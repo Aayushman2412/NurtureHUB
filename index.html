@@ -1,0 +1,1986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="NurtureHUB — A structured learning and assessment platform for training and certification">
+  <title>NurtureHUB — Training & Assessment Platform</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230FADA0' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M2 22c1.25-3.25 3.75-5.5 7.5-6.5C12 14.5 15.5 15.5 18 13.5c2.5-2 3.5-5.5 4-8.5-.75.75-2 1.25-3.5 1.25-2 0-3.5-1-4.5-2.5C13 2.75 9.5 3.25 7 5.5 4.5 7.75 3.5 11.25 3 14.25c.5-.5 1.5-1 2.5-1 1.5 0 2.5.5 3.5 1.5C5.75 16 3.25 18.25 2 22z'/></svg>">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TOAST NOTIFICATIONS
+     ═══════════════════════════════════════════════════════════ -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 1: LANDING PAGE
+     ═══════════════════════════════════════════════════════════ -->
+<div class="screen active" id="screen-landing">
+  <div class="full-layout">
+    <!-- Hero Section -->
+    <section class="landing-hero">
+      <nav class="landing-nav">
+        <div class="landing-nav-brand">
+          <div class="icon">
+            <svg class="svg-icon svg-icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22c1.25-3.25 3.75-5.5 7.5-6.5C12 14.5 15.5 15.5 18 13.5c2.5-2 3.5-5.5 4-8.5-.75.75-2 1.25-3.5 1.25-2 0-3.5-1-4.5-2.5C13 2.75 9.5 3.25 7 5.5 4.5 7.75 3.5 11.25 3 14.25c.5-.5 1.5-1 2.5-1 1.5 0 2.5.5 3.5 1.5C5.75 16 3.25 18.25 2 22z"/></svg>
+          </div>
+          NurtureHUB
+        </div>
+        <div class="landing-nav-links">
+          <a href="#" onclick="event.preventDefault()">Features</a>
+          <a href="#" onclick="event.preventDefault()">About</a>
+          <a href="#" onclick="event.preventDefault()">Support</a>
+          <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Theme" style="border-color: rgba(255,255,255,0.4); color: white; background: transparent;">
+            <svg class="svg-icon svg-icon-md theme-toggle-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+          <button class="btn btn-outline" style="border-color: rgba(255,255,255,0.4); color: white;" onclick="navigateTo('screen-login')">Log In</button>
+          <button class="btn btn-primary" onclick="navigateTo('screen-signup')">Get Started</button>
+        </div>
+      </nav>
+
+      <div class="landing-hero-content">
+        <div class="landing-hero-text">
+          <h1>Empower Your Learning with <span>NurtureHUB</span></h1>
+          <p>A structured training and assessment platform designed for healthcare workers, ICDS professionals, and district administrators. Complete tutorials, pass assessments, and advance your career — all in one place.</p>
+          <div class="hero-btns">
+            <button class="btn btn-primary btn-lg" onclick="navigateTo('screen-signup')">
+              Start Learning Today →
+            </button>
+            <button class="btn btn-outline btn-lg" onclick="navigateTo('screen-login')">
+              Sign In
+            </button>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="hero-dashboard-preview">
+            <div class="preview-stat">
+              <div class="ps-icon t">
+                <svg class="svg-icon svg-icon-md" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5z"/></svg>
+              </div>
+              <div class="ps-text">
+                <div class="ps-label">Tutorials Completed</div>
+                <div class="ps-value">12 / 18</div>
+              </div>
+              <div class="ps-bar"><span style="width: 67%; background: var(--primary-400);"></span></div>
+            </div>
+            <div class="preview-stat">
+              <div class="ps-icon b">
+                <svg class="svg-icon svg-icon-md" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+              <div class="ps-text">
+                <div class="ps-label">Tests Passed</div>
+                <div class="ps-value">2 / 3</div>
+              </div>
+              <div class="ps-bar"><span style="width: 67%; background: var(--info-500);"></span></div>
+            </div>
+            <div class="preview-stat">
+              <div class="ps-icon a">
+                <svg class="svg-icon svg-icon-md" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+              <div class="ps-text">
+                <div class="ps-label">Current Phase</div>
+                <div class="ps-value">Phase 2</div>
+              </div>
+              <div class="ps-bar"><span style="width: 50%; background: var(--accent-400);"></span></div>
+            </div>
+            <div class="preview-stat">
+              <div class="ps-icon g">
+                <svg class="svg-icon svg-icon-md" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              </div>
+              <div class="ps-text">
+                <div class="ps-label">Avg. Score</div>
+                <div class="ps-value">82%</div>
+              </div>
+              <div class="ps-bar"><span style="width: 82%; background: var(--success-500);"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="landing-features">
+      <h2>Everything You Need to Succeed</h2>
+      <p class="subtitle">A complete learning ecosystem designed for structured training programs</p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon stat-icon teal">
+            <svg class="svg-icon svg-icon-md" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+          </div>
+          <h3>Video Tutorials</h3>
+          <p>Access structured video lessons organized by modules. Watch, learn, and progress at your own pace with embedded video playback.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon stat-icon blue">
+            <svg class="svg-icon svg-icon-md" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <h3>Assessments & Tests</h3>
+          <p>Take formative and screening tests with real-time feedback. Track your scores, review answers, and improve with each attempt.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon stat-icon amber">
+            <svg class="svg-icon svg-icon-md" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
+          <h3>Progress Tracking</h3>
+          <p>Visual dashboards showing your journey from Phase 1 to completion. Badges, milestones, and motivational summaries keep you on track.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon stat-icon green">
+            <svg class="svg-icon svg-icon-md" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <h3>Stage Unlocking</h3>
+          <p>Complete required tutorials to unlock assessments. Pass tests to advance to the next stage. A proven progression system.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon stat-icon red">
+            <svg class="svg-icon svg-icon-md" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          </div>
+          <h3>Fully Responsive</h3>
+          <p>Learn anywhere — desktop, tablet, or mobile. The platform adapts seamlessly to your device for uninterrupted learning.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background: var(--secondary-50); color: var(--secondary-500); display: flex; align-items: center; justify-content: center;">
+            <svg class="svg-icon svg-icon-md" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </div>
+          <h3>Smart Reminders</h3>
+          <p>Never miss a deadline. Get notified about upcoming tests, incomplete tutorials, and new content availability.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="landing-cta">
+      <h2>Ready to Begin Your Journey?</h2>
+      <p>Join thousands of professionals advancing their skills through NurtureHUB's structured learning platform.</p>
+      <button class="btn btn-primary btn-lg" onclick="navigateTo('screen-signup')">Create Free Account →</button>
+    </section>
+
+    <!-- Footer -->
+    <footer class="landing-footer">
+      <p>© 2026 NurtureHUB. Built for structured training and assessment programs.</p>
+    </footer>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 2: LOGIN
+     ═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-login">
+  <div class="auth-layout">
+    <div class="auth-brand">
+      <div class="auth-brand-content">
+        <div class="brand-logo">
+          <svg class="svg-icon svg-icon-xl" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width: 48px; height: 48px;"><path d="M2 22c1.25-3.25 3.75-5.5 7.5-6.5C12 14.5 15.5 15.5 18 13.5c2.5-2 3.5-5.5 4-8.5-.75.75-2 1.25-3.5 1.25-2 0-3.5-1-4.5-2.5C13 2.75 9.5 3.25 7 5.5 4.5 7.75 3.5 11.25 3 14.25c.5-.5 1.5-1 2.5-1 1.5 0 2.5.5 3.5 1.5C5.75 16 3.25 18.25 2 22z"/></svg>
+        </div>
+        <h1>NurtureHUB</h1>
+        <p>Your structured learning & assessment platform for professional growth and certification.</p>
+        <ul class="features-list">
+          <li>Structured video tutorials by module</li>
+          <li>Formative & screening assessments</li>
+          <li>Progress tracking & phase unlocking</li>
+          <li>Performance analytics & insights</li>
+        </ul>
+      </div>
+    </div>
+    <div class="auth-form-side">
+      <div class="auth-form-container">
+        <h2>Welcome back</h2>
+        <p class="subtitle">Sign in to continue your learning journey</p>
+        
+        <div class="auth-form">
+          <button class="btn btn-google btn-full btn-lg" onclick="showToast('Google authentication initiated...', 'info'); setTimeout(() => navigateTo('screen-dashboard'), 1500);">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Continue with Google
+          </button>
+ 
+          <div class="divider-text">or sign in with email</div>
+ 
+          <div class="form-group">
+            <label class="form-label">Email address</label>
+            <div class="input-icon-wrap">
+              <span class="icon-left"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+              <input type="email" class="form-input" placeholder="you@example.com" id="login-email" value="priya.sharma@example.com">
+            </div>
+          </div>
+ 
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <div class="input-icon-wrap">
+              <span class="icon-left"><svg class="svg-icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+              <input type="password" class="form-input" placeholder="Enter your password" id="login-password" value="••••••••">
+              <span class="icon-right password-toggle" onclick="togglePassword(this)"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+            </div>
+          </div>
+ 
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label class="checkbox-custom">
+              <input type="checkbox" checked> Remember me
+            </label>
+            <a href="#" onclick="event.preventDefault(); navigateTo('screen-forgot-password')" style="color: var(--primary-600); font-size: 0.875rem; font-weight: 500;">Forgot password?</a>
+          </div>
+
+          <button class="btn btn-primary btn-full btn-lg" onclick="handleLogin()">
+            Sign In
+          </button>
+
+          <p style="text-align: center; font-size: 0.9375rem; color: var(--gray-500);">
+            Don't have an account? 
+            <a href="#" onclick="event.preventDefault(); navigateTo('screen-signup')" style="color: var(--primary-600); font-weight: 600;">Sign up</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 3: SIGNUP
+     ═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-signup">
+  <div class="auth-layout">
+    <div class="auth-brand">
+      <div class="auth-brand-content">
+        <div class="brand-logo">
+          <svg class="svg-icon svg-icon-xl" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width: 48px; height: 48px;"><path d="M2 22c1.25-3.25 3.75-5.5 7.5-6.5C12 14.5 15.5 15.5 18 13.5c2.5-2 3.5-5.5 4-8.5-.75.75-2 1.25-3.5 1.25-2 0-3.5-1-4.5-2.5C13 2.75 9.5 3.25 7 5.5 4.5 7.75 3.5 11.25 3 14.25c.5-.5 1.5-1 2.5-1 1.5 0 2.5.5 3.5 1.5C5.75 16 3.25 18.25 2 22z"/></svg>
+        </div>
+        <h1>Join NurtureHUB</h1>
+        <p>Create your account and start your structured learning journey today.</p>
+        <ul class="features-list">
+          <li>Free access to all tutorials</li>
+          <li>Track your learning progress</li>
+          <li>Earn certificates on completion</li>
+          <li>Mobile-friendly platform</li>
+        </ul>
+      </div>
+    </div>
+    <div class="auth-form-side">
+      <div class="auth-form-container">
+        <h2>Create your account</h2>
+        <p class="subtitle">Get started with NurtureHUB in minutes</p>
+        
+        <div class="auth-form">
+          <button class="btn btn-google btn-full btn-lg" onclick="showToast('Google sign-up initiated...', 'info'); setTimeout(() => navigateTo('screen-registration'), 1500);">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Sign up with Google
+          </button>
+ 
+          <div class="divider-text">or sign up with email</div>
+ 
+          <div class="form-group">
+            <label class="form-label">Full name</label>
+            <input type="text" class="form-input" placeholder="Enter your full name" value="Priya Sharma">
+          </div>
+ 
+          <div class="form-group">
+            <label class="form-label">Email address</label>
+            <input type="email" class="form-input" placeholder="you@example.com" value="priya.sharma@example.com">
+          </div>
+ 
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <div class="input-icon-wrap">
+              <span class="icon-left"><svg class="svg-icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+              <input type="password" class="form-input" placeholder="Min 8 characters" value="••••••••">
+              <span class="icon-right password-toggle" onclick="togglePassword(this)"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+            </div>
+            <div class="form-hint">Must contain at least 8 characters, one uppercase, and one number</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Confirm password</label>
+            <input type="password" class="form-input" placeholder="Re-enter your password" value="••••••••">
+          </div>
+
+          <label class="checkbox-custom">
+            <input type="checkbox" checked> I agree to the <a href="#" onclick="event.preventDefault()" style="color: var(--primary-600); font-weight: 500;">Terms of Service</a> and <a href="#" onclick="event.preventDefault()" style="color: var(--primary-600); font-weight: 500;">Privacy Policy</a>
+          </label>
+
+          <button class="btn btn-primary btn-full btn-lg" onclick="navigateTo('screen-otp')">
+            Create Account
+          </button>
+
+          <p style="text-align: center; font-size: 0.9375rem; color: var(--gray-500);">
+            Already have an account? 
+            <a href="#" onclick="event.preventDefault(); navigateTo('screen-login')" style="color: var(--primary-600); font-weight: 600;">Sign in</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 4: FORGOT PASSWORD
+     ═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-forgot-password">
+  <div class="auth-layout">
+    <div class="auth-brand">
+      <div class="auth-brand-content">
+        <div class="brand-logo">
+          <svg class="svg-icon svg-icon-xl" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width: 48px; height: 48px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h1>Reset Password</h1>
+        <p>Don't worry, it happens to the best of us. We'll help you get back into your account.</p>
+      </div>
+    </div>
+    <div class="auth-form-side">
+      <div class="auth-form-container">
+        <h2>Forgot your password?</h2>
+        <p class="subtitle">Enter your email address and we'll send you a reset link</p>
+        
+        <div class="auth-form">
+          <div class="form-group">
+            <label class="form-label">Email address</label>
+            <div class="input-icon-wrap">
+              <span class="icon-left"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+              <input type="email" class="form-input" placeholder="you@example.com" value="priya.sharma@example.com">
+            </div>
+          </div>
+ 
+          <button class="btn btn-primary btn-full btn-lg" onclick="showToast('Password reset link sent to your email!', 'success')">
+            Send Reset Link
+          </button>
+ 
+          <p style="text-align: center; font-size: 0.9375rem; color: var(--gray-500);">
+            Remember your password? 
+            <a href="#" onclick="event.preventDefault(); navigateTo('screen-login')" style="color: var(--primary-600); font-weight: 600;">Sign in</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+ 
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 5: OTP VERIFICATION
+     ═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-otp">
+  <div class="auth-layout">
+    <div class="auth-brand">
+      <div class="auth-brand-content">
+        <div class="brand-logo">
+          <svg class="svg-icon svg-icon-xl" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width: 48px; height: 48px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </div>
+        <h1>Verify Email</h1>
+        <p>We've sent a verification code to your email. Enter it below to confirm your account.</p>
+      </div>
+    </div>
+    <div class="auth-form-side">
+      <div class="auth-form-container" style="text-align: center;">
+        <h2>Enter verification code</h2>
+        <p class="subtitle">We've sent a 6-digit code to <strong>priya.sharma@example.com</strong></p>
+        
+        <div class="auth-form" style="align-items: center;">
+          <div style="display: flex; gap: 12px; justify-content: center; margin: var(--space-4) 0;">
+            <input type="text" maxlength="1" class="form-input" style="width: 52px; height: 56px; text-align: center; font-size: 1.5rem; font-weight: 700; padding: 0;" value="4" id="otp-1">
+            <input type="text" maxlength="1" class="form-input" style="width: 52px; height: 56px; text-align: center; font-size: 1.5rem; font-weight: 700; padding: 0;" value="8" id="otp-2">
+            <input type="text" maxlength="1" class="form-input" style="width: 52px; height: 56px; text-align: center; font-size: 1.5rem; font-weight: 700; padding: 0;" value="2" id="otp-3">
+            <input type="text" maxlength="1" class="form-input" style="width: 52px; height: 56px; text-align: center; font-size: 1.5rem; font-weight: 700; padding: 0;" value="7" id="otp-4">
+            <input type="text" maxlength="1" class="form-input" style="width: 52px; height: 56px; text-align: center; font-size: 1.5rem; font-weight: 700; padding: 0;" value="1" id="otp-5">
+            <input type="text" maxlength="1" class="form-input" style="width: 52px; height: 56px; text-align: center; font-size: 1.5rem; font-weight: 700; padding: 0;" value="9" id="otp-6">
+          </div>
+ 
+          <button class="btn btn-primary btn-full btn-lg" onclick="showToast('Email verified successfully!', 'success'); setTimeout(() => navigateTo('screen-registration'), 1200);">
+            Verify & Continue
+          </button>
+ 
+          <p style="font-size: 0.9375rem; color: var(--gray-500); margin-top: var(--space-4);">
+            Didn't receive the code? 
+            <a href="#" onclick="event.preventDefault(); showToast('New code sent!', 'info')" style="color: var(--primary-600); font-weight: 600;">Resend</a>
+          </p>
+          <p style="font-size: 0.8125rem; color: var(--gray-400);">
+            Code expires in <strong style="color: var(--primary-600);">04:32</strong>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 6: REGISTRATION FORM (Multi-Step)
+     ═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-registration">
+  <div class="registration-layout">
+    <div class="registration-card">
+      <div class="registration-header">
+        <h2>Complete Your Profile</h2>
+        <p>Please fill in your details to get started with NurtureHUB</p>
+      </div>
+
+      <!-- Stepper -->
+      <div style="padding: var(--space-6) var(--space-8) 0;">
+        <div class="stepper" id="reg-stepper">
+          <div class="stepper-step active" data-step="1">
+            <div class="step-circle">1</div>
+            <span class="step-label">Personal Info</span>
+          </div>
+          <div class="stepper-step" data-step="2">
+            <div class="step-circle">2</div>
+            <span class="step-label">Professional</span>
+          </div>
+          <div class="stepper-step" data-step="3">
+            <div class="step-circle">3</div>
+            <span class="step-label">Confirmation</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 1: Personal Info -->
+      <div class="registration-body">
+        <div class="reg-step active" id="reg-step-1">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Full Name <span class="required">*</span></label>
+              <input type="text" class="form-input" placeholder="Enter full name" value="Priya Sharma">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Age <span class="required">*</span></label>
+              <input type="number" class="form-input" placeholder="Your age" value="32">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Date of Birth <span class="required">*</span></label>
+              <input type="date" class="form-input" value="1994-03-15">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Sex <span class="required">*</span></label>
+              <select class="form-select">
+                <option value="">Select sex</option>
+                <option value="female" selected>Female</option>
+                <option value="male">Male</option>
+                <option value="other">Other</option>
+                <option value="prefer-not">Prefer not to say</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Phone Number <span class="required">*</span></label>
+              <input type="tel" class="form-input" placeholder="+91 XXXXX XXXXX" value="+91 98765 43210">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <input type="email" class="form-input" value="priya.sharma@example.com" readonly style="background: var(--gray-50); color: var(--gray-500);">
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Professional Details -->
+        <div class="reg-step" id="reg-step-2">
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label class="form-label">Department <span class="required">*</span></label>
+              <select class="form-select" id="reg-department">
+                <option value="">Select department</option>
+                <option value="dohfw" selected>DoHFW (Department of Health and Family Welfare)</option>
+                <option value="icds">ICDS (Integrated Child Development Services)</option>
+                <option value="district">District Administration</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Role <span class="required">*</span></label>
+              <select class="form-select" id="reg-role">
+                <option value="">Select role</option>
+                <option value="block" selected>Block / Project / Tehsil</option>
+                <option value="sector">Sector / Village</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Type of Work Center <span class="required">*</span></label>
+              <select class="form-select">
+                <option value="">Select type</option>
+                <option value="phc" selected>Primary Health Center (PHC)</option>
+                <option value="chc">Community Health Center (CHC)</option>
+                <option value="sc">Sub-Center</option>
+                <option value="dh">District Hospital</option>
+                <option value="awc">Anganwadi Center</option>
+                <option value="block-office">Block Office</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Work Center Name <span class="required">*</span></label>
+              <input type="text" class="form-input" placeholder="Enter work center name" value="PHC Raipur Block-II">
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">District</label>
+              <input type="text" class="form-input" placeholder="Enter your district" value="Raipur">
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Confirmation -->
+        <div class="reg-step" id="reg-step-3">
+          <div style="text-align: center; padding: var(--space-4) 0;">
+            <div style="margin-bottom: var(--space-4); color: var(--success-500); display: flex; justify-content: center;">
+              <svg class="svg-icon svg-icon-xl" style="width: 48px; height: 48px;" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <h3>Review Your Details</h3>
+            <p class="text-muted" style="margin-bottom: var(--space-6);">Please confirm your information before proceeding</p>
+          </div>
+          <div class="card card-flat" style="margin-bottom: var(--space-5);">
+            <div class="card-body">
+              <h4 style="margin-bottom: var(--space-4); color: var(--primary-600);">Personal Information</h4>
+              <div class="form-grid" style="gap: var(--space-3);">
+                <div><span class="text-sm text-muted">Name:</span> <strong>Priya Sharma</strong></div>
+                <div><span class="text-sm text-muted">Age:</span> <strong>32</strong></div>
+                <div><span class="text-sm text-muted">DOB:</span> <strong>15 Mar 1994</strong></div>
+                <div><span class="text-sm text-muted">Sex:</span> <strong>Female</strong></div>
+                <div><span class="text-sm text-muted">Phone:</span> <strong>+91 98765 43210</strong></div>
+                <div><span class="text-sm text-muted">Email:</span> <strong>priya.sharma@example.com</strong></div>
+              </div>
+            </div>
+          </div>
+          <div class="card card-flat">
+            <div class="card-body">
+              <h4 style="margin-bottom: var(--space-4); color: var(--primary-600);">Professional Information</h4>
+              <div class="form-grid" style="gap: var(--space-3);">
+                <div><span class="text-sm text-muted">Department:</span> <strong>DoHFW</strong></div>
+                <div><span class="text-sm text-muted">Role:</span> <strong>Block / Project / Tehsil</strong></div>
+                <div><span class="text-sm text-muted">Work Center Type:</span> <strong>PHC</strong></div>
+                <div><span class="text-sm text-muted">Work Center:</span> <strong>PHC Raipur Block-II</strong></div>
+                <div><span class="text-sm text-muted">District:</span> <strong>Raipur</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="registration-footer">
+        <button class="btn btn-ghost" id="reg-back-btn" style="visibility: hidden;" onclick="regPrevStep()">← Back</button>
+        <div style="display: flex; gap: var(--space-3);">
+          <button class="btn btn-ghost" onclick="showToast('Progress saved!', 'success')">Save Draft</button>
+          <button class="btn btn-primary" id="reg-next-btn" onclick="regNextStep()">Continue →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SIDEBAR (shared across app screens)
+     ═══════════════════════════════════════════════════════════ -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">N</div>
+    <span class="sidebar-brand">NurtureHUB</span>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section-title">Main</div>
+    <div class="nav-item active" onclick="navigateTo('screen-dashboard')" data-screen="screen-dashboard">
+      <span class="nav-icon"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span> Dashboard
+    </div>
+    <div class="nav-item" onclick="navigateTo('screen-tutorials')" data-screen="screen-tutorials">
+      <span class="nav-icon"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5z"/></svg></span> Tutorials
+    </div>
+    <div class="nav-item" onclick="navigateTo('screen-tests')" data-screen="screen-tests">
+      <span class="nav-icon"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span> Assessments
+      <span class="nav-badge">2</span>
+    </div>
+ 
+    <div class="nav-section-title">Analytics</div>
+    <div class="nav-item" onclick="navigateTo('screen-results')" data-screen="screen-results">
+      <span class="nav-icon"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span> Results
+    </div>
+ 
+    <div class="nav-section-title">Account</div>
+    <div class="nav-item" onclick="navigateTo('screen-profile')" data-screen="screen-profile">
+      <span class="nav-icon"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span> Profile
+    </div>
+    <div class="nav-item" onclick="toggleNotifPanel()">
+      <span class="nav-icon"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> Notifications
+      <span class="nav-badge">3</span>
+    </div>
+    <div class="nav-item" onclick="showToast('Help center coming soon!', 'info')">
+      <span class="nav-icon"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Help & Support
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="avatar">PS</div>
+      <div class="sidebar-user-info">
+        <div class="name">Priya Sharma</div>
+        <div class="role">DoHFW • Block Level</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="navigateTo('screen-landing')" title="Sign Out">
+        <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════
+     NOTIFICATION PANEL
+     ═══════════════════════════════════════════════════════════ -->
+<div class="notif-panel" id="notifPanel">
+  <div class="notif-panel-header">
+    <h3>Notifications</h3>
+    <button class="btn btn-ghost btn-sm" onclick="toggleNotifPanel()">✕</button>
+  </div>
+  <div class="notif-panel-body">
+    <div class="notif-item unread">
+      <div class="notif-dot"></div>
+      <div style="flex: 1;">
+        <div style="font-weight: 600; font-size: 0.9375rem;">Screening Test Available</div>
+        <div style="font-size: 0.8125rem; color: var(--gray-500); margin-top: 2px;">You've completed all Stage 2 tutorials. The Screening Test is now unlocked!</div>
+        <div style="font-size: 0.75rem; color: var(--gray-400); margin-top: 4px;">5 min ago</div>
+      </div>
+    </div>
+    <div class="notif-item unread">
+      <div class="notif-dot"></div>
+      <div style="flex: 1;">
+        <div style="font-weight: 600; font-size: 0.9375rem;">New Tutorial Added</div>
+        <div style="font-size: 0.8125rem; color: var(--gray-500); margin-top: 2px;">"Advanced Growth Monitoring Techniques" has been added to Stage 2.</div>
+        <div style="font-size: 0.75rem; color: var(--gray-400); margin-top: 4px;">2 hours ago</div>
+      </div>
+    </div>
+    <div class="notif-item unread">
+      <div class="notif-dot"></div>
+      <div style="flex: 1;">
+        <div style="font-weight: 600; font-size: 0.9375rem;">Reminder: Complete Phase 2</div>
+        <div style="font-size: 0.8125rem; color: var(--gray-500); margin-top: 2px;">You have 3 tutorials remaining in Stage 2. Complete them before June 30.</div>
+        <div style="font-size: 0.75rem; color: var(--gray-400); margin-top: 4px;">1 day ago</div>
+      </div>
+    </div>
+    <div class="notif-item">
+      <div class="notif-dot"></div>
+      <div style="flex: 1;">
+        <div style="font-weight: 600; font-size: 0.9375rem;">Formative Test Result</div>
+        <div style="font-size: 0.8125rem; color: var(--gray-500); margin-top: 2px;">You scored 78% on the Formative Test. Great job! Review your results.</div>
+        <div style="font-size: 0.75rem; color: var(--gray-400); margin-top: 4px;">3 days ago</div>
+      </div>
+    </div>
+    <div class="notif-item">
+      <div class="notif-dot"></div>
+      <div style="flex: 1;">
+        <div style="font-weight: 600; font-size: 0.9375rem;">Welcome to NurtureHUB!</div>
+        <div style="font-size: 0.8125rem; color: var(--gray-500); margin-top: 2px;">Your account has been verified. Start with Stage 1 tutorials.</div>
+        <div style="font-size: 0.75rem; color: var(--gray-400); margin-top: 4px;">1 week ago</div>
+      </div>
+    </div>
+  </div>
+</div>
+ 
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 7: MAIN DASHBOARD
+     ═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-dashboard">
+  <div class="app-layout">
+    <div class="main-content">
+      <!-- Header -->
+      <header class="main-header">
+        <div style="display: flex; align-items: center; gap: var(--space-4);">
+          <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+          <span class="page-title">Dashboard</span>
+        </div>
+        <div class="header-actions">
+          <div class="header-search">
+            <span><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+            <input type="text" placeholder="Search tutorials, tests...">
+          </div>
+          <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Theme">
+            <svg class="svg-icon theme-toggle-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+          <button class="notif-btn" onclick="toggleNotifPanel()">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="notif-count">3</span>
+          </button>
+          <div class="avatar" style="cursor: pointer;" onclick="navigateTo('screen-profile')">PS</div>
+        </div>
+      </header>
+ 
+      <div class="page-content">
+        <!-- Welcome Banner -->
+        <div class="dashboard-welcome">
+          <h2>Welcome back, Priya!</h2>
+          <p>You're making great progress. Continue with Stage 2 tutorials to unlock the Screening Test.</p>
+          <div class="welcome-action">
+            <button class="btn" onclick="navigateTo('screen-tutorials')">Resume Learning →</button>
+          </div>
+        </div>
+ 
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon teal">
+              <svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5z"/></svg>
+            </div>
+            <div class="stat-value">12</div>
+            <div class="stat-label">Tutorials Watched</div>
+            <div class="stat-change up">↑ 3 this week</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon blue">
+              <svg class="svg-icon" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            </div>
+            <div class="stat-value">6</div>
+            <div class="stat-label">Tutorials Remaining</div>
+            <div class="progress-bar progress-bar-sm" style="margin-top: var(--space-2);">
+              <div class="fill" style="width: 67%;"></div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <svg class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div class="stat-value">1</div>
+            <div class="stat-label">Tests Completed</div>
+            <div class="stat-change up">Score: 78%</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon amber">
+              <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+            </div>
+            <div class="stat-value">2</div>
+            <div class="stat-label">Tests Upcoming</div>
+            <div class="badge badge-warning" style="margin-top: var(--space-2);">Action Required</div>
+          </div>
+        </div>
+ 
+        <!-- Main Dashboard Grid -->
+        <div class="dashboard-grid">
+          <div class="dashboard-main">
+            <!-- Current Progress -->
+            <div class="card">
+              <div class="card-body">
+                <div class="section-header">
+                  <h3>Learning Progress</h3>
+                  <span class="badge badge-primary badge-lg">Phase 2 of 3</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: var(--space-6); margin-bottom: var(--space-5);">
+                  <div class="progress-ring">
+                    <svg width="100" height="100">
+                      <circle class="ring-bg" cx="50" cy="50" r="42" stroke-width="8"/>
+                      <circle class="ring-fill" cx="50" cy="50" r="42" stroke-width="8" 
+                              stroke="var(--primary-500)" 
+                              stroke-dasharray="264" 
+                              stroke-dashoffset="87"/>
+                    </svg>
+                    <span class="ring-label">67%</span>
+                  </div>
+                  <div>
+                    <h4 style="margin-bottom: var(--space-2);">Stage 2: Growth Monitoring</h4>
+                    <p class="text-sm text-muted">Complete 3 more tutorials to unlock the Screening Test</p>
+                    <div class="progress-bar" style="margin-top: var(--space-3); max-width: 300px;">
+                      <div class="fill" style="width: 67%;"></div>
+                    </div>
+                    <p class="text-xs text-muted" style="margin-top: var(--space-1);">12 of 18 tutorials completed</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Next Recommended Action -->
+            <div class="next-action-card">
+              <h4>Next Recommended Action</h4>
+              <p>Watch "Complementary Feeding Guidelines" tutorial (15 min) to continue your Stage 2 progress.</p>
+              <button class="btn btn-primary btn-sm" onclick="navigateTo('screen-tutorial-player')">Start Tutorial →</button>
+            </div>
+ 
+            <!-- Recent Activity -->
+            <div class="card">
+              <div class="card-body">
+                <div class="section-header">
+                  <h3>Recent Activity</h3>
+                  <span class="view-all">View all →</span>
+                </div>
+                <div class="activity-item">
+                  <div class="activity-icon stat-icon green">
+                    <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <div class="activity-text">
+                    <div class="title">Completed: Nutrition Assessment Basics</div>
+                    <div class="desc">Tutorial • Stage 2 • Module 4</div>
+                  </div>
+                  <div class="activity-time">2h ago</div>
+                </div>
+                <div class="activity-item">
+                  <div class="activity-icon stat-icon blue">
+                    <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  </div>
+                  <div class="activity-text">
+                    <div class="title">Formative Test Passed — Score: 78%</div>
+                    <div class="desc">Assessment • Stage 1 Completion Test</div>
+                  </div>
+                  <div class="activity-time">2 days ago</div>
+                </div>
+                <div class="activity-item">
+                  <div class="activity-icon stat-icon teal">
+                    <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                  </div>
+                  <div class="activity-text">
+                    <div class="title">Watched: Growth Chart Interpretation</div>
+                    <div class="desc">Tutorial • Stage 2 • Module 3</div>
+                  </div>
+                  <div class="activity-time">3 days ago</div>
+                </div>
+                <div class="activity-item">
+                  <div class="activity-icon stat-icon amber">
+                    <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  </div>
+                  <div class="activity-text">
+                    <div class="title">Badge Earned: Stage 1 Champion</div>
+                    <div class="desc">Completed all Stage 1 requirements</div>
+                  </div>
+                  <div class="activity-time">5 days ago</div>
+                </div>
+              </div>
+            </div>
+ 
+            <!-- Upcoming Tests -->
+            <div class="card">
+              <div class="card-body">
+                <div class="section-header">
+                  <h3>Upcoming Assessments</h3>
+                  <span class="view-all" onclick="navigateTo('screen-tests')">View all →</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+                  <div class="card card-flat card-clickable" onclick="navigateTo('screen-tests')">
+                    <div class="card-body" style="padding: var(--space-5);">
+                      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-3);">
+                        <span class="badge badge-warning">3 tutorials left</span>
+                        <span style="color: var(--text-muted);"><svg class="svg-icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                      </div>
+                      <h4>Screening Test</h4>
+                      <p class="text-sm text-muted" style="margin-top: var(--space-1);">Complete Stage 2 tutorials to unlock</p>
+                      <div class="progress-bar progress-bar-sm" style="margin-top: var(--space-3);">
+                        <div class="fill" style="width: 67%;"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card card-flat card-clickable" onclick="navigateTo('screen-test-instructions')">
+                    <div class="card-body" style="padding: var(--space-5);">
+                      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-3);">
+                        <span class="badge badge-success">Ready</span>
+                        <span style="color: var(--success-500);"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
+                      </div>
+                      <h4>Formative Test — Retake</h4>
+                      <p class="text-sm text-muted" style="margin-top: var(--space-1);">Improve your score (current: 78%)</p>
+                      <button class="btn btn-primary btn-sm" style="margin-top: var(--space-3);">Take Test →</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+ 
+          <!-- Right Sidebar -->
+          <div>
+            <!-- Phase Timeline -->
+            <div class="card" style="margin-bottom: var(--space-6);">
+              <div class="card-body">
+                <h3 style="margin-bottom: var(--space-5);">Phase Progress</h3>
+                <div class="phase-timeline">
+                  <div class="phase-item completed">
+                    <div class="phase-dot"></div>
+                    <div class="phase-label">Stage 1: Basics</div>
+                    <div class="phase-desc">6/6 tutorials • Test passed</div>
+                  </div>
+                  <div class="phase-item current">
+                    <div class="phase-dot"></div>
+                    <div class="phase-label">Stage 2: Growth Monitoring</div>
+                    <div class="phase-desc">6/9 tutorials • Test locked</div>
+                  </div>
+                  <div class="phase-item locked">
+                    <div class="phase-dot"></div>
+                    <div class="phase-label">Stage 3: Advanced</div>
+                    <div class="phase-desc">0/6 tutorials • Locked</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Milestones -->
+            <div class="card" style="margin-bottom: var(--space-6);">
+              <div class="card-body">
+                <h3 style="margin-bottom: var(--space-5);">🏆 Achievements</h3>
+                <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+                  <div class="milestone-card">
+                    <div class="milestone-icon">🌟</div>
+                    <div class="milestone-info">
+                      <h4>Stage 1 Champion</h4>
+                      <p>All Stage 1 modules completed</p>
+                    </div>
+                  </div>
+                  <div class="milestone-card">
+                    <div class="milestone-icon">🔥</div>
+                    <div class="milestone-info">
+                      <h4>5-Day Streak</h4>
+                      <p>Consistent learning for 5 days</p>
+                    </div>
+                  </div>
+                  <div class="milestone-card" style="opacity: 0.5;">
+                    <div class="milestone-icon" style="background: var(--gray-300);">🎯</div>
+                    <div class="milestone-info">
+                      <h4>Test Ace</h4>
+                      <p>Score 90%+ on any test</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Performance Summary -->
+            <div class="card">
+              <div class="card-body">
+                <h3 style="margin-bottom: var(--space-5);">📊 Performance</h3>
+                <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+                  <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
+                      <span class="text-sm text-muted">Average Score</span>
+                      <span class="font-semibold">78%</span>
+                    </div>
+                    <div class="progress-bar progress-bar-sm">
+                      <div class="fill" style="width: 78%;"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
+                      <span class="text-sm text-muted">Tutorials</span>
+                      <span class="font-semibold">67%</span>
+                    </div>
+                    <div class="progress-bar progress-bar-sm">
+                      <div class="fill" style="width: 67%;"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
+                      <span class="text-sm text-muted">Tests Passed</span>
+                      <span class="font-semibold">1/3</span>
+                    </div>
+                    <div class="progress-bar progress-bar-sm">
+                      <div class="fill" style="width: 33%;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 8: TUTORIALS LISTING
+     ═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-tutorials">
+  <div class="app-layout">
+    <div class="main-content">
+      <header class="main-header">
+        <div style="display: flex; align-items: center; gap: var(--space-4);">
+          <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+          <span class="page-title">Tutorials</span>
+        </div>
+        <div class="header-actions">
+          <div class="header-search">
+            <span>🔍</span>
+            <input type="text" placeholder="Search tutorials...">
+          </div>
+          <button class="notif-btn" onclick="toggleNotifPanel()">🔔<span class="notif-count">3</span></button>
+          <div class="avatar" onclick="navigateTo('screen-profile')" style="cursor:pointer">PS</div>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <!-- Filters -->
+        <div class="tutorials-header">
+          <div>
+            <h2 style="margin-bottom: var(--space-1);">Video Tutorials</h2>
+            <p class="text-muted">12 of 18 tutorials completed • Stage 2 in progress</p>
+          </div>
+          <div class="filter-bar">
+            <button class="filter-chip active">All Stages</button>
+            <button class="filter-chip" onclick="this.classList.toggle('active')">Stage 1</button>
+            <button class="filter-chip" onclick="this.classList.toggle('active')">Stage 2</button>
+            <button class="filter-chip" onclick="this.classList.toggle('active')">Stage 3</button>
+            <button class="filter-chip" onclick="this.classList.toggle('active')">Completed</button>
+          </div>
+        </div>
+
+        <!-- Stage 1: Completed -->
+        <div class="stage-section">
+          <div class="stage-header">
+            <div class="stage-number">✓</div>
+            <div class="stage-info">
+              <h3>Stage 1: Fundamentals of Child Health</h3>
+              <p>6 of 6 tutorials completed • Formative Test passed</p>
+            </div>
+            <div class="stage-progress" style="color: var(--success-500);">✅ Completed</div>
+          </div>
+          <div class="video-grid">
+            <!-- Completed videos -->
+            <div class="card video-card" onclick="navigateTo('screen-tutorial-player')">
+              <div class="video-thumb" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                <div class="completed-badge">✓</div>
+                <div class="duration">12:34</div>
+              </div>
+              <div class="video-info">
+                <div class="video-title">Introduction to Child Health Programs</div>
+                <div class="video-meta"><span>📚 Module 1</span><span>12 min</span></div>
+              </div>
+            </div>
+            <div class="card video-card" onclick="navigateTo('screen-tutorial-player')">
+              <div class="video-thumb" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+                <div class="completed-badge">✓</div>
+                <div class="duration">18:45</div>
+              </div>
+              <div class="video-info">
+                <div class="video-title">Understanding Malnutrition Indicators</div>
+                <div class="video-meta"><span>📚 Module 2</span><span>18 min</span></div>
+              </div>
+            </div>
+            <div class="card video-card" onclick="navigateTo('screen-tutorial-player')">
+              <div class="video-thumb" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
+                <div class="completed-badge">✓</div>
+                <div class="duration">15:20</div>
+              </div>
+              <div class="video-info">
+                <div class="video-title">Immunization Schedule Basics</div>
+                <div class="video-meta"><span>📚 Module 3</span><span>15 min</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stage 2: In Progress -->
+        <div class="stage-section">
+          <div class="stage-header">
+            <div class="stage-number">2</div>
+            <div class="stage-info">
+              <h3>Stage 2: Growth Monitoring & Assessment</h3>
+              <p>6 of 9 tutorials completed • Screening Test locked (3 remaining)</p>
+            </div>
+            <div class="stage-progress">6/9</div>
+          </div>
+          <div class="video-grid">
+            <div class="card video-card" onclick="navigateTo('screen-tutorial-player')">
+              <div class="video-thumb" style="background: linear-gradient(135deg, #a18cd1, #fbc2eb);">
+                <div class="completed-badge">✓</div>
+                <div class="duration">20:15</div>
+              </div>
+              <div class="video-info">
+                <div class="video-title">Growth Chart Interpretation</div>
+                <div class="video-meta"><span>📚 Module 1</span><span>20 min</span><span class="badge badge-success" style="font-size:0.625rem">Done</span></div>
+              </div>
+            </div>
+            <div class="card video-card" onclick="navigateTo('screen-tutorial-player')">
+              <div class="video-thumb" style="background: linear-gradient(135deg, #fccb90, #d57eeb);">
+                <div class="completed-badge">✓</div>
+                <div class="duration">16:40</div>
+              </div>
+              <div class="video-info">
+                <div class="video-title">Nutrition Assessment Basics</div>
+                <div class="video-meta"><span>📚 Module 2</span><span>16 min</span><span class="badge badge-success" style="font-size:0.625rem">Done</span></div>
+              </div>
+            </div>
+            <!-- Currently available tutorial -->
+            <div class="card video-card" onclick="navigateTo('screen-tutorial-player')" style="border: 2px solid var(--primary-300);">
+              <div class="video-thumb" style="background: linear-gradient(135deg, #0FADA0, #1E3A5F);">
+                <div class="play-overlay">
+                  <div class="play-btn-icon">▶</div>
+                </div>
+                <div class="duration">15:00</div>
+              </div>
+              <div class="video-info">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-1);">
+                  <div class="video-title" style="margin-bottom: 0;">Complementary Feeding Guidelines</div>
+                  <span class="badge badge-primary" style="font-size: 0.625rem;">Up Next</span>
+                </div>
+                <div class="video-meta"><span>📚 Module 3</span><span>15 min</span></div>
+              </div>
+            </div>
+            <div class="card video-card" onclick="navigateTo('screen-tutorial-player')">
+              <div class="video-thumb" style="background: linear-gradient(135deg, #89f7fe, #66a6ff);">
+                <div class="play-overlay"><div class="play-btn-icon">▶</div></div>
+                <div class="duration">22:10</div>
+              </div>
+              <div class="video-info">
+                <div class="video-title">MUAC Measurement Techniques</div>
+                <div class="video-meta"><span>📚 Module 4</span><span>22 min</span></div>
+              </div>
+            </div>
+            <div class="card video-card" onclick="navigateTo('screen-tutorial-player')">
+              <div class="video-thumb" style="background: linear-gradient(135deg, #96fbc4, #f9f586);">
+                <div class="play-overlay"><div class="play-btn-icon">▶</div></div>
+                <div class="duration">14:55</div>
+              </div>
+              <div class="video-info">
+                <div class="video-title">Weight-for-Age Z-Scores</div>
+                <div class="video-meta"><span>📚 Module 5</span><span>14 min</span></div>
+              </div>
+            </div>
+            <div class="card video-card" onclick="navigateTo('screen-tutorial-player')">
+              <div class="video-thumb" style="background: linear-gradient(135deg, #c471f5, #fa71cd);">
+                <div class="play-overlay"><div class="play-btn-icon">▶</div></div>
+                <div class="duration">18:30</div>
+              </div>
+              <div class="video-info">
+                <div class="video-title">Advanced Growth Monitoring</div>
+                <div class="video-meta"><span>📚 Module 6</span><span>18 min</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stage 3: Locked -->
+        <div class="stage-section">
+          <div class="stage-header locked">
+            <div class="stage-number">🔒</div>
+            <div class="stage-info">
+              <h3>Stage 3: Advanced Interventions</h3>
+              <p>Pass the Screening Test to unlock this stage</p>
+            </div>
+            <div class="stage-progress" style="color: var(--gray-400);">Locked</div>
+          </div>
+          <div class="video-grid">
+            <div class="card video-card locked">
+              <div class="video-thumb" style="background: var(--gray-300);">
+                <div class="status-overlay locked-overlay">🔒</div>
+              </div>
+              <div class="video-info">
+                <div class="video-title" style="color: var(--gray-400);">SAM/MAM Treatment Protocols</div>
+                <div class="video-meta"><span>🔒 Locked</span></div>
+              </div>
+            </div>
+            <div class="card video-card locked">
+              <div class="video-thumb" style="background: var(--gray-300);">
+                <div class="status-overlay locked-overlay">🔒</div>
+              </div>
+              <div class="video-info">
+                <div class="video-title" style="color: var(--gray-400);">Community-based Management</div>
+                <div class="video-meta"><span>🔒 Locked</span></div>
+              </div>
+            </div>
+            <div class="card video-card locked">
+              <div class="video-thumb" style="background: var(--gray-300);">
+                <div class="status-overlay locked-overlay">🔒</div>
+              </div>
+              <div class="video-info">
+                <div class="video-title" style="color: var(--gray-400);">Referral Pathways</div>
+                <div class="video-meta"><span>🔒 Locked</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 9: TUTORIAL PLAYER
+     ═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-tutorial-player">
+  <div class="app-layout">
+    <div class="main-content">
+      <header class="main-header">
+        <div style="display: flex; align-items: center; gap: var(--space-4);">
+          <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+          <button class="btn btn-ghost btn-sm" onclick="navigateTo('screen-tutorials')">← Back to Tutorials</button>
+        </div>
+        <div class="header-actions">
+          <button class="notif-btn" onclick="toggleNotifPanel()">🔔<span class="notif-count">3</span></button>
+          <div class="avatar" onclick="navigateTo('screen-profile')" style="cursor:pointer">PS</div>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="player-layout">
+          <div>
+            <!-- Video Player -->
+            <div class="video-player-container">
+              <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+
+            <!-- Video Info -->
+            <div class="player-info">
+              <div style="display: flex; align-items: start; justify-content: space-between; gap: var(--space-4);">
+                <h2>Complementary Feeding Guidelines</h2>
+                <span class="badge badge-primary badge-lg">Stage 2 • Module 3</span>
+              </div>
+              <div class="player-meta">
+                <span>📚 Growth Monitoring & Assessment</span>
+                <span>⏱ 15 minutes</span>
+                <span>📅 Updated Jun 2026</span>
+              </div>
+              <div>
+                <h4 style="margin-bottom: var(--space-3);">About this tutorial</h4>
+                <p class="text-muted" style="line-height: 1.7;">
+                  This tutorial covers the essential guidelines for complementary feeding in children aged 6-24 months. You'll learn about timing, food consistency, frequency, and nutrient density requirements. Understanding these principles is crucial for proper growth monitoring and nutritional assessment at the community level.
+                </p>
+              </div>
+              <div style="margin-top: var(--space-6); display: flex; gap: var(--space-3);">
+                <button class="btn btn-primary" onclick="showToast('Tutorial marked as complete!', 'success'); setTimeout(() => navigateTo('screen-tutorials'), 1000);">✓ Mark as Complete</button>
+                <button class="btn btn-outline">📝 Take Notes</button>
+                <button class="btn btn-ghost">📤 Share</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Playlist Sidebar -->
+          <div class="playlist-sidebar">
+            <div class="playlist-header">
+              Stage 2 Tutorials (6/9)
+            </div>
+            <div class="playlist-items">
+              <div class="playlist-item" onclick="navigateTo('screen-tutorial-player')">
+                <span class="pl-num" style="color: var(--success-500);">✓</span>
+                <div class="pl-info">
+                  <div class="pl-title">Growth Chart Interpretation</div>
+                  <div class="pl-dur">20:15</div>
+                </div>
+              </div>
+              <div class="playlist-item" onclick="navigateTo('screen-tutorial-player')">
+                <span class="pl-num" style="color: var(--success-500);">✓</span>
+                <div class="pl-info">
+                  <div class="pl-title">Nutrition Assessment Basics</div>
+                  <div class="pl-dur">16:40</div>
+                </div>
+              </div>
+              <div class="playlist-item active">
+                <span class="pl-num">3</span>
+                <div class="pl-info">
+                  <div class="pl-title">Complementary Feeding Guidelines</div>
+                  <div class="pl-dur">15:00</div>
+                </div>
+              </div>
+              <div class="playlist-item" onclick="navigateTo('screen-tutorial-player')">
+                <span class="pl-num">4</span>
+                <div class="pl-info">
+                  <div class="pl-title">MUAC Measurement Techniques</div>
+                  <div class="pl-dur">22:10</div>
+                </div>
+              </div>
+              <div class="playlist-item" onclick="navigateTo('screen-tutorial-player')">
+                <span class="pl-num">5</span>
+                <div class="pl-info">
+                  <div class="pl-title">Weight-for-Age Z-Scores</div>
+                  <div class="pl-dur">14:55</div>
+                </div>
+              </div>
+              <div class="playlist-item" onclick="navigateTo('screen-tutorial-player')">
+                <span class="pl-num">6</span>
+                <div class="pl-info">
+                  <div class="pl-title">Advanced Growth Monitoring</div>
+                  <div class="pl-dur">18:30</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 10: TESTS / ASSESSMENTS LISTING
+     ═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-tests">
+  <div class="app-layout">
+    <div class="main-content">
+      <header class="main-header">
+        <div style="display: flex; align-items: center; gap: var(--space-4);">
+          <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+          <span class="page-title">Assessments</span>
+        </div>
+        <div class="header-actions">
+          <button class="notif-btn" onclick="toggleNotifPanel()">🔔<span class="notif-count">3</span></button>
+          <div class="avatar" onclick="navigateTo('screen-profile')" style="cursor:pointer">PS</div>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <h2 style="margin-bottom: var(--space-2);">Your Assessments</h2>
+        <p class="text-muted" style="margin-bottom: var(--space-8);">Complete tutorials to unlock tests. Pass each test to advance to the next stage.</p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); margin-bottom: var(--space-8);">
+          <!-- Formative Test Card -->
+          <div class="card" style="border: 2px solid var(--success-300);">
+            <div style="background: linear-gradient(135deg, var(--success-50), white); padding: var(--space-6);">
+              <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-4);">
+                <div>
+                  <span class="badge badge-success badge-lg">Stage 1 Test</span>
+                  <h3 style="margin-top: var(--space-3);">Formative Test</h3>
+                </div>
+                <div style="font-size: 2.5rem;">📝</div>
+              </div>
+              <p class="text-sm text-muted" style="margin-bottom: var(--space-5);">Evaluates your understanding of child health fundamentals covered in Stage 1 tutorials.</p>
+              
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin-bottom: var(--space-5);">
+                <div style="padding: var(--space-3); background: white; border-radius: var(--radius-md); text-align: center;">
+                  <div class="text-sm text-muted">Questions</div>
+                  <div class="font-bold">25</div>
+                </div>
+                <div style="padding: var(--space-3); background: white; border-radius: var(--radius-md); text-align: center;">
+                  <div class="text-sm text-muted">Duration</div>
+                  <div class="font-bold">30 min</div>
+                </div>
+                <div style="padding: var(--space-3); background: white; border-radius: var(--radius-md); text-align: center;">
+                  <div class="text-sm text-muted">Best Score</div>
+                  <div class="font-bold text-success">78%</div>
+                </div>
+                <div style="padding: var(--space-3); background: white; border-radius: var(--radius-md); text-align: center;">
+                  <div class="text-sm text-muted">Attempts</div>
+                  <div class="font-bold">1/3</div>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: var(--space-3);">
+                <button class="btn btn-primary" onclick="navigateTo('screen-test-instructions')">Retake Test →</button>
+                <button class="btn btn-outline" onclick="navigateTo('screen-results')">View Results</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Screening Test Card -->
+          <div class="card" style="border: 2px solid var(--gray-200);">
+            <div style="background: linear-gradient(135deg, var(--gray-50), white); padding: var(--space-6);">
+              <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-4);">
+                <div>
+                  <span class="badge badge-warning badge-lg">Stage 2 Test</span>
+                  <h3 style="margin-top: var(--space-3);">Screening Test</h3>
+                </div>
+                <div style="font-size: 2.5rem;">🔒</div>
+              </div>
+              <p class="text-sm text-muted" style="margin-bottom: var(--space-5);">Comprehensive assessment covering growth monitoring techniques from Stage 2.</p>
+              
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin-bottom: var(--space-5);">
+                <div style="padding: var(--space-3); background: white; border-radius: var(--radius-md); text-align: center;">
+                  <div class="text-sm text-muted">Questions</div>
+                  <div class="font-bold">40</div>
+                </div>
+                <div style="padding: var(--space-3); background: white; border-radius: var(--radius-md); text-align: center;">
+                  <div class="text-sm text-muted">Duration</div>
+                  <div class="font-bold">45 min</div>
+                </div>
+                <div style="padding: var(--space-3); background: white; border-radius: var(--radius-md); text-align: center;">
+                  <div class="text-sm text-muted">Passing</div>
+                  <div class="font-bold">70%</div>
+                </div>
+                <div style="padding: var(--space-3); background: white; border-radius: var(--radius-md); text-align: center;">
+                  <div class="text-sm text-muted">Status</div>
+                  <div class="font-bold text-warning">Locked</div>
+                </div>
+              </div>
+
+              <div style="background: var(--warning-50); padding: var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--accent-200); margin-bottom: var(--space-4);">
+                <p class="text-sm" style="color: var(--warning-600);">
+                  <strong>⚠️ Unlock Requirement:</strong> Complete 3 more Stage 2 tutorials to unlock this test.
+                </p>
+                <div class="progress-bar progress-bar-sm" style="margin-top: var(--space-2);">
+                  <div class="fill" style="width: 67%; background: var(--accent-400);"></div>
+                </div>
+              </div>
+
+              <button class="btn btn-primary disabled" disabled>🔒 Complete Tutorials to Unlock</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Test History -->
+        <div class="card">
+          <div class="card-body">
+            <h3 style="margin-bottom: var(--space-5);">📋 Test History</h3>
+            <table class="results-table">
+              <thead>
+                <tr>
+                  <th>Test</th>
+                  <th>Date</th>
+                  <th>Score</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Formative Test</strong></td>
+                  <td>Jun 15, 2026</td>
+                  <td><strong>78%</strong> (19.5/25)</td>
+                  <td><span class="badge badge-success">Passed</span></td>
+                  <td><a href="#" onclick="event.preventDefault(); navigateTo('screen-results')" style="color: var(--primary-600); font-weight: 500;">View Details →</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 11: TEST INSTRUCTIONS
+     ═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-test-instructions">
+  <div class="app-layout">
+    <div class="main-content">
+      <header class="main-header">
+        <div style="display: flex; align-items: center; gap: var(--space-4);">
+          <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+          <button class="btn btn-ghost btn-sm" onclick="navigateTo('screen-tests')">← Back to Assessments</button>
+        </div>
+        <div class="header-actions">
+          <div class="avatar" onclick="navigateTo('screen-profile')" style="cursor:pointer">PS</div>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="test-instructions-layout">
+          <div class="test-info-card">
+            <div class="test-info-header">
+              <span class="badge badge-lg" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.25);">Stage 1 Assessment</span>
+              <h2 style="margin-top: var(--space-3);">Formative Test</h2>
+              <p style="opacity: 0.85; margin-top: var(--space-2);">Evaluating your knowledge of child health fundamentals</p>
+            </div>
+
+            <div class="test-info-body">
+              <!-- User Info -->
+              <div style="display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4); background: var(--gray-50); border-radius: var(--radius-md); margin-bottom: var(--space-6);">
+                <div class="avatar">PS</div>
+                <div>
+                  <div class="font-semibold">Priya Sharma</div>
+                  <div class="text-sm text-muted">DoHFW • Block / Project / Tehsil • PHC Raipur Block-II</div>
+                </div>
+                <span class="badge badge-info" style="margin-left: auto;">Attempt 2 of 3</span>
+              </div>
+
+              <!-- Test Meta -->
+              <div class="test-meta-grid">
+                <div class="test-meta-item">
+                  <div class="tmi-icon stat-icon blue">❓</div>
+                  <div>
+                    <div class="tmi-label">Total Questions</div>
+                    <div class="tmi-value">25</div>
+                  </div>
+                </div>
+                <div class="test-meta-item">
+                  <div class="tmi-icon stat-icon amber">⏱</div>
+                  <div>
+                    <div class="tmi-label">Time Limit</div>
+                    <div class="tmi-value">30 Minutes</div>
+                  </div>
+                </div>
+                <div class="test-meta-item">
+                  <div class="tmi-icon stat-icon green">📊</div>
+                  <div>
+                    <div class="tmi-label">Total Marks</div>
+                    <div class="tmi-value">25 Marks</div>
+                  </div>
+                </div>
+                <div class="test-meta-item">
+                  <div class="tmi-icon stat-icon teal">🎯</div>
+                  <div>
+                    <div class="tmi-label">Passing Score</div>
+                    <div class="tmi-value">70% (17.5)</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Scoring Rules -->
+              <div style="background: var(--info-50); padding: var(--space-5); border-radius: var(--radius-md); border: 1px solid rgba(49,130,206,0.15); margin-bottom: var(--space-6);">
+                <h4 style="color: var(--info-600); margin-bottom: var(--space-3);">📋 Scoring Rules</h4>
+                <ul style="display: flex; flex-direction: column; gap: var(--space-2); font-size: 0.9375rem; color: var(--gray-600);">
+                  <li>• Each correct answer = 1 mark</li>
+                  <li>• No negative marking for incorrect answers</li>
+                  <li>• Unanswered questions receive 0 marks</li>
+                  <li>• Minimum 70% required to pass</li>
+                </ul>
+              </div>
+
+              <!-- Instructions -->
+              <div class="instructions-list">
+                <h3>📄 Instructions</h3>
+                <ul>
+                  <li>All questions are multiple-choice with a single correct answer.</li>
+                  <li>You can navigate between questions using the Previous and Next buttons.</li>
+                  <li>You may mark questions for review and come back to them before submission.</li>
+                  <li>The timer starts automatically once you click "Start Test".</li>
+                  <li>The test will auto-submit when the timer reaches zero.</li>
+                  <li>Do not refresh or close the browser window during the test.</li>
+                  <li>Ensure you have a stable internet connection before starting.</li>
+                  <li>Once submitted, answers cannot be changed.</li>
+                </ul>
+              </div>
+
+              <!-- Start Section -->
+              <div class="test-start-section">
+                <div class="checkbox-agree">
+                  <input type="checkbox" id="agree-terms" checked>
+                  <label for="agree-terms">I have read and understood the instructions above</label>
+                </div>
+                <button class="btn btn-primary btn-lg" onclick="navigateTo('screen-test-active')">
+                  🚀 Start Test
+                </button>
+                <p class="text-xs text-muted" style="margin-top: var(--space-3);">The test will open and the 30-minute timer will begin</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 12: ACTIVE TEST INTERFACE
+     ═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-test-active">
+  <div class="test-interface">
+    <!-- Test Sidebar -->
+    <div class="test-sidebar" id="testSidebar">
+      <div class="test-sidebar-header">
+        <div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4);">
+          <div class="sidebar-logo" style="width: 32px; height: 32px; font-size: 0.875rem;">N</div>
+          <span class="font-semibold">Formative Test</span>
+        </div>
+        <div class="test-timer" id="testTimer">
+          ⏱ <span id="timerDisplay">27:42</span>
+        </div>
+      </div>
+
+      <div class="test-legend">
+        <div class="legend-item"><div class="legend-dot current"></div> Current</div>
+        <div class="legend-item"><div class="legend-dot answered"></div> Answered</div>
+        <div class="legend-item"><div class="legend-dot review"></div> Review</div>
+        <div class="legend-item"><div class="legend-dot unanswered"></div> Not Visited</div>
+      </div>
+
+      <div class="test-q-nav">
+        <h4 style="margin-bottom: var(--space-4); font-size: 0.875rem; color: var(--gray-500);">QUESTIONS</h4>
+        <div class="question-nav" id="questionNav">
+          <div class="q-num answered" data-q="1" onclick="goToQuestion(1)">1</div>
+          <div class="q-num answered" data-q="2" onclick="goToQuestion(2)">2</div>
+          <div class="q-num answered" data-q="3" onclick="goToQuestion(3)">3</div>
+          <div class="q-num review answered" data-q="4" onclick="goToQuestion(4)">4</div>
+          <div class="q-num answered" data-q="5" onclick="goToQuestion(5)">5</div>
+          <div class="q-num answered" data-q="6" onclick="goToQuestion(6)">6</div>
+          <div class="q-num review" data-q="7" onclick="goToQuestion(7)">7</div>
+          <div class="q-num current" data-q="8" onclick="goToQuestion(8)">8</div>
+          <div class="q-num" data-q="9" onclick="goToQuestion(9)">9</div>
+          <div class="q-num" data-q="10" onclick="goToQuestion(10)">10</div>
+          <div class="q-num" data-q="11" onclick="goToQuestion(11)">11</div>
+          <div class="q-num" data-q="12" onclick="goToQuestion(12)">12</div>
+          <div class="q-num" data-q="13" onclick="goToQuestion(13)">13</div>
+          <div class="q-num" data-q="14" onclick="goToQuestion(14)">14</div>
+          <div class="q-num" data-q="15" onclick="goToQuestion(15)">15</div>
+          <div class="q-num" data-q="16" onclick="goToQuestion(16)">16</div>
+          <div class="q-num" data-q="17" onclick="goToQuestion(17)">17</div>
+          <div class="q-num" data-q="18" onclick="goToQuestion(18)">18</div>
+          <div class="q-num" data-q="19" onclick="goToQuestion(19)">19</div>
+          <div class="q-num" data-q="20" onclick="goToQuestion(20)">20</div>
+          <div class="q-num" data-q="21" onclick="goToQuestion(21)">21</div>
+          <div class="q-num" data-q="22" onclick="goToQuestion(22)">22</div>
+          <div class="q-num" data-q="23" onclick="goToQuestion(23)">23</div>
+          <div class="q-num" data-q="24" onclick="goToQuestion(24)">24</div>
+          <div class="q-num" data-q="25" onclick="goToQuestion(25)">25</div>
+        </div>
+
+        <div style="margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--gray-100);">
+          <div style="display: flex; justify-content: space-between; font-size: 0.8125rem; margin-bottom: var(--space-2);">
+            <span class="text-muted">Answered</span><span class="font-semibold text-success">6/25</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.8125rem; margin-bottom: var(--space-2);">
+            <span class="text-muted">For Review</span><span class="font-semibold text-warning">2</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.8125rem;">
+            <span class="text-muted">Remaining</span><span class="font-semibold">17</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="test-sidebar-footer">
+        <button class="btn btn-danger btn-full" onclick="showSubmitModal()">Submit Test</button>
+      </div>
+    </div>
+
+    <!-- Test Main Area -->
+    <div class="test-main">
+      <!-- Mobile toggle -->
+      <div style="display: none; margin-bottom: var(--space-4);">
+        <button class="btn btn-outline btn-sm" id="toggleTestSidebar">☰ Question Panel</button>
+      </div>
+      
+      <div class="test-progress-bar">
+        <span>Question 8 of 25</span>
+        <div class="progress-bar" style="flex: 1;">
+          <div class="fill" style="width: 32%;"></div>
+        </div>
+        <span>32%</span>
+      </div>
+
+      <div class="question-card">
+        <div class="question-header">
+          <span class="question-number">Question 8</span>
+          <span class="question-marks">1 Mark</span>
+        </div>
+
+        <div class="question-text">
+          According to WHO guidelines, at what age should complementary feeding be introduced to an infant alongside continued breastfeeding?
+        </div>
+
+        <div class="options-list">
+          <div class="option-item" onclick="selectOption(this)">
+            <div class="option-radio"></div>
+            <span class="option-label"><strong>A.</strong> 4 months of age</span>
+          </div>
+          <div class="option-item selected" onclick="selectOption(this)">
+            <div class="option-radio"></div>
+            <span class="option-label"><strong>B.</strong> 6 months of age</span>
+          </div>
+          <div class="option-item" onclick="selectOption(this)">
+            <div class="option-radio"></div>
+            <span class="option-label"><strong>C.</strong> 8 months of age</span>
+          </div>
+          <div class="option-item" onclick="selectOption(this)">
+            <div class="option-radio"></div>
+            <span class="option-label"><strong>D.</strong> 12 months of age</span>
+          </div>
+        </div>
+
+        <div class="question-actions">
+          <div class="left">
+            <button class="btn btn-ghost" onclick="goToQuestion(7)">← Previous</button>
+            <button class="btn btn-review" onclick="this.classList.toggle('active')">🔖 Mark for Review</button>
+          </div>
+          <div class="right">
+            <button class="btn btn-outline" onclick="selectOption(null)">Clear Answer</button>
+            <button class="btn btn-primary" onclick="goToQuestion(9)">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Submit Confirmation Modal -->
+<div class="modal-backdrop" id="submitModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Submit Test?</h3>
+      <button class="btn btn-ghost btn-sm" onclick="hideSubmitModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="text-align: center; margin-bottom: var(--space-5);">
+        <div style="font-size: 3rem; margin-bottom: var(--space-3);">⚠️</div>
+        <p style="color: var(--gray-600); line-height: 1.6;">Are you sure you want to submit your test? This action cannot be undone.</p>
+      </div>
+      <div style="background: var(--gray-50); padding: var(--space-4); border-radius: var(--radius-md);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
+          <span class="text-sm text-muted">Answered Questions</span>
+          <span class="font-semibold text-success">6 / 25</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
+          <span class="text-sm text-muted">Marked for Review</span>
+          <span class="font-semibold text-warning">2</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span class="text-sm text-muted">Unanswered</span>
+          <span class="font-semibold text-error">17</span>
+        </div>
+      </div>
+      <div style="background: var(--warning-50); padding: var(--space-3); border-radius: var(--radius-md); margin-top: var(--space-4); border: 1px solid var(--accent-200);">
+        <p class="text-sm" style="color: var(--warning-600);">⚠️ You have 17 unanswered questions and 2 marked for review.</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="hideSubmitModal()">Go Back</button>
+      <button class="btn btn-primary" onclick="hideSubmitModal(); navigateTo('screen-test-submitted')">Confirm & Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 13: TEST SUBMITTED CONFIRMATION
+     ═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-test-submitted">
+  <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-primary); padding: var(--space-8);">
+    <div style="text-align: center; max-width: 500px;">
+      <div style="font-size: 5rem; margin-bottom: var(--space-6); animation: fadeIn 0.5s ease-out;">🎉</div>
+      <h1 style="margin-bottom: var(--space-3);">Test Submitted!</h1>
+      <p class="text-muted text-lg" style="margin-bottom: var(--space-8); line-height: 1.7;">
+        Your Formative Test has been submitted successfully. Your results are being processed and will be available shortly.
+      </p>
+      <div class="card" style="text-align: left; margin-bottom: var(--space-6);">
+        <div class="card-body">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+            <div><span class="text-sm text-muted">Test:</span><br><strong>Formative Test</strong></div>
+            <div><span class="text-sm text-muted">Submitted:</span><br><strong>Jun 18, 2026 1:15 AM</strong></div>
+            <div><span class="text-sm text-muted">Questions Answered:</span><br><strong>23 of 25</strong></div>
+            <div><span class="text-sm text-muted">Time Used:</span><br><strong>24:18 of 30:00</strong></div>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; gap: var(--space-4); justify-content: center;">
+        <button class="btn btn-primary btn-lg" onclick="navigateTo('screen-results')">View Results →</button>
+        <button class="btn btn-outline btn-lg" onclick="navigateTo('screen-dashboard')">Go to Dashboard</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 14: TEST RESULTS / ANALYTICS
+     ═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-results">
+  <div class="app-layout">
+    <div class="main-content">
+      <header class="main-header">
+        <div style="display: flex; align-items: center; gap: var(--space-4);">
+          <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+          <span class="page-title">Test Results</span>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-outline btn-sm" onclick="navigateTo('screen-dashboard')">← Dashboard</button>
+          <div class="avatar" onclick="navigateTo('screen-profile')" style="cursor:pointer">PS</div>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="results-layout">
+          <!-- Results Hero -->
+          <div class="results-hero passed">
+            <div class="results-status-icon">🎉</div>
+            <h2 style="margin-bottom: var(--space-2);">Congratulations, Priya!</h2>
+            <p class="text-muted" style="margin-bottom: var(--space-4);">You passed the Formative Test</p>
+            <div class="results-score">78%</div>
+            <p class="text-muted">19.5 out of 25 marks</p>
+            <div style="display: flex; gap: var(--space-3); justify-content: center; margin-top: var(--space-6);">
+              <span class="badge badge-success badge-lg">✅ Passed</span>
+              <span class="badge badge-info badge-lg">Attempt 1 of 3</span>
+            </div>
+          </div>
+
+          <!-- Score Breakdown -->
+          <div class="results-grid">
+            <div class="result-detail-card">
+              <h4>📊 Score Breakdown</h4>
+              <div class="score-breakdown">
+                <div class="breakdown-item">
+                  <span class="label">✅ Correct Answers</span>
+                  <span class="value text-success">19</span>
+                </div>
+                <div class="breakdown-item">
+                  <span class="label">❌ Incorrect Answers</span>
+                  <span class="value text-error">4</span>
+                </div>
+                <div class="breakdown-item">
+                  <span class="label">⏭ Unanswered</span>
+                  <span class="value text-warning">2</span>
+                </div>
+                <div class="breakdown-item">
+                  <span class="label">🎯 Passing Score</span>
+                  <span class="value">70% (17.5)</span>
+                </div>
+                <div class="breakdown-item">
+                  <span class="label">⏱ Time Taken</span>
+                  <span class="value">24:18</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="result-detail-card">
+              <h4>📈 Section-wise Performance</h4>
+              <div class="section-perf-item">
+                <div class="section-perf-header">
+                  <span class="text-sm font-medium">Child Health Basics</span>
+                  <span class="text-sm font-bold text-success">90%</span>
+                </div>
+                <div class="progress-bar progress-bar-sm">
+                  <div class="fill" style="width: 90%;"></div>
+                </div>
+              </div>
+              <div class="section-perf-item">
+                <div class="section-perf-header">
+                  <span class="text-sm font-medium">Malnutrition Indicators</span>
+                  <span class="text-sm font-bold text-primary">80%</span>
+                </div>
+                <div class="progress-bar progress-bar-sm">
+                  <div class="fill" style="width: 80%;"></div>
+                </div>
+              </div>
+              <div class="section-perf-item">
+                <div class="section-perf-header">
+                  <span class="text-sm font-medium">Immunization</span>
+                  <span class="text-sm font-bold text-warning">60%</span>
+                </div>
+                <div class="progress-bar progress-bar-sm">
+                  <div class="fill" style="width: 60%; background: var(--warning-500);"></div>
+                </div>
+              </div>
+              <div class="section-perf-item">
+                <div class="section-perf-header">
+                  <span class="text-sm font-medium">Growth Monitoring</span>
+                  <span class="text-sm font-bold text-success">85%</span>
+                </div>
+                <div class="progress-bar progress-bar-sm">
+                  <div class="fill" style="width: 85%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Comparison & Suggestions -->
+          <div class="results-grid">
+            <div class="result-detail-card">
+              <h4>📊 Attempt Comparison</h4>
+              <table class="results-table">
+                <thead>
+                  <tr><th>Attempt</th><th>Date</th><th>Score</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Attempt 1</strong></td>
+                    <td>Jun 15, 2026</td>
+                    <td><strong>78%</strong></td>
+                    <td><span class="badge badge-success">Passed</span></td>
+                  </tr>
+                  <tr style="opacity: 0.4;">
+                    <td>Attempt 2</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td><span class="badge badge-gray">Not Taken</span></td>
+                  </tr>
+                  <tr style="opacity: 0.4;">
+                    <td>Attempt 3</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td><span class="badge badge-gray">Not Taken</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="result-detail-card">
+              <h4>💡 Recommendations</h4>
+              <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+                <div style="display: flex; gap: var(--space-3); align-items: flex-start;">
+                  <span style="font-size: 1.25rem;">📖</span>
+                  <div>
+                    <div class="font-medium text-sm">Review Immunization Module</div>
+                    <div class="text-xs text-muted">Your lowest score area (60%). Revisit Stage 1, Module 3.</div>
+                  </div>
+                </div>
+                <div style="display: flex; gap: var(--space-3); align-items: flex-start;">
+                  <span style="font-size: 1.25rem;">🎯</span>
+                  <div>
+                    <div class="font-medium text-sm">Retake for Higher Score</div>
+                    <div class="text-xs text-muted">You have 2 remaining attempts. Target 85%+ next time.</div>
+                  </div>
+                </div>
+                <div style="display: flex; gap: var(--space-3); align-items: flex-start;">
+                  <span style="font-size: 1.25rem;">🚀</span>
+                  <div>
+                    <div class="font-medium text-sm">Continue to Stage 2</div>
+                    <div class="text-xs text-muted">You've unlocked Stage 2 tutorials. Start with Growth Chart Interpretation.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Next Steps -->
+          <div class="next-action-card" style="margin-top: var(--space-2);">
+            <h4>🎯 What's Next?</h4>
+            <p>Stage 2 tutorials are now unlocked! Complete all 9 tutorials to unlock the Screening Test.</p>
+            <div style="display: flex; gap: var(--space-3); margin-top: var(--space-2);">
+              <button class="btn btn-primary btn-sm" onclick="navigateTo('screen-tutorials')">Start Stage 2 →</button>
+              <button class="btn btn-outline btn-sm" onclick="navigateTo('screen-test-instructions')">Retake Test</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 15: PROFILE / SETTINGS
+     ═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-profile">
+  <div class="app-layout">
+    <div class="main-content">
+      <header class="main-header">
+        <div style="display: flex; align-items: center; gap: var(--space-4);">
+          <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+          <span class="page-title">Profile & Settings</span>
+        </div>
+        <div class="header-actions">
+          <button class="notif-btn" onclick="toggleNotifPanel()">🔔<span class="notif-count">3</span></button>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <!-- Profile Header -->
+        <div class="profile-header-card">
+          <div class="avatar avatar-xl">PS</div>
+          <div>
+            <h2>Priya Sharma</h2>
+            <p class="role">DoHFW • Block / Project / Tehsil</p>
+            <div class="stats">
+              <div class="stat"><div class="stat-num">12</div><div class="stat-lbl">Tutorials</div></div>
+              <div class="stat"><div class="stat-num">1</div><div class="stat-lbl">Tests Passed</div></div>
+              <div class="stat"><div class="stat-num">78%</div><div class="stat-lbl">Avg Score</div></div>
+              <div class="stat"><div class="stat-num">2</div><div class="stat-lbl">Badges</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Grid -->
+        <div class="settings-grid">
+          <div class="settings-nav">
+            <div class="settings-nav-item active">👤 Personal Info</div>
+            <div class="settings-nav-item">💼 Professional</div>
+            <div class="settings-nav-item">🔒 Security</div>
+            <div class="settings-nav-item">🔔 Notifications</div>
+            <div class="settings-nav-item">❓ Help & Support</div>
+          </div>
+          <div class="settings-content">
+            <h3 style="margin-bottom: var(--space-6);">Personal Information</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" class="form-input" value="Priya Sharma">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-input" value="priya.sharma@example.com" readonly style="background: var(--gray-50);">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Phone</label>
+                <input type="tel" class="form-input" value="+91 98765 43210">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Date of Birth</label>
+                <input type="date" class="form-input" value="1994-03-15">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Age</label>
+                <input type="number" class="form-input" value="32">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Sex</label>
+                <select class="form-select">
+                  <option selected>Female</option>
+                  <option>Male</option>
+                  <option>Other</option>
+                </select>
+              </div>
+            </div>
+            <div style="margin-top: var(--space-8); display: flex; gap: var(--space-3); justify-content: flex-end;">
+              <button class="btn btn-ghost">Cancel</button>
+              <button class="btn btn-primary" onclick="showToast('Profile updated successfully!', 'success')">Save Changes</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

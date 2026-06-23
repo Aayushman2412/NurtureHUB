@@ -1,0 +1,32 @@
+# Virtual Environments
+venv/
+backend/venv/
+.venv/
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build outputs
+dist/
+frontend/dist/
+
+# Secret files
+.env
+backend/.env
+frontend/.env
+
+# Python caching
+__pycache__/
+backend/app/__pycache__/
+backend/app/routers/__pycache__/
+*.pyc
+
+# System / IDE files
+.DS_Store
+.gemini/
+.system_generated/
+browser/
+*.log
+gh
+gh.tar.gz
