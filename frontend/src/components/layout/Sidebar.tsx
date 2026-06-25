@@ -30,12 +30,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       <aside id="sidebar" className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div>
           {/* Brand/Logo Header */}
-          <div className="sidebar-brand">
-            <span style={{ fontSize: '1.5rem' }}>🌱</span>
-            <div>
-              <span className="brand-name">NurtureHUB</span>
-              <span className="brand-subtitle font-display">ICDS Training Portal</span>
-            </div>
+          <div className="sidebar-header">
+            <div className="sidebar-logo">🌱</div>
+            <span className="sidebar-brand">NurtureHUB</span>
           </div>
 
           {/* Navigation Links */}
@@ -47,7 +44,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                 onClick={onClose}
               >
-                <item.icon size={20} className="nav-item-icon" />
+                <span className="nav-icon">
+                  <item.icon size={18} />
+                </span>
                 <span>{item.label}</span>
               </NavLink>
             ))}
@@ -58,32 +57,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         {user && (
           <div className="sidebar-footer">
             <div className="sidebar-user">
-              <div className="avatar avatar-md font-display">
+              <div className="avatar font-display">
                 {user.avatar_initials || 'U'}
               </div>
-              <div className="user-info">
-                <span className="user-name">{user.full_name || 'User'}</span>
-                <span className="user-role">{user.role || 'ICDS Worker'}</span>
+              <div className="sidebar-user-info">
+                <div className="name">{user.full_name || 'User'}</div>
+                <div className="role">{user.role || 'ICDS Worker'}</div>
               </div>
+              <button 
+                className="btn btn-ghost btn-sm" 
+                onClick={logout}
+                title="Sign Out"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', padding: '6px' }}
+              >
+                <LogOut size={16} />
+              </button>
             </div>
-            <button 
-              className="btn btn-outline" 
-              onClick={logout}
-              style={{ 
-                width: '100%', 
-                marginTop: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                padding: '8px',
-                borderColor: 'var(--gray-200)',
-                color: 'var(--text-secondary)'
-              }}
-            >
-              <LogOut size={16} />
-              <span>Sign Out</span>
-            </button>
           </div>
         )}
       </aside>

@@ -1,12 +1,8 @@
-import React, { createContext, useState, useContext, useCallback } from 'react';
+import React, { createContext, useContext, useCallback } from 'react';
+import { toast, Toaster } from 'sonner';
+import { useTheme } from './ThemeContext';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
-
-interface Toast {
-  id: string;
-  message: string;
-  type: ToastType;
-}
 
 interface ToastContextType {
   showToast: (message: string, type?: ToastType) => void;
@@ -15,52 +11,41 @@ interface ToastContextType {
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [toasts, setToasts] = useState<Toast[]>([]);
+  const { darkMode } = useTheme();
 
   const showToast = useCallback((message: string, type: ToastType = 'info') => {
-    const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, message, type }]);
-
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((toast) => toast.id !== id));
-    }, 4000);
+    switch (type) {
+      case 'success':
+        toast.success(message);
+        break;
+      case 'error':
+        toast.error(message);
+        break;
+      case 'warning':
+        toast.warning(message);
+        break;
+      case 'info':
+      default:
+        toast.info(message);
+        break;
+    }
   }, []);
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  };
-
-  const icons = {
-    success: '✅',
-    error: '❌',
-    warning: '⚠️',
-    info: 'ℹ️',
-  };
 
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div id="toastContainer" className="toast-container" style={{ zIndex: 'var(--z-toast)' }}>
-        {toasts.map((toast) => (
-          <div key={toast.id} className={`toast toast-${toast.type}`} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '1.25rem' }}>{icons[toast.type]}</span>
-            <span style={{ flex: 1, fontSize: '0.9375rem' }}>{toast.message}</span>
-            <button
-              onClick={() => removeToast(toast.id)}
-              style={{
-                fontSize: '1.1rem',
-                color: 'var(--gray-400)',
-                cursor: 'pointer',
-                background: 'none',
-                border: 'none',
-                padding: '0 4px',
-              }}
-            >
-              ✕
-            </button>
-          </div>
-        ))}
-      </div>
+      <Toaster 
+        theme={darkMode ? 'dark' : 'light'}
+        richColors
+        closeButton
+        position="top-right"
+        toastOptions={{
+          style: {
+            fontFamily: "var(--font-display, 'Plus Jakarta Sans', sans-serif)",
+            borderRadius: "var(--radius-lg, 8px)"
+          }
+        }}
+      />
     </ToastContext.Provider>
   );
 };

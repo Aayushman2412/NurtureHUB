@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
 import OTPInput from '../components/auth/OTPInput';
+import { Eye, EyeOff } from 'lucide-react';
 
 const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -80,7 +81,7 @@ const ForgotPasswordPage: React.FC = () => {
             <input
               id="email-input"
               type="email"
-              className="form-control"
+              className="auth-input-field"
               placeholder="e.g. name@department.gov"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -91,9 +92,9 @@ const ForgotPasswordPage: React.FC = () => {
 
           <button
             type="submit"
-            className="btn btn-primary"
+            className="auth-primary-btn"
             disabled={loading}
-            style={{ width: '100%', padding: '12px', fontWeight: 600, fontSize: '0.9375rem', marginTop: '8px' }}
+            style={{ width: '100%', marginTop: '8px' }}
           >
             {loading ? 'Sending Code...' : 'Send Verification Code'}
           </button>
@@ -121,7 +122,7 @@ const ForgotPasswordPage: React.FC = () => {
               <input
                 id="newpassword-input"
                 type={showPwd ? 'text' : 'password'}
-                className="form-control"
+                className="auth-input-field"
                 placeholder="Min. 6 characters"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -140,30 +141,32 @@ const ForgotPasswordPage: React.FC = () => {
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  fontSize: '1.1rem',
                   color: 'var(--gray-500)',
-                  padding: '4px'
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
               >
-                {showPwd ? '🙈' : '👁'}
+                {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
 
           <button
             type="submit"
-            className="btn btn-primary"
+            className="auth-primary-btn"
             disabled={loading || code.length < 6}
-            style={{ width: '100%', padding: '12px', fontWeight: 600, fontSize: '0.9375rem', marginTop: '8px' }}
+            style={{ width: '100%', marginTop: '8px' }}
           >
             {loading ? 'Resetting...' : 'Reset Password'}
           </button>
 
           <button
             type="button"
-            className="btn btn-outline"
+            className="auth-outline-btn"
             onClick={() => setSubmitted(false)}
-            style={{ width: '100%', padding: '12px', cursor: 'pointer' }}
+            style={{ width: '100%' }}
           >
             Back
           </button>

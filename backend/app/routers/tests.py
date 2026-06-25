@@ -161,6 +161,7 @@ def start_test_attempt(id: int, current_user: User = Depends(get_current_user), 
     return {
         "attempt_id": new_attempt.id,
         "duration_minutes": test.duration_minutes,
+        "started_at": new_attempt.started_at.isoformat(),
         "questions": questions_out
     }
 

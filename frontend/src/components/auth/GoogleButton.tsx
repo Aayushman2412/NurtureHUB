@@ -75,23 +75,8 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({ onSuccessRedirect = '/dashb
     <button
       type="button"
       onClick={handleGoogleClick}
-      className="btn btn-outline"
-      style={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '12px',
-        padding: '12px',
-        borderColor: 'var(--gray-300)',
-        color: 'var(--text-primary)',
-        fontWeight: 600,
-        backgroundColor: 'var(--bg-secondary)',
-        cursor: 'pointer',
-        fontSize: '0.9375rem',
-        borderRadius: 'var(--radius-lg)',
-        boxShadow: 'var(--shadow-xs)'
-      }}
+      className="auth-outline-btn"
+      style={{ padding: '16px 24px' }}
     >
       {/* SVG Google Logo */}
       <svg width="18" height="18" viewBox="0 0 18 18">

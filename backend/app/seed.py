@@ -1,8 +1,64 @@
 from sqlalchemy.orm import Session
-from app.models import Stage, Tutorial, Test, Question, QuestionOption, Achievement
+from app.models import Stage, Tutorial, Test, Question, QuestionOption, Achievement, State, District, Block, Village, Facility, EducationalQualification, ExperienceRange
 
 def seed_database(db: Session):
-    # Check if database is already seeded
+    # Seed metadata tables if they are empty
+    if db.query(State).count() == 0:
+        print("Seeding locations and metadata...")
+        # 1. States
+        up = State(name="Uttar Pradesh", is_active=True)
+        bihar = State(name="Bihar", is_active=True)
+        db.add_all([up, bihar])
+        db.commit()
+
+        # 2. Districts
+        gkp = District(state_id=up.id, name="Gorakhpur")
+        lko = District(state_id=up.id, name="Lucknow")
+        pat = District(state_id=bihar.id, name="Patna")
+        db.add_all([gkp, lko, pat])
+        db.commit()
+
+        # 3. Blocks
+        bhathat = Block(district_id=gkp.id, name="Bhathat")
+        pipraich = Block(district_id=gkp.id, name="Pipraich")
+        malihabad = Block(district_id=lko.id, name="Malihabad")
+        patnasad = Block(district_id=pat.id, name="Patna Sadar")
+        db.add_all([bhathat, pipraich, malihabad, patnasad])
+        db.commit()
+
+        # 4. Villages
+        kalyanpur = Village(block_id=bhathat.id, name="Kalyanpur")
+        bhathat_khas = Village(block_id=bhathat.id, name="Bhathat Khas")
+        pipraich_v = Village(block_id=pipraich.id, name="Pipraich Village")
+        db.add_all([kalyanpur, bhathat_khas, pipraich_v])
+        db.commit()
+
+        # 5. Facilities
+        awc1 = Facility(block_id=bhathat.id, name="Kalyanpur AWC", facility_type="Anganwadi Center (AWC)")
+        phc1 = Facility(block_id=bhathat.id, name="Bhathat PHC", facility_type="Primary Health Center (PHC)")
+        awc2 = Facility(block_id=pipraich.id, name="Pipraich AWC 1", facility_type="Anganwadi Center (AWC)")
+        db.add_all([awc1, phc1, awc2])
+        db.commit()
+
+        # 6. Educational Qualifications
+        q_hs = EducationalQualification(qualification_name="High School (10th)", has_semi_open_input=False)
+        q_ssc = EducationalQualification(qualification_name="Higher Secondary (12th)", has_semi_open_input=False)
+        q_grad = EducationalQualification(qualification_name="Graduate (BA/BSc/BCom/etc)", has_semi_open_input=False)
+        q_pg = EducationalQualification(qualification_name="Post Graduate (MA/MSc/MCom/etc)", has_semi_open_input=False)
+        q_other = EducationalQualification(qualification_name="Other (Please specify)", has_semi_open_input=True)
+        db.add_all([q_hs, q_ssc, q_grad, q_pg, q_other])
+        db.commit()
+
+        # 7. Experience Ranges
+        exp1 = ExperienceRange(label="Under 1 year", order_index=0)
+        exp2 = ExperienceRange(label="1 - 3 years", order_index=1)
+        exp3 = ExperienceRange(label="3 - 5 years", order_index=2)
+        exp4 = ExperienceRange(label="5 - 10 years", order_index=3)
+        exp5 = ExperienceRange(label="10+ years", order_index=4)
+        db.add_all([exp1, exp2, exp3, exp4, exp5])
+        db.commit()
+
+    # Check if database is already seeded for stages
     if db.query(Stage).count() > 0:
         print("Database already contains data, skipping seeding.")
         return

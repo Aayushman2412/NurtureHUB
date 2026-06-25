@@ -2,6 +2,70 @@ from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 
+# Metadata Schemas
+class StateOut(BaseModel):
+    id: int
+    name: str
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+
+class DistrictOut(BaseModel):
+    id: int
+    state_id: int
+    name: str
+
+    class Config:
+        from_attributes = True
+
+
+class BlockOut(BaseModel):
+    id: int
+    district_id: int
+    name: str
+
+    class Config:
+        from_attributes = True
+
+
+class VillageOut(BaseModel):
+    id: int
+    block_id: int
+    name: str
+
+    class Config:
+        from_attributes = True
+
+
+class FacilityOut(BaseModel):
+    id: int
+    block_id: int
+    name: str
+    facility_type: str
+
+    class Config:
+        from_attributes = True
+
+
+class EducationalQualificationOut(BaseModel):
+    id: int
+    qualification_name: str
+    has_semi_open_input: bool
+
+    class Config:
+        from_attributes = True
+
+
+class ExperienceRangeOut(BaseModel):
+    id: int
+    label: str
+    order_index: int
+
+    class Config:
+        from_attributes = True
+
 # Auth Schemas
 class UserRegister(BaseModel):
     email: EmailStr
@@ -33,8 +97,17 @@ class UserProfileUpdate(BaseModel):
     full_name: Optional[str] = None
     age: Optional[int] = None
     date_of_birth: Optional[date] = None
-    sex: Optional[str] = None
+    gender: Optional[str] = None
     phone: Optional[str] = None
+    alternate_phone: Optional[str] = None
+    state_id: Optional[int] = None
+    district_id: Optional[int] = None
+    block_id: Optional[int] = None
+    village_id: Optional[int] = None
+    facility_id: Optional[int] = None
+    qualification_id: Optional[int] = None
+    experience_range_id: Optional[int] = None
+    qualification_other_detail: Optional[str] = None
     department: Optional[str] = None
     role: Optional[str] = None
     work_center_type: Optional[str] = None
@@ -48,8 +121,17 @@ class UserOut(BaseModel):
     full_name: Optional[str] = None
     age: Optional[int] = None
     date_of_birth: Optional[date] = None
-    sex: Optional[str] = None
+    gender: Optional[str] = None
     phone: Optional[str] = None
+    alternate_phone: Optional[str] = None
+    state_id: Optional[int] = None
+    district_id: Optional[int] = None
+    block_id: Optional[int] = None
+    village_id: Optional[int] = None
+    facility_id: Optional[int] = None
+    qualification_id: Optional[int] = None
+    experience_range_id: Optional[int] = None
+    qualification_other_detail: Optional[str] = None
     department: Optional[str] = None
     role: Optional[str] = None
     work_center_type: Optional[str] = None
@@ -58,6 +140,15 @@ class UserOut(BaseModel):
     avatar_initials: Optional[str] = None
     is_verified: bool
     created_at: datetime
+
+    # Nested relations (lazy loaded via ORM)
+    state: Optional[StateOut] = None
+    district_rel: Optional[DistrictOut] = None
+    block: Optional[BlockOut] = None
+    village: Optional[VillageOut] = None
+    facility: Optional[FacilityOut] = None
+    qualification: Optional[EducationalQualificationOut] = None
+    experience_range: Optional[ExperienceRangeOut] = None
 
     class Config:
         from_attributes = True

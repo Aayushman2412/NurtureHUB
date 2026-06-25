@@ -4,12 +4,14 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
 import GoogleButton from '../components/auth/GoogleButton';
+import { Eye, EyeOff, Mail, ArrowLeft } from 'lucide-react';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
 
   const { login } = useAuth();
   const { showToast } = useToast();
@@ -53,10 +55,52 @@ const LoginPage: React.FC = () => {
     }
   };
 
+  if (!showEmailForm) {
+    return (
+      <AuthLayout 
+        title="Welcome" 
+        subtitle="Please choose a method to access your training dashboard."
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+          {/* Sign in with Email Option */}
+          <button 
+            type="button" 
+            onClick={() => setShowEmailForm(true)}
+            className="auth-primary-btn"
+          >
+            <Mail size={18} />
+            Sign in with Email
+          </button>
+
+          {/* Divider */}
+          <div className="auth-divider">
+            <div className="auth-divider-line" />
+            <span className="auth-divider-text">or continue with</span>
+            <div className="auth-divider-line" />
+          </div>
+
+          {/* Google Sign In Button */}
+          <GoogleButton />
+
+          {/* Create Account Link */}
+          <p style={{ textAlign: 'center', fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '24px' }}>
+            Don't have an account?{' '}
+            <Link 
+              to="/signup" 
+              style={{ color: 'var(--primary-600)', fontWeight: 600, textDecoration: 'none' }}
+            >
+              Create account
+            </Link>
+          </p>
+        </div>
+      </AuthLayout>
+    );
+  }
+
   return (
     <AuthLayout 
       title="Sign In" 
-      subtitle="Access your customized training path and assessment reports."
+      subtitle="Enter your email and password to access your training dashboard."
     >
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {/* Email */}
@@ -65,7 +109,7 @@ const LoginPage: React.FC = () => {
           <input
             id="email-input"
             type="email"
-            className="form-control"
+            className="auth-input-field"
             placeholder="e.g. name@department.gov"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -89,7 +133,7 @@ const LoginPage: React.FC = () => {
             <input
               id="password-input"
               type={showPwd ? 'text' : 'password'}
-              className="form-control"
+              className="auth-input-field"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -108,12 +152,14 @@ const LoginPage: React.FC = () => {
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                fontSize: '1.1rem',
                 color: 'var(--gray-500)',
-                padding: '4px'
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
-              {showPwd ? '🙈' : '👁'}
+              {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
         </div>
@@ -121,35 +167,35 @@ const LoginPage: React.FC = () => {
         {/* Submit */}
         <button 
           type="submit" 
-          className="btn btn-primary" 
+          className="auth-primary-btn" 
           disabled={loading}
-          style={{ width: '100%', padding: '12px', fontWeight: 600, fontSize: '0.9375rem', marginTop: '8px' }}
+          style={{ width: '100%', marginTop: '8px' }}
         >
           {loading ? 'Signing in...' : 'Sign In'}
         </button>
 
-        {/* Divider */}
-        <div style={{ display: 'flex', alignItems: 'center', margin: '12px 0' }}>
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }} />
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', padding: '0 16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Or continue with
-          </span>
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }} />
-        </div>
-
-        {/* Google OAuth Button */}
-        <GoogleButton />
-
-        {/* Link to Signup */}
-        <p style={{ textAlign: 'center', fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '16px' }}>
-          Don't have an account?{' '}
-          <Link 
-            to="/signup" 
-            style={{ color: 'var(--primary-600)', fontWeight: 600, textDecoration: 'none' }}
-          >
-            Create account
-          </Link>
-        </p>
+        {/* Back Link */}
+        <button
+          type="button"
+          onClick={() => setShowEmailForm(false)}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            fontSize: '0.875rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            marginTop: '16px',
+            alignSelf: 'center',
+            fontWeight: 500
+          }}
+        >
+          <ArrowLeft size={16} />
+          Back to sign-in options
+        </button>
       </form>
     </AuthLayout>
   );

@@ -21,6 +21,7 @@ interface Question {
 interface AttemptData {
   attempt_id: number;
   duration_minutes: number;
+  started_at?: string;
   questions: Question[];
 }
 
@@ -30,6 +31,14 @@ interface AnswerState {
     is_marked_for_review: boolean;
   };
 }
+
+/** Calculate remaining seconds from a start timestamp and total duration. */
+const calcRemaining = (startIso: string, durationMinutes: number): number => {
+  const startMs = new Date(startIso).getTime();
+  const nowMs = Date.now();
+  const elapsed = Math.floor((nowMs - startMs) / 1000);
+  return Math.max(0, durationMinutes * 60 - elapsed);
+};
 
 const ActiveTestPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -50,13 +59,56 @@ const ActiveTestPage: React.FC = () => {
   const { attemptData, testTitle } = stateData;
   const { attempt_id, duration_minutes, questions } = attemptData;
 
+  // --- Persist start time to localStorage so timer survives refresh ---
+  const storageKey = `nurturehub_attempt_${attempt_id}`;
+
+  const getPersistedStartTime = (): string => {
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed.startedAt) return parsed.startedAt;
+      } catch { /* ignore */ }
+    }
+    // Use server-provided started_at, or fallback to now
+    const startedAt = attemptData.started_at || new Date().toISOString();
+    // Persist for future refreshes
+    const existing = stored ? JSON.parse(stored) : {};
+    localStorage.setItem(storageKey, JSON.stringify({ ...existing, startedAt }));
+    return startedAt;
+  };
+
+  const startedAt = getPersistedStartTime();
+  const initialRemaining = calcRemaining(startedAt, duration_minutes);
+
+  // --- Restore persisted answers ---
+  const getPersistedAnswers = (): AnswerState => {
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.answers) return parsed.answers;
+      }
+    } catch { /* ignore */ }
+    return {};
+  };
+
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [answers, setAnswers] = useState<AnswerState>({});
-  const [timeRemaining, setTimeRemaining] = useState(duration_minutes * 60);
+  const [answers, setAnswers] = useState<AnswerState>(getPersistedAnswers);
+  const [timeRemaining, setTimeRemaining] = useState(initialRemaining);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const timerRef = useRef<any>(null);
+
+  // Persist answers to localStorage whenever they change
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(storageKey);
+      const existing = stored ? JSON.parse(stored) : {};
+      localStorage.setItem(storageKey, JSON.stringify({ ...existing, answers }));
+    } catch { /* ignore */ }
+  }, [answers]);
 
   // Keyboard Shortcuts navigation
   useEffect(() => {
@@ -71,17 +123,20 @@ const ActiveTestPage: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentIdx, questions.length]);
 
-  // Countdown timer setup
+  // Countdown timer — recalculates from start time each tick for accuracy
   useEffect(() => {
+    if (initialRemaining <= 0) {
+      handleAutoSubmit();
+      return;
+    }
+
     timerRef.current = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current!);
-          handleAutoSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
+      const remaining = calcRemaining(startedAt, duration_minutes);
+      setTimeRemaining(remaining);
+      if (remaining <= 0) {
+        clearInterval(timerRef.current!);
+        handleAutoSubmit();
+      }
     }, 1000);
 
     return () => {
@@ -179,44 +234,22 @@ const ActiveTestPage: React.FC = () => {
   const unansweredCount = totalQuestions - answeredCount;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '80vh', gap: '20px' }}>
+    <div className="active-test-wrapper">
       
       {/* Top Header bar with title, timer and submit */}
-      <div 
-        style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          backgroundColor: 'var(--bg-secondary)', 
-          border: '1px solid var(--border-color)', 
-          borderRadius: 'var(--radius-lg)', 
-          padding: '16px 24px',
-          flexWrap: 'wrap',
-          gap: '16px'
-        }}
-      >
+      <div className="active-test-header">
         <div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--primary-500)', fontWeight: 700, textTransform: 'uppercase' }}>Active Assessment</span>
-          <h3 className="font-display" style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+          <span className="active-test-badge">Active Assessment</span>
+          <h3 className="font-display active-test-title">
             {testTitle}
           </h3>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div className="active-test-header-actions">
           {/* Timer block */}
           <div 
             id="testTimer" 
             className={`test-timer ${getTimerClass()}`}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px', 
-              padding: '8px 16px', 
-              borderRadius: 'var(--radius-md)', 
-              backgroundColor: 'var(--bg-primary)',
-              border: '1px solid var(--border-color)',
-              fontWeight: 700
-            }}
           >
             <Clock size={16} />
             <span id="timerDisplay" style={{ fontFamily: 'monospace', fontSize: '1.125rem' }}>{formatTime(timeRemaining)}</span>
@@ -232,97 +265,47 @@ const ActiveTestPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Question counter (replaces progress bar) */}
+      <div className="active-test-counter">
+        <span>Question {currentIdx + 1} of {totalQuestions}</span>
+      </div>
+
       {/* Main split work area */}
-      <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '24px', flex: 1, minHeight: 0 }} className="active-test-grid">
+      <div className="active-test-grid">
         
         {/* Left pane: Active Question Card */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minHeight: 0 }}>
-          {/* Progress fill bar */}
-          <div 
-            style={{ 
-              backgroundColor: 'var(--bg-secondary)', 
-              padding: '12px 20px', 
-              borderRadius: 'var(--radius-lg)', 
-              border: '1px solid var(--border-color)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-              <span>Question {currentIdx + 1} of {totalQuestions}</span>
-              <span>{Math.round(((currentIdx + 1) / totalQuestions) * 100)}% progress</span>
-            </div>
-            <div style={{ height: '6px', backgroundColor: 'var(--gray-100)', borderRadius: '3px', overflow: 'hidden' }}>
-              <div 
-                style={{ 
-                  width: `${((currentIdx + 1) / totalQuestions) * 100}%`, 
-                  height: '100%', 
-                  backgroundColor: 'var(--primary-500)',
-                  transition: 'width var(--transition-fast)' 
-                }} 
-              />
-            </div>
-          </div>
+        <div className="active-test-question-pane">
 
           {/* Question and choices */}
-          <div className="card" style={{ padding: '32px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div className="card active-test-question-card">
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <span className="question-number" style={{ fontWeight: 800, color: 'var(--primary-600)', fontSize: '1.125rem' }}>
+              <div className="active-test-question-header">
+                <span className="active-test-question-number">
                   Question {currentIdx + 1}
                 </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, backgroundColor: 'var(--bg-primary)', padding: '4px 8px', borderRadius: '4px' }}>
+                <span className="active-test-marks-badge">
                   Marks: {currentQuestion.marks}
                 </span>
               </div>
 
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '24px', lineHeight: 1.4 }}>
+              <h3 className="active-test-question-text">
                 {currentQuestion.text}
               </h3>
 
               {/* Choices option list */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="active-test-options">
                 {currentQuestion.options.map((opt) => {
                   const isSelected = answers[currentQuestion.id]?.selected_option_id === opt.id;
                   return (
                     <button
                       key={opt.id}
                       onClick={() => handleSelectOption(currentQuestion.id, opt.id)}
-                      className={`option-item ${isSelected ? 'selected' : ''}`}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '16px',
-                        padding: '16px 20px',
-                        borderRadius: 'var(--radius-lg)',
-                        border: `1px solid ${isSelected ? 'var(--primary-400)' : 'var(--border-color)'}`,
-                        backgroundColor: isSelected ? 'var(--primary-50)' : 'var(--bg-secondary)',
-                        color: isSelected ? 'var(--primary-900)' : 'var(--text-primary)',
-                        width: '100%',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        transition: 'all var(--transition-fast)'
-                      }}
+                      className={`active-test-option ${isSelected ? 'selected' : ''}`}
                     >
-                      <div 
-                        style={{ 
-                          width: '28px', 
-                          height: '28px', 
-                          borderRadius: '50%', 
-                          border: `2px solid ${isSelected ? 'var(--primary-500)' : 'var(--gray-300)'}`,
-                          backgroundColor: isSelected ? 'var(--primary-500)' : 'transparent',
-                          color: isSelected ? 'white' : 'var(--text-secondary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 700,
-                          fontSize: '0.875rem'
-                        }}
-                      >
+                      <div className={`active-test-option-label ${isSelected ? 'selected' : ''}`}>
                         {opt.label}
                       </div>
-                      <span style={{ fontSize: '0.9375rem', fontWeight: 500 }}>{opt.text}</span>
+                      <span className="active-test-option-text">{opt.text}</span>
                     </button>
                   );
                 })}
@@ -330,18 +313,9 @@ const ActiveTestPage: React.FC = () => {
             </div>
 
             {/* Bottom Actions for current question */}
-            <div 
-              style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center', 
-                marginTop: '32px',
-                borderTop: '1px solid var(--border-color-light)',
-                paddingTop: '20px'
-              }}
-            >
-              <div style={{ display: 'flex', gap: '16px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+            <div className="active-test-actions">
+              <div className="active-test-actions-left">
+                <label className="active-test-review-label">
                   <input
                     type="checkbox"
                     checked={!!answers[currentQuestion.id]?.is_marked_for_review}
@@ -356,14 +330,14 @@ const ActiveTestPage: React.FC = () => {
                 {answers[currentQuestion.id]?.selected_option_id !== null && (
                   <button
                     onClick={() => handleClearAnswer(currentQuestion.id)}
-                    style={{ background: 'none', border: 'none', color: 'var(--error-500)', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer' }}
+                    className="active-test-clear-btn"
                   >
                     Clear Selection
                   </button>
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div className="active-test-nav-btns">
                 <button
                   className="btn btn-outline"
                   disabled={currentIdx === 0}
@@ -387,72 +361,29 @@ const ActiveTestPage: React.FC = () => {
         </div>
 
         {/* Right pane: Question Map Grid Navigation */}
-        <div 
-          className="card" 
-          style={{ 
-            padding: '20px', 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: '20px',
-            minHeight: 0,
-            overflowY: 'auto'
-          }}
-        >
-          <h4 style={{ fontSize: '0.875rem', fontWeight: 700, margin: 0, borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', color: 'var(--text-primary)' }}>
+        <div className="card active-test-map-panel">
+          <h4 className="active-test-map-title">
             Questions Map
           </h4>
 
           {/* Quick numbers tracker grid */}
-          <div 
-            style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(4, 1fr)', 
-              gap: '10px' 
-            }}
-          >
+          <div className="active-test-map-grid">
             {questions.map((q, idx) => {
               const ansState = answers[q.id];
               const isCurrent = idx === currentIdx;
               const isAnswered = ansState?.selected_option_id !== null && ansState?.selected_option_id !== undefined;
               const isMarked = ansState?.is_marked_for_review;
 
-              let btnBg = 'transparent';
-              let btnBorder = '1px solid var(--border-color)';
-              let btnColor = 'var(--text-secondary)';
-
-              if (isCurrent) {
-                btnBorder = '2px solid var(--primary-500)';
-                btnBg = 'var(--primary-50)';
-                btnColor = 'var(--primary-800)';
-              } else if (isMarked) {
-                btnBg = 'var(--accent-100)';
-                btnBorder = '1px solid var(--accent-500)';
-                btnColor = 'var(--accent-700)';
-              } else if (isAnswered) {
-                btnBg = 'var(--primary-500)';
-                btnBorder = '1px solid var(--primary-600)';
-                btnColor = 'white';
-              }
+              let statusClass = '';
+              if (isCurrent) statusClass = 'current';
+              else if (isMarked) statusClass = 'marked';
+              else if (isAnswered) statusClass = 'answered';
 
               return (
                 <button
                   key={q.id}
                   onClick={() => setCurrentIdx(idx)}
-                  className="q-num"
-                  style={{
-                    height: '38px',
-                    borderRadius: 'var(--radius-md)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 700,
-                    fontSize: '0.875rem',
-                    cursor: 'pointer',
-                    background: btnBg,
-                    border: btnBorder,
-                    color: btnColor,
-                    transition: 'all var(--transition-fast)'
-                  }}
+                  className={`active-test-map-btn ${statusClass}`}
                 >
                   {idx + 1}
                 </button>
@@ -461,21 +392,21 @@ const ActiveTestPage: React.FC = () => {
           </div>
 
           {/* Color legend guides */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border-color)', paddingTop: '16px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: 'var(--primary-500)' }} />
+          <div className="active-test-legend">
+            <div className="active-test-legend-item">
+              <div className="active-test-legend-dot answered" />
               <span>Answered</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: 'var(--accent-100)', border: '1px solid var(--accent-500)' }} />
+            <div className="active-test-legend-item">
+              <div className="active-test-legend-dot marked" />
               <span>Marked for Review</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '12px', height: '12px', borderRadius: '3px', border: '1px solid var(--border-color)' }} />
+            <div className="active-test-legend-item">
+              <div className="active-test-legend-dot unanswered" />
               <span>Unanswered</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '12px', height: '12px', borderRadius: '3px', border: '2px solid var(--primary-500)', backgroundColor: 'var(--primary-50)' }} />
+            <div className="active-test-legend-item">
+              <div className="active-test-legend-dot current-q" />
               <span>Current Question</span>
             </div>
           </div>
@@ -486,7 +417,7 @@ const ActiveTestPage: React.FC = () => {
       {/* Confirmation Modal */}
       {showConfirm && (
         <div 
-          className="modal active" 
+          className="modal-backdrop active" 
           style={{ 
             position: 'fixed', 
             inset: 0, 
@@ -495,10 +426,11 @@ const ActiveTestPage: React.FC = () => {
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
-            zIndex: 'var(--z-modal)'
+            zIndex: 'var(--z-modal-backdrop)',
+            padding: '16px'
           }}
         >
-          <div className="card" style={{ maxWidth: '440px', width: '100%', padding: '30px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="modal active-test-confirm-modal">
             <div style={{ display: 'flex', gap: '12px', color: 'var(--primary-600)' }}>
               <AlertCircle size={24} style={{ flexShrink: 0 }} />
               <div>
@@ -512,7 +444,7 @@ const ActiveTestPage: React.FC = () => {
             </div>
 
             {/* Statistics check summary */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', backgroundColor: 'var(--bg-primary)', padding: '16px', borderRadius: 'var(--radius-md)', fontSize: '0.8125rem' }}>
+            <div className="active-test-confirm-stats">
               <div>Total Questions:</div>
               <div style={{ fontWeight: 700, textAlign: 'right' }}>{totalQuestions}</div>
               <div>Answered:</div>
@@ -523,7 +455,7 @@ const ActiveTestPage: React.FC = () => {
               <div style={{ fontWeight: 700, textAlign: 'right', color: unansweredCount > 0 ? 'var(--error-500)' : 'var(--text-muted)' }}>{unansweredCount}</div>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
+            <div className="active-test-confirm-actions">
               <button
                 className="btn btn-outline"
                 onClick={() => setShowConfirm(false)}

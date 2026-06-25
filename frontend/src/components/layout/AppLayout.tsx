@@ -35,7 +35,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       />
 
       {/* Main Work Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div className="main-content" style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <MainHeader
           title={getHeaderTitle()}
           onToggleSidebar={() => setSidebarOpen(prev => !prev)}
@@ -43,7 +43,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           unreadNotifsCount={unreadCount}
         />
 
-        <main className="main-content" style={{ flex: 1, padding: 'var(--space-6)', overflowY: 'auto' }}>
+        <main style={{ flex: 1, padding: 'var(--space-6)', overflowY: 'auto' }}>
           {children}
         </main>
       </div>

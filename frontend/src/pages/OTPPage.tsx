@@ -95,9 +95,9 @@ const OTPPage: React.FC = () => {
         </div>
 
         <button
-          className="btn btn-outline"
+          className="auth-outline-btn"
           onClick={() => navigate('/login')}
-          style={{ width: '100%', padding: '12px', marginTop: '16px', cursor: 'pointer' }}
+          style={{ width: '100%', marginTop: '16px' }}
         >
           Back to Login
         </button>

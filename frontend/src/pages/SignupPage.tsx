@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
+import { Eye, EyeOff } from 'lucide-react';
 import GoogleButton from '../components/auth/GoogleButton';
 
 const SignupPage: React.FC = () => {
@@ -55,7 +56,7 @@ const SignupPage: React.FC = () => {
           <input
             id="fullname-input"
             type="text"
-            className="form-control"
+            className="auth-input-field"
             placeholder="e.g. Priya Mishra"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
@@ -70,7 +71,7 @@ const SignupPage: React.FC = () => {
           <input
             id="email-input"
             type="email"
-            className="form-control"
+            className="auth-input-field"
             placeholder="e.g. priya.mishra@department.gov"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -86,7 +87,7 @@ const SignupPage: React.FC = () => {
             <input
               id="password-input"
               type={showPwd ? 'text' : 'password'}
-              className="form-control"
+              className="auth-input-field"
               placeholder="Min. 6 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -94,33 +95,35 @@ const SignupPage: React.FC = () => {
               disabled={loading}
               style={{ paddingRight: '48px' }}
             />
-            <button
-              type="button"
-              onClick={() => setShowPwd(!showPwd)}
-              style={{
-                position: 'absolute',
-                right: '12px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '1.1rem',
-                color: 'var(--gray-500)',
-                padding: '4px'
-              }}
-            >
-              {showPwd ? '🙈' : '👁'}
-            </button>
+             <button
+               type="button"
+               onClick={() => setShowPwd(!showPwd)}
+               style={{
+                 position: 'absolute',
+                 right: '12px',
+                 top: '50%',
+                 transform: 'translateY(-50%)',
+                 background: 'none',
+                 border: 'none',
+                 cursor: 'pointer',
+                 color: 'var(--gray-500)',
+                 padding: '4px',
+                 display: 'flex',
+                 alignItems: 'center',
+                 justifyContent: 'center'
+               }}
+             >
+               {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
+             </button>
           </div>
         </div>
 
         {/* Submit */}
         <button
           type="submit"
-          className="btn btn-primary"
+          className="auth-primary-btn"
           disabled={loading}
-          style={{ width: '100%', padding: '12px', fontWeight: 600, fontSize: '0.9375rem', marginTop: '8px' }}
+          style={{ width: '100%', marginTop: '8px' }}
         >
           {loading ? 'Creating account...' : 'Create Account'}
         </button>

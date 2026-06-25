@@ -12,8 +12,17 @@ class User(Base):
     full_name = Column(String, nullable=True)
     age = Column(Integer, nullable=True)
     date_of_birth = Column(Date, nullable=True)
-    sex = Column(String, nullable=True)
+    gender = Column(String, nullable=True)
     phone = Column(String, nullable=True)
+    alternate_phone = Column(String, nullable=True)
+    state_id = Column(Integer, ForeignKey("states.id"), nullable=True)
+    district_id = Column(Integer, ForeignKey("districts.id"), nullable=True)
+    block_id = Column(Integer, ForeignKey("blocks.id"), nullable=True)
+    village_id = Column(Integer, ForeignKey("villages.id"), nullable=True)
+    facility_id = Column(Integer, ForeignKey("facilities.id"), nullable=True)
+    qualification_id = Column(Integer, ForeignKey("educational_qualifications.id"), nullable=True)
+    experience_range_id = Column(Integer, ForeignKey("experience_ranges.id"), nullable=True)
+    qualification_other_detail = Column(String, nullable=True)
     department = Column(String, nullable=True)
     role = Column(String, nullable=True)
     work_center_type = Column(String, nullable=True)
@@ -28,6 +37,13 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
+    state = relationship("State")
+    district_rel = relationship("District")
+    block = relationship("Block")
+    village = relationship("Village")
+    facility = relationship("Facility")
+    qualification = relationship("EducationalQualification")
+    experience_range = relationship("ExperienceRange")
     tutorial_progress = relationship("UserTutorialProgress", back_populates="user", cascade="all, delete-orphan")
     test_attempts = relationship("TestAttempt", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
@@ -195,3 +211,78 @@ class UserAchievement(Base):
     # Relationships
     user = relationship("User", back_populates="achievements")
     achievement = relationship("Achievement")
+
+
+class State(Base):
+    __tablename__ = "states"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+
+    # Relationships
+    districts = relationship("District", back_populates="state", cascade="all, delete-orphan")
+
+
+class District(Base):
+    __tablename__ = "districts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    state_id = Column(Integer, ForeignKey("states.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String, nullable=False)
+
+    # Relationships
+    state = relationship("State", back_populates="districts")
+    blocks = relationship("Block", back_populates="district", cascade="all, delete-orphan")
+
+
+class Block(Base):
+    __tablename__ = "blocks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    district_id = Column(Integer, ForeignKey("districts.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String, nullable=False)
+
+    # Relationships
+    district = relationship("District", back_populates="blocks")
+    villages = relationship("Village", back_populates="block", cascade="all, delete-orphan")
+    facilities = relationship("Facility", back_populates="block", cascade="all, delete-orphan")
+
+
+class Village(Base):
+    __tablename__ = "villages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    block_id = Column(Integer, ForeignKey("blocks.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String, nullable=False)
+
+    # Relationships
+    block = relationship("Block", back_populates="villages")
+
+
+class Facility(Base):
+    __tablename__ = "facilities"
+
+    id = Column(Integer, primary_key=True, index=True)
+    block_id = Column(Integer, ForeignKey("blocks.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String, nullable=False)
+    facility_type = Column(String, nullable=False)
+
+    # Relationships
+    block = relationship("Block", back_populates="facilities")
+
+
+class EducationalQualification(Base):
+    __tablename__ = "educational_qualifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    qualification_name = Column(String, nullable=False)
+    has_semi_open_input = Column(Boolean, default=False, nullable=False)
+
+
+class ExperienceRange(Base):
+    __tablename__ = "experience_ranges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    label = Column(String, nullable=False)
+    order_index = Column(Integer, default=0, nullable=False)

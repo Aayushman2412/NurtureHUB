@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Globe, ChevronDown, BookOpen, Award } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -10,11 +11,23 @@ interface AuthLayoutProps {
 
 const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) => {
   const { darkMode, toggleDarkMode } = useTheme();
+  const [selectedLang, setSelectedLang] = useState('English');
+  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+
+  const languages = [
+    { name: 'English', native: 'English' },
+    { name: 'Hindi', native: 'हिंदी' },
+    { name: 'Tamil', native: 'தமிழ்' },
+    { name: 'Telugu', native: 'తెలుగు' },
+    { name: 'Marathi', native: 'मराठी' },
+    { name: 'Bengali', native: 'বাংলা' },
+    { name: 'Kannada', native: 'ಕನ್ನಡ' }
+  ];
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-primary)' }}>
+    <div className="auth-layout-root">
       {/* Dark Mode toggle on absolute top-right */}
-      <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
+      <div className="auth-theme-toggle">
         <button
           onClick={toggleDarkMode}
           className="header-action-btn"
@@ -38,24 +51,47 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
       </div>
 
       {/* Split Auth Screen Layout */}
-      <div style={{ display: 'flex', width: '100%', flexWrap: 'wrap' }}>
+      <div className="auth-layout-inner">
         
-        {/* Left Side: Forms */}
-        <div 
-          style={{ 
-            flex: '1 1 50%', 
-            display: 'flex', 
-            flexDirection: 'column', 
-            justifyContent: 'center', 
-            padding: '40px max(24px, 5%)',
-            backgroundColor: 'var(--bg-secondary)',
-            minHeight: '100vh',
-            boxSizing: 'border-box'
-          }}
-        >
-          <div style={{ maxWidth: '440px', width: '100%', margin: '0 auto' }}>
+        {/* Left Side: Forms (scrollable) */}
+        <div className="auth-form-panel">
+          {/* Top Row: Language Selector */}
+          <div className="auth-top-row" style={{ display: 'flex', justifyContent: 'flex-start', width: '100%', marginBottom: '24px' }}>
+            <div style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setLangDropdownOpen(!langDropdownOpen)}
+                className="lang-selector-btn"
+              >
+                <Globe size={16} />
+                <span>{selectedLang}</span>
+                <ChevronDown size={14} style={{ transform: langDropdownOpen ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
+              </button>
+              {langDropdownOpen && (
+                <div className="lang-dropdown">
+                  {languages.map((lang) => (
+                    <button
+                      key={lang.name}
+                      type="button"
+                      onClick={() => {
+                        setSelectedLang(lang.name);
+                        setLangDropdownOpen(false);
+                      }}
+                      className="lang-dropdown-item"
+                    >
+                      <span>{lang.name}</span>
+                      <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>{lang.native}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Center Content: Welcome & Actions */}
+          <div className="auth-form-container" style={{ margin: 'auto 0' }}>
             {/* Header logo block */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '32px' }}>
+            <div className="auth-logo-block">
               <span style={{ fontSize: '2.25rem' }}>🌱</span>
               <div>
                 <span className="brand-name" style={{ fontSize: '1.5rem', display: 'block', fontWeight: 800, color: 'var(--text-primary)' }}>NurtureHUB</span>
@@ -63,94 +99,64 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
               </div>
             </div>
 
-            <h2 className="font-display" style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '8px' }}>
+            <h2 className="font-display auth-form-title">
               {title}
             </h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '0.9375rem' }}>
+            <p className="auth-form-subtitle">
               {subtitle}
             </p>
 
             {children}
           </div>
+
+          {/* Bottom Row: Footer-lite */}
+          <div className="auth-bottom-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: '24px', opacity: 0.6, fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+            <p>© 2026 NurtureHUB. All rights reserved.</p>
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <Link to="#" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }}>Privacy Policy</Link>
+              <Link to="#" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }}>Terms</Link>
+            </div>
+          </div>
         </div>
 
         {/* Right Side: Visual banner panels */}
-        <div 
-          style={{ 
-            flex: '1 1 50%', 
-            background: 'linear-gradient(135deg, var(--secondary-900) 0%, var(--primary-900) 100%)', 
-            color: 'white',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            padding: '60px max(40px, 8%)',
-            boxSizing: 'border-box',
-            minHeight: '100vh',
-            position: 'relative',
-            overflow: 'hidden'
-          }}
-          className="auth-visual-panel"
-        >
-          {/* Glassmorphic decorative grid bubbles */}
-          <div style={{
-            position: 'absolute',
-            width: '400px',
-            height: '400px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, var(--primary-500) 0%, transparent 70%)',
-            top: '-10%',
-            right: '-10%',
-            opacity: 0.15,
-            pointerEvents: 'none'
-          }} />
-          <div style={{
-            position: 'absolute',
-            width: '300px',
-            height: '300px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, var(--accent-500) 0%, transparent 70%)',
-            bottom: '10%',
-            left: '-10%',
-            opacity: 0.1,
-            pointerEvents: 'none'
-          }} />
+        <div className="auth-visual-panel">
+          {/* Decorative Background Elements */}
+          <div className="auth-visual-blob-1" />
+          <div className="auth-visual-blob-2" />
 
-          {/* Slogan */}
-          <div style={{ maxWidth: '480px' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--primary-300)', backgroundColor: 'rgba(15,173,160,0.15)', padding: '6px 12px', borderRadius: '4px', display: 'inline-block', marginBottom: '24px' }}>
-              Empowering Anganwadi & ICDS Teams
-            </span>
-            <h3 className="font-display" style={{ fontSize: '2.5rem', fontWeight: 800, lineHeight: 1.2, marginBottom: '24px', letterSpacing: '-0.02em' }}>
-              Nurturing Skills, Elevating Communities
-            </h3>
-            <p style={{ fontSize: '1.0625rem', color: 'var(--secondary-200)', lineHeight: 1.6 }}>
-              Access standardized training videos, complete knowledge-check assessments, unlock specialized badges, and monitor your personal growth journey.
-            </p>
-          </div>
-
-          {/* Review card */}
-          <div 
-            style={{ 
-              maxWidth: '480px', 
-              backgroundColor: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              backdropFilter: 'blur(16px)',
-              padding: '24px',
-              borderRadius: '12px',
-              boxShadow: 'var(--shadow-xl)',
-              marginTop: '40px'
-            }}
-          >
-            <p style={{ fontSize: '0.9375rem', color: '#E2E8F0', fontStyle: 'italic', marginBottom: '16px', lineHeight: 1.5 }}>
-              "The assessments on NurtureHUB have helped me build confidence in identifying SAM indicators. I can now counseling mothers with standard checklist references."
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div className="avatar avatar-sm font-display" style={{ backgroundColor: 'var(--primary-500)', color: 'white', fontWeight: 600 }}>
-                PM
+          <div style={{ position: 'relative', zIndex: 1, maxWidth: '480px', width: '100%', margin: '0 auto', textAlign: 'center' }}>
+            {/* Branding */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
+              <div className="auth-brand-logo-container">
+                <span style={{ fontSize: '3rem' }}>🌱</span>
               </div>
-              <div>
-                <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'white', margin: 0 }}>Priya Mishra</h4>
-                <span style={{ fontSize: '0.75rem', color: 'var(--primary-300)' }}>Anganwadi Supervisor • Gorakhpur</span>
+              <div style={{ textAlign: 'center' }}>
+                <h3 className="font-display auth-visual-heading" style={{ margin: 0 }}>
+                  Nurturing Skills, Elevating Communities
+                </h3>
+                <div className="auth-brand-title-divider" />
+              </div>
+            </div>
+
+            {/* Descriptive Content */}
+            <div style={{ marginBottom: '32px' }}>
+              <p className="auth-visual-description">
+                Access standardized training videos, complete knowledge-check assessments, unlock specialized badges, and monitor your personal growth journey.
+              </p>
+              
+              {/* Feature Bento Layout */}
+              <div className="auth-features-bento">
+                <div className="auth-bento-card">
+                  <BookOpen className="auth-bento-card-icon" size={24} />
+                  <h4 className="auth-bento-card-title">Training Modules</h4>
+                  <p className="auth-bento-card-desc">Interactive video tutorials designed specifically for ICDS & Anganwadi workflows.</p>
+                </div>
+                <div className="auth-bento-card">
+                  <Award className="auth-bento-card-icon" size={24} />
+                  <h4 className="auth-bento-card-title">Assessments & Badges</h4>
+                  <p className="auth-bento-card-desc">Structured knowledge checks to verify learning and earn official milestone badges.</p>
+                </div>
               </div>
             </div>
           </div>
