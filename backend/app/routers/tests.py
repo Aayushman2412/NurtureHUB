@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime
 from app.database import get_db
-from app.models import Test, Question, QuestionOption, TestAttempt, TestAnswer, Tutorial, UserTutorialProgress, Notification
+from app.models import Stage, Test, Question, QuestionOption, TestAttempt, TestAnswer, Tutorial, UserTutorialProgress, Notification
 from app.schemas import TestOut, StartAttemptResponse, TestSubmitRequest, TestSubmitResponse, QuestionOut, QuestionOptionOut
 from app.dependencies import get_current_user
 from app.models import User
@@ -12,7 +12,16 @@ router = APIRouter(prefix="/api/tests", tags=["tests"])
 
 @router.get("", response_model=List[TestOut])
 def get_tests(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    tests = db.query(Test).all()
+    # Filter tests by user's program district
+    if not current_user.program_district_id:
+        return []
+
+    # Get stage IDs belonging to user's district
+    district_stage_ids = {s.id for s in db.query(Stage).filter(
+        Stage.program_district_id == current_user.program_district_id
+    ).all()}
+
+    tests = db.query(Test).filter(Test.stage_id.in_(district_stage_ids)).all() if district_stage_ids else []
     
     # Get completed tutorial IDs for the current user
     completed_progress = db.query(UserTutorialProgress).filter(
@@ -35,8 +44,11 @@ def get_tests(current_user: User = Depends(get_current_user), db: Session = Depe
                 is_locked = True
                 
         # If the stage itself is locked (depends on previous stage's test pass), then the test is also locked
-        # Find if there is a previous stage test
-        prev_test = db.query(Test).join(Test.stage).filter(Test.stage_id < test.stage_id).order_by(Test.stage_id.desc()).first()
+        # Find if there is a previous stage test (within same district)
+        prev_test = db.query(Test).join(Test.stage).filter(
+            Test.stage_id < test.stage_id,
+            Stage.program_district_id == current_user.program_district_id
+        ).order_by(Test.stage_id.desc()).first()
         if prev_test:
             prev_passed = db.query(TestAttempt).filter(
                 TestAttempt.user_id == current_user.id,

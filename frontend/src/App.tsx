@@ -23,6 +23,14 @@ import ProfilePage from './pages/ProfilePage';
 
 // Layout
 import AppLayout from './components/layout/AppLayout';
+import AdminLayout from './components/layout/AdminLayout';
+
+// Admin Pages
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminFormBuilderPage from './pages/admin/AdminFormBuilderPage';
+import AdminTutorialsPage from './pages/admin/AdminTutorialsPage';
+import AdminTestsPage from './pages/admin/AdminTestsPage';
+import AdminDistrictsPage from './pages/admin/AdminDistrictsPage';
 
 // --- Route Guards ---
 
@@ -64,6 +72,13 @@ const CompleteRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   return <AppLayout>{children}</AppLayout>;
 };
 
+// Admin Route: Check localStorage for admin access
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const isAdmin = localStorage.getItem('nh_admin') === 'true';
+  if (!isAdmin) return <Navigate to="/login" replace />;
+  return <AdminLayout>{children}</AdminLayout>;
+};
+
 const AppRoutes: React.FC = () => {
   const { loading } = useAuth();
 
@@ -103,6 +118,13 @@ const AppRoutes: React.FC = () => {
       <Route path="/tests/:id/submitted" element={<CompleteRoute><TestSubmittedPage /></CompleteRoute>} />
       <Route path="/results/:attemptId" element={<CompleteRoute><ResultsPage /></CompleteRoute>} />
       <Route path="/profile" element={<CompleteRoute><ProfilePage /></CompleteRoute>} />
+
+      {/* Admin Panel Routes */}
+      <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
+      <Route path="/admin/districts" element={<AdminRoute><AdminDistrictsPage /></AdminRoute>} />
+      <Route path="/admin/form-builder" element={<AdminRoute><AdminFormBuilderPage /></AdminRoute>} />
+      <Route path="/admin/tutorials" element={<AdminRoute><AdminTutorialsPage /></AdminRoute>} />
+      <Route path="/admin/tests" element={<AdminRoute><AdminTestsPage /></AdminRoute>} />
 
       {/* Catch-all fallback */}
       <Route path="*" element={<Navigate to="/login" replace />} />

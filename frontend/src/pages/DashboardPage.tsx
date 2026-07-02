@@ -101,7 +101,7 @@ const DashboardPage: React.FC = () => {
       >
         <div>
           <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--primary-100)' }}>
-            Welcome back, Supervisor
+            {user?.program_district?.name ? `${user.program_district.name} District` : 'Welcome back, Supervisor'}
           </span>
           <h2 className="font-display" style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: '4px', marginBottom: '8px' }}>
             {user?.full_name || 'Healthcare Worker'} 🌱

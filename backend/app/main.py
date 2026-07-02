@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from app.database import Base, engine, SessionLocal
 from app.seed import seed_database
-from app.routers import auth, users, tutorials, tests, results, notifications, dashboard, metadata
+from app.routers import auth, users, tutorials, tests, results, notifications, dashboard, metadata, admin
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -50,6 +50,7 @@ app.include_router(results.router)
 app.include_router(notifications.router)
 app.include_router(dashboard.router)
 app.include_router(metadata.router)
+app.include_router(admin.router)
 
 @app.get("/")
 def read_root():

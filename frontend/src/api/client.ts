@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'http://localhost:8000';
 
 const client = axios.create({
   baseURL: API_BASE_URL,
@@ -31,11 +31,11 @@ client.interceptors.response.use(
       // Clear token and redirect to login if unauthorized
       localStorage.removeItem('nh_token');
       localStorage.removeItem('nh_user_email');
-      
+
       // Prevent redirecting loops
-      if (!window.location.pathname.includes('/login') && 
-          !window.location.pathname.includes('/signup') && 
-          window.location.pathname !== '/') {
+      if (!window.location.pathname.includes('/login') &&
+        !window.location.pathname.includes('/signup') &&
+        window.location.pathname !== '/') {
         window.location.href = '/login?expired=true';
       }
     }

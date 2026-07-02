@@ -12,7 +12,15 @@ router = APIRouter(prefix="/api", tags=["tutorials"])
 
 @router.get("/stages", response_model=List[StageOut])
 def get_stages(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    stages = db.query(Stage).order_index_by(Stage.order_index).all() if hasattr(db.query(Stage), 'order_index_by') else db.query(Stage).order_by(Stage.order_index).all()
+    # Filter stages by the user's program district
+    query = db.query(Stage)
+    if current_user.program_district_id:
+        query = query.filter(Stage.program_district_id == current_user.program_district_id)
+    else:
+        # Users without a district see no stages
+        return []
+
+    stages = query.order_by(Stage.order_index).all()
     
     # Get user completed tutorial IDs
     completed_progress = db.query(UserTutorialProgress).filter(
@@ -87,6 +95,7 @@ def get_stages(current_user: User = Depends(get_current_user), db: Session = Dep
         response_stages.append(
             StageOut(
                 id=stage.id,
+                program_district_id=stage.program_district_id,
                 title=stage.title,
                 description=stage.description,
                 order_index=stage.order_index,

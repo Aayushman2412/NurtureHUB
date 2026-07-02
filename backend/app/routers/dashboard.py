@@ -12,18 +12,46 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 @router.get("", response_model=DashboardData)
 def get_dashboard_data(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # 1. Calculate overall progress metrics
-    total_tutorials = db.query(Tutorial).count()
+    # Scope all queries to the user's program district
+    district_id = current_user.program_district_id
+
+    # Get stage IDs for this district
+    if district_id:
+        district_stage_ids = {s.id for s in db.query(Stage).filter(
+            Stage.program_district_id == district_id
+        ).all()}
+    else:
+        district_stage_ids = set()
+
+    # Get tutorial IDs scoped to district
+    if district_stage_ids:
+        district_tutorial_ids = {t.id for t in db.query(Tutorial).filter(
+            Tutorial.stage_id.in_(district_stage_ids)
+        ).all()}
+        district_test_ids = {t.id for t in db.query(Test).filter(
+            Test.stage_id.in_(district_stage_ids)
+        ).all()}
+    else:
+        district_tutorial_ids = set()
+        district_test_ids = set()
+
+    # 1. Calculate overall progress metrics (scoped to district)
+    total_tutorials = len(district_tutorial_ids)
     completed_tutorials = db.query(UserTutorialProgress).filter(
         UserTutorialProgress.user_id == current_user.id,
-        UserTutorialProgress.is_completed == True
-    ).count()
+        UserTutorialProgress.is_completed == True,
+        UserTutorialProgress.tutorial_id.in_(district_tutorial_ids) if district_tutorial_ids else False
+    ).count() if district_tutorial_ids else 0
     
-    total_tests = db.query(Test).count()
-    passed_tests = db.query(TestAttempt).filter(
-        TestAttempt.user_id == current_user.id,
-        TestAttempt.is_passed == True
-    ).distinct(TestAttempt.test_id).count()
+    total_tests = len(district_test_ids)
+    if district_test_ids:
+        passed_tests = db.query(TestAttempt).filter(
+            TestAttempt.user_id == current_user.id,
+            TestAttempt.is_passed == True,
+            TestAttempt.test_id.in_(district_test_ids)
+        ).distinct(TestAttempt.test_id).count()
+    else:
+        passed_tests = 0
     
     # Combined progress percentage: 60% weight to tutorials, 40% weight to tests passed
     if total_tutorials > 0 or total_tests > 0:
@@ -52,14 +80,21 @@ def get_dashboard_data(current_user: User = Depends(get_current_user), db: Sessi
         ) for a in achievements_db
     ]
     
-    # 3. Compile activities list
+    # 3. Compile activities list (scoped to district)
     activities = []
     
     # Fetch tutorial progress items for activity feed
-    tutorial_progress_list = db.query(UserTutorialProgress).filter(
+    tutorial_progress_query = db.query(UserTutorialProgress).filter(
         UserTutorialProgress.user_id == current_user.id,
         UserTutorialProgress.is_completed == True
-    ).order_by(UserTutorialProgress.completed_at.desc()).limit(5).all()
+    )
+    if district_tutorial_ids:
+        tutorial_progress_query = tutorial_progress_query.filter(
+            UserTutorialProgress.tutorial_id.in_(district_tutorial_ids)
+        )
+    tutorial_progress_list = tutorial_progress_query.order_by(
+        UserTutorialProgress.completed_at.desc()
+    ).limit(5).all()
     
     for tp in tutorial_progress_list:
         tutorial = db.query(Tutorial).filter(Tutorial.id == tp.tutorial_id).first()
@@ -75,10 +110,17 @@ def get_dashboard_data(current_user: User = Depends(get_current_user), db: Sessi
             )
             
     # Fetch test attempts for activity feed
-    test_attempts_list = db.query(TestAttempt).filter(
+    test_attempts_query = db.query(TestAttempt).filter(
         TestAttempt.user_id == current_user.id,
         TestAttempt.submitted_at.isnot(None)
-    ).order_by(TestAttempt.submitted_at.desc()).limit(5).all()
+    )
+    if district_test_ids:
+        test_attempts_query = test_attempts_query.filter(
+            TestAttempt.test_id.in_(district_test_ids)
+        )
+    test_attempts_list = test_attempts_query.order_by(
+        TestAttempt.submitted_at.desc()
+    ).limit(5).all()
     
     for att in test_attempts_list:
         test = db.query(Test).filter(Test.id == att.test_id).first()
@@ -98,7 +140,7 @@ def get_dashboard_data(current_user: User = Depends(get_current_user), db: Sessi
     activities.sort(key=lambda x: x.timestamp, reverse=True)
     activities = activities[:5] # Limit to 5 total recent activities
     
-    # 4. Get stages and tutorials using our existing endpoint logic
+    # 4. Get stages and tutorials using our existing endpoint logic (already district-filtered)
     stages_out = get_stages(current_user=current_user, db=db)
     
     return DashboardData(

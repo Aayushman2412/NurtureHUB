@@ -66,6 +66,20 @@ class ExperienceRangeOut(BaseModel):
     class Config:
         from_attributes = True
 
+
+class ProgramDistrictOut(BaseModel):
+    id: int
+    name: str
+    slug: str
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+
+class ProgramDistrictCreate(BaseModel):
+    name: str
+
 # Auth Schemas
 class UserRegister(BaseModel):
     email: EmailStr
@@ -139,6 +153,7 @@ class UserOut(BaseModel):
     district: Optional[str] = None
     avatar_initials: Optional[str] = None
     is_verified: bool
+    program_district_id: Optional[int] = None
     created_at: datetime
 
     # Nested relations (lazy loaded via ORM)
@@ -149,6 +164,7 @@ class UserOut(BaseModel):
     facility: Optional[FacilityOut] = None
     qualification: Optional[EducationalQualificationOut] = None
     experience_range: Optional[ExperienceRangeOut] = None
+    program_district: Optional[ProgramDistrictOut] = None
 
     class Config:
         from_attributes = True
@@ -178,6 +194,7 @@ class TutorialOut(BaseModel):
 
 class StageOut(BaseModel):
     id: int
+    program_district_id: Optional[int] = None
     title: str
     description: Optional[str] = None
     order_index: int

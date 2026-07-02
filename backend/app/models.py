@@ -3,6 +3,22 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
 
+
+class ProgramDistrict(Base):
+    """Represents a program district — each district gets its own content (stages, tutorials, tests, forms)."""
+    __tablename__ = "program_districts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+    slug = Column(String, unique=True, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    users = relationship("User", back_populates="program_district")
+    stages = relationship("Stage", back_populates="program_district", cascade="all, delete-orphan")
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -30,9 +46,11 @@ class User(Base):
     district = Column(String, nullable=True)
     avatar_initials = Column(String, nullable=True)
     is_verified = Column(Boolean, default=False, nullable=False)
+    is_admin = Column(Boolean, default=False, nullable=False)
     otp_code = Column(String, nullable=True)
     otp_expires_at = Column(DateTime, nullable=True)
     google_id = Column(String, unique=True, nullable=True)
+    program_district_id = Column(Integer, ForeignKey("program_districts.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -44,6 +62,7 @@ class User(Base):
     facility = relationship("Facility")
     qualification = relationship("EducationalQualification")
     experience_range = relationship("ExperienceRange")
+    program_district = relationship("ProgramDistrict", back_populates="users")
     tutorial_progress = relationship("UserTutorialProgress", back_populates="user", cascade="all, delete-orphan")
     test_attempts = relationship("TestAttempt", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
@@ -54,11 +73,13 @@ class Stage(Base):
     __tablename__ = "stages"
 
     id = Column(Integer, primary_key=True, index=True)
+    program_district_id = Column(Integer, ForeignKey("program_districts.id", ondelete="CASCADE"), nullable=True)
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     order_index = Column(Integer, nullable=False, default=0)
 
     # Relationships
+    program_district = relationship("ProgramDistrict", back_populates="stages")
     tutorials = relationship("Tutorial", back_populates="stage", cascade="all, delete-orphan")
     tests = relationship("Test", back_populates="stage", cascade="all, delete-orphan")
 

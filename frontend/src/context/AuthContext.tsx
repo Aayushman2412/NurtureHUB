@@ -32,6 +32,8 @@ export interface User {
   district: string | null;
   avatar_initials: string | null;
   is_verified: boolean;
+  program_district_id: number | null;
+  program_district: { id: number; name: string; slug: string; is_active: boolean } | null;
   created_at: string;
 }
 
