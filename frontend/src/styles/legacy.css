@@ -1604,16 +1604,7 @@ h4 { font-size: 1.125rem; }
 .results-table th { font-weight: 600; color: var(--gray-500); font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.04em; }
 .results-table tr:hover td { background: var(--gray-50); }
 
-/* ── Confetti Animation (for pass) ───────────────────────────── */
-@keyframes confettiFall {
-  0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
-}
-.confetti-piece {
-  position: fixed; top: 0; z-index: 1000;
-  width: 10px; height: 10px;
-  animation: confettiFall 3s linear forwards;
-}
+/* Confetti moved to base.css (uses the new --animate-confetti-fall keyframe). */
 
 /* ═══════════════════════════════════════════════════════════════
    ADMIN PANEL STYLES

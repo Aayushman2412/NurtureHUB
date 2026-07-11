@@ -41,3 +41,15 @@ h1, h2, h3, h4, h5, h6 {
 @media print {
   .print-hidden { display: none !important; }
 }
+
+/* Confetti pieces are created at runtime (TestSubmittedPage) so they need a
+   real class; color/size/position/delay are set inline per-piece. */
+.confetti-piece {
+  position: fixed;
+  top: -10vh;
+  z-index: var(--z-toast);
+  pointer-events: none;
+  animation-name: confetti-fall;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}

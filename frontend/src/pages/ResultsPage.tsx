@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getDetailedResult } from '../api/results';
 import { useToast } from '../context/ToastContext';
 import { CheckCircle, XCircle, Clock, Award, ChevronLeft, HelpCircle } from 'lucide-react';
+import { Badge, Button, Card, PageLoader } from '../components/ui';
+import { cn } from '../utils/cn';
 
 interface Option {
   id: number;
@@ -40,6 +42,20 @@ interface DetailedResult {
   answers: DetailedAnswer[];
 }
 
+const StatItem: React.FC<{ icon: React.ReactNode; label: string; value: React.ReactNode }> = ({
+  icon,
+  label,
+  value,
+}) => (
+  <div className="flex items-center gap-2.5">
+    <span className="text-primary">{icon}</span>
+    <div>
+      <span className="block text-xs text-ink-faint">{label}</span>
+      <strong className="text-[15px] text-ink">{value}</strong>
+    </div>
+  </div>
+);
+
 const ResultsPage: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
   const navigate = useNavigate();
@@ -53,7 +69,7 @@ const ResultsPage: React.FC = () => {
       try {
         const data = await getDetailedResult(Number(attemptId));
         setResult(data);
-      } catch (err) {
+      } catch {
         showToast('Failed to load performance report details', 'error');
         navigate('/tests');
       } finally {
@@ -63,206 +79,151 @@ const ResultsPage: React.FC = () => {
     fetchResult();
   }, [attemptId]);
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-        <div className="spinner">Loading performance scorecard...</div>
-      </div>
-    );
-  }
-
+  if (loading) return <PageLoader label="Loading performance scorecard…" />;
   if (!result) return null;
 
   const { attempt, test_title, passing_score_pct, correct_count, total_questions, answers } = result;
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-      {/* Back button */}
-      <div>
-        <button 
+    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+      <div className="print-hidden">
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => navigate('/tests')}
-          className="btn btn-outline"
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.875rem' }}
+          iconLeft={<ChevronLeft className="size-4" />}
         >
-          <ChevronLeft size={16} />
-          <span>Back to Assessments</span>
-        </button>
+          Back to Assessments
+        </Button>
       </div>
 
-      {/* Summary Performance Card */}
-      <div className="card" style={{ padding: '32px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+      {/* Summary */}
+      <Card className="p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--primary-500)', letterSpacing: '0.05em' }}>
+            <span className="text-xs font-bold uppercase tracking-wider text-primary">
               Performance Report • Attempt #{attempt.attempt_number}
             </span>
-            <h2 className="font-display" style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '4px', marginBottom: '8px' }}>
-              {test_title}
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: 0 }}>
+            <h2 className="mt-1 mb-2 font-display text-3xl font-extrabold text-ink">{test_title}</h2>
+            <p className="text-sm text-ink-muted">
               Submitted on {new Date(attempt.submitted_at).toLocaleDateString()} at{' '}
               {new Date(attempt.submitted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '16px' }}>
-            {/* Score block */}
-            <div style={{ textAlign: 'right' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Score</span>
-              <span className="font-display" style={{ fontSize: '2rem', fontWeight: 800, color: attempt.is_passed ? 'var(--success-600)' : 'var(--error-600)', lineHeight: 1 }}>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <span className="block text-xs text-ink-faint">Score</span>
+              <span
+                className={cn(
+                  'font-display text-4xl font-extrabold leading-none',
+                  attempt.is_passed ? 'text-success-600' : 'text-error-600',
+                )}
+              >
                 {attempt.score.toFixed(0)}%
               </span>
             </div>
-            
-            {/* Pass/Fail badge */}
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <span 
-                className={`badge ${attempt.is_passed ? 'badge-success' : 'badge-error'}`}
-                style={{ padding: '8px 16px', fontSize: '0.9375rem', fontWeight: 700 }}
-              >
-                {attempt.is_passed ? 'PASSED' : 'FAILED'}
-              </span>
-            </div>
+            <Badge variant={attempt.is_passed ? 'success' : 'error'} size="md">
+              {attempt.is_passed ? 'PASSED' : 'FAILED'}
+            </Badge>
           </div>
         </div>
 
-        {/* Stats Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '20px', marginTop: '30px', padding: '16px 24px', backgroundColor: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Award size={20} style={{ color: 'var(--primary-500)' }} />
-            <div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Result Breakdown</span>
-              <strong style={{ fontSize: '0.9375rem', color: 'var(--text-primary)' }}>{correct_count} / {total_questions} Correct</strong>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Clock size={20} style={{ color: 'var(--primary-500)' }} />
-            <div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Time Elapsed</span>
-              <strong style={{ fontSize: '0.9375rem', color: 'var(--text-primary)' }}>
-                {Math.floor(attempt.time_used_seconds / 60)}m {attempt.time_used_seconds % 60}s
-              </strong>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <HelpCircle size={20} style={{ color: 'var(--primary-500)' }} />
-            <div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Required Score</span>
-              <strong style={{ fontSize: '0.9375rem', color: 'var(--text-primary)' }}>{passing_score_pct}% Pass Mark</strong>
-            </div>
-          </div>
+        {/* Stats */}
+        <div className="mt-7 grid grid-cols-1 gap-5 rounded-xl border border-border bg-surface-sunken p-5 sm:grid-cols-3">
+          <StatItem
+            icon={<Award className="size-5" />}
+            label="Result Breakdown"
+            value={`${correct_count} / ${total_questions} Correct`}
+          />
+          <StatItem
+            icon={<Clock className="size-5" />}
+            label="Time Elapsed"
+            value={`${Math.floor(attempt.time_used_seconds / 60)}m ${attempt.time_used_seconds % 60}s`}
+          />
+          <StatItem
+            icon={<HelpCircle className="size-5" />}
+            label="Required Score"
+            value={`${passing_score_pct}% Pass Mark`}
+          />
         </div>
-      </div>
+      </Card>
 
-      {/* Answer review question blocks */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        <h3 className="font-display" style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-          Answer Key & Explanations Review
-        </h3>
+      {/* Answer review */}
+      <div className="flex flex-col gap-6">
+        <h3 className="font-display text-xl font-bold text-ink">Answer Key &amp; Explanations Review</h3>
 
         {answers.map((ans, idx) => (
-          <div 
-            key={ans.question_id} 
-            className="card" 
-            style={{ 
-              padding: '28px',
-              borderLeft: `4px solid ${ans.selected_option_id === null ? 'var(--gray-300)' : ans.is_correct ? 'var(--success-500)' : 'var(--error-500)'}` 
-            }}
+          <Card
+            key={ans.question_id}
+            className={cn(
+              'border-l-4 p-7',
+              ans.selected_option_id === null
+                ? 'border-l-border-strong'
+                : ans.is_correct
+                  ? 'border-l-success-500'
+                  : 'border-l-error-500',
+            )}
           >
-            {/* Header: Question Num + Correct status */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <span style={{ fontWeight: 800, color: 'var(--primary-600)', fontSize: '1rem' }}>
-                Question {idx + 1}
-              </span>
-              
+            <div className="mb-4 flex items-center justify-between">
+              <span className="font-display text-base font-extrabold text-primary">Question {idx + 1}</span>
+
               {ans.selected_option_id === null ? (
-                <span className="badge badge-error" style={{ backgroundColor: 'var(--gray-200)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  Not Attempted
-                </span>
+                <Badge variant="neutral">Not Attempted</Badge>
               ) : ans.is_correct ? (
-                <span className="badge badge-success" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <CheckCircle size={12} /> Correct
-                </span>
+                <Badge variant="success">
+                  <CheckCircle className="size-3" /> Correct
+                </Badge>
               ) : (
-                <span className="badge badge-error" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <XCircle size={12} /> Incorrect
-                </span>
+                <Badge variant="error">
+                  <XCircle className="size-3" /> Incorrect
+                </Badge>
               )}
             </div>
 
-            <h4 style={{ fontSize: '1.0625rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 20px 0', lineHeight: 1.4 }}>
-              {ans.question_text}
-            </h4>
+            <h4 className="mb-5 text-[17px] font-semibold leading-snug text-ink">{ans.question_text}</h4>
 
-            {/* Render options highlights */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {ans.options.map((opt) => {
+            <div className="flex flex-col gap-2.5">
+              {ans.options.map(opt => {
                 const isSelected = ans.selected_option_id === opt.id;
                 const isCorrect = ans.correct_option_id === opt.id;
-
-                let border = '1px solid var(--border-color)';
-                let bg = 'var(--bg-secondary)';
-                let color = 'var(--text-primary)';
-                let indicator = '';
-
-                if (isCorrect) {
-                  border = '1px solid var(--success-500)';
-                  bg = 'var(--success-50)';
-                  color = 'var(--success-600)';
-                  indicator = ' (Correct Option)';
-                } else if (isSelected && !isCorrect) {
-                  border = '1px solid var(--error-500)';
-                  bg = 'var(--error-50)';
-                  color = 'var(--error-600)';
-                  indicator = ' (Your Answer)';
-                }
+                const indicator = isCorrect ? ' (Correct Option)' : isSelected ? ' (Your Answer)' : '';
 
                 return (
                   <div
                     key={opt.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '12px 16px',
-                      borderRadius: 'var(--radius-md)',
-                      border,
-                      backgroundColor: bg,
-                      color,
-                      fontSize: '0.875rem',
-                      fontWeight: (isCorrect || isSelected) ? 600 : 500
-                    }}
+                    className={cn(
+                      'flex items-center gap-3 rounded-lg border p-3 text-sm',
+                      isCorrect
+                        ? 'border-success-500 bg-success-50 font-semibold text-success-600 dark:bg-success-500/10'
+                        : isSelected
+                          ? 'border-error-500 bg-error-50 font-semibold text-error-600 dark:bg-error-500/10'
+                          : 'border-border bg-surface text-ink',
+                    )}
                   >
-                    <div 
-                      style={{ 
-                        width: '24px', 
-                        height: '24px', 
-                        borderRadius: '50%', 
-                        border: `2px solid ${isCorrect ? 'var(--success-500)' : isSelected ? 'var(--error-500)' : 'var(--gray-300)'}`,
-                        backgroundColor: isCorrect ? 'var(--success-500)' : isSelected ? 'var(--error-500)' : 'transparent',
-                        color: (isCorrect || isSelected) ? 'white' : 'var(--text-secondary)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 700,
-                        fontSize: '0.75rem',
-                        flexShrink: 0
-                      }}
+                    <span
+                      className={cn(
+                        'flex size-6 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold',
+                        isCorrect
+                          ? 'border-success-500 bg-success-500 text-white'
+                          : isSelected
+                            ? 'border-error-500 bg-error-500 text-white'
+                            : 'border-border-strong text-ink-muted',
+                      )}
                     >
                       {opt.label}
-                    </div>
-                    <span>{opt.text}{indicator}</span>
+                    </span>
+                    <span>
+                      {opt.text}
+                      {indicator}
+                    </span>
                   </div>
                 );
               })}
             </div>
-
-          </div>
+          </Card>
         ))}
       </div>
-
     </div>
   );
 };

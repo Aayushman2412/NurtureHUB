@@ -3,6 +3,8 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { submitAttempt } from '../api/tests';
 import { useToast } from '../context/ToastContext';
 import { AlertCircle, Clock, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button, Card, Modal } from '../components/ui';
+import { cn } from '../utils/cn';
 
 interface Option {
   id: number;
@@ -40,6 +42,13 @@ const calcRemaining = (startIso: string, durationMinutes: number): number => {
   return Math.max(0, durationMinutes * 60 - elapsed);
 };
 
+// Timer visual state → Tailwind classes (getTimerClass() keeps its '' | 'warning' | 'danger' contract)
+const timerClasses: Record<string, string> = {
+  '': 'bg-surface-sunken text-ink border-border',
+  warning: 'bg-amber-50 text-amber-700 border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-500',
+  danger: 'bg-error-50 text-error-600 border-error-500/50 animate-pulse dark:bg-error-500/10 dark:text-error-500',
+};
+
 const ActiveTestPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
@@ -68,7 +77,9 @@ const ActiveTestPage: React.FC = () => {
       try {
         const parsed = JSON.parse(stored);
         if (parsed.startedAt) return parsed.startedAt;
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
     // Use server-provided started_at, or fallback to now
     const startedAt = attemptData.started_at || new Date().toISOString();
@@ -89,7 +100,9 @@ const ActiveTestPage: React.FC = () => {
         const parsed = JSON.parse(stored);
         if (parsed.answers) return parsed.answers;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return {};
   };
 
@@ -107,7 +120,9 @@ const ActiveTestPage: React.FC = () => {
       const stored = localStorage.getItem(storageKey);
       const existing = stored ? JSON.parse(stored) : {};
       localStorage.setItem(storageKey, JSON.stringify({ ...existing, answers }));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [answers]);
 
   // Keyboard Shortcuts navigation
@@ -151,9 +166,9 @@ const ActiveTestPage: React.FC = () => {
 
   const performSubmission = async () => {
     setIsSubmitting(true);
-    
+
     // Format answers array
-    const formattedAnswers = questions.map((q) => {
+    const formattedAnswers = questions.map(q => {
       const ans = answers[q.id];
       return {
         question_id: q.id,
@@ -167,9 +182,9 @@ const ActiveTestPage: React.FC = () => {
     try {
       const response = await submitAttempt(attempt_id, {
         answers: formattedAnswers,
-        time_used_seconds: timeUsed
+        time_used_seconds: timeUsed,
       });
-      
+
       showToast('Assessment submitted successfully!', 'success');
       navigate(`/tests/${id}/submitted`, { state: { resultData: response, testTitle } });
     } catch (err: any) {
@@ -180,7 +195,7 @@ const ActiveTestPage: React.FC = () => {
   };
 
   const handleSelectOption = (questionId: number, optionId: number) => {
-    setAnswers((prev) => ({
+    setAnswers(prev => ({
       ...prev,
       [questionId]: {
         selected_option_id: optionId,
@@ -190,7 +205,7 @@ const ActiveTestPage: React.FC = () => {
   };
 
   const handleToggleReview = (questionId: number) => {
-    setAnswers((prev) => {
+    setAnswers(prev => {
       const current = prev[questionId];
       return {
         ...prev,
@@ -203,7 +218,7 @@ const ActiveTestPage: React.FC = () => {
   };
 
   const handleClearAnswer = (questionId: number) => {
-    setAnswers((prev) => {
+    setAnswers(prev => {
       const copy = { ...prev };
       if (copy[questionId]) {
         copy[questionId] = {
@@ -229,161 +244,156 @@ const ActiveTestPage: React.FC = () => {
 
   const currentQuestion = questions[currentIdx];
   const totalQuestions = questions.length;
-  const answeredCount = Object.values(answers).filter((a) => a.selected_option_id !== null).length;
-  const reviewCount = Object.values(answers).filter((a) => a.is_marked_for_review).length;
+  const answeredCount = Object.values(answers).filter(a => a.selected_option_id !== null).length;
+  const reviewCount = Object.values(answers).filter(a => a.is_marked_for_review).length;
   const unansweredCount = totalQuestions - answeredCount;
 
   return (
-    <div className="active-test-wrapper">
-      
-      {/* Top Header bar with title, timer and submit */}
-      <div className="active-test-header">
+    <div className="flex flex-col gap-4">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-5 py-4">
         <div>
-          <span className="active-test-badge">Active Assessment</span>
-          <h3 className="font-display active-test-title">
-            {testTitle}
-          </h3>
+          <span className="text-xs font-bold uppercase tracking-wider text-primary">Active Assessment</span>
+          <h3 className="font-display text-lg font-bold text-ink">{testTitle}</h3>
         </div>
 
-        <div className="active-test-header-actions">
-          {/* Timer block */}
-          <div 
-            id="testTimer" 
-            className={`test-timer ${getTimerClass()}`}
+        <div className="flex items-center gap-3">
+          <div
+            className={cn(
+              'flex items-center gap-2 rounded-lg border px-3.5 py-2 font-bold',
+              timerClasses[getTimerClass()],
+            )}
           >
-            <Clock size={16} />
-            <span id="timerDisplay" style={{ fontFamily: 'monospace', fontSize: '1.125rem' }}>{formatTime(timeRemaining)}</span>
+            <Clock className="size-4" />
+            <span className="font-mono text-lg">{formatTime(timeRemaining)}</span>
           </div>
 
-          <button 
-            className="btn btn-primary" 
-            onClick={() => setShowConfirm(true)}
-            style={{ padding: '8px 20px', fontWeight: 600 }}
-          >
-            Finish Test
-          </button>
+          <Button onClick={() => setShowConfirm(true)}>Finish Test</Button>
         </div>
       </div>
 
-      {/* Question counter (replaces progress bar) */}
-      <div className="active-test-counter">
-        <span>Question {currentIdx + 1} of {totalQuestions}</span>
+      {/* Counter */}
+      <div className="rounded-lg bg-surface-sunken px-4 py-2 text-center text-sm font-semibold text-ink-muted">
+        Question {currentIdx + 1} of {totalQuestions}
       </div>
 
-      {/* Main split work area */}
-      <div className="active-test-grid">
-        
-        {/* Left pane: Active Question Card */}
-        <div className="active-test-question-pane">
-
-          {/* Question and choices */}
-          <div className="card active-test-question-card">
-            <div>
-              <div className="active-test-question-header">
-                <span className="active-test-question-number">
-                  Question {currentIdx + 1}
-                </span>
-                <span className="active-test-marks-badge">
-                  Marks: {currentQuestion.marks}
-                </span>
-              </div>
-
-              <h3 className="active-test-question-text">
-                {currentQuestion.text}
-              </h3>
-
-              {/* Choices option list */}
-              <div className="active-test-options">
-                {currentQuestion.options.map((opt) => {
-                  const isSelected = answers[currentQuestion.id]?.selected_option_id === opt.id;
-                  return (
-                    <button
-                      key={opt.id}
-                      onClick={() => handleSelectOption(currentQuestion.id, opt.id)}
-                      className={`active-test-option ${isSelected ? 'selected' : ''}`}
-                    >
-                      <div className={`active-test-option-label ${isSelected ? 'selected' : ''}`}>
-                        {opt.label}
-                      </div>
-                      <span className="active-test-option-text">{opt.text}</span>
-                    </button>
-                  );
-                })}
-              </div>
+      {/* Work area */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[2fr_1fr]">
+        {/* Question card */}
+        <Card className="flex flex-col justify-between p-6">
+          <div>
+            <div className="mb-4 flex items-center justify-between">
+              <span className="font-display font-bold text-ink">Question {currentIdx + 1}</span>
+              <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700 dark:bg-teal-500/15 dark:text-teal-300">
+                Marks: {currentQuestion.marks}
+              </span>
             </div>
 
-            {/* Bottom Actions for current question */}
-            <div className="active-test-actions">
-              <div className="active-test-actions-left">
-                <label className="active-test-review-label">
-                  <input
-                    type="checkbox"
-                    checked={!!answers[currentQuestion.id]?.is_marked_for_review}
-                    onChange={() => handleToggleReview(currentQuestion.id)}
-                    style={{ accentColor: 'var(--accent-500)', width: '16px', height: '16px' }}
-                  />
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Eye size={16} /> Mark for Review
-                  </span>
-                </label>
+            <h3 className="mb-5 text-lg font-semibold leading-relaxed text-ink">{currentQuestion.text}</h3>
 
-                {answers[currentQuestion.id]?.selected_option_id !== null && (
+            {/* Options */}
+            <div className="flex flex-col gap-3">
+              {currentQuestion.options.map(opt => {
+                const isSelected = answers[currentQuestion.id]?.selected_option_id === opt.id;
+                return (
                   <button
-                    onClick={() => handleClearAnswer(currentQuestion.id)}
-                    className="active-test-clear-btn"
+                    key={opt.id}
+                    onClick={() => handleSelectOption(currentQuestion.id, opt.id)}
+                    className={cn(
+                      'flex items-center gap-3 rounded-xl border-2 p-3.5 text-left transition-colors',
+                      isSelected
+                        ? 'border-primary bg-coral-50 dark:bg-coral-500/10'
+                        : 'border-border hover:border-border-strong hover:bg-surface-sunken/50',
+                    )}
                   >
-                    Clear Selection
+                    <span
+                      className={cn(
+                        'flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold',
+                        isSelected ? 'bg-primary text-primary-fg' : 'bg-surface-sunken text-ink-muted',
+                      )}
+                    >
+                      {opt.label}
+                    </span>
+                    <span className="text-sm text-ink">{opt.text}</span>
                   </button>
-                )}
-              </div>
+                );
+              })}
+            </div>
+          </div>
 
-              <div className="active-test-nav-btns">
+          {/* Bottom actions */}
+          <div className="mt-6 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  checked={!!answers[currentQuestion.id]?.is_marked_for_review}
+                  onChange={() => handleToggleReview(currentQuestion.id)}
+                  className="size-4 accent-amber-500"
+                />
+                <span className="flex items-center gap-1">
+                  <Eye className="size-4" /> Mark for Review
+                </span>
+              </label>
+
+              {answers[currentQuestion.id]?.selected_option_id !== null && (
                 <button
-                  className="btn btn-outline"
-                  disabled={currentIdx === 0}
-                  onClick={() => setCurrentIdx(prev => prev - 1)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 16px', fontSize: '0.875rem' }}
+                  onClick={() => handleClearAnswer(currentQuestion.id)}
+                  className="text-sm font-semibold text-ink-muted hover:text-error-500 cursor-pointer"
                 >
-                  <ChevronLeft size={16} /> Back
+                  Clear Selection
                 </button>
-                <button
-                  className="btn btn-outline"
-                  disabled={currentIdx === questions.length - 1}
-                  onClick={() => setCurrentIdx(prev => prev + 1)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 16px', fontSize: '0.875rem' }}
-                >
-                  Next <ChevronRight size={16} />
-                </button>
-              </div>
+              )}
             </div>
 
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentIdx === 0}
+                onClick={() => setCurrentIdx(prev => prev - 1)}
+                iconLeft={<ChevronLeft className="size-4" />}
+              >
+                Back
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentIdx === questions.length - 1}
+                onClick={() => setCurrentIdx(prev => prev + 1)}
+                iconRight={<ChevronRight className="size-4" />}
+              >
+                Next
+              </Button>
+            </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Right pane: Question Map Grid Navigation */}
-        <div className="card active-test-map-panel">
-          <h4 className="active-test-map-title">
-            Questions Map
-          </h4>
+        {/* Question map */}
+        <Card className="p-5">
+          <h4 className="mb-4 font-display font-bold text-ink">Questions Map</h4>
 
-          {/* Quick numbers tracker grid */}
-          <div className="active-test-map-grid">
+          <div className="grid grid-cols-6 gap-2 lg:grid-cols-5">
             {questions.map((q, idx) => {
               const ansState = answers[q.id];
               const isCurrent = idx === currentIdx;
               const isAnswered = ansState?.selected_option_id !== null && ansState?.selected_option_id !== undefined;
               const isMarked = ansState?.is_marked_for_review;
 
-              let statusClass = '';
-              if (isCurrent) statusClass = 'current';
-              else if (isMarked) statusClass = 'marked';
-              else if (isAnswered) statusClass = 'answered';
-
               return (
                 <button
                   key={q.id}
                   onClick={() => setCurrentIdx(idx)}
-                  className={`active-test-map-btn ${statusClass}`}
+                  className={cn(
+                    'flex h-9 items-center justify-center rounded-lg text-sm font-bold transition-colors',
+                    isCurrent
+                      ? 'bg-primary text-primary-fg ring-2 ring-primary ring-offset-2 ring-offset-surface'
+                      : isMarked
+                        ? 'bg-amber-500 text-white'
+                        : isAnswered
+                          ? 'bg-teal-500 text-white'
+                          : 'bg-surface-sunken text-ink-muted hover:bg-border',
+                  )}
                 >
                   {idx + 1}
                 </button>
@@ -391,92 +401,58 @@ const ActiveTestPage: React.FC = () => {
             })}
           </div>
 
-          {/* Color legend guides */}
-          <div className="active-test-legend">
-            <div className="active-test-legend-item">
-              <div className="active-test-legend-dot answered" />
-              <span>Answered</span>
-            </div>
-            <div className="active-test-legend-item">
-              <div className="active-test-legend-dot marked" />
-              <span>Marked for Review</span>
-            </div>
-            <div className="active-test-legend-item">
-              <div className="active-test-legend-dot unanswered" />
-              <span>Unanswered</span>
-            </div>
-            <div className="active-test-legend-item">
-              <div className="active-test-legend-dot current-q" />
-              <span>Current Question</span>
-            </div>
+          {/* Legend */}
+          <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-xs text-ink-muted">
+            <span className="flex items-center gap-1.5">
+              <span className="size-3 rounded-full bg-teal-500" /> Answered
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="size-3 rounded-full bg-amber-500" /> Marked for Review
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="size-3 rounded-full bg-surface-sunken ring-1 ring-border-strong" /> Unanswered
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="size-3 rounded-full bg-primary" /> Current Question
+            </span>
           </div>
-        </div>
-
+        </Card>
       </div>
 
-      {/* Confirmation Modal */}
-      {showConfirm && (
-        <div 
-          className="modal-backdrop active" 
-          style={{ 
-            position: 'fixed', 
-            inset: 0, 
-            backgroundColor: 'rgba(15,23,42,0.6)', 
-            backdropFilter: 'blur(4px)',
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            zIndex: 'var(--z-modal-backdrop)',
-            padding: '16px'
-          }}
-        >
-          <div className="modal active-test-confirm-modal">
-            <div style={{ display: 'flex', gap: '12px', color: 'var(--primary-600)' }}>
-              <AlertCircle size={24} style={{ flexShrink: 0 }} />
-              <div>
-                <h4 className="font-display" style={{ fontSize: '1.125rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-                  Submit Assessment?
-                </h4>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>
-                  Are you sure you want to finish and submit your answers?
-                </p>
-              </div>
-            </div>
-
-            {/* Statistics check summary */}
-            <div className="active-test-confirm-stats">
-              <div>Total Questions:</div>
-              <div style={{ fontWeight: 700, textAlign: 'right' }}>{totalQuestions}</div>
-              <div>Answered:</div>
-              <div style={{ fontWeight: 700, textAlign: 'right', color: 'var(--primary-600)' }}>{answeredCount}</div>
-              <div>Flagged for Review:</div>
-              <div style={{ fontWeight: 700, textAlign: 'right', color: 'var(--accent-600)' }}>{reviewCount}</div>
-              <div>Unanswered:</div>
-              <div style={{ fontWeight: 700, textAlign: 'right', color: unansweredCount > 0 ? 'var(--error-500)' : 'var(--text-muted)' }}>{unansweredCount}</div>
-            </div>
-
-            <div className="active-test-confirm-actions">
-              <button
-                className="btn btn-outline"
-                onClick={() => setShowConfirm(false)}
-                disabled={isSubmitting}
-                style={{ padding: '10px 20px', cursor: 'pointer' }}
-              >
-                Go Back
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={() => performSubmission()}
-                disabled={isSubmitting}
-                style={{ padding: '10px 24px', fontWeight: 600, cursor: 'pointer' }}
-              >
-                {isSubmitting ? 'Submitting...' : 'Submit Assessment'}
-              </button>
-            </div>
-          </div>
+      {/* Confirm modal */}
+      <Modal
+        open={showConfirm}
+        onClose={() => !isSubmitting && setShowConfirm(false)}
+        title="Submit Assessment?"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setShowConfirm(false)} disabled={isSubmitting}>
+              Go Back
+            </Button>
+            <Button onClick={() => performSubmission()} loading={isSubmitting}>
+              {isSubmitting ? 'Submitting...' : 'Submit Assessment'}
+            </Button>
+          </>
+        }
+      >
+        <div className="mb-4 flex gap-3 text-primary">
+          <AlertCircle className="size-6 shrink-0" />
+          <p className="text-sm text-ink-muted">Are you sure you want to finish and submit your answers?</p>
         </div>
-      )}
 
+        <dl className="grid grid-cols-2 gap-y-2 text-sm">
+          <dt className="text-ink-muted">Total Questions:</dt>
+          <dd className="text-right font-bold text-ink">{totalQuestions}</dd>
+          <dt className="text-ink-muted">Answered:</dt>
+          <dd className="text-right font-bold text-primary">{answeredCount}</dd>
+          <dt className="text-ink-muted">Flagged for Review:</dt>
+          <dd className="text-right font-bold text-amber-600">{reviewCount}</dd>
+          <dt className="text-ink-muted">Unanswered:</dt>
+          <dd className={cn('text-right font-bold', unansweredCount > 0 ? 'text-error-500' : 'text-ink-faint')}>
+            {unansweredCount}
+          </dd>
+        </dl>
+      </Modal>
     </div>
   );
 };
