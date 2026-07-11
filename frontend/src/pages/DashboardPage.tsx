@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getDashboardData } from '../api/dashboard';
 import { BookOpen, Award, CheckCircle2, ChevronRight, Lock, Trophy, PlayCircle } from 'lucide-react';
+import { Badge, Button, Card, PageLoader, ProgressBar, StatCard } from '../components/ui';
 
 interface Achievement {
   id: number;
@@ -60,7 +61,7 @@ const DashboardPage: React.FC = () => {
     try {
       const res = await getDashboardData();
       setData(res);
-    } catch (err) {
+    } catch {
       showToast('Failed to load dashboard metrics', 'error');
     } finally {
       setLoading(false);
@@ -71,253 +72,204 @@ const DashboardPage: React.FC = () => {
     loadDashboard();
   }, []);
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-        <div className="spinner" style={{ fontSize: '1.25rem' }}>Loading metrics...</div>
-      </div>
-    );
-  }
-
+  if (loading) return <PageLoader label="Loading metrics…" />;
   if (!data) return null;
 
+  const ring = 2 * Math.PI * 32;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-      
+    <div className="flex flex-col gap-6">
       {/* Welcome Banner */}
-      <div 
-        style={{ 
-          background: 'linear-gradient(135deg, var(--primary-600) 0%, var(--primary-800) 100%)', 
-          borderRadius: 'var(--radius-xl)', 
-          padding: '30px 40px',
-          color: 'white',
-          boxShadow: 'var(--shadow-md)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '20px'
-        }}
-      >
+      <div className="flex flex-wrap items-center justify-between gap-5 rounded-2xl bg-gradient-to-br from-coral-500 to-coral-700 px-8 py-7 text-white shadow-(--shadow-card)">
         <div>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--primary-100)' }}>
+          <span className="text-xs font-bold uppercase tracking-widest text-coral-100">
             {user?.program_district?.name ? `${user.program_district.name} District` : 'Welcome back, Supervisor'}
           </span>
-          <h2 className="font-display" style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: '4px', marginBottom: '8px' }}>
+          <h2 className="mt-1 mb-2 font-display text-3xl font-extrabold">
             {user?.full_name || 'Healthcare Worker'} 🌱
           </h2>
-          <p style={{ color: 'var(--primary-50)', margin: 0, opacity: 0.9 }}>
+          <p className="text-coral-50/90">
             You have completed {data.tutorials_completed} of {data.total_tutorials} video lessons. Keep up the good work!
           </p>
         </div>
-        
-        {/* Progress circle metric */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ position: 'relative', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {/* SVG Circle track */}
-            <svg style={{ position: 'absolute', transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+
+        {/* Progress ring */}
+        <div className="flex items-center gap-4">
+          <div className="relative flex size-20 items-center justify-center">
+            <svg className="absolute size-full -rotate-90">
               <circle cx="40" cy="40" r="32" stroke="rgba(255,255,255,0.15)" strokeWidth="6" fill="transparent" />
-              <circle cx="40" cy="40" r="32" stroke="white" strokeWidth="6" fill="transparent" 
-                strokeDasharray={`${2 * Math.PI * 32}`} 
-                strokeDashoffset={`${2 * Math.PI * 32 * (1 - data.progress_percentage / 100)}`} 
+              <circle
+                cx="40"
+                cy="40"
+                r="32"
+                stroke="white"
+                strokeWidth="6"
+                fill="transparent"
+                strokeDasharray={ring}
+                strokeDashoffset={ring * (1 - data.progress_percentage / 100)}
                 strokeLinecap="round"
-                style={{ transition: 'stroke-dashoffset var(--transition-slow)' }}
+                className="transition-[stroke-dashoffset] duration-700"
               />
             </svg>
-            <span style={{ fontSize: '1.125rem', fontWeight: 800 }}>{Math.round(data.progress_percentage)}%</span>
+            <span className="font-display text-lg font-extrabold">{Math.round(data.progress_percentage)}%</span>
           </div>
-          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--primary-50)' }}>Overall<br />Progress</span>
+          <span className="text-sm font-semibold text-coral-50">
+            Overall
+            <br />
+            Progress
+          </span>
         </div>
       </div>
 
-      {/* Metrics Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-6)' }}>
-        
-        <div className="card" style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ backgroundColor: 'var(--primary-50)', color: 'var(--primary-600)', borderRadius: '12px', padding: '16px', display: 'flex' }}>
-            <BookOpen size={28} />
-          </div>
-          <div>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', display: 'block', fontWeight: 500 }}>Completed Tutorials</span>
-            <span className="font-display" style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              {data.tutorials_completed} <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 500 }}>/ {data.total_tutorials}</span>
-            </span>
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ backgroundColor: 'var(--accent-50)', color: 'var(--accent-600)', borderRadius: '12px', padding: '16px', display: 'flex' }}>
-            <Award size={28} />
-          </div>
-          <div>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', display: 'block', fontWeight: 500 }}>Assessments Passed</span>
-            <span className="font-display" style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              {data.tests_passed} <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 500 }}>/ {data.total_tests}</span>
-            </span>
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ backgroundColor: 'var(--success-50)', color: 'var(--success-500)', borderRadius: '12px', padding: '16px', display: 'flex' }}>
-            <Trophy size={28} />
-          </div>
-          <div>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', display: 'block', fontWeight: 500 }}>Achievements Earned</span>
-            <span className="font-display" style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              {data.achievements.length} <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 500 }}>/ 3</span>
-            </span>
-          </div>
-        </div>
+      {/* Metrics */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          icon={<BookOpen />}
+          tone="coral"
+          label="Completed Tutorials"
+          value={
+            <>
+              {data.tutorials_completed}{' '}
+              <span className="text-base font-medium text-ink-faint">/ {data.total_tutorials}</span>
+            </>
+          }
+        />
+        <StatCard
+          icon={<Award />}
+          tone="amber"
+          label="Assessments Passed"
+          value={
+            <>
+              {data.tests_passed} <span className="text-base font-medium text-ink-faint">/ {data.total_tests}</span>
+            </>
+          }
+        />
+        <StatCard
+          icon={<Trophy />}
+          tone="sage"
+          label="Achievements Earned"
+          value={
+            <>
+              {data.achievements.length} <span className="text-base font-medium text-ink-faint">/ 3</span>
+            </>
+          }
+        />
       </div>
 
-      {/* Main Grid: Stages list & Activity/Achievements panel */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 'var(--space-6)', alignItems: 'flex-start', flexWrap: 'wrap' }} className="dashboard-grid">
-        
-        {/* Course progression pipeline */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          <h3 className="font-display" style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-            Training Progression Timeline
-          </h3>
+      {/* Main grid */}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        {/* Stage timeline */}
+        <div className="flex flex-col gap-4 lg:col-span-2">
+          <h3 className="font-display text-xl font-bold text-ink">Training Progression Timeline</h3>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {data.stages.map((stg, i) => (
-              <div 
-                key={stg.id} 
-                className={`card ${stg.is_locked ? 'card-locked' : ''}`} 
-                style={{ 
-                  padding: '24px', 
-                  position: 'relative',
-                  borderLeft: `4px solid ${stg.is_locked ? 'var(--gray-300)' : 'var(--primary-500)'}`,
-                  opacity: stg.is_locked ? 0.75 : 1
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '8px' }}>
-                  <div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--primary-500)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Phase {i + 1}
-                    </span>
-                    <h4 className="font-display" style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px', marginBottom: '6px' }}>
-                      {stg.title}
-                    </h4>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: 0, lineHeight: 1.4 }}>
-                      {stg.description}
-                    </p>
-                  </div>
-                  {stg.is_locked ? (
-                    <span className="badge badge-error" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Lock size={12} /> Locked
-                    </span>
-                  ) : (
-                    <span className="badge badge-success">Unlocked</span>
-                  )}
-                </div>
-
-                {/* Progress bars */}
-                {!stg.is_locked && (
-                  <div style={{ marginTop: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                      <span>Tutorial Completed: {stg.tutorials_completed} of {stg.total_tutorials}</span>
-                      <span>{Math.round((stg.tutorials_completed / stg.total_tutorials) * 100)}%</span>
+          <div className="flex flex-col gap-5">
+            {data.stages.map((stg, i) => {
+              const pct = stg.total_tutorials
+                ? Math.round((stg.tutorials_completed / stg.total_tutorials) * 100)
+                : 0;
+              return (
+                <Card key={stg.id} accent={stg.is_locked ? undefined : 'coral'} locked={stg.is_locked} className="p-6">
+                  <div className="mb-2 flex items-start justify-between gap-4">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary">Phase {i + 1}</span>
+                      <h4 className="mt-0.5 mb-1.5 font-display text-lg font-bold text-ink">{stg.title}</h4>
+                      <p className="text-sm leading-snug text-ink-muted">{stg.description}</p>
                     </div>
-                    <div className="progress-bar" style={{ height: '8px', backgroundColor: 'var(--gray-100)', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div 
-                        className="progress-bar-fill" 
-                        style={{ 
-                          width: `${(stg.tutorials_completed / stg.total_tutorials) * 100}%`, 
-                          height: '100%', 
-                          backgroundColor: 'var(--primary-500)',
-                          borderRadius: '4px',
-                          transition: 'width var(--transition-base)' 
-                        }} 
-                      />
-                    </div>
+                    {stg.is_locked ? (
+                      <Badge variant="error">
+                        <Lock className="size-3" /> Locked
+                      </Badge>
+                    ) : (
+                      <Badge variant="success">Unlocked</Badge>
+                    )}
                   </div>
-                )}
 
-                {/* Bottom Resume Action */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
-                  {stg.is_locked ? (
-                    <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      Complete previous assessments to unlock this phase.
-                    </span>
-                  ) : (
-                    <button 
-                      className="btn btn-primary"
-                      onClick={() => navigate('/tutorials')}
-                      style={{ padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem' }}
-                    >
-                      <PlayCircle size={16} />
-                      <span>Resume Course</span>
-                      <ChevronRight size={14} />
-                    </button>
+                  {!stg.is_locked && (
+                    <div className="mt-5">
+                      <div className="mb-1.5 flex justify-between text-xs font-semibold text-ink-muted">
+                        <span>
+                          Tutorial Completed: {stg.tutorials_completed} of {stg.total_tutorials}
+                        </span>
+                        <span>{pct}%</span>
+                      </div>
+                      <ProgressBar value={pct} tone="coral" />
+                    </div>
                   )}
-                </div>
-              </div>
-            ))}
+
+                  <div className="mt-4 flex justify-end border-t border-border pt-4">
+                    {stg.is_locked ? (
+                      <span className="text-[13px] text-ink-faint">
+                        Complete previous assessments to unlock this phase.
+                      </span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => navigate('/tutorials')}
+                        iconLeft={<PlayCircle className="size-4" />}
+                        iconRight={<ChevronRight className="size-3.5" />}
+                      >
+                        Resume Course
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         </div>
 
-        {/* Right Column: Achievements and Activity Feed */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-          
-          {/* Achievements Container */}
-          <div className="card" style={{ padding: '24px' }}>
-            <h3 className="font-display" style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Trophy size={18} style={{ color: 'var(--accent-500)' }} />
+        {/* Right column */}
+        <div className="flex flex-col gap-6">
+          {/* Achievements */}
+          <Card className="p-6">
+            <h3 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink">
+              <Trophy className="size-[18px] text-amber-500" />
               <span>Earned Badges</span>
             </h3>
 
             {data.achievements.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0, textAlign: 'center', padding: '16px 0' }}>
-                Complete courses & assessments to unlock achievements.
+              <p className="py-4 text-center text-sm text-ink-faint">
+                Complete courses &amp; assessments to unlock achievements.
               </p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {data.achievements.map((ach) => (
-                  <div key={ach.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', backgroundColor: 'var(--bg-primary)', borderRadius: 'var(--radius-md)' }}>
-                    <span style={{ fontSize: '1.75rem' }}>{ach.emoji_icon}</span>
+              <div className="flex flex-col gap-3">
+                {data.achievements.map(ach => (
+                  <div key={ach.id} className="flex items-center gap-3 rounded-lg bg-surface-sunken p-2.5">
+                    <span className="text-3xl">{ach.emoji_icon}</span>
                     <div>
-                      <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{ach.title}</h4>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>{ach.description}</p>
+                      <h4 className="text-sm font-bold text-ink">{ach.title}</h4>
+                      <p className="text-xs text-ink-muted">{ach.description}</p>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-          </div>
+          </Card>
 
-          {/* Activity Feed Container */}
-          <div className="card" style={{ padding: '24px' }}>
-            <h3 className="font-display" style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <CheckCircle2 size={18} style={{ color: 'var(--primary-500)' }} />
+          {/* Activity feed */}
+          <Card className="p-6">
+            <h3 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink">
+              <CheckCircle2 className="size-[18px] text-primary" />
               <span>Recent Activity</span>
             </h3>
 
             {data.activities.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0, textAlign: 'center', padding: '16px 0' }}>
-                No recent activity.
-              </p>
+              <p className="py-4 text-center text-sm text-ink-faint">No recent activity.</p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative' }}>
+              <div className="flex flex-col gap-4">
                 {data.activities.map((act, index) => (
-                  <div key={act.id} style={{ display: 'flex', gap: '12px', fontSize: '0.8125rem' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <div 
-                        style={{ 
-                          width: '10px', 
-                          height: '10px', 
-                          borderRadius: '50%', 
-                          backgroundColor: act.type === 'test' ? 'var(--accent-500)' : 'var(--primary-500)',
-                          marginTop: '4px' 
-                        }} 
+                  <div key={act.id} className="flex gap-3 text-[13px]">
+                    <div className="flex flex-col items-center">
+                      <div
+                        className={`mt-1 size-2.5 rounded-full ${
+                          act.type === 'test' ? 'bg-amber-500' : 'bg-primary'
+                        }`}
                       />
-                      {index < data.activities.length - 1 && (
-                        <div style={{ width: '2px', flex: 1, backgroundColor: 'var(--border-color)', margin: '4px 0' }} />
-                      )}
+                      {index < data.activities.length - 1 && <div className="my-1 w-0.5 flex-1 bg-border" />}
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{act.title}</h4>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-ink">{act.title}</h4>
+                      <div className="mt-0.5 flex justify-between text-ink-faint">
                         <span>Status: {act.status}</span>
                         <span>{new Date(act.timestamp).toLocaleDateString()}</span>
                       </div>
@@ -326,12 +278,9 @@ const DashboardPage: React.FC = () => {
                 ))}
               </div>
             )}
-          </div>
-
+          </Card>
         </div>
-
       </div>
-
     </div>
   );
 };
