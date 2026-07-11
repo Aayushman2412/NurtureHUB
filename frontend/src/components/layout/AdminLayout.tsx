@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, FileText, Video, ClipboardList, LogOut, Shield, MapPin, ChevronDown, Building2, Sun, Moon } from 'lucide-react';
 import client from '../../api/client';
 import { useTheme } from '../../context/ThemeContext';
@@ -26,7 +26,6 @@ const navItems = [
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { darkMode, toggleDarkMode } = useTheme();
   
   const [districts, setDistricts] = useState<ProgramDistrict[]>([]);

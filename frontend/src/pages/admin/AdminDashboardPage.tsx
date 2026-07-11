@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../../api/client';
-import { Users, Layers, Video, ClipboardList, FileText, Zap, ArrowRight, MapPin, Building2 } from 'lucide-react';
+import { Users, Layers, Video, ClipboardList, FileText, Zap, ArrowRight, MapPin } from 'lucide-react';
 
 interface Stats {
   total_users: number;

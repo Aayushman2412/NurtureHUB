@@ -80,10 +80,6 @@ const AdminTutorialsPage: React.FC = () => {
     client.delete(`/api/admin/stages/${id}?district=${getDistrict()}`).then(fetchStages);
   };
 
-  const updateStage = (id: number, updates: Partial<Stage>) => {
-    client.put(`/api/admin/stages/${id}?district=${getDistrict()}`, updates).then(fetchStages);
-  };
-
   const addTutorial = (stageId: number) => {
     if (!newTut.title?.trim()) return;
     client.post(`/api/admin/stages/${stageId}/tutorials?district=${getDistrict()}`, newTut)

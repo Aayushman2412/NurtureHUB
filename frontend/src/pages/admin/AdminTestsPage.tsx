@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import client from '../../api/client';
 import * as XLSX from 'xlsx';
 import {
-  Plus, Trash2, Edit3, Save, X, Upload, Play, Square,
+  Trash2, Save, X, Upload, Play, Square,
   Download, ChevronDown, ChevronUp, FileSpreadsheet, ClipboardList, AlertCircle
 } from 'lucide-react';
 
@@ -48,7 +48,6 @@ const AdminTestsPage: React.FC = () => {
   const [tests, setTests] = useState<Test[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedTest, setExpandedTest] = useState<number | null>(null);
-  const [editingTest, setEditingTest] = useState<number | null>(null);
   const [showAddTest, setShowAddTest] = useState(false);
   const [showResults, setShowResults] = useState<number | null>(null);
   const [resultData, setResultData] = useState<ResultData | null>(null);
