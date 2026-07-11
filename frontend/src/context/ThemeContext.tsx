@@ -17,10 +17,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   useEffect(() => {
+    // `.dark` on <html> drives the new Tailwind token system;
+    // `body.dark-mode` is the legacy hook (removed once legacy.css is gone).
     if (darkMode) {
+      document.documentElement.classList.add('dark');
       document.body.classList.add('dark-mode');
       localStorage.setItem('nh_theme', 'dark');
     } else {
+      document.documentElement.classList.remove('dark');
       document.body.classList.remove('dark-mode');
       localStorage.setItem('nh_theme', 'light');
     }
