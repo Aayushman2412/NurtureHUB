@@ -1,205 +1,170 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import {
+  Award, BookOpen, ChartLine, MapPin, ShieldCheck, Sprout, Users, ArrowRight, Sun, Moon,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { Button } from '../components/ui';
+
+const features = [
+  {
+    icon: BookOpen,
+    title: 'Structured Training',
+    body: 'Standardized video modules built for ICDS & Anganwadi workflows — learn at your own pace, stage by stage.',
+    tone: 'text-teal-600 bg-teal-50 dark:text-teal-300 dark:bg-teal-500/15',
+  },
+  {
+    icon: Award,
+    title: 'Assessments & Badges',
+    body: 'Knowledge checks after every phase verify learning and earn official milestone badges for your profile.',
+    tone: 'text-coral-600 bg-coral-50 dark:text-coral-300 dark:bg-coral-500/15',
+  },
+  {
+    icon: ChartLine,
+    title: 'Growth Tracking',
+    body: 'A personal dashboard monitors progress, unlocks new stages, and keeps your development on course.',
+    tone: 'text-sage-700 bg-sage-50 dark:text-sage-300 dark:bg-sage-500/15',
+  },
+];
+
+const stats = [
+  { icon: Users, value: 'Frontline first', label: 'Built for Anganwadi workers, helpers & supervisors' },
+  { icon: MapPin, value: 'District-aware', label: 'Content and cohorts organized by your district' },
+  { icon: ShieldCheck, value: 'Officially recognized', label: 'Progress and badges your department can trust' },
+];
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated, isVerified, isProfileComplete } = useAuth();
+  const { darkMode, toggleDarkMode } = useTheme();
 
   const handleCTA = () => {
     if (isAuthenticated) {
-      if (!isVerified) {
-        navigate('/verify');
-      } else if (!isProfileComplete) {
-        navigate('/register');
-      } else {
-        navigate('/dashboard');
-      }
+      if (!isVerified) navigate('/verify');
+      else if (!isProfileComplete) navigate('/register');
+      else navigate('/dashboard');
     } else {
-      navigate('/login');
+      navigate('/signup');
     }
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)' }}>
-      {/* Navigation bar */}
-      <nav 
-        style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          padding: '20px max(24px, 6%)',
-          backgroundColor: 'var(--bg-secondary)',
-          borderBottom: '1px solid var(--border-color)'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '2rem' }}>🌱</span>
+    <div className="min-h-screen bg-background text-ink">
+      {/* ── Nav ─────────────────────────────────────────── */}
+      <nav className="flex items-center justify-between border-b border-border bg-surface/80 px-[max(24px,6%)] py-4 backdrop-blur-sm">
+        <div className="flex items-center gap-3">
+          <span className="flex size-11 items-center justify-center rounded-xl bg-gradient-to-br from-coral-400 to-coral-600">
+            <Sprout className="size-6 text-white" />
+          </span>
           <div>
-            <span style={{ fontWeight: 800, fontSize: '1.25rem', color: 'var(--text-primary)' }} className="brand-name">NurtureHUB</span>
-            <span style={{ fontSize: '0.6875rem', color: 'var(--primary-500)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>ICDS Professional Portal</span>
+            <span className="block font-display text-lg font-extrabold leading-tight">NurtureHUB</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+              ICDS Professional Portal
+            </span>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '16px' }}>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggleDarkMode}
+            title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            className="flex size-10 items-center justify-center rounded-full border border-border bg-surface
+                       text-ink-muted transition-colors hover:text-ink cursor-pointer"
+          >
+            {darkMode ? <Sun className="size-4.5" /> : <Moon className="size-4.5" />}
+          </button>
           {isAuthenticated ? (
-            <button className="btn btn-primary" onClick={handleCTA}>Go to App</button>
+            <Button onClick={handleCTA} iconRight={<ArrowRight className="size-4" />}>
+              Go to App
+            </Button>
           ) : (
             <>
-              <button className="btn btn-outline" onClick={() => navigate('/login')} style={{ cursor: 'pointer' }}>Sign In</button>
-              <button className="btn btn-primary" onClick={() => navigate('/signup')} style={{ cursor: 'pointer' }}>Register</button>
+              <Button variant="ghost" onClick={() => navigate('/login')} className="max-sm:hidden">
+                Sign In
+              </Button>
+              <Button onClick={() => navigate('/signup')}>Register</Button>
             </>
           )}
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section 
-        style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          textAlign: 'center', 
-          padding: '80px 24px', 
-          background: 'linear-gradient(135deg, var(--primary-900) 0%, var(--secondary-900) 100%)',
-          color: 'white',
-          position: 'relative'
-        }}
-      >
-        <div style={{ maxWidth: '800px' }}>
-          <span 
-            style={{ 
-              backgroundColor: 'rgba(15, 173, 160, 0.2)', 
-              color: 'var(--primary-200)', 
-              padding: '6px 16px', 
-              borderRadius: '20px', 
-              fontSize: '0.8125rem', 
-              fontWeight: 700, 
-              letterSpacing: '0.1em', 
-              textTransform: 'uppercase',
-              display: 'inline-block',
-              marginBottom: '24px'
-            }}
-          >
-            Digital Skill Portal for Healthcare Professionals
+      {/* ── Hero ────────────────────────────────────────── */}
+      <section className="relative overflow-hidden px-6 py-20 text-center sm:py-28">
+        <div className="absolute -top-40 left-1/2 size-[560px] -translate-x-1/2 rounded-full bg-coral-200/30 blur-3xl dark:bg-coral-500/10" aria-hidden />
+        <div className="absolute -bottom-56 right-[10%] size-96 rounded-full bg-sage-300/30 blur-3xl dark:bg-sage-500/10" aria-hidden />
+
+        <div className="relative mx-auto max-w-3xl">
+          <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-ink-muted">
+            <Sprout className="size-3.5 text-sage-600 dark:text-sage-300" />
+            Nurturing skills, elevating communities
           </span>
-          <h1 
-            className="font-display" 
-            style={{ 
-              fontSize: 'min(3rem, 9vw)', 
-              fontWeight: 800, 
-              lineHeight: 1.15, 
-              marginBottom: '24px',
-              letterSpacing: '-0.03em' 
-            }}
-          >
-            Elevate Anganwadi Training & Assessment
+          <h1 className="font-display text-4xl font-extrabold leading-tight sm:text-6xl">
+            Grow the skills that help
+            <span className="text-primary"> children thrive</span>
           </h1>
-          <p 
-            style={{ 
-              fontSize: 'max(1.0625rem, 3.5vw)', 
-              color: 'var(--secondary-200)', 
-              marginBottom: '40px',
-              lineHeight: 1.6,
-              maxWidth: '680px',
-              marginRight: 'auto',
-              marginLeft: 'auto'
-            }}
-          >
-            NurtureHUB is a modern learning management framework designed specifically for ICDS professionals. Access interactive tutorial videos, test your knowledge, and unlock achievements.
+          <p className="mx-auto mt-6 max-w-xl text-lg text-ink-muted">
+            NurtureHUB is the training &amp; assessment home for ICDS professionals — standardized
+            tutorials, fair assessments, and a clear record of your growth.
           </p>
-          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
-            <button className="btn btn-primary" onClick={handleCTA} style={{ padding: '14px 28px', fontSize: '1rem', cursor: 'pointer' }}>
-              Start Learning Journey
-            </button>
-            <button 
-              className="btn btn-outline" 
-              onClick={() => navigate('/login')} 
-              style={{ 
-                padding: '14px 28px', 
-                fontSize: '1rem', 
-                color: 'white', 
-                borderColor: 'rgba(255,255,255,0.3)',
-                backgroundColor: 'rgba(255,255,255,0.05)',
-                cursor: 'pointer'
-              }}
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+            <Button size="lg" onClick={handleCTA} iconRight={<ArrowRight className="size-4.5" />}>
+              {isAuthenticated ? 'Continue your journey' : 'Start learning today'}
+            </Button>
+            {!isAuthenticated && (
+              <Button size="lg" variant="outline" onClick={() => navigate('/login')}>
+                I already have an account
+              </Button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Features ────────────────────────────────────── */}
+      <section className="mx-auto max-w-5xl px-6 pb-20">
+        <div className="grid gap-6 md:grid-cols-3">
+          {features.map(f => (
+            <div
+              key={f.title}
+              className="rounded-2xl border border-border bg-surface p-7 shadow-(--shadow-card)
+                         transition-all duration-200 hover:-translate-y-1 hover:shadow-(--shadow-card-hover)"
             >
-              Sign In
-            </button>
-          </div>
+              <span className={`mb-5 inline-flex size-12 items-center justify-center rounded-xl ${f.tone}`}>
+                <f.icon className="size-6" />
+              </span>
+              <h3 className="font-display text-lg font-bold">{f.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-ink-muted">{f.body}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Trust strip */}
+        <div className="mt-6 grid gap-6 rounded-2xl border border-border bg-gradient-to-br from-sage-50 to-cream-100 p-8 dark:from-sage-950/40 dark:to-surface md:grid-cols-3">
+          {stats.map(s => (
+            <div key={s.value} className="flex items-start gap-4">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface text-teal-600 shadow-sm dark:text-teal-300">
+                <s.icon className="size-5" />
+              </span>
+              <div>
+                <div className="font-display font-bold">{s.value}</div>
+                <div className="mt-0.5 text-sm text-ink-muted">{s.label}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section style={{ padding: '80px max(24px, 6%)', backgroundColor: 'var(--bg-secondary)', flex: 1 }}>
-        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-          <h2 className="font-display" style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px' }}>
-            Core Training Pillars
-          </h2>
-          <p style={{ color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto' }}>
-            Empowering childcare workers with the right skills and evaluation workflows to assure early developmental care.
-          </p>
-        </div>
-
-        <div 
-          style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-            gap: '30px', 
-            maxWidth: '1200px', 
-            margin: '0 auto' 
-          }}
-        >
-          {/* Card 1 */}
-          <div className="card card-interactive" style={{ padding: '32px' }}>
-            <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '16px' }}>🎥</span>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
-              Standardized Tutorials
-            </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem', lineHeight: 1.5 }}>
-              Structured, stage-wise video modules covering developmental tracker metrics, child nutrition guides, and WHO growth scales.
-            </p>
+      {/* ── Footer ──────────────────────────────────────── */}
+      <footer className="border-t border-border bg-surface px-[max(24px,6%)] py-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-ink-faint">
+          <div className="flex items-center gap-2">
+            <Sprout className="size-4 text-sage-600 dark:text-sage-300" />
+            <span>© 2026 NurtureHUB. All rights reserved.</span>
           </div>
-
-          {/* Card 2 */}
-          <div className="card card-interactive" style={{ padding: '32px' }}>
-            <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '16px' }}>📝</span>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
-              Knowledge Checks
-            </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem', lineHeight: 1.5 }}>
-              Interactive multiple-choice quizzes designed to consolidate training. Instant scorecards, passing thresholds, and unlimited review attempts.
-            </p>
-          </div>
-
-          {/* Card 3 */}
-          <div className="card card-interactive" style={{ padding: '32px' }}>
-            <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '16px' }}>🏆</span>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
-              Earn Achievements
-            </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem', lineHeight: 1.5 }}>
-              Earn virtual milestone badges (Fast Learner, Scholar, Graduate) as you finish courses and demonstrate skills competency.
-            </p>
+          <div className="flex gap-6">
+            <Link to="#" className="transition-colors hover:text-ink-muted">Privacy Policy</Link>
+            <Link to="#" className="transition-colors hover:text-ink-muted">Terms</Link>
           </div>
         </div>
-      </section>
-
-      {/* Footer */}
-      <footer 
-        style={{ 
-          padding: '40px 24px', 
-          backgroundColor: 'var(--secondary-900)', 
-          color: 'var(--secondary-300)', 
-          textAlign: 'center',
-          borderTop: '1px solid var(--secondary-800)',
-          fontSize: '0.875rem'
-        }}
-      >
-        <p style={{ margin: 0 }}>© {new Date().getFullYear()} NurtureHUB Framework. All rights reserved.</p>
-        <p style={{ fontSize: '0.75rem', color: 'var(--secondary-500)', marginTop: '8px' }}>
-          Designed for Department of Women and Child Development (WCD) and ICDS workers.
-        </p>
       </footer>
     </div>
   );

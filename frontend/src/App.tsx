@@ -6,6 +6,7 @@ import { ToastProvider } from './context/ToastContext';
 
 // Pages
 
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
@@ -95,7 +96,8 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
       {/* Public Pages */}
-      <Route path="/" element={<PublicRoute><LoginPage /></PublicRoute>} />
+      {/* Landing is visible to everyone — its CTA adapts to auth state */}
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
       <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
@@ -132,7 +134,7 @@ const AppRoutes: React.FC = () => {
       {import.meta.env.DEV && <Route path="/dev/styleguide" element={<StyleguidePage />} />}
 
       {/* Catch-all fallback */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

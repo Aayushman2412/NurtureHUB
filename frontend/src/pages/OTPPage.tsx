@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
 import OTPInput from '../components/auth/OTPInput';
+import { Button } from '../components/ui';
 
 const OTPPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -31,7 +32,7 @@ const OTPPage: React.FC = () => {
     try {
       const response = await verifyOtp(email, otpCode);
       showToast('Account verified successfully!', 'success');
-      
+
       if (response.is_profile_complete) {
         navigate('/dashboard');
       } else {
@@ -51,7 +52,7 @@ const OTPPage: React.FC = () => {
     try {
       await forgotPassword(email);
       showToast('New verification code sent to your email.', 'success');
-    } catch (err: any) {
+    } catch {
       showToast('Failed to resend code. Please try again.', 'error');
     } finally {
       setResending(false);
@@ -63,44 +64,32 @@ const OTPPage: React.FC = () => {
       title="Verify Account"
       subtitle={`We have sent a 6-digit verification code to ${email || 'your email address'}.`}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div className="form-group" style={{ textAlign: 'center' }}>
-          <label className="form-label" style={{ marginBottom: '12px' }}>Enter 6-digit Code</label>
+      <div className="flex flex-col gap-5">
+        <div className="text-center">
+          <label className="mb-3 block text-sm font-semibold text-ink">Enter 6-digit Code</label>
           <OTPInput length={6} onComplete={handleVerify} />
         </div>
 
-        {/* Action Buttons */}
-        <div style={{ textAlign: 'center', marginTop: '12px' }}>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+        <div className="mt-3 text-center">
+          <p className="text-sm text-ink-muted">
             Didn't receive the email?{' '}
             <button
               onClick={handleResend}
               disabled={resending || loading}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--primary-600)',
-                fontWeight: 600,
-                cursor: 'pointer',
-                padding: '4px',
-                fontSize: '0.875rem'
-              }}
+              className="cursor-pointer p-1 text-sm font-semibold text-primary hover:text-primary-hover
+                         disabled:opacity-50"
             >
               {resending ? 'Resending...' : 'Resend OTP Code'}
             </button>
           </p>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+          <p className="mt-1 text-xs text-ink-faint">
             Note: You can check your email inbox or copy the code printed in the backend terminal logs.
           </p>
         </div>
 
-        <button
-          className="auth-outline-btn"
-          onClick={() => navigate('/login')}
-          style={{ width: '100%', marginTop: '16px' }}
-        >
+        <Button variant="outline" size="lg" fullWidth onClick={() => navigate('/login')} className="mt-4">
           Back to Login
-        </button>
+        </Button>
       </div>
     </AuthLayout>
   );
