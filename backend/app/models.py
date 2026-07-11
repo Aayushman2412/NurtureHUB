@@ -47,8 +47,9 @@ class User(Base):
     avatar_initials = Column(String, nullable=True)
     is_verified = Column(Boolean, default=False, nullable=False)
     is_admin = Column(Boolean, default=False, nullable=False)
-    otp_code = Column(String, nullable=True)
+    otp_code = Column(String, nullable=True)  # stores a bcrypt hash of the OTP, never plaintext
     otp_expires_at = Column(DateTime, nullable=True)
+    otp_attempts = Column(Integer, default=0, nullable=False)  # failed verify attempts for the current code
     google_id = Column(String, unique=True, nullable=True)
     program_district_id = Column(Integer, ForeignKey("program_districts.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

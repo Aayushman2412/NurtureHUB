@@ -5,7 +5,7 @@ test management, and results export.
 All content endpoints are scoped per program district.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
@@ -19,8 +19,14 @@ import re
 from app.database import get_db
 from app.models import User, ProgramDistrict
 from app.auth import verify_password, create_access_token
+from app.dependencies import get_current_admin
+from app.rate_limit import limiter
 
-router = APIRouter(prefix="/api/admin", tags=["admin"])
+# Public admin endpoints (login only) — no token required.
+auth_router = APIRouter(prefix="/api/admin", tags=["admin-auth"])
+
+# All other admin endpoints require a valid admin token.
+router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(get_current_admin)])
 
 # ──────────────────────────────────────────────
 # Hardcoded admin credentials for quick testing
@@ -130,8 +136,9 @@ def _slugify(name: str) -> str:
 # ──────────────────────────────────────────────
 # Admin Login
 # ──────────────────────────────────────────────
-@router.post("/login", response_model=AdminLoginResponse)
-def admin_login(credentials: AdminLoginRequest, db: Session = Depends(get_db)):
+@auth_router.post("/login", response_model=AdminLoginResponse)
+@limiter.limit("10/minute")
+def admin_login(request: Request, credentials: AdminLoginRequest, db: Session = Depends(get_db)):
     """
     Authenticate admin user.
     Supports both hardcoded credentials for testing and DB-validated admin auth.
