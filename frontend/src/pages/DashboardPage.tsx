@@ -75,45 +75,47 @@ const DashboardPage: React.FC = () => {
   if (loading) return <PageLoader label="Loading metrics…" />;
   if (!data) return null;
 
-  const ring = 2 * Math.PI * 32;
-
   return (
     <div className="flex flex-col gap-6">
       {/* Welcome Banner */}
-      <div className="flex flex-wrap items-center justify-between gap-5 rounded-2xl bg-gradient-to-br from-coral-500 to-coral-700 px-8 py-7 text-white shadow-(--shadow-card)">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-widest text-coral-100">
+      <div className="relative flex flex-wrap items-center justify-between gap-5 overflow-hidden rounded-3xl bg-gradient-to-br from-coral-400 via-coral-500 to-coral-700 px-8 py-8 shadow-(--shadow-card-hover)">
+        {/* Decorative depth */}
+        <div className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full bg-white/15 blur-2xl" aria-hidden />
+        <div className="pointer-events-none absolute -bottom-28 left-1/3 size-64 rounded-full bg-coral-800/30 blur-3xl" aria-hidden />
+
+        <div className="relative">
+          <span className="text-xs font-bold uppercase tracking-widest text-white/75">
             {user?.program_district?.name ? `${user.program_district.name} District` : 'Welcome back, Supervisor'}
           </span>
-          <h2 className="mt-1 mb-2 font-display text-3xl font-extrabold">
-            {user?.full_name || 'Healthcare Worker'} 🌱
+          <h2 className="mt-1.5 mb-2 font-display text-3xl font-extrabold text-white drop-shadow-sm">
+            {user?.full_name || 'Healthcare Worker'} <span className="align-middle">🌱</span>
           </h2>
-          <p className="text-coral-50/90">
+          <p className="max-w-md text-[15px] text-white/85">
             You have completed {data.tutorials_completed} of {data.total_tutorials} video lessons. Keep up the good work!
           </p>
         </div>
 
         {/* Progress ring */}
-        <div className="flex items-center gap-4">
-          <div className="relative flex size-20 items-center justify-center">
-            <svg className="absolute size-full -rotate-90">
-              <circle cx="40" cy="40" r="32" stroke="rgba(255,255,255,0.15)" strokeWidth="6" fill="transparent" />
+        <div className="relative flex items-center gap-4">
+          <div className="relative flex size-24 items-center justify-center">
+            <svg className="absolute size-full -rotate-90" viewBox="0 0 96 96">
+              <circle cx="48" cy="48" r="40" stroke="rgba(255,255,255,0.25)" strokeWidth="7" fill="transparent" />
               <circle
-                cx="40"
-                cy="40"
-                r="32"
+                cx="48"
+                cy="48"
+                r="40"
                 stroke="white"
-                strokeWidth="6"
+                strokeWidth="7"
                 fill="transparent"
-                strokeDasharray={ring}
-                strokeDashoffset={ring * (1 - data.progress_percentage / 100)}
+                strokeDasharray={2 * Math.PI * 40}
+                strokeDashoffset={2 * Math.PI * 40 * (1 - data.progress_percentage / 100)}
                 strokeLinecap="round"
-                className="transition-[stroke-dashoffset] duration-700"
+                className="transition-[stroke-dashoffset] duration-700 [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.15))]"
               />
             </svg>
-            <span className="font-display text-lg font-extrabold">{Math.round(data.progress_percentage)}%</span>
+            <span className="font-display text-xl font-extrabold text-white">{Math.round(data.progress_percentage)}%</span>
           </div>
-          <span className="text-sm font-semibold text-coral-50">
+          <span className="text-sm font-semibold leading-tight text-white/80">
             Overall
             <br />
             Progress

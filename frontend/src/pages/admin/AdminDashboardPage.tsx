@@ -64,11 +64,13 @@ const AdminDashboardPage: React.FC = () => {
   return (
     <div className="flex flex-col gap-6">
       {/* Banner — teal identity for admin */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-gradient-to-br from-teal-600 to-teal-800 px-8 py-7 text-white shadow-(--shadow-card)">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-widest text-teal-100">Welcome back</span>
-          <h1 className="mt-1 mb-2 font-display text-3xl font-extrabold">Admin Dashboard</h1>
-          <p className="max-w-xl text-teal-50/90">
+      <div className="relative flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-3xl bg-gradient-to-br from-teal-500 via-teal-600 to-teal-800 px-8 py-8 text-white shadow-(--shadow-card-hover)">
+        <div className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full bg-white/15 blur-2xl" aria-hidden />
+        <div className="pointer-events-none absolute -bottom-28 left-1/3 size-64 rounded-full bg-teal-900/30 blur-3xl" aria-hidden />
+        <div className="relative">
+          <span className="text-xs font-bold uppercase tracking-widest text-white/75">Welcome back</span>
+          <h1 className="mt-1.5 mb-2 font-display text-3xl font-extrabold text-white drop-shadow-sm">Admin Dashboard</h1>
+          <p className="max-w-xl text-[15px] text-white/85">
             {stats?.district_name ? (
               <>
                 Managing <strong className="text-white">{stats.district_name}</strong> district — configure forms,
@@ -79,7 +81,7 @@ const AdminDashboardPage: React.FC = () => {
             )}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="relative flex items-center gap-3">
           {stats?.district_name && (
             <div className="flex items-center gap-2 rounded-xl border border-white/25 bg-white/15 px-4 py-2.5">
               <MapPin className="size-4.5" />
