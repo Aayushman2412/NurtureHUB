@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import client from '../../api/client';
-import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown, Edit3, Save, X, Eye } from 'lucide-react';
+import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown, Edit3, Save, Eye } from 'lucide-react';
+import { Button, Card, Checkbox, Input, Modal, PageHeader, PageLoader, Select } from '../../components/ui';
+import { inputClasses } from '../../components/ui/Input';
+import { cn } from '../../utils/cn';
 
 interface FieldOption {
   label: string;
@@ -25,6 +28,10 @@ const FIELD_TYPES = [
   { value: 'textarea', label: 'Text Area' },
 ];
 
+const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <label className="mb-1.5 block text-xs font-semibold text-ink-muted">{children}</label>
+);
+
 const AdminFormBuilderPage: React.FC = () => {
   const [fields, setFields] = useState<FormField[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +39,12 @@ const AdminFormBuilderPage: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [newField, setNewField] = useState<FormField>({
-    id: '', label: '', type: 'text', placeholder: '', required: true, options: null
+    id: '',
+    label: '',
+    type: 'text',
+    placeholder: '',
+    required: true,
+    options: null,
   });
   const [newOptionLabel, setNewOptionLabel] = useState('');
   const [editOptionLabel, setEditOptionLabel] = useState('');
@@ -41,8 +53,12 @@ const AdminFormBuilderPage: React.FC = () => {
 
   const loadFields = () => {
     setLoading(true);
-    client.get(`/api/admin/form-config?district=${getDistrict()}`)
-      .then(res => { setFields(res.data.fields); setLoading(false); })
+    client
+      .get(`/api/admin/form-config?district=${getDistrict()}`)
+      .then(res => {
+        setFields(res.data.fields);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   };
 
@@ -84,7 +100,7 @@ const AdminFormBuilderPage: React.FC = () => {
   };
 
   const updateField = (id: string, updates: Partial<FormField>) => {
-    const newFields = fields.map(f => f.id === id ? { ...f, ...updates } : f);
+    const newFields = fields.map(f => (f.id === id ? { ...f, ...updates } : f));
     saveConfig(newFields);
   };
 
@@ -92,7 +108,10 @@ const AdminFormBuilderPage: React.FC = () => {
     if (!editOptionLabel.trim()) return;
     const field = fields.find(f => f.id === fieldId);
     if (!field) return;
-    const newOpt: FieldOption = { label: editOptionLabel.trim(), value: editOptionLabel.trim().toLowerCase().replace(/\s+/g, '_') };
+    const newOpt: FieldOption = {
+      label: editOptionLabel.trim(),
+      value: editOptionLabel.trim().toLowerCase().replace(/\s+/g, '_'),
+    };
     updateField(fieldId, { options: [...(field.options || []), newOpt] });
     setEditOptionLabel('');
   };
@@ -106,133 +125,210 @@ const AdminFormBuilderPage: React.FC = () => {
 
   const addOptionToNewField = () => {
     if (!newOptionLabel.trim()) return;
-    const newOpt: FieldOption = { label: newOptionLabel.trim(), value: newOptionLabel.trim().toLowerCase().replace(/\s+/g, '_') };
+    const newOpt: FieldOption = {
+      label: newOptionLabel.trim(),
+      value: newOptionLabel.trim().toLowerCase().replace(/\s+/g, '_'),
+    };
     setNewField({ ...newField, options: [...(newField.options || []), newOpt] });
     setNewOptionLabel('');
   };
 
   const getTypeIcon = (type: string) => {
-    const map: Record<string, string> = { text: '📝', number: '🔢', date: '📅', dropdown: '📋', radio: '🔘', textarea: '📄' };
+    const map: Record<string, string> = {
+      text: '📝',
+      number: '🔢',
+      date: '📅',
+      dropdown: '📋',
+      radio: '🔘',
+      textarea: '📄',
+    };
     return map[type] || '📝';
   };
 
-  if (loading) return <div className="admin-page"><div className="admin-loading">Loading form configuration...</div></div>;
+  if (loading) return <PageLoader label="Loading form configuration…" />;
+
+  const iconBtn =
+    'flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer disabled:opacity-40 disabled:pointer-events-none';
+  const dangerIconBtn =
+    'flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-error-50 hover:text-error-500 cursor-pointer dark:hover:bg-error-500/10';
+
+  const OptionsEditor: React.FC<{
+    options: FieldOption[];
+    onRemove: (i: number) => void;
+    optionLabel: string;
+    setOptionLabel: (v: string) => void;
+    onAdd: () => void;
+  }> = ({ options, onRemove, optionLabel, setOptionLabel, onAdd }) => (
+    <div className="mt-4">
+      <Label>Options</Label>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt, oi) => (
+          <span
+            key={oi}
+            className="inline-flex items-center gap-2 rounded-lg bg-surface-sunken px-3 py-1.5 text-sm text-ink"
+          >
+            {opt.label}
+            <button onClick={() => onRemove(oi)} className="text-ink-faint hover:text-error-500 cursor-pointer">
+              <Trash2 className="size-3" />
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="mt-2 flex gap-2">
+        <Input
+          placeholder="New option label"
+          value={optionLabel}
+          onChange={e => setOptionLabel(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && onAdd()}
+        />
+        <Button size="sm" onClick={onAdd}>
+          Add
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="admin-page">
-      <div className="admin-page-header">
-        <div>
-          <h1 className="admin-page-title">Registration Form Builder</h1>
-          <p className="admin-page-desc">Add, remove, and reorder fields in the user registration form. Changes are saved automatically.</p>
-        </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button className="admin-btn admin-btn-outline" onClick={() => setShowPreview(!showPreview)}>
-            <Eye size={16} /> {showPreview ? 'Hide Preview' : 'Preview Form'}
-          </button>
-          <button className="admin-btn admin-btn-primary" onClick={() => setShowAddModal(true)}>
-            <Plus size={16} /> Add Field
-          </button>
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        title="Registration Form Builder"
+        description="Add, remove, and reorder fields in the user registration form. Changes are saved automatically."
+        actions={
+          <>
+            <Button variant="outline" iconLeft={<Eye className="size-4" />} onClick={() => setShowPreview(!showPreview)}>
+              {showPreview ? 'Hide Preview' : 'Preview Form'}
+            </Button>
+            <Button iconLeft={<Plus className="size-4" />} onClick={() => setShowAddModal(true)}>
+              Add Field
+            </Button>
+          </>
+        }
+      />
 
-      <div style={{ display: 'grid', gridTemplateColumns: showPreview ? '1fr 1fr' : '1fr', gap: '24px' }}>
-        {/* Fields List */}
-        <div className="admin-card-list">
+      <div className={cn('grid gap-6', showPreview ? 'lg:grid-cols-2' : 'grid-cols-1')}>
+        {/* Fields */}
+        <div className="flex flex-col gap-3">
           {fields.map((field, idx) => (
-            <div key={field.id} className="admin-form-field-card">
-              <div className="admin-field-header">
-                <div className="admin-field-grip">
-                  <GripVertical size={16} />
-                </div>
-                <span className="admin-field-type-icon">{getTypeIcon(field.type)}</span>
-                <div className="admin-field-info">
-                  <span className="admin-field-label">{field.label}</span>
-                  <span className="admin-field-meta">
-                    {FIELD_TYPES.find(t => t.value === field.type)?.label} • {field.required ? 'Required' : 'Optional'}
+            <Card key={field.id} className="p-4">
+              <div className="flex items-center gap-3">
+                <GripVertical className="size-4 shrink-0 text-ink-faint" />
+                <span className="text-xl">{getTypeIcon(field.type)}</span>
+                <div className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold text-ink">{field.label}</span>
+                  <span className="text-xs text-ink-faint">
+                    {FIELD_TYPES.find(t => t.value === field.type)?.label} •{' '}
+                    {field.required ? 'Required' : 'Optional'}
                     {field.options ? ` • ${field.options.length} options` : ''}
                   </span>
                 </div>
-                <div className="admin-field-actions">
-                  <button onClick={() => moveField(idx, 'up')} disabled={idx === 0} className="admin-icon-btn" title="Move up"><ChevronUp size={16} /></button>
-                  <button onClick={() => moveField(idx, 'down')} disabled={idx === fields.length - 1} className="admin-icon-btn" title="Move down"><ChevronDown size={16} /></button>
-                  <button onClick={() => setEditingField(editingField === field.id ? null : field.id)} className="admin-icon-btn" title="Edit"><Edit3 size={16} /></button>
-                  <button onClick={() => removeField(field.id)} className="admin-icon-btn danger" title="Remove"><Trash2 size={16} /></button>
+                <div className="flex gap-1">
+                  <button onClick={() => moveField(idx, 'up')} disabled={idx === 0} className={iconBtn} title="Move up">
+                    <ChevronUp className="size-4" />
+                  </button>
+                  <button
+                    onClick={() => moveField(idx, 'down')}
+                    disabled={idx === fields.length - 1}
+                    className={iconBtn}
+                    title="Move down"
+                  >
+                    <ChevronDown className="size-4" />
+                  </button>
+                  <button
+                    onClick={() => setEditingField(editingField === field.id ? null : field.id)}
+                    className={iconBtn}
+                    title="Edit"
+                  >
+                    <Edit3 className="size-4" />
+                  </button>
+                  <button onClick={() => removeField(field.id)} className={dangerIconBtn} title="Remove">
+                    <Trash2 className="size-4" />
+                  </button>
                 </div>
               </div>
 
-              {/* Expanded edit panel */}
               {editingField === field.id && (
-                <div className="admin-field-edit-panel">
-                  <div className="admin-field-edit-grid">
+                <div className="mt-4 border-t border-border pt-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
-                      <label className="admin-label">Label</label>
-                      <input className="admin-input" value={field.label} onChange={e => updateField(field.id, { label: e.target.value })} />
+                      <Label>Label</Label>
+                      <Input value={field.label} onChange={e => updateField(field.id, { label: e.target.value })} />
                     </div>
                     <div>
-                      <label className="admin-label">Type</label>
-                      <select className="admin-input" value={field.type} onChange={e => updateField(field.id, { type: e.target.value, options: ['dropdown', 'radio'].includes(e.target.value) ? (field.options || []) : null })}>
-                        {FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                      </select>
+                      <Label>Type</Label>
+                      <Select
+                        value={field.type}
+                        onChange={e =>
+                          updateField(field.id, {
+                            type: e.target.value,
+                            options: ['dropdown', 'radio'].includes(e.target.value) ? field.options || [] : null,
+                          })
+                        }
+                      >
+                        {FIELD_TYPES.map(t => (
+                          <option key={t.value} value={t.value}>{t.label}</option>
+                        ))}
+                      </Select>
                     </div>
                     <div>
-                      <label className="admin-label">Placeholder</label>
-                      <input className="admin-input" value={field.placeholder} onChange={e => updateField(field.id, { placeholder: e.target.value })} />
+                      <Label>Placeholder</Label>
+                      <Input
+                        value={field.placeholder}
+                        onChange={e => updateField(field.id, { placeholder: e.target.value })}
+                      />
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '24px' }}>
-                      <input type="checkbox" checked={field.required} onChange={e => updateField(field.id, { required: e.target.checked })} style={{ accentColor: '#6366f1' }} />
-                      <label className="admin-label" style={{ margin: 0 }}>Required</label>
+                    <div className="flex items-center pt-6">
+                      <Checkbox
+                        label="Required"
+                        checked={field.required}
+                        onChange={e => updateField(field.id, { required: e.target.checked })}
+                      />
                     </div>
                   </div>
 
-                  {/* Options editor for dropdown/radio */}
                   {field.options !== null && (
-                    <div className="admin-options-editor">
-                      <label className="admin-label">Options</label>
-                      <div className="admin-options-list">
-                        {field.options.map((opt, oi) => (
-                          <div key={oi} className="admin-option-item">
-                            <span>{opt.label}</span>
-                            <button onClick={() => removeOptionFromField(field.id, oi)} className="admin-icon-btn danger sm"><Trash2 size={12} /></button>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                        <input className="admin-input sm" placeholder="New option label" value={editOptionLabel} onChange={e => setEditOptionLabel(e.target.value)} onKeyDown={e => e.key === 'Enter' && addOptionToField(field.id)} />
-                        <button className="admin-btn admin-btn-sm admin-btn-primary" onClick={() => addOptionToField(field.id)}>Add</button>
-                      </div>
-                    </div>
+                    <OptionsEditor
+                      options={field.options}
+                      onRemove={oi => removeOptionFromField(field.id, oi)}
+                      optionLabel={editOptionLabel}
+                      setOptionLabel={setEditOptionLabel}
+                      onAdd={() => addOptionToField(field.id)}
+                    />
                   )}
                 </div>
               )}
-            </div>
+            </Card>
           ))}
         </div>
 
-        {/* Preview Panel */}
+        {/* Preview */}
         {showPreview && (
-          <div className="admin-preview-panel">
-            <h3 className="admin-preview-title">Form Preview</h3>
-            <div className="admin-preview-form">
+          <Card className="p-6">
+            <h3 className="mb-4 font-display font-bold text-ink">Form Preview</h3>
+            <div className="flex flex-col gap-4">
               {fields.map(field => (
-                <div key={field.id} className="admin-preview-field">
-                  <label className="admin-preview-label">
-                    {field.label} {field.required && <span style={{ color: '#ef4444' }}>*</span>}
+                <div key={field.id}>
+                  <label className="mb-1.5 block text-sm font-semibold text-ink">
+                    {field.label} {field.required && <span className="text-error-500">*</span>}
                   </label>
-                  {field.type === 'text' && <input className="admin-preview-input" placeholder={field.placeholder} readOnly />}
-                  {field.type === 'number' && <input className="admin-preview-input" type="number" placeholder={field.placeholder} readOnly />}
-                  {field.type === 'date' && <input className="admin-preview-input" type="date" readOnly />}
-                  {field.type === 'textarea' && <textarea className="admin-preview-input" placeholder={field.placeholder} rows={3} readOnly />}
+                  {field.type === 'text' && <Input placeholder={field.placeholder} readOnly />}
+                  {field.type === 'number' && <Input type="number" placeholder={field.placeholder} readOnly />}
+                  {field.type === 'date' && <Input type="date" readOnly />}
+                  {field.type === 'textarea' && (
+                    <textarea className={cn(inputClasses(), 'resize-y')} placeholder={field.placeholder} rows={3} readOnly />
+                  )}
                   {field.type === 'dropdown' && (
-                    <select className="admin-preview-input">
+                    <Select>
                       <option>{field.placeholder || 'Select...'}</option>
-                      {field.options?.map((o, i) => <option key={i}>{o.label}</option>)}
-                    </select>
+                      {field.options?.map((o, i) => (
+                        <option key={i}>{o.label}</option>
+                      ))}
+                    </Select>
                   )}
                   {field.type === 'radio' && (
-                    <div style={{ display: 'flex', gap: '16px', marginTop: '4px' }}>
+                    <div className="mt-1 flex flex-wrap gap-4">
                       {field.options?.map((o, i) => (
-                        <label key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                          <input type="radio" name={field.id} readOnly /> {o.label}
+                        <label key={i} className="flex items-center gap-1.5 text-sm text-ink-muted">
+                          <input type="radio" name={field.id} readOnly className="accent-(--primary)" /> {o.label}
                         </label>
                       ))}
                     </div>
@@ -240,67 +336,79 @@ const AdminFormBuilderPage: React.FC = () => {
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         )}
       </div>
 
-      {/* Add Field Modal */}
-      {showAddModal && (
-        <div className="admin-modal-backdrop" onClick={() => setShowAddModal(false)}>
-          <div className="admin-modal" onClick={e => e.stopPropagation()}>
-            <div className="admin-modal-header">
-              <h3>Add New Form Field</h3>
-              <button onClick={() => setShowAddModal(false)} className="admin-icon-btn"><X size={20} /></button>
-            </div>
-            <div className="admin-modal-body">
-              <div className="admin-field-edit-grid">
-                <div>
-                  <label className="admin-label">Field Label *</label>
-                  <input className="admin-input" placeholder="e.g. Aadhar Number" value={newField.label} onChange={e => setNewField({ ...newField, label: e.target.value })} />
-                </div>
-                <div>
-                  <label className="admin-label">Type</label>
-                  <select className="admin-input" value={newField.type} onChange={e => setNewField({ ...newField, type: e.target.value, options: ['dropdown', 'radio'].includes(e.target.value) ? [] : null })}>
-                    {FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="admin-label">Placeholder</label>
-                  <input className="admin-input" placeholder="e.g. Enter your ID..." value={newField.placeholder} onChange={e => setNewField({ ...newField, placeholder: e.target.value })} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '24px' }}>
-                  <input type="checkbox" checked={newField.required} onChange={e => setNewField({ ...newField, required: e.target.checked })} style={{ accentColor: '#6366f1' }} />
-                  <label className="admin-label" style={{ margin: 0 }}>Required</label>
-                </div>
-              </div>
-
-              {newField.options !== null && (
-                <div className="admin-options-editor" style={{ marginTop: '16px' }}>
-                  <label className="admin-label">Options</label>
-                  <div className="admin-options-list">
-                    {newField.options.map((opt, oi) => (
-                      <div key={oi} className="admin-option-item">
-                        <span>{opt.label}</span>
-                        <button onClick={() => setNewField({ ...newField, options: newField.options!.filter((_, i) => i !== oi) })} className="admin-icon-btn danger sm"><Trash2 size={12} /></button>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                    <input className="admin-input sm" placeholder="Option label" value={newOptionLabel} onChange={e => setNewOptionLabel(e.target.value)} onKeyDown={e => e.key === 'Enter' && addOptionToNewField()} />
-                    <button className="admin-btn admin-btn-sm admin-btn-primary" onClick={addOptionToNewField}>Add</button>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="admin-modal-footer">
-              <button className="admin-btn admin-btn-outline" onClick={() => setShowAddModal(false)}>Cancel</button>
-              <button className="admin-btn admin-btn-primary" onClick={addField} disabled={!newField.label.trim()}>
-                <Save size={16} /> Add Field
-              </button>
-            </div>
+      {/* Add field modal */}
+      <Modal
+        open={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Add New Form Field"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setShowAddModal(false)}>
+              Cancel
+            </Button>
+            <Button iconLeft={<Save className="size-4" />} onClick={addField} disabled={!newField.label.trim()}>
+              Add Field
+            </Button>
+          </>
+        }
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <Label>Field Label *</Label>
+            <Input
+              placeholder="e.g. Aadhar Number"
+              value={newField.label}
+              onChange={e => setNewField({ ...newField, label: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label>Type</Label>
+            <Select
+              value={newField.type}
+              onChange={e =>
+                setNewField({
+                  ...newField,
+                  type: e.target.value,
+                  options: ['dropdown', 'radio'].includes(e.target.value) ? [] : null,
+                })
+              }
+            >
+              {FIELD_TYPES.map(t => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label>Placeholder</Label>
+            <Input
+              placeholder="e.g. Enter your ID..."
+              value={newField.placeholder}
+              onChange={e => setNewField({ ...newField, placeholder: e.target.value })}
+            />
+          </div>
+          <div className="flex items-center pt-6">
+            <Checkbox
+              label="Required"
+              checked={newField.required}
+              onChange={e => setNewField({ ...newField, required: e.target.checked })}
+            />
           </div>
         </div>
-      )}
+
+        {newField.options !== null && (
+          <OptionsEditor
+            options={newField.options}
+            onRemove={oi => setNewField({ ...newField, options: newField.options!.filter((_, i) => i !== oi) })}
+            optionLabel={newOptionLabel}
+            setOptionLabel={setNewOptionLabel}
+            onAdd={addOptionToNewField}
+          />
+        )}
+      </Modal>
     </div>
   );
 };
