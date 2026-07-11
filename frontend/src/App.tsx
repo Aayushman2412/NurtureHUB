@@ -23,6 +23,7 @@ import ResultsPage from './pages/ResultsPage';
 import ProfilePage from './pages/ProfilePage';
 
 // Layout
+import { PageLoader } from './components/ui';
 import AppLayout from './components/layout/AppLayout';
 import AdminLayout from './components/layout/AdminLayout';
 
@@ -87,8 +88,8 @@ const AppRoutes: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--bg-primary)' }}>
-        <div className="spinner" style={{ fontSize: '1.5rem', color: 'var(--primary-500)' }}>Initializing NurtureHUB...</div>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <PageLoader label="Initializing NurtureHUB…" />
       </div>
     );
   }

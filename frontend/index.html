@@ -15,16 +15,12 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
-    <!-- Pre-paint theme: avoids dark-mode flash. body.dark-mode is the
-         legacy hook and is removed when the CSS migration completes. -->
+    <!-- Pre-paint theme: avoids the dark-mode flash on first load. -->
     <script>
       (function () {
         var t = localStorage.getItem('nh_theme');
         var dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (dark) {
-          document.documentElement.classList.add('dark');
-          document.body.classList.add('dark-mode');
-        }
+        if (dark) document.documentElement.classList.add('dark');
       })();
     </script>
     <div id="root"></div>

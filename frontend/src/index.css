@@ -1,13 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
    NurtureHUB — Tailwind v4 entry
-   Layer order: legacy styles sit ABOVE Tailwind's base (so preflight
-   doesn't break unmigrated pages) but BELOW components/utilities
-   (so migrated markup always wins). legacy.css is deleted when the
-   migration completes.
    ═══════════════════════════════════════════════════════════════ */
-@layer theme, base, legacy, components, utilities;
-
 @import "tailwindcss";
 @import "./styles/theme.css";
 @import "./styles/base.css" layer(base);
-@import "./styles/legacy.css" layer(legacy);
