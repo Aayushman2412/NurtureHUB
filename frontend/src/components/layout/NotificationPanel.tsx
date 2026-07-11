@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Bell, CheckCheck, X } from 'lucide-react';
 import { getNotifications, markAsRead, markAllAsRead } from '../../api/notifications';
+import { Button, EmptyState, Spinner } from '../ui';
+import { cn } from '../../utils/cn';
 
 interface Notification {
   id: number;
@@ -47,7 +49,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
         const data = await getNotifications();
         const unread = data.filter((n: Notification) => !n.is_read).length;
         onUpdateCount(unread);
-      } catch (err) {
+      } catch {
         // Silent error for polling
       }
     }, 15000);
@@ -57,10 +59,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
   const handleMarkAsRead = async (id: number) => {
     try {
       await markAsRead(id);
-      setNotifications(prev =>
-        prev.map(n => (n.id === id ? { ...n, is_read: true } : n))
-      );
-      // Recalculate unread count
+      setNotifications(prev => prev.map(n => (n.id === id ? { ...n, is_read: true } : n)));
       const updated = notifications.map(n => (n.id === id ? { ...n, is_read: true } : n));
       const unread = updated.filter(n => !n.is_read).length;
       onUpdateCount(unread);
@@ -80,66 +79,95 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
   };
 
   return (
-    <div id="notifPanel" className={`notif-panel ${isOpen ? 'open' : ''}`}>
-      {/* Header */}
-      <div className="notif-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Bell size={20} style={{ color: 'var(--primary-500)' }} />
-          <span style={{ fontWeight: 600 }}>Notifications</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {notifications.some(n => !n.is_read) && (
-            <button
-              onClick={handleMarkAllRead}
-              className="btn btn-outline"
-              style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-              title="Mark all as read"
-            >
-              <CheckCheck size={14} />
-              <span>Read All</span>
-            </button>
-          )}
-          <button
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
-          >
-            <X size={20} />
-          </button>
-        </div>
-      </div>
-
-      {/* Body List */}
-      <div className="notif-body">
-        {loading && notifications.length === 0 ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '30px' }}>
-            <span className="spinner">Loading...</span>
-          </div>
-        ) : notifications.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🔔</div>
-            <p>You have no notifications yet.</p>
-          </div>
-        ) : (
-          notifications.map(n => (
-            <div
-              key={n.id}
-              className={`notif-item ${!n.is_read ? 'unread' : ''}`}
-              onClick={() => !n.is_read && handleMarkAsRead(n.id)}
-              style={{ cursor: !n.is_read ? 'pointer' : 'default' }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
-                <span className="notif-item-title">{n.title}</span>
-                {!n.is_read && <span className="notif-item-badge" />}
-              </div>
-              <p className="notif-item-message">{n.message}</p>
-              <span className="notif-item-time">
-                {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(n.created_at).toLocaleDateString()}
-              </span>
-            </div>
-          ))
+    <>
+      {/* Scrim */}
+      <div
+        onClick={onClose}
+        className={cn(
+          'fixed inset-0 z-(--z-modal-backdrop) bg-cream-950/40 backdrop-blur-xs transition-opacity print:hidden',
+          isOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
-      </div>
-    </div>
+        aria-hidden
+      />
+
+      <aside
+        className={cn(
+          'fixed inset-y-0 right-0 z-(--z-modal) flex w-[min(360px,90vw)] flex-col border-l border-border bg-surface shadow-2xl',
+          'transition-transform duration-300 print:hidden',
+          isOpen ? 'translate-x-0' : 'translate-x-full',
+        )}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+          <div className="flex items-center gap-2">
+            <Bell className="size-5 text-primary" />
+            <span className="font-display font-bold">Notifications</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {notifications.some(n => !n.is_read) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleMarkAllRead}
+                iconLeft={<CheckCheck className="size-3.5" />}
+                title="Mark all as read"
+              >
+                Read All
+              </Button>
+            )}
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer"
+            >
+              <X className="size-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-3">
+          {loading && notifications.length === 0 ? (
+            <div className="flex justify-center py-10">
+              <Spinner />
+            </div>
+          ) : notifications.length === 0 ? (
+            <EmptyState
+              icon={<Bell />}
+              title="No notifications yet"
+              description="Updates about your training and assessments will appear here."
+              className="mt-6"
+            />
+          ) : (
+            <div className="flex flex-col gap-2">
+              {notifications.map(n => (
+                <button
+                  key={n.id}
+                  type="button"
+                  onClick={() => !n.is_read && handleMarkAsRead(n.id)}
+                  className={cn(
+                    'w-full rounded-xl border p-3.5 text-left transition-colors',
+                    n.is_read
+                      ? 'border-border bg-surface'
+                      : 'cursor-pointer border-primary/30 bg-coral-50 hover:bg-coral-100 dark:bg-coral-500/10 dark:hover:bg-coral-500/15',
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2.5">
+                    <span className="font-semibold text-ink">{n.title}</span>
+                    {!n.is_read && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />}
+                  </div>
+                  <p className="mt-1 text-sm text-ink-muted">{n.message}</p>
+                  <span className="mt-2 block text-xs text-ink-faint">
+                    {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} •{' '}
+                    {new Date(n.created_at).toLocaleDateString()}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </aside>
+    </>
   );
 };
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { Menu, Sun, Moon, Bell } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { Avatar } from '../ui';
 
 interface MainHeaderProps {
   title: string;
@@ -9,6 +10,10 @@ interface MainHeaderProps {
   onToggleNotifs: () => void;
   unreadNotifsCount: number;
 }
+
+const iconBtn =
+  'flex size-9.5 items-center justify-center rounded-full text-ink-muted transition-colors ' +
+  'hover:bg-surface-sunken hover:text-ink cursor-pointer';
 
 const MainHeader: React.FC<MainHeaderProps> = ({
   title,
@@ -20,78 +25,40 @@ const MainHeader: React.FC<MainHeaderProps> = ({
   const { user } = useAuth();
 
   return (
-    <header className="main-header" style={{ position: 'sticky', top: 0, zIndex: 'var(--z-dropdown)' }}>
-      {/* Left side: Hamburger (Mobile) + Screen Title */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <button
-          className="sidebar-toggle-btn"
-          onClick={onToggleSidebar}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <Menu size={24} />
+    <header className="sticky top-0 z-(--z-dropdown) flex items-center justify-between gap-4 border-b border-border bg-surface/85 px-5 py-3 backdrop-blur-md print:hidden">
+      {/* Left: hamburger (mobile) + title */}
+      <div className="flex items-center gap-3">
+        <button onClick={onToggleSidebar} className={`${iconBtn} lg:hidden`} aria-label="Toggle menu">
+          <Menu className="size-6" />
         </button>
-        <h1 className="font-display" style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-          {title}
-        </h1>
+        <h1 className="font-display text-xl font-bold text-ink">{title}</h1>
       </div>
 
-      {/* Right side: Actions & User avatar */}
-      <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        {/* Dark Mode Toggle */}
+      {/* Right: actions + avatar */}
+      <div className="flex items-center gap-2">
         <button
           onClick={toggleDarkMode}
-          className="header-action-btn"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', width: '38px', height: '38px' }}
+          className={iconBtn}
           title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
         >
-          {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+          {darkMode ? <Sun className="size-5" /> : <Moon className="size-5" />}
         </button>
 
-        {/* Notifications Bell */}
-        <button
-          onClick={onToggleNotifs}
-          className="header-action-btn"
-          style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', width: '38px', height: '38px' }}
-          title="Notifications"
-        >
-          <Bell size={20} />
+        <button onClick={onToggleNotifs} className={`${iconBtn} relative`} title="Notifications">
+          <Bell className="size-5" />
           {unreadNotifsCount > 0 && (
-            <span
-              style={{
-                position: 'absolute',
-                top: '4px',
-                right: '4px',
-                width: '18px',
-                height: '18px',
-                backgroundColor: 'var(--error-500)',
-                color: 'white',
-                borderRadius: '50%',
-                fontSize: '0.6875rem',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 0 0 2px var(--bg-secondary)',
-              }}
-            >
+            <span className="absolute right-1 top-1 flex size-4.5 items-center justify-center rounded-full bg-error-500 text-[11px] font-bold text-white ring-2 ring-surface">
               {unreadNotifsCount > 9 ? '9+' : unreadNotifsCount}
             </span>
           )}
         </button>
 
-        {/* User initials block */}
         {user && (
-          <div
-            className="avatar avatar-sm font-display"
-            style={{
-              cursor: 'pointer',
-              boxShadow: '0 0 0 2px var(--primary-500)',
-              backgroundColor: 'var(--primary-100)',
-              color: 'var(--primary-800)',
-            }}
-          >
-            {user.avatar_initials || 'U'}
-          </div>
+          <Avatar
+            name={user.full_name || 'User'}
+            size="sm"
+            className="ring-2 ring-primary cursor-pointer"
+          />
         )}
       </div>
     </header>

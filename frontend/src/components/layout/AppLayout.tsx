@@ -12,10 +12,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  
+
   const location = useLocation();
 
-  // Determine header title based on current route
   const getHeaderTitle = () => {
     const path = location.pathname;
     if (path === '/dashboard') return 'Dashboard';
@@ -27,15 +26,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="app-container" style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-primary)' }}>
-      {/* Sidebar Navigation */}
-      <Sidebar 
-        isOpen={sidebarOpen} 
-        onClose={() => setSidebarOpen(false)} 
-      />
+    <div className="min-h-screen bg-background">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Main Work Area */}
-      <div className="main-content" style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      {/* Main column — offset by sidebar width on desktop */}
+      <div className="flex min-h-screen flex-col lg:pl-64">
         <MainHeader
           title={getHeaderTitle()}
           onToggleSidebar={() => setSidebarOpen(prev => !prev)}
@@ -43,16 +38,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           unreadNotifsCount={unreadCount}
         />
 
-        <main style={{ flex: 1, padding: 'var(--space-6)', overflowY: 'auto' }}>
-          {children}
-        </main>
+        <main className="flex-1 animate-fade-in overflow-x-hidden p-5 sm:p-6">{children}</main>
       </div>
 
-      {/* Notification Slide Panel */}
-      <NotificationPanel 
-        isOpen={notifOpen} 
+      <NotificationPanel
+        isOpen={notifOpen}
         onClose={() => setNotifOpen(false)}
-        onUpdateCount={(count) => setUnreadCount(count)}
+        onUpdateCount={count => setUnreadCount(count)}
       />
     </div>
   );
