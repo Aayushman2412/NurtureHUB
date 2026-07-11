@@ -27,6 +27,8 @@ import AdminLayout from './components/layout/AdminLayout';
 
 // Admin Pages
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+// Dev-only styleguide (tree-shaken out of prod builds)
+import StyleguidePage from './pages/dev/StyleguidePage';
 import AdminFormBuilderPage from './pages/admin/AdminFormBuilderPage';
 import AdminTutorialsPage from './pages/admin/AdminTutorialsPage';
 import AdminTestsPage from './pages/admin/AdminTestsPage';
@@ -125,6 +127,9 @@ const AppRoutes: React.FC = () => {
       <Route path="/admin/form-builder" element={<AdminRoute><AdminFormBuilderPage /></AdminRoute>} />
       <Route path="/admin/tutorials" element={<AdminRoute><AdminTutorialsPage /></AdminRoute>} />
       <Route path="/admin/tests" element={<AdminRoute><AdminTestsPage /></AdminRoute>} />
+
+      {/* Dev-only styleguide */}
+      {import.meta.env.DEV && <Route path="/dev/styleguide" element={<StyleguidePage />} />}
 
       {/* Catch-all fallback */}
       <Route path="*" element={<Navigate to="/login" replace />} />
