@@ -1,11 +1,10 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
 
-type CardAccent = 'coral' | 'teal' | 'sage' | 'amber';
+type CardAccent = 'coral' | 'sage' | 'amber';
 
 const accentBorders: Record<CardAccent, string> = {
   coral: 'border-l-4 border-l-coral-500',
-  teal: 'border-l-4 border-l-teal-500',
   sage: 'border-l-4 border-l-sage-500',
   amber: 'border-l-4 border-l-amber-500',
 };

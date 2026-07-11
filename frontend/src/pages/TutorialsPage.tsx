@@ -143,7 +143,7 @@ const TutorialsPage: React.FC = () => {
                       className="flex flex-col overflow-hidden"
                     >
                       {/* Thumbnail */}
-                      <div className="group relative flex h-40 items-center justify-center bg-gradient-to-br from-teal-500 to-sage-600 text-white">
+                      <div className="group relative flex h-40 items-center justify-center bg-gradient-to-br from-coral-500 to-sage-600 text-white">
                         <div className="flex size-13 items-center justify-center rounded-full bg-cream-950/40 shadow-md transition-transform group-hover:scale-110">
                           <Play className="ml-0.5 size-6 fill-white stroke-none" />
                         </div>

@@ -2,11 +2,10 @@ import React from 'react';
 import Card from './Card';
 import { cn } from '../../utils/cn';
 
-type StatTone = 'coral' | 'teal' | 'sage' | 'amber' | 'neutral';
+type StatTone = 'coral' | 'sage' | 'amber' | 'neutral';
 
 const iconTones: Record<StatTone, string> = {
   coral: 'bg-coral-50 text-coral-600 dark:bg-coral-500/15 dark:text-coral-300',
-  teal: 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300',
   sage: 'bg-sage-50 text-sage-700 dark:bg-sage-500/15 dark:text-sage-300',
   amber: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-500',
   neutral: 'bg-surface-sunken text-ink-muted',

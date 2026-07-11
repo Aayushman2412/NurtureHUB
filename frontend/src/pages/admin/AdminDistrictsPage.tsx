@@ -111,7 +111,7 @@ const AdminDistrictsPage: React.FC = () => {
           {districts.map(d => (
             <Card key={d.id} className="flex flex-col gap-4 p-6">
               <div className="flex items-center gap-3.5">
-                <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-600 dark:bg-teal-500/15 dark:text-teal-300">
+                <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-coral-50 text-coral-600 dark:bg-coral-500/15 dark:text-coral-300">
                   <MapPin className="size-6" />
                 </span>
                 <div className="min-w-0 flex-1">

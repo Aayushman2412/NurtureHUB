@@ -261,7 +261,7 @@ const AdminTestsPage: React.FC = () => {
             >
               <div>
                 <div className="mb-1 flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-300">
+                  <span className="text-xs font-bold uppercase tracking-wider text-coral-600 dark:text-coral-300">
                     Stage {test.stage_id}
                   </span>
                   {statusBadge(test.status)}
@@ -383,7 +383,7 @@ const AdminTestsPage: React.FC = () => {
                           <Td className="text-xs text-ink-muted">{q.option_c}</Td>
                           <Td className="text-xs text-ink-muted">{q.option_d}</Td>
                           <Td className="text-center">
-                            <Badge variant="teal">{q.correct_answer}</Badge>
+                            <Badge variant="coral">{q.correct_answer}</Badge>
                           </Td>
                           <Td className="text-center">{q.marks}</Td>
                         </Tr>

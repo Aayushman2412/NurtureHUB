@@ -7,8 +7,9 @@
       like bg-surface / text-ink that flip with the theme.
 
    Components should use SEMANTIC utilities by default and reach
-   for raw ramps only for decorative accents. Teal's job is
-   informational/progress accent (progress, links, active tabs).
+   for raw ramps only for decorative accents. Coral carries the
+   informational/progress accent role too (progress, links, active
+   tabs, admin identity) — the app is coral end-to-end.
    JS-side copies of these hexes live in src/utils/brandColors.ts.
    ═══════════════════════════════════════════════════════════════ */
 
@@ -54,14 +55,6 @@
   --color-cream-900: #26221C;
   --color-cream-950: #191612;
 
-  /* ── Teal — continuity accent (ported from old primary) ───── */
-  --color-teal-50:  #E6FAF8;
-  --color-teal-100: #B3F0E9;
-  --color-teal-300: #4DDCCB;
-  --color-teal-500: #0FADA0;
-  --color-teal-700: #097A70;
-  --color-teal-900: #034640;
-
   /* ── Amber — warning / celebratory ─────────────────────────── */
   --color-amber-50:  #FFFBEB;
   --color-amber-100: #FEF3C7;
@@ -78,9 +71,9 @@
   --color-error-50:  #FDF0F0;
   --color-error-500: #DC2F2F;
   --color-error-600: #BE2525;
-  --color-info-50:  #E6FAF8;
-  --color-info-500: #0FADA0;
-  --color-info-600: #097A70;
+  --color-info-50:  var(--color-coral-50);
+  --color-info-500: var(--color-coral-500);
+  --color-info-600: var(--color-coral-600);
 
   /* ── Typography ────────────────────────────────────────────── */
   --font-display: 'Figtree', ui-sans-serif, system-ui, sans-serif;

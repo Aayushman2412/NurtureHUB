@@ -56,7 +56,6 @@ const StyleguidePage: React.FC = () => {
         <Badge variant="warning">Pending</Badge>
         <Badge variant="info">Info</Badge>
         <Badge variant="neutral">Neutral</Badge>
-        <Badge variant="teal">Teal</Badge>
         <Badge variant="coral" size="md">Coral md</Badge>
       </Section>
 
@@ -83,14 +82,15 @@ const StyleguidePage: React.FC = () => {
         <Card className="w-56"><CardBody>Plain card</CardBody></Card>
         <Card interactive className="w-56"><CardBody>Interactive card</CardBody></Card>
         <Card locked className="w-56"><CardBody><Lock className="size-4 inline mr-1" />Locked card</CardBody></Card>
-        <Card accent="teal" className="w-56"><CardBody>Teal accent</CardBody></Card>
         <Card accent="coral" className="w-56"><CardBody>Coral accent</CardBody></Card>
+        <Card accent="sage" className="w-56"><CardBody>Sage accent</CardBody></Card>
+        <Card accent="amber" className="w-56"><CardBody>Amber accent</CardBody></Card>
       </Section>
 
       <Section title="Stat cards">
         <StatCard icon={<BookOpen />} label="Completed Tutorials" value="12/30" tone="coral" className="w-64" />
         <StatCard icon={<Award />} label="Assessments Passed" value="4/6" tone="amber" className="w-64" />
-        <StatCard icon={<TrendingUp />} label="Progress" value="63%" trend="+12% this week" tone="teal" className="w-64" />
+        <StatCard icon={<TrendingUp />} label="Progress" value="63%" trend="+12% this week" tone="sage" className="w-64" />
       </Section>
 
       <Section title="Progress">
@@ -124,7 +124,7 @@ const StyleguidePage: React.FC = () => {
 
       <Section title="Alerts">
         <div className="w-full space-y-3">
-          <Alert variant="info" title="Heads up">Informational message with teal accent.</Alert>
+          <Alert variant="info" title="Heads up">Informational message with the coral accent.</Alert>
           <Alert variant="warning" title="Important">You cannot pause the assessment once started.</Alert>
           <Alert variant="success">Profile saved successfully.</Alert>
           <Alert variant="error" title="Submission failed">Please check your connection and try again.</Alert>

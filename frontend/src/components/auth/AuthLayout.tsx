@@ -115,7 +115,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
               <h3 className="font-display text-3xl font-extrabold leading-tight">
                 Nurturing Skills, Elevating Communities
               </h3>
-              <div className="mt-4 h-1 w-16 rounded-full bg-teal-500" aria-hidden />
+              <div className="mt-4 h-1 w-16 rounded-full bg-coral-500" aria-hidden />
             </div>
 
             <p className="mb-8 text-ink-muted">
@@ -125,14 +125,14 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
 
             <div className="grid grid-cols-2 gap-4 text-left">
               <div className="rounded-2xl border border-border bg-surface/70 p-5 backdrop-blur-sm">
-                <BookOpen className="mb-3 size-6 text-teal-600 dark:text-teal-300" />
+                <BookOpen className="mb-3 size-6 text-coral-600 dark:text-coral-300" />
                 <h4 className="font-display text-sm font-bold">Training Modules</h4>
                 <p className="mt-1 text-xs text-ink-muted">
                   Interactive video tutorials designed specifically for ICDS &amp; Anganwadi workflows.
                 </p>
               </div>
               <div className="rounded-2xl border border-border bg-surface/70 p-5 backdrop-blur-sm">
-                <Award className="mb-3 size-6 text-teal-600 dark:text-teal-300" />
+                <Award className="mb-3 size-6 text-coral-600 dark:text-coral-300" />
                 <h4 className="font-display text-sm font-bold">Assessments &amp; Badges</h4>
                 <p className="mt-1 text-xs text-ink-muted">
                   Structured knowledge checks to verify learning and earn official milestone badges.

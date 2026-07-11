@@ -12,7 +12,7 @@ const features = [
     icon: BookOpen,
     title: 'Structured Training',
     body: 'Standardized video modules built for ICDS & Anganwadi workflows — learn at your own pace, stage by stage.',
-    tone: 'text-teal-600 bg-teal-50 dark:text-teal-300 dark:bg-teal-500/15',
+    tone: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-500/15',
   },
   {
     icon: Award,
@@ -141,7 +141,7 @@ const LandingPage: React.FC = () => {
         <div className="mt-6 grid gap-6 rounded-2xl border border-border bg-gradient-to-br from-sage-50 to-cream-100 p-8 dark:from-sage-950/40 dark:to-surface md:grid-cols-3">
           {stats.map(s => (
             <div key={s.value} className="flex items-start gap-4">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface text-teal-600 shadow-sm dark:text-teal-300">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface text-coral-600 shadow-sm dark:text-coral-300">
                 <s.icon className="size-5" />
               </span>
               <div>

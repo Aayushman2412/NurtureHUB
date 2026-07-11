@@ -84,16 +84,16 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Sidebar — teal accent distinguishes admin from the coral member app */}
+      {/* Sidebar — same coral identity as the member app */}
       <aside className="fixed inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-surface">
         {/* Header */}
         <div className="flex items-center gap-3 border-b border-border px-5 py-5">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-700 text-white">
+          <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-coral-400 to-coral-600 text-white">
             <Shield className="size-5" />
           </span>
           <div className="flex-1">
             <h2 className="font-display text-base font-extrabold leading-tight">NurtureHUB</h2>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-teal-600 dark:text-teal-300">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
               Admin Panel
             </span>
           </div>
@@ -114,7 +114,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               <button
                 className="flex w-full items-center gap-2.5 rounded-lg border border-border bg-surface-sunken px-3.5 py-2.5 text-[13px] font-semibold text-ink hover:border-border-strong cursor-pointer"
               >
-                <MapPin className="size-4 shrink-0 text-teal-600 dark:text-teal-300" />
+                <MapPin className="size-4 shrink-0 text-primary" />
                 <span className="flex-1 truncate text-left">{selectedDistrict?.name || 'Select District'}</span>
                 <ChevronDown className={cn('size-3.5 shrink-0 opacity-60 transition-transform', open && 'rotate-180')} />
               </button>
@@ -147,7 +147,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 cn(
                   'flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold transition-colors',
                   isActive
-                    ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-300'
+                    ? 'bg-coral-50 text-primary dark:bg-coral-500/10'
                     : 'text-ink-muted hover:bg-surface-sunken hover:text-ink',
                 )
               }
@@ -160,7 +160,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
 
         {/* Footer */}
         <div className="flex items-center gap-3 border-t border-border p-3">
-          <Avatar name={adminName} size="md" className="bg-gradient-to-br from-teal-500 to-teal-700" />
+          <Avatar name={adminName} size="md" />
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-semibold text-ink">{adminName}</div>
             <div className="text-xs text-ink-muted">Super Admin</div>

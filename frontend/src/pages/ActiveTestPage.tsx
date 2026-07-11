@@ -284,7 +284,7 @@ const ActiveTestPage: React.FC = () => {
           <div>
             <div className="mb-4 flex items-center justify-between">
               <span className="font-display font-bold text-ink">Question {currentIdx + 1}</span>
-              <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700 dark:bg-teal-500/15 dark:text-teal-300">
+              <span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700 dark:bg-coral-500/15 dark:text-coral-300">
                 Marks: {currentQuestion.marks}
               </span>
             </div>
@@ -391,7 +391,7 @@ const ActiveTestPage: React.FC = () => {
                       : isMarked
                         ? 'bg-amber-500 text-white'
                         : isAnswered
-                          ? 'bg-teal-500 text-white'
+                          ? 'bg-sage-500 text-white'
                           : 'bg-surface-sunken text-ink-muted hover:bg-border',
                   )}
                 >
@@ -404,7 +404,7 @@ const ActiveTestPage: React.FC = () => {
           {/* Legend */}
           <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-xs text-ink-muted">
             <span className="flex items-center gap-1.5">
-              <span className="size-3 rounded-full bg-teal-500" /> Answered
+              <span className="size-3 rounded-full bg-sage-500" /> Answered
             </span>
             <span className="flex items-center gap-1.5">
               <span className="size-3 rounded-full bg-amber-500" /> Marked for Review

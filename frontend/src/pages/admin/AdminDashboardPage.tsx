@@ -14,7 +14,7 @@ interface Stats {
   district_name: string;
 }
 
-type Tone = 'teal' | 'sage' | 'coral' | 'amber';
+type Tone = 'sage' | 'coral' | 'amber';
 
 const AdminDashboardPage: React.FC = () => {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -46,12 +46,12 @@ const AdminDashboardPage: React.FC = () => {
   }, [loadStats]);
 
   const cards: { icon: React.ReactNode; label: string; value: number; tone: Tone }[] = [
-    { icon: <Users />, label: 'District Users', value: stats?.total_users ?? 0, tone: 'teal' },
+    { icon: <Users />, label: 'District Users', value: stats?.total_users ?? 0, tone: 'coral' },
     { icon: <Layers />, label: 'Training Stages', value: stats?.total_stages ?? 0, tone: 'sage' },
-    { icon: <Video />, label: 'Tutorials', value: stats?.total_tutorials ?? 0, tone: 'teal' },
-    { icon: <ClipboardList />, label: 'Assessments', value: stats?.total_tests ?? 0, tone: 'amber' },
+    { icon: <Video />, label: 'Tutorials', value: stats?.total_tutorials ?? 0, tone: 'amber' },
+    { icon: <ClipboardList />, label: 'Assessments', value: stats?.total_tests ?? 0, tone: 'coral' },
     { icon: <FileText />, label: 'Form Fields', value: stats?.total_form_fields ?? 0, tone: 'sage' },
-    { icon: <Zap />, label: 'Active Tests', value: stats?.active_tests ?? 0, tone: 'coral' },
+    { icon: <Zap />, label: 'Active Tests', value: stats?.active_tests ?? 0, tone: 'amber' },
   ];
 
   const quickActions = [
@@ -63,10 +63,10 @@ const AdminDashboardPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Banner — teal identity for admin */}
-      <div className="relative flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-3xl bg-gradient-to-br from-teal-500 via-teal-600 to-teal-800 px-8 py-8 text-white shadow-(--shadow-card-hover)">
+      {/* Banner — same coral identity as the member app */}
+      <div className="relative flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-3xl bg-gradient-to-br from-coral-400 via-coral-500 to-coral-700 px-8 py-8 text-white shadow-(--shadow-card-hover)">
         <div className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full bg-white/15 blur-2xl" aria-hidden />
-        <div className="pointer-events-none absolute -bottom-28 left-1/3 size-64 rounded-full bg-teal-900/30 blur-3xl" aria-hidden />
+        <div className="pointer-events-none absolute -bottom-28 left-1/3 size-64 rounded-full bg-coral-800/30 blur-3xl" aria-hidden />
         <div className="relative">
           <span className="text-xs font-bold uppercase tracking-widest text-white/75">Welcome back</span>
           <h1 className="mt-1.5 mb-2 font-display text-3xl font-extrabold text-white drop-shadow-sm">Admin Dashboard</h1>
@@ -118,7 +118,7 @@ const AdminDashboardPage: React.FC = () => {
                 <p className="text-sm text-ink-muted">{action.desc}</p>
               </div>
             </div>
-            <ArrowRight className="size-5 shrink-0 text-teal-600 dark:text-teal-300" />
+            <ArrowRight className="size-5 shrink-0 text-primary" />
           </Card>
         ))}
       </div>

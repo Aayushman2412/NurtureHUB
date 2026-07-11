@@ -1,10 +1,9 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
 
-type ProgressTone = 'teal' | 'coral' | 'sage' | 'amber';
+type ProgressTone = 'coral' | 'sage' | 'amber';
 
 const barTones: Record<ProgressTone, string> = {
-  teal: 'bg-teal-500',
   coral: 'bg-coral-500',
   sage: 'bg-sage-500',
   amber: 'bg-amber-500',
@@ -18,8 +17,7 @@ export interface ProgressBarProps {
   className?: string;
 }
 
-/** Teal is the default: progress is an "informational" accent in the brand system. */
-export const ProgressBar: React.FC<ProgressBarProps> = ({ value, tone = 'teal', size = 'md', className }) => (
+export const ProgressBar: React.FC<ProgressBarProps> = ({ value, tone = 'coral', size = 'md', className }) => (
   <div
     role="progressbar"
     aria-valuenow={Math.round(value)}
@@ -44,7 +42,7 @@ export interface ProgressRingProps {
   size?: number;
   strokeWidth?: number;
   className?: string;
-  /** ring color comes from text color — defaults to teal */
+  /** ring color comes from text color — defaults to coral */
   label?: React.ReactNode;
 }
 
@@ -59,7 +57,7 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - Math.min(100, Math.max(0, value)) / 100);
   return (
-    <div className={cn('relative inline-flex items-center justify-center text-teal-500', className)}>
+    <div className={cn('relative inline-flex items-center justify-center text-coral-500', className)}>
       <svg width={size} height={size} className="-rotate-90">
         <circle
           cx={size / 2}

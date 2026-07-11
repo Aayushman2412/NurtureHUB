@@ -14,7 +14,7 @@ export interface TabsProps<T extends string = string> {
   className?: string;
 }
 
-/** Controlled tab bar with a teal active indicator (teal = informational accent). */
+/** Controlled tab bar with a coral active indicator. */
 function Tabs<T extends string = string>({ value, onChange, items, className }: TabsProps<T>) {
   return (
     <div role="tablist" className={cn('flex gap-1 border-b border-border overflow-x-auto', className)}>
@@ -30,7 +30,7 @@ function Tabs<T extends string = string>({ value, onChange, items, className }: 
               'inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold whitespace-nowrap cursor-pointer',
               'border-b-2 -mb-px transition-colors',
               active
-                ? 'border-teal-500 text-teal-700 dark:text-teal-300'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-ink-muted hover:text-ink',
             )}
           >

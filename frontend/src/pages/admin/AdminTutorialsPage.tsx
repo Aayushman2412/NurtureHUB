@@ -160,7 +160,7 @@ const AdminTutorialsPage: React.FC = () => {
         <Card className="mb-6 p-5">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="flex items-center gap-2 font-display font-bold text-ink">
-              <Play className="size-4 text-teal-600 dark:text-teal-300" /> Video Preview (Clipped)
+              <Play className="size-4 text-coral-600 dark:text-coral-300" /> Video Preview (Clipped)
             </h3>
             <button className={iconBtn} onClick={() => setPreviewVideoId('')}>
               <X className="size-4.5" />
@@ -189,7 +189,7 @@ const AdminTutorialsPage: React.FC = () => {
               onClick={() => setExpandedStage(expandedStage === stage.id ? null : stage.id)}
             >
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-300">
+                <span className="text-xs font-bold uppercase tracking-wider text-coral-600 dark:text-coral-300">
                   Stage {stage.order_index + 1}
                 </span>
                 <h3 className="mt-0.5 font-display text-lg font-bold text-ink">{stage.title}</h3>
@@ -218,7 +218,7 @@ const AdminTutorialsPage: React.FC = () => {
                 {stage.tutorials.map(tut => (
                   <div key={tut.id} className="rounded-xl border border-border bg-surface-sunken/40 p-4">
                     <div className="flex items-center gap-3">
-                      <Video className="size-4 shrink-0 text-teal-600 dark:text-teal-300" />
+                      <Video className="size-4 shrink-0 text-coral-600 dark:text-coral-300" />
                       <div className="flex-1 min-w-0">
                         <span className="block truncate font-semibold text-ink">{tut.title}</span>
                         <span className="text-xs text-ink-faint">
@@ -279,8 +279,8 @@ const AdminTutorialsPage: React.FC = () => {
 
                 {/* Add tutorial */}
                 {showAddTutorial === stage.id ? (
-                  <div className="rounded-xl border border-teal-500/30 bg-teal-50/50 p-4 dark:bg-teal-500/5">
-                    <h4 className="mb-3 font-bold text-teal-700 dark:text-teal-300">Add New Tutorial</h4>
+                  <div className="rounded-xl border border-coral-500/30 bg-coral-50/50 p-4 dark:bg-coral-500/5">
+                    <h4 className="mb-3 font-bold text-coral-700 dark:text-coral-300">Add New Tutorial</h4>
                     {editGrid(
                       <>
                         <div><Label>Title *</Label><Input placeholder="Tutorial title" value={newTut.title} onChange={e => setNewTut({ ...newTut, title: e.target.value })} /></div>
@@ -324,7 +324,7 @@ const AdminTutorialsPage: React.FC = () => {
                   </div>
                 ) : (
                   <button
-                    className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong/60 py-3 text-sm font-semibold text-ink-muted hover:border-teal-500 hover:text-teal-600 cursor-pointer dark:hover:text-teal-300"
+                    className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong/60 py-3 text-sm font-semibold text-ink-muted hover:border-coral-500 hover:text-coral-600 cursor-pointer dark:hover:text-coral-300"
                     onClick={() => setShowAddTutorial(stage.id)}
                   >
                     <Plus className="size-4" /> Add Tutorial to this Stage
