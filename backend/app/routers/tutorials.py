@@ -5,13 +5,13 @@ from datetime import datetime
 from app.database import get_db
 from app.models import Stage, Tutorial, UserTutorialProgress, Test, TestAttempt, Notification
 from app.schemas import StageOut, TutorialOut
-from app.dependencies import get_current_user
+from app.dependencies import get_verified_user
 from app.models import User
 
 router = APIRouter(prefix="/api", tags=["tutorials"])
 
 @router.get("/stages", response_model=List[StageOut])
-def get_stages(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_stages(current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
     # Filter stages by the user's program district
     query = db.query(Stage)
     if current_user.program_district_id:
@@ -111,7 +111,7 @@ def get_stages(current_user: User = Depends(get_current_user), db: Session = Dep
 @router.post("/tutorials/{id}/complete")
 def complete_tutorial(
     id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_verified_user),
     db: Session = Depends(get_db)
 ):
     tutorial = db.query(Tutorial).filter(Tutorial.id == id).first()

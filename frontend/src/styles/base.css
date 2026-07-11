@@ -1,0 +1,61 @@
+/* ═══════════════════════════════════════════════════════════════
+   NurtureHUB — global base styles (new system)
+   Note: while legacy.css exists its equivalents win (legacy layer
+   sits above base). These take over as legacy sections are deleted.
+   ═══════════════════════════════════════════════════════════════ */
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--background);
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--ink);
+}
+/* Default heading sizes for bare headings (explicit text-* utilities win). */
+h1 { font-size: 2.25rem; }
+h2 { font-size: 1.75rem; }
+h3 { font-size: 1.375rem; }
+h4 { font-size: 1.125rem; }
+
+/* Thin themed scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-faint); }
+
+::selection {
+  background: var(--color-coral-200);
+  color: var(--color-coral-950);
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media print {
+  .print-hidden { display: none !important; }
+}
+
+/* Confetti pieces are created at runtime (TestSubmittedPage) so they need a
+   real class; color/size/position/delay are set inline per-piece. */
+.confetti-piece {
+  position: fixed;
+  top: -10vh;
+  z-index: var(--z-toast);
+  pointer-events: none;
+  animation-name: confetti-fall;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}

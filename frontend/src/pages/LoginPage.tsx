@@ -5,12 +5,37 @@ import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
 import GoogleButton from '../components/auth/GoogleButton';
 import client from '../api/client';
-import { Eye, EyeOff, Mail, ArrowLeft, Shield } from 'lucide-react';
+import { Mail, ArrowLeft, Shield } from 'lucide-react';
+import { Button, Input, PasswordInput } from '../components/ui';
+
+const FormLabel: React.FC<{ htmlFor: string; children: React.ReactNode }> = ({ htmlFor, children }) => (
+  <label htmlFor={htmlFor} className="mb-2 block text-sm font-semibold text-ink">
+    {children}
+  </label>
+);
+
+const Divider: React.FC<{ label: string }> = ({ label }) => (
+  <div className="flex items-center gap-3" aria-hidden>
+    <div className="h-px flex-1 bg-border" />
+    <span className="text-xs text-ink-faint">{label}</span>
+    <div className="h-px flex-1 bg-border" />
+  </div>
+);
+
+const BackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="mx-auto mt-2 inline-flex items-center gap-2 text-sm font-medium text-ink-muted
+               hover:text-ink transition-colors cursor-pointer"
+  >
+    <ArrowLeft className="size-4" /> Back to sign-in options
+  </button>
+);
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [showAdminForm, setShowAdminForm] = useState(false);
@@ -43,7 +68,7 @@ const LoginPage: React.FC = () => {
     try {
       const response = await login(email, password);
       showToast('Welcome back to NurtureHUB!', 'success');
-      
+
       // Handle page routing according to user auth states
       if (!response.is_verified) {
         navigate('/verify');
@@ -85,22 +110,42 @@ const LoginPage: React.FC = () => {
   if (showAdminForm) {
     return (
       <AuthLayout title="Admin Access" subtitle="Enter administrator credentials to access the management panel.">
-        <form onSubmit={handleAdminLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div className="form-group">
-            <label className="form-label" htmlFor="admin-email">Admin Email</label>
-            <input id="admin-email" type="email" className="auth-input-field" placeholder="admin@nurturehub.org" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} required disabled={adminLoading} />
+        <form onSubmit={handleAdminLogin} className="flex flex-col gap-5">
+          <div>
+            <FormLabel htmlFor="admin-email">Admin Email</FormLabel>
+            <Input
+              id="admin-email"
+              type="email"
+              placeholder="admin@nurturehub.org"
+              value={adminEmail}
+              onChange={e => setAdminEmail(e.target.value)}
+              required
+              disabled={adminLoading}
+            />
           </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="admin-password">Password</label>
-            <input id="admin-password" type="password" className="auth-input-field" placeholder="••••••••" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} required disabled={adminLoading} />
+          <div>
+            <FormLabel htmlFor="admin-password">Password</FormLabel>
+            <PasswordInput
+              id="admin-password"
+              placeholder="••••••••"
+              value={adminPassword}
+              onChange={e => setAdminPassword(e.target.value)}
+              required
+              disabled={adminLoading}
+            />
           </div>
-          <button type="submit" className="auth-primary-btn" disabled={adminLoading} style={{ width: '100%', marginTop: '8px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
-            <Shield size={18} />
+          <Button
+            type="submit"
+            variant="secondary"
+            size="lg"
+            fullWidth
+            loading={adminLoading}
+            iconLeft={<Shield className="size-4.5" />}
+            className="mt-2"
+          >
             {adminLoading ? 'Authenticating...' : 'Login as Admin'}
-          </button>
-          <button type="button" onClick={() => setShowAdminForm(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '16px', alignSelf: 'center', fontWeight: 500 }}>
-            <ArrowLeft size={16} /> Back to sign-in options
-          </button>
+          </Button>
+          <BackButton onClick={() => setShowAdminForm(false)} />
         </form>
       </AuthLayout>
     );
@@ -108,61 +153,38 @@ const LoginPage: React.FC = () => {
 
   if (!showEmailForm) {
     return (
-      <AuthLayout 
-        title="Welcome" 
-        subtitle="Please choose a method to access your training dashboard."
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
-          {/* Sign in with Email Option */}
-          <button 
-            type="button" 
+      <AuthLayout title="Welcome" subtitle="Please choose a method to access your training dashboard.">
+        <div className="flex w-full flex-col gap-4">
+          <Button
+            type="button"
+            size="lg"
+            fullWidth
+            iconLeft={<Mail className="size-4.5" />}
             onClick={() => setShowEmailForm(true)}
-            className="auth-primary-btn"
           >
-            <Mail size={18} />
             Sign in with Email
-          </button>
+          </Button>
 
-          {/* Divider */}
-          <div className="auth-divider">
-            <div className="auth-divider-line" />
-            <span className="auth-divider-text">or continue with</span>
-            <div className="auth-divider-line" />
-          </div>
+          <Divider label="or continue with" />
 
-          {/* Google Sign In Button */}
           <GoogleButton />
 
-          {/* Divider for admin */}
-          <div className="auth-divider">
-            <div className="auth-divider-line" />
-            <span className="auth-divider-text">admin access</span>
-            <div className="auth-divider-line" />
-          </div>
+          <Divider label="admin access" />
 
-          {/* Admin Login Button */}
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="lg"
+            fullWidth
+            iconLeft={<Shield className="size-4.5" />}
             onClick={() => setShowAdminForm(true)}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-              padding: '12px 20px', borderRadius: '10px', border: '1px solid rgba(99,102,241,0.3)',
-              background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.08))',
-              color: '#6366f1', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
           >
-            <Shield size={18} />
             Login as Admin
-          </button>
+          </Button>
 
-          {/* Create Account Link */}
-          <p style={{ textAlign: 'center', fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '24px' }}>
+          <p className="mt-6 text-center text-sm text-ink-muted">
             Don't have an account?{' '}
-            <Link 
-              to="/signup" 
-              style={{ color: 'var(--primary-600)', fontWeight: 600, textDecoration: 'none' }}
-            >
+            <Link to="/signup" className="font-semibold text-primary hover:text-primary-hover">
               Create account
             </Link>
           </p>
@@ -172,104 +194,45 @@ const LoginPage: React.FC = () => {
   }
 
   return (
-    <AuthLayout 
-      title="Sign In" 
-      subtitle="Enter your email and password to access your training dashboard."
-    >
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* Email */}
-        <div className="form-group">
-          <label className="form-label" htmlFor="email-input">Email Address</label>
-          <input
+    <AuthLayout title="Sign In" subtitle="Enter your email and password to access your training dashboard.">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <div>
+          <FormLabel htmlFor="email-input">Email Address</FormLabel>
+          <Input
             id="email-input"
             type="email"
-            className="auth-input-field"
             placeholder="e.g. name@department.gov"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={e => setEmail(e.target.value)}
             required
             disabled={loading}
           />
         </div>
 
-        {/* Password */}
-        <div className="form-group">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <label className="form-label" htmlFor="password-input" style={{ marginBottom: 0 }}>Password</label>
-            <Link 
-              to="/forgot-password" 
-              style={{ fontSize: '0.8125rem', color: 'var(--primary-600)', fontWeight: 600, textDecoration: 'none' }}
-            >
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <label htmlFor="password-input" className="text-sm font-semibold text-ink">
+              Password
+            </label>
+            <Link to="/forgot-password" className="text-[13px] font-semibold text-primary hover:text-primary-hover">
               Forgot password?
             </Link>
           </div>
-          <div style={{ position: 'relative' }}>
-            <input
-              id="password-input"
-              type={showPwd ? 'text' : 'password'}
-              className="auth-input-field"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-              style={{ paddingRight: '48px' }}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPwd(!showPwd)}
-              style={{
-                position: 'absolute',
-                right: '12px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: 'var(--gray-500)',
-                padding: '4px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
+          <PasswordInput
+            id="password-input"
+            placeholder="••••••••"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            disabled={loading}
+          />
         </div>
 
-        {/* Submit */}
-        <button 
-          type="submit" 
-          className="auth-primary-btn" 
-          disabled={loading}
-          style={{ width: '100%', marginTop: '8px' }}
-        >
+        <Button type="submit" size="lg" fullWidth loading={loading} className="mt-2">
           {loading ? 'Signing in...' : 'Sign In'}
-        </button>
+        </Button>
 
-        {/* Back Link */}
-        <button
-          type="button"
-          onClick={() => setShowEmailForm(false)}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--text-secondary)',
-            cursor: 'pointer',
-            fontSize: '0.875rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            marginTop: '16px',
-            alignSelf: 'center',
-            fontWeight: 500
-          }}
-        >
-          <ArrowLeft size={16} />
-          Back to sign-in options
-        </button>
+        <BackButton onClick={() => setShowEmailForm(false)} />
       </form>
     </AuthLayout>
   );

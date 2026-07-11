@@ -4,14 +4,14 @@ from typing import List
 from app.database import get_db
 from app.models import Stage, Tutorial, UserTutorialProgress, Test, TestAttempt, UserAchievement, Achievement
 from app.schemas import DashboardData, DashboardActivity, AchievementOut
-from app.dependencies import get_current_user
+from app.dependencies import get_verified_user
 from app.models import User
 from app.routers.tutorials import get_stages
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 @router.get("", response_model=DashboardData)
-def get_dashboard_data(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_dashboard_data(current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
     # Scope all queries to the user's program district
     district_id = current_user.program_district_id
 

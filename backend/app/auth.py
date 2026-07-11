@@ -19,6 +19,14 @@ def get_password_hash(password: str) -> str:
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
+def hash_otp(otp: str) -> str:
+    """Hash an OTP for storage. OTPs are never persisted in plaintext."""
+    return get_password_hash(otp)
+
+def verify_otp_code(otp: str, hashed_otp: str) -> bool:
+    """Constant-time comparison of a submitted OTP against its stored hash."""
+    return verify_password(otp, hashed_otp)
+
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
     if expires_delta:

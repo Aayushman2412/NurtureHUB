@@ -3,14 +3,13 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
-import { Eye, EyeOff } from 'lucide-react';
 import GoogleButton from '../components/auth/GoogleButton';
+import { Button, Input, PasswordInput } from '../components/ui';
 
 const SignupPage: React.FC = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const { register } = useAuth();
@@ -49,104 +48,66 @@ const SignupPage: React.FC = () => {
       title="Create Account"
       subtitle="Register now to start your standardized skills development path."
     >
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* Full Name */}
-        <div className="form-group">
-          <label className="form-label" htmlFor="fullname-input">Full Name</label>
-          <input
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <div>
+          <label htmlFor="fullname-input" className="mb-2 block text-sm font-semibold text-ink">
+            Full Name
+          </label>
+          <Input
             id="fullname-input"
             type="text"
-            className="auth-input-field"
             placeholder="e.g. Priya Mishra"
             value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            onChange={e => setFullName(e.target.value)}
             required
             disabled={loading}
           />
         </div>
 
-        {/* Email */}
-        <div className="form-group">
-          <label className="form-label" htmlFor="email-input">Email Address</label>
-          <input
+        <div>
+          <label htmlFor="email-input" className="mb-2 block text-sm font-semibold text-ink">
+            Email Address
+          </label>
+          <Input
             id="email-input"
             type="email"
-            className="auth-input-field"
             placeholder="e.g. priya.mishra@department.gov"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={e => setEmail(e.target.value)}
             required
             disabled={loading}
           />
         </div>
 
-        {/* Password */}
-        <div className="form-group">
-          <label className="form-label" htmlFor="password-input">Password</label>
-          <div style={{ position: 'relative' }}>
-            <input
-              id="password-input"
-              type={showPwd ? 'text' : 'password'}
-              className="auth-input-field"
-              placeholder="Min. 6 characters"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-              style={{ paddingRight: '48px' }}
-            />
-             <button
-               type="button"
-               onClick={() => setShowPwd(!showPwd)}
-               style={{
-                 position: 'absolute',
-                 right: '12px',
-                 top: '50%',
-                 transform: 'translateY(-50%)',
-                 background: 'none',
-                 border: 'none',
-                 cursor: 'pointer',
-                 color: 'var(--gray-500)',
-                 padding: '4px',
-                 display: 'flex',
-                 alignItems: 'center',
-                 justifyContent: 'center'
-               }}
-             >
-               {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
-             </button>
-          </div>
+        <div>
+          <label htmlFor="password-input" className="mb-2 block text-sm font-semibold text-ink">
+            Password
+          </label>
+          <PasswordInput
+            id="password-input"
+            placeholder="Min. 6 characters"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            disabled={loading}
+          />
         </div>
 
-        {/* Submit */}
-        <button
-          type="submit"
-          className="auth-primary-btn"
-          disabled={loading}
-          style={{ width: '100%', marginTop: '8px' }}
-        >
+        <Button type="submit" size="lg" fullWidth loading={loading} className="mt-2">
           {loading ? 'Creating account...' : 'Create Account'}
-        </button>
+        </Button>
 
-        {/* Divider */}
-        <div style={{ display: 'flex', alignItems: 'center', margin: '12px 0' }}>
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }} />
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', padding: '0 16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Or sign up with
-          </span>
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }} />
+        <div className="my-1 flex items-center gap-3" aria-hidden>
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-xs uppercase tracking-wider text-ink-faint">Or sign up with</span>
+          <div className="h-px flex-1 bg-border" />
         </div>
 
-        {/* Google OAuth Button */}
         <GoogleButton />
 
-        {/* Link to Login */}
-        <p style={{ textAlign: 'center', fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '16px' }}>
+        <p className="mt-4 text-center text-sm text-ink-muted">
           Already have an account?{' '}
-          <Link
-            to="/login"
-            style={{ color: 'var(--primary-600)', fontWeight: 600, textDecoration: 'none' }}
-          >
+          <Link to="/login" className="font-semibold text-primary hover:text-primary-hover">
             Sign In
           </Link>
         </p>

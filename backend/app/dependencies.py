@@ -30,8 +30,37 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user is None:
         raise credentials_exception
         
-    # Optional: Check if user is verified.
-    # Note: Users can sign up, but need to be verified to access protected routes.
-    # If is_verified is False, we might want to restrict access to some routes, 
-    # but let's let them complete profile / verify-otp first.
+    # Note: this dependency allows unverified users through so they can complete
+    # the onboarding flow (fetch /users/me, verify OTP, build profile).
+    # Content routes should depend on get_verified_user instead.
     return user
+
+
+def get_verified_user(current_user: User = Depends(get_current_user)) -> User:
+    """Require an authenticated AND OTP-verified account. Use on content routes."""
+    if not current_user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account not verified. Please verify your email to continue.",
+        )
+    return current_user
+
+
+def get_current_admin(token: str = Depends(oauth2_scheme)) -> dict:
+    """
+    Require a valid admin token (JWT carrying an is_admin claim, issued by
+    /api/admin/login). Guards every /api/admin/* route except login itself.
+    """
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    payload = decode_access_token(token)
+    if payload is None or not payload.get("is_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator privileges required",
+        )
+    return {"email": payload.get("sub"), "is_admin": True}

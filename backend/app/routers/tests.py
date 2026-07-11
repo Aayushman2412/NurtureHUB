@@ -5,13 +5,13 @@ from datetime import datetime
 from app.database import get_db
 from app.models import Stage, Test, Question, QuestionOption, TestAttempt, TestAnswer, Tutorial, UserTutorialProgress, Notification
 from app.schemas import TestOut, StartAttemptResponse, TestSubmitRequest, TestSubmitResponse, QuestionOut, QuestionOptionOut
-from app.dependencies import get_current_user
+from app.dependencies import get_verified_user
 from app.models import User
 
 router = APIRouter(prefix="/api/tests", tags=["tests"])
 
 @router.get("", response_model=List[TestOut])
-def get_tests(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_tests(current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
     # Filter tests by user's program district
     if not current_user.program_district_id:
         return []
@@ -89,7 +89,7 @@ def get_tests(current_user: User = Depends(get_current_user), db: Session = Depe
     return response
 
 @router.get("/{id}", response_model=TestOut)
-def get_test_details(id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_test_details(id: int, current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
     test = db.query(Test).filter(Test.id == id).first()
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
@@ -121,7 +121,7 @@ def get_test_details(id: int, current_user: User = Depends(get_current_user), db
     )
 
 @router.post("/{id}/start", response_model=StartAttemptResponse)
-def start_test_attempt(id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def start_test_attempt(id: int, current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
     test = db.query(Test).filter(Test.id == id).first()
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
@@ -181,7 +181,7 @@ def start_test_attempt(id: int, current_user: User = Depends(get_current_user), 
 def submit_test_attempt(
     attempt_id: int,
     submission: TestSubmitRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_verified_user),
     db: Session = Depends(get_db)
 ):
     attempt = db.query(TestAttempt).filter(

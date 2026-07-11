@@ -4,13 +4,12 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
 import OTPInput from '../components/auth/OTPInput';
-import { Eye, EyeOff } from 'lucide-react';
+import { Button, Input, PasswordInput } from '../components/ui';
 
 const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [showPwd, setShowPwd] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -69,107 +68,70 @@ const ForgotPasswordPage: React.FC = () => {
     <AuthLayout
       title="Reset Password"
       subtitle={
-        !submitted 
+        !submitted
           ? "Enter your email address and we'll send a 6-digit verification code."
-          : "Enter the verification code and choose a new password."
+          : 'Enter the verification code and choose a new password.'
       }
     >
       {!submitted ? (
-        <form onSubmit={handleSendCode} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div className="form-group">
-            <label className="form-label" htmlFor="email-input">Email Address</label>
-            <input
+        <form onSubmit={handleSendCode} className="flex flex-col gap-5">
+          <div>
+            <label htmlFor="email-input" className="mb-2 block text-sm font-semibold text-ink">
+              Email Address
+            </label>
+            <Input
               id="email-input"
               type="email"
-              className="auth-input-field"
               placeholder="e.g. name@department.gov"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={e => setEmail(e.target.value)}
               required
               disabled={loading}
             />
           </div>
 
-          <button
-            type="submit"
-            className="auth-primary-btn"
-            disabled={loading}
-            style={{ width: '100%', marginTop: '8px' }}
-          >
+          <Button type="submit" size="lg" fullWidth loading={loading} className="mt-2">
             {loading ? 'Sending Code...' : 'Send Verification Code'}
-          </button>
+          </Button>
 
-          <p style={{ textAlign: 'center', fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '8px' }}>
+          <p className="mt-2 text-center text-sm text-ink-muted">
             Back to{' '}
-            <Link to="/login" style={{ color: 'var(--primary-600)', fontWeight: 600, textDecoration: 'none' }}>
+            <Link to="/login" className="font-semibold text-primary hover:text-primary-hover">
               Sign In
             </Link>
           </p>
         </form>
       ) : (
-        <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div className="form-group" style={{ textAlign: 'center' }}>
-            <label className="form-label">6-Digit Verification Code</label>
-            <OTPInput length={6} onComplete={(otpCode) => setCode(otpCode)} />
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '-8px' }}>
+        <form onSubmit={handleResetPassword} className="flex flex-col gap-5">
+          <div className="text-center">
+            <label className="mb-2 block text-sm font-semibold text-ink">6-Digit Verification Code</label>
+            <OTPInput length={6} onComplete={otpCode => setCode(otpCode)} />
+            <p className="-mt-2 text-xs text-ink-faint">
               Didn't receive it? Check your email or backend terminal output.
             </p>
           </div>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="newpassword-input">New Password</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                id="newpassword-input"
-                type={showPwd ? 'text' : 'password'}
-                className="auth-input-field"
-                placeholder="Min. 6 characters"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                disabled={loading}
-                style={{ paddingRight: '48px' }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPwd(!showPwd)}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: 'var(--gray-500)',
-                  padding: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
+          <div>
+            <label htmlFor="newpassword-input" className="mb-2 block text-sm font-semibold text-ink">
+              New Password
+            </label>
+            <PasswordInput
+              id="newpassword-input"
+              placeholder="Min. 6 characters"
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              required
+              disabled={loading}
+            />
           </div>
 
-          <button
-            type="submit"
-            className="auth-primary-btn"
-            disabled={loading || code.length < 6}
-            style={{ width: '100%', marginTop: '8px' }}
-          >
+          <Button type="submit" size="lg" fullWidth loading={loading} disabled={code.length < 6} className="mt-2">
             {loading ? 'Resetting...' : 'Reset Password'}
-          </button>
+          </Button>
 
-          <button
-            type="button"
-            className="auth-outline-btn"
-            onClick={() => setSubmitted(false)}
-            style={{ width: '100%' }}
-          >
+          <Button type="button" variant="outline" size="lg" fullWidth onClick={() => setSubmitted(false)}>
             Back
-          </button>
+          </Button>
         </form>
       )}
     </AuthLayout>

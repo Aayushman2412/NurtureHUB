@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
-import { Sun, Moon, Globe, ChevronDown, BookOpen, Award } from 'lucide-react';
+import { Sun, Moon, Globe, ChevronDown, BookOpen, Award, Sprout } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Dropdown } from '../ui';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -9,159 +10,137 @@ interface AuthLayoutProps {
   subtitle: string;
 }
 
+const languages = [
+  { name: 'English', native: 'English' },
+  { name: 'Hindi', native: 'हिंदी' },
+  { name: 'Tamil', native: 'தமிழ்' },
+  { name: 'Telugu', native: 'తెలుగు' },
+  { name: 'Marathi', native: 'मराठी' },
+  { name: 'Bengali', native: 'বাংলা' },
+  { name: 'Kannada', native: 'ಕನ್ನಡ' },
+];
+
 const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) => {
   const { darkMode, toggleDarkMode } = useTheme();
   const [selectedLang, setSelectedLang] = useState('English');
-  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
-
-  const languages = [
-    { name: 'English', native: 'English' },
-    { name: 'Hindi', native: 'हिंदी' },
-    { name: 'Tamil', native: 'தமிழ்' },
-    { name: 'Telugu', native: 'తెలుగు' },
-    { name: 'Marathi', native: 'मराठी' },
-    { name: 'Bengali', native: 'বাংলা' },
-    { name: 'Kannada', native: 'ಕನ್ನಡ' }
-  ];
 
   return (
-    <div className="auth-layout-root">
-      {/* Dark Mode toggle on absolute top-right */}
-      <div className="auth-theme-toggle">
-        <button
-          onClick={toggleDarkMode}
-          className="header-action-btn"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '50%',
-            width: '40px',
-            height: '40px',
-            backgroundColor: 'var(--bg-secondary)',
-            boxShadow: 'var(--shadow-md)',
-            border: '1px solid var(--border-color)',
-            color: 'var(--text-primary)',
-            cursor: 'pointer'
-          }}
-          title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-        >
-          {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
-      </div>
+    <div className="relative min-h-screen bg-background text-ink">
+      {/* Theme toggle, absolute top-right */}
+      <button
+        onClick={toggleDarkMode}
+        title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        className="absolute top-5 right-5 z-10 flex size-10 items-center justify-center rounded-full
+                   bg-surface border border-border shadow-md text-ink-muted hover:text-ink
+                   transition-colors cursor-pointer"
+      >
+        {darkMode ? <Sun className="size-4.5" /> : <Moon className="size-4.5" />}
+      </button>
 
-      {/* Split Auth Screen Layout */}
-      <div className="auth-layout-inner">
-        
-        {/* Left Side: Forms (scrollable) */}
-        <div className="auth-form-panel">
-          {/* Top Row: Language Selector */}
-          <div className="auth-top-row" style={{ display: 'flex', justifyContent: 'flex-start', width: '100%', marginBottom: '24px' }}>
-            <div style={{ position: 'relative' }}>
-              <button
-                type="button"
-                onClick={() => setLangDropdownOpen(!langDropdownOpen)}
-                className="lang-selector-btn"
-              >
-                <Globe size={16} />
-                <span>{selectedLang}</span>
-                <ChevronDown size={14} style={{ transform: langDropdownOpen ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
-              </button>
-              {langDropdownOpen && (
-                <div className="lang-dropdown">
-                  {languages.map((lang) => (
-                    <button
-                      key={lang.name}
-                      type="button"
-                      onClick={() => {
-                        setSelectedLang(lang.name);
-                        setLangDropdownOpen(false);
-                      }}
-                      className="lang-dropdown-item"
-                    >
-                      <span>{lang.name}</span>
-                      <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>{lang.native}</span>
-                    </button>
-                  ))}
-                </div>
+      <div className="flex min-h-screen">
+        {/* Left: form panel (scrollable) */}
+        <div className="flex w-full flex-col overflow-y-auto px-6 py-6 sm:px-12 lg:w-1/2 lg:px-16">
+          {/* Language selector */}
+          <div className="mb-6">
+            <Dropdown
+              trigger={open => (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-full border border-border bg-surface
+                             px-4 py-2 text-sm font-semibold text-ink-muted hover:text-ink
+                             transition-colors cursor-pointer"
+                >
+                  <Globe className="size-4" />
+                  {selectedLang}
+                  <ChevronDown className={`size-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
+                </button>
               )}
-            </div>
+              items={languages.map(lang => ({
+                key: lang.name,
+                selected: lang.name === selectedLang,
+                label: (
+                  <span className="flex w-full items-center justify-between gap-4">
+                    {lang.name}
+                    <span className="text-xs opacity-60">{lang.native}</span>
+                  </span>
+                ),
+                onSelect: () => setSelectedLang(lang.name),
+              }))}
+            />
           </div>
 
-          {/* Center Content: Welcome & Actions */}
-          <div className="auth-form-container" style={{ margin: 'auto 0' }}>
-            {/* Header logo block */}
-            <div className="auth-logo-block">
-              <span style={{ fontSize: '2.25rem' }}>🌱</span>
+          {/* Centered form content */}
+          <div className="my-auto w-full max-w-md mx-auto lg:mx-0">
+            <div className="mb-8 flex items-center gap-3">
+              <span className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-coral-400 to-coral-600 shadow-(--shadow-glow)">
+                <Sprout className="size-7 text-white" />
+              </span>
               <div>
-                <span className="brand-name" style={{ fontSize: '1.5rem', display: 'block', fontWeight: 800, color: 'var(--text-primary)' }}>NurtureHUB</span>
-                <span style={{ fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--primary-500)', fontWeight: 700 }}>ICDS Training Platform</span>
+                <span className="block font-display text-2xl font-extrabold">NurtureHUB</span>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
+                  ICDS Training Platform
+                </span>
               </div>
             </div>
 
-            <h2 className="font-display auth-form-title">
-              {title}
-            </h2>
-            <p className="auth-form-subtitle">
-              {subtitle}
-            </p>
+            <h2 className="font-display text-3xl font-extrabold">{title}</h2>
+            <p className="mt-2 mb-8 text-ink-muted">{subtitle}</p>
 
             {children}
           </div>
 
-          {/* Bottom Row: Footer-lite */}
-          <div className="auth-bottom-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: '24px', opacity: 0.6, fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+          {/* Footer-lite */}
+          <div className="mt-6 flex w-full items-center justify-between text-[13px] text-ink-faint">
             <p>© 2026 NurtureHUB. All rights reserved.</p>
-            <div style={{ display: 'flex', gap: '16px' }}>
-              <Link to="#" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }}>Privacy Policy</Link>
-              <Link to="#" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }}>Terms</Link>
+            <div className="flex gap-4">
+              <Link to="#" className="hover:text-ink-muted transition-colors">Privacy Policy</Link>
+              <Link to="#" className="hover:text-ink-muted transition-colors">Terms</Link>
             </div>
           </div>
         </div>
 
-        {/* Right Side: Visual banner panels */}
-        <div className="auth-visual-panel">
-          {/* Decorative Background Elements */}
-          <div className="auth-visual-blob-1" />
-          <div className="auth-visual-blob-2" />
+        {/* Right: brand panel */}
+        <div className="relative hidden w-1/2 items-center justify-center overflow-hidden
+                        bg-gradient-to-br from-sage-100 via-cream-100 to-coral-100
+                        dark:from-sage-950 dark:via-(--background) dark:to-coral-950/40 lg:flex">
+          {/* Decorative blobs */}
+          <div className="absolute -top-24 -right-24 size-96 rounded-full bg-coral-200/40 blur-3xl dark:bg-coral-500/10" aria-hidden />
+          <div className="absolute -bottom-32 -left-24 size-96 rounded-full bg-sage-300/40 blur-3xl dark:bg-sage-500/10" aria-hidden />
 
-          <div style={{ position: 'relative', zIndex: 1, maxWidth: '480px', width: '100%', margin: '0 auto', textAlign: 'center' }}>
-            {/* Branding */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
-              <div className="auth-brand-logo-container">
-                <span style={{ fontSize: '3rem' }}>🌱</span>
+          <div className="relative z-1 mx-auto w-full max-w-md px-8 text-center">
+            <div className="mb-8 flex flex-col items-center">
+              <div className="mb-5 flex size-20 items-center justify-center rounded-3xl bg-surface shadow-(--shadow-card-hover)">
+                <Sprout className="size-11 text-sage-600 dark:text-sage-300" />
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <h3 className="font-display auth-visual-heading" style={{ margin: 0 }}>
-                  Nurturing Skills, Elevating Communities
-                </h3>
-                <div className="auth-brand-title-divider" />
-              </div>
+              <h3 className="font-display text-3xl font-extrabold leading-tight">
+                Nurturing Skills, Elevating Communities
+              </h3>
+              <div className="mt-4 h-1 w-16 rounded-full bg-coral-500" aria-hidden />
             </div>
 
-            {/* Descriptive Content */}
-            <div style={{ marginBottom: '32px' }}>
-              <p className="auth-visual-description">
-                Access standardized training videos, complete knowledge-check assessments, unlock specialized badges, and monitor your personal growth journey.
-              </p>
-              
-              {/* Feature Bento Layout */}
-              <div className="auth-features-bento">
-                <div className="auth-bento-card">
-                  <BookOpen className="auth-bento-card-icon" size={24} />
-                  <h4 className="auth-bento-card-title">Training Modules</h4>
-                  <p className="auth-bento-card-desc">Interactive video tutorials designed specifically for ICDS & Anganwadi workflows.</p>
-                </div>
-                <div className="auth-bento-card">
-                  <Award className="auth-bento-card-icon" size={24} />
-                  <h4 className="auth-bento-card-title">Assessments & Badges</h4>
-                  <p className="auth-bento-card-desc">Structured knowledge checks to verify learning and earn official milestone badges.</p>
-                </div>
+            <p className="mb-8 text-ink-muted">
+              Access standardized training videos, complete knowledge-check assessments, unlock
+              specialized badges, and monitor your personal growth journey.
+            </p>
+
+            <div className="grid grid-cols-2 gap-4 text-left">
+              <div className="rounded-2xl border border-border bg-surface/70 p-5 backdrop-blur-sm">
+                <BookOpen className="mb-3 size-6 text-coral-600 dark:text-coral-300" />
+                <h4 className="font-display text-sm font-bold">Training Modules</h4>
+                <p className="mt-1 text-xs text-ink-muted">
+                  Interactive video tutorials designed specifically for ICDS &amp; Anganwadi workflows.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-surface/70 p-5 backdrop-blur-sm">
+                <Award className="mb-3 size-6 text-coral-600 dark:text-coral-300" />
+                <h4 className="font-display text-sm font-bold">Assessments &amp; Badges</h4>
+                <p className="mt-1 text-xs text-ink-muted">
+                  Structured knowledge checks to verify learning and earn official milestone badges.
+                </p>
               </div>
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import { ToastProvider } from './context/ToastContext';
 
 // Pages
 
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
@@ -22,11 +23,14 @@ import ResultsPage from './pages/ResultsPage';
 import ProfilePage from './pages/ProfilePage';
 
 // Layout
+import { PageLoader } from './components/ui';
 import AppLayout from './components/layout/AppLayout';
 import AdminLayout from './components/layout/AdminLayout';
 
 // Admin Pages
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+// Dev-only styleguide (tree-shaken out of prod builds)
+import StyleguidePage from './pages/dev/StyleguidePage';
 import AdminFormBuilderPage from './pages/admin/AdminFormBuilderPage';
 import AdminTutorialsPage from './pages/admin/AdminTutorialsPage';
 import AdminTestsPage from './pages/admin/AdminTestsPage';
@@ -84,8 +88,8 @@ const AppRoutes: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--bg-primary)' }}>
-        <div className="spinner" style={{ fontSize: '1.5rem', color: 'var(--primary-500)' }}>Initializing NurtureHUB...</div>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <PageLoader label="Initializing NurtureHUB…" />
       </div>
     );
   }
@@ -93,7 +97,8 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
       {/* Public Pages */}
-      <Route path="/" element={<PublicRoute><LoginPage /></PublicRoute>} />
+      {/* Landing is visible to everyone — its CTA adapts to auth state */}
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
       <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
@@ -126,8 +131,11 @@ const AppRoutes: React.FC = () => {
       <Route path="/admin/tutorials" element={<AdminRoute><AdminTutorialsPage /></AdminRoute>} />
       <Route path="/admin/tests" element={<AdminRoute><AdminTestsPage /></AdminRoute>} />
 
+      {/* Dev-only styleguide */}
+      {import.meta.env.DEV && <Route path="/dev/styleguide" element={<StyleguidePage />} />}
+
       {/* Catch-all fallback */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

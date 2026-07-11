@@ -9,10 +9,24 @@ const client = axios.create({
   },
 });
 
-// Request interceptor to attach JWT token
+// /api/admin/* requests (except login) authenticate with the admin token;
+// everything else uses the member token.
+const isAdminRequest = (url: string) =>
+  url.startsWith('/api/admin') && !url.startsWith('/api/admin/login');
+
+const clearAdminSession = () => {
+  localStorage.removeItem('nh_admin');
+  localStorage.removeItem('nh_admin_token');
+  localStorage.removeItem('nh_admin_name');
+};
+
+// Request interceptor to attach the appropriate JWT token
 client.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('nh_token');
+    const url = config.url || '';
+    const token = isAdminRequest(url)
+      ? localStorage.getItem('nh_admin_token')
+      : localStorage.getItem('nh_token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -27,16 +41,27 @@ client.interceptors.request.use(
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      // Clear token and redirect to login if unauthorized
-      localStorage.removeItem('nh_token');
-      localStorage.removeItem('nh_user_email');
+    const status = error.response?.status;
+    const url = error.config?.url || '';
 
-      // Prevent redirecting loops
-      if (!window.location.pathname.includes('/login') &&
-        !window.location.pathname.includes('/signup') &&
-        window.location.pathname !== '/') {
-        window.location.href = '/login?expired=true';
+    if (status === 401 || (status === 403 && isAdminRequest(url))) {
+      if (isAdminRequest(url)) {
+        // Admin token missing/expired/invalid — drop admin session and re-auth.
+        clearAdminSession();
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login?expired=true';
+        }
+      } else if (status === 401) {
+        // Member token expired.
+        localStorage.removeItem('nh_token');
+        localStorage.removeItem('nh_user_email');
+
+        // Prevent redirecting loops
+        if (!window.location.pathname.includes('/login') &&
+          !window.location.pathname.includes('/signup') &&
+          window.location.pathname !== '/') {
+          window.location.href = '/login?expired=true';
+        }
       }
     }
     return Promise.reject(error);

@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getStages, completeTutorial } from '../api/tutorials';
 import { useToast } from '../context/ToastContext';
 import { Play, CheckCircle, Clock, ChevronLeft, Check, Lock } from 'lucide-react';
+import { Badge, Button, Card, PageLoader } from '../components/ui';
+import { cn } from '../utils/cn';
 
 interface Tutorial {
   id: number;
@@ -36,7 +38,7 @@ const TutorialPlayerPage: React.FC = () => {
   const [stages, setStages] = useState<Stage[]>([]);
   const [currentTutorial, setCurrentTutorial] = useState<Tutorial | null>(null);
   const [loading, setLoading] = useState(true);
-  
+
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const loadData = async () => {
@@ -44,10 +46,8 @@ const TutorialPlayerPage: React.FC = () => {
       const data = await getStages();
       setStages(data);
 
-      // Find current tutorial by ID
       const targetId = Number(id);
       let found: Tutorial | null = null;
-      
       for (const stg of data) {
         const match = stg.tutorials.find((t: Tutorial) => t.id === targetId);
         if (match) {
@@ -62,7 +62,7 @@ const TutorialPlayerPage: React.FC = () => {
         showToast('Video module not found', 'error');
         navigate('/tutorials');
       }
-    } catch (err) {
+    } catch {
       showToast('Failed to load player configurations', 'error');
     } finally {
       setLoading(false);
@@ -74,184 +74,124 @@ const TutorialPlayerPage: React.FC = () => {
   }, [id]);
 
   const handleVideoEnded = async () => {
-    if (!currentTutorial) return;
-    
-    // If already completed, ignore
-    if (currentTutorial.is_completed) return;
-
+    if (!currentTutorial || currentTutorial.is_completed) return;
     try {
       await completeTutorial(currentTutorial.id);
       showToast(`Module completed: "${currentTutorial.title}"`, 'success');
-      
-      // Reload stages data to update completion checks
       const updatedData = await getStages();
       setStages(updatedData);
-      
-      // Update current tutorial completed state
-      setCurrentTutorial(prev => prev ? { ...prev, is_completed: true } : null);
+      setCurrentTutorial(prev => (prev ? { ...prev, is_completed: true } : null));
     } catch (e) {
       console.error('Failed to save completion:', e);
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-        <div className="spinner">Loading player panel...</div>
-      </div>
-    );
-  }
-
+  if (loading) return <PageLoader label="Loading player panel…" />;
   if (!currentTutorial) return null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      {/* Back button */}
+    <div className="flex flex-col gap-4">
       <div>
-        <button 
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => navigate('/tutorials')}
-          className="btn btn-outline"
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.875rem' }}
+          iconLeft={<ChevronLeft className="size-4" />}
         >
-          <ChevronLeft size={16} />
-          <span>Back to Modules</span>
-        </button>
+          Back to Modules
+        </Button>
       </div>
 
-      {/* Main player workspace grid */}
-      <div 
-        style={{ 
-          display: 'grid', 
-          gridTemplateColumns: '3fr 1.2fr', 
-          gap: 'var(--space-6)',
-          alignItems: 'flex-start'
-        }}
-        className="player-grid"
-      >
-        {/* Left Column: Player & Info */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Glassmorphic Video Box */}
-          <div 
-            style={{ 
-              backgroundColor: 'black', 
-              borderRadius: 'var(--radius-xl)', 
-              overflow: 'hidden', 
-              boxShadow: 'var(--shadow-lg)',
-              position: 'relative',
-              aspectRatio: '16/9'
-            }}
-          >
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[3fr_1.2fr]">
+        {/* Player + info */}
+        <div className="flex flex-col gap-5">
+          <div className="relative aspect-video overflow-hidden rounded-2xl bg-black shadow-lg">
             <video
               ref={videoRef}
               src={currentTutorial.video_url}
               controls
               onEnded={handleVideoEnded}
-              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-              poster="https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=1200&q=80" // healthcare backdrop poster
+              className="size-full object-contain"
+              poster="https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=1200&q=80"
             />
           </div>
 
-          {/* Module description */}
-          <div className="card" style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--primary-500)', letterSpacing: '0.05em' }}>
+          <Card className="p-6">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-primary">
                 {currentTutorial.module_number} • Video Lesson
               </span>
               {currentTutorial.is_completed && (
-                <span className="badge badge-success" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <CheckCircle size={12} /> Completed ✓
-                </span>
+                <Badge variant="success">
+                  <CheckCircle className="size-3" /> Completed
+                </Badge>
               )}
             </div>
-            
-            <h2 className="font-display" style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 12px 0' }}>
-              {currentTutorial.title}
-            </h2>
 
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem', lineHeight: 1.5, margin: 0 }}>
-              {currentTutorial.description}
-            </p>
+            <h2 className="mb-3 font-display text-2xl font-extrabold text-ink">{currentTutorial.title}</h2>
+            <p className="text-[15px] leading-relaxed text-ink-muted">{currentTutorial.description}</p>
 
-            <div style={{ display: 'flex', gap: '20px', fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '24px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Clock size={14} /> {currentTutorial.duration_minutes} Mins Duration
+            <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-t border-border pt-4 text-[13px] text-ink-faint">
+              <span className="flex items-center gap-1.5">
+                <Clock className="size-3.5" /> {currentTutorial.duration_minutes} Mins Duration
               </span>
-              <span>•</span>
-              <span style={{ color: 'var(--primary-500)', fontWeight: 600 }}>
+              <span className="hidden sm:inline">•</span>
+              <span className="font-semibold text-primary">
                 Tip: Watch this video to the end to mark it as completed and unlock assessments!
               </span>
             </div>
-          </div>
+          </Card>
         </div>
 
-        {/* Right Column: Sidebar Playlist */}
-        <div className="card" style={{ padding: '20px', height: 'fit-content', maxHeight: '72vh', display: 'flex', flexDirection: 'column' }}>
-          <h3 className="font-display" style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 16px 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
-            Course Playlist
-          </h3>
+        {/* Playlist */}
+        <Card className="flex max-h-[72vh] flex-col p-5">
+          <h3 className="mb-4 border-b border-border pb-3 font-display text-lg font-bold text-ink">Course Playlist</h3>
 
-          <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }} className="custom-scrollbar">
-            {stages.map((stg) => (
+          <div className="flex flex-1 flex-col gap-4 overflow-y-auto">
+            {stages.map(stg => (
               <div key={stg.id}>
-                {/* Stage header inside playlist */}
-                <h4 style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
+                <h4 className="mb-2 flex justify-between text-[13px] font-bold uppercase tracking-wider text-ink-faint">
                   <span>{stg.title.split(':')[0]}</span>
-                  {stg.is_locked && <Lock size={12} />}
+                  {stg.is_locked && <Lock className="size-3" />}
                 </h4>
 
-                {/* Tutorials item checklist */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {stg.tutorials.map((tut) => {
+                <div className="flex flex-col gap-1.5">
+                  {stg.tutorials.map(tut => {
                     const isPlaying = tut.id === currentTutorial.id;
                     return (
                       <button
                         key={tut.id}
                         onClick={() => !stg.is_locked && navigate(`/tutorials/${tut.id}`)}
                         disabled={stg.is_locked}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '10px',
-                          padding: '10px 12px',
-                          borderRadius: 'var(--radius-md)',
-                          border: isPlaying ? '1px solid var(--primary-400)' : '1px solid transparent',
-                          backgroundColor: isPlaying ? 'var(--primary-50)' : 'transparent',
-                          color: isPlaying ? 'var(--primary-800)' : 'var(--text-primary)',
-                          width: '100%',
-                          textAlign: 'left',
-                          cursor: stg.is_locked ? 'not-allowed' : 'pointer',
-                          opacity: stg.is_locked ? 0.5 : 1,
-                        }}
-                        className={`playlist-item ${isPlaying ? 'active' : ''}`}
+                        className={cn(
+                          'flex w-full items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors',
+                          isPlaying
+                            ? 'border-primary/40 bg-coral-50 text-primary dark:bg-coral-500/10'
+                            : 'border-transparent text-ink hover:bg-surface-sunken',
+                          stg.is_locked && 'cursor-not-allowed opacity-50',
+                        )}
                       >
-                        {/* Play/Complete state circle */}
-                        <div 
-                          style={{ 
-                            width: '20px', 
-                            height: '20px', 
-                            borderRadius: '50%', 
-                            border: `2px solid ${tut.is_completed ? 'var(--success-500)' : 'var(--gray-300)'}`,
-                            backgroundColor: tut.is_completed ? 'var(--success-500)' : 'transparent',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            color: 'white'
-                          }}
+                        <span
+                          className={cn(
+                            'flex size-5 shrink-0 items-center justify-center rounded-full border-2 text-white',
+                            tut.is_completed ? 'border-success-500 bg-success-500' : 'border-border-strong',
+                          )}
                         >
                           {tut.is_completed ? (
-                            <Check size={12} strokeWidth={3} />
+                            <Check className="size-3" strokeWidth={3} />
                           ) : (
-                            <Play size={8} style={{ fill: isPlaying ? 'var(--primary-500)' : 'var(--text-muted)', stroke: 'none', marginLeft: '1px' }} />
+                            <Play
+                              className={cn(
+                                'ml-px size-2 stroke-none',
+                                isPlaying ? 'fill-primary' : 'fill-ink-faint',
+                              )}
+                            />
                           )}
-                        </div>
+                        </span>
 
-                        {/* Title text */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ fontSize: '0.8125rem', fontWeight: 600, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {tut.title}
-                          </span>
-                          <span style={{ fontSize: '0.718rem', color: isPlaying ? 'var(--primary-600)' : 'var(--text-muted)' }}>
+                        <div className="min-w-0 flex-1">
+                          <span className="block truncate text-[13px] font-semibold">{tut.title}</span>
+                          <span className={cn('text-[11px]', isPlaying ? 'text-primary' : 'text-ink-faint')}>
                             {tut.duration_minutes}m duration
                           </span>
                         </div>
@@ -262,8 +202,7 @@ const TutorialPlayerPage: React.FC = () => {
               </div>
             ))}
           </div>
-        </div>
-
+        </Card>
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../../api/client';
-import { Users, Layers, Video, ClipboardList, FileText, Zap, ArrowRight, MapPin, Building2 } from 'lucide-react';
+import { Users, Layers, Video, ClipboardList, FileText, Zap, ArrowRight, MapPin, Shield } from 'lucide-react';
+import { Card, StatCard } from '../../components/ui';
 
 interface Stats {
   total_users: number;
@@ -13,15 +14,28 @@ interface Stats {
   district_name: string;
 }
 
+type Tone = 'sage' | 'coral' | 'amber';
+
 const AdminDashboardPage: React.FC = () => {
   const [stats, setStats] = useState<Stats | null>(null);
   const navigate = useNavigate();
 
   const loadStats = useCallback(() => {
     const district = localStorage.getItem('nh_admin_district') || '';
-    client.get(`/api/admin/dashboard-stats?district=${district}`)
+    client
+      .get(`/api/admin/dashboard-stats?district=${district}`)
       .then(res => setStats(res.data))
-      .catch(() => setStats({ total_users: 0, total_stages: 0, total_tutorials: 0, total_tests: 0, total_form_fields: 0, active_tests: 0, district_name: '' }));
+      .catch(() =>
+        setStats({
+          total_users: 0,
+          total_stages: 0,
+          total_tutorials: 0,
+          total_tests: 0,
+          total_form_fields: 0,
+          active_tests: 0,
+          district_name: '',
+        }),
+      );
   }, []);
 
   useEffect(() => {
@@ -31,81 +45,81 @@ const AdminDashboardPage: React.FC = () => {
     return () => window.removeEventListener('district-changed', handleDistrictChange);
   }, [loadStats]);
 
-  const cards = [
-    { icon: Users, label: 'District Users', value: stats?.total_users ?? 0, color: '#6366f1', bg: 'rgba(99,102,241,0.12)' },
-    { icon: Layers, label: 'Training Stages', value: stats?.total_stages ?? 0, color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
-    { icon: Video, label: 'Tutorials', value: stats?.total_tutorials ?? 0, color: '#06b6d4', bg: 'rgba(6,182,212,0.12)' },
-    { icon: ClipboardList, label: 'Assessments', value: stats?.total_tests ?? 0, color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-    { icon: FileText, label: 'Form Fields', value: stats?.total_form_fields ?? 0, color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
-    { icon: Zap, label: 'Active Tests', value: stats?.active_tests ?? 0, color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+  const cards: { icon: React.ReactNode; label: string; value: number; tone: Tone }[] = [
+    { icon: <Users />, label: 'District Users', value: stats?.total_users ?? 0, tone: 'coral' },
+    { icon: <Layers />, label: 'Training Stages', value: stats?.total_stages ?? 0, tone: 'sage' },
+    { icon: <Video />, label: 'Tutorials', value: stats?.total_tutorials ?? 0, tone: 'amber' },
+    { icon: <ClipboardList />, label: 'Assessments', value: stats?.total_tests ?? 0, tone: 'coral' },
+    { icon: <FileText />, label: 'Form Fields', value: stats?.total_form_fields ?? 0, tone: 'sage' },
+    { icon: <Zap />, label: 'Active Tests', value: stats?.active_tests ?? 0, tone: 'amber' },
   ];
 
   const quickActions = [
-    { label: 'Manage Districts', desc: 'Add, edit, or remove program districts', path: '/admin/districts', color: '#a78bfa', icon: '🏛️' },
-    { label: 'Configure Registration Form', desc: 'Add, remove, or reorder registration fields', path: '/admin/form-builder', color: '#6366f1', icon: '📝' },
-    { label: 'Manage Tutorials & Stages', desc: 'Upload YouTube videos, clip sections, manage stages', path: '/admin/tutorials', color: '#8b5cf6', icon: '🎬' },
-    { label: 'Test Manager', desc: 'Upload questions, start/stop tests, download results', path: '/admin/tests', color: '#f59e0b', icon: '📋' },
+    { label: 'Manage Districts', desc: 'Add, edit, or remove program districts', path: '/admin/districts', icon: '🏛️' },
+    { label: 'Configure Registration Form', desc: 'Add, remove, or reorder registration fields', path: '/admin/form-builder', icon: '📝' },
+    { label: 'Manage Tutorials & Stages', desc: 'Upload YouTube videos, clip sections, manage stages', path: '/admin/tutorials', icon: '🎬' },
+    { label: 'Test Manager', desc: 'Upload questions, start/stop tests, download results', path: '/admin/tests', icon: '📋' },
   ];
 
   return (
-    <div className="admin-page">
-      {/* Header Banner */}
-      <div className="admin-welcome-banner">
-        <div>
-          <span className="admin-welcome-label">Welcome back</span>
-          <h1 className="admin-welcome-title">Admin Dashboard</h1>
-          <p className="admin-welcome-desc">
+    <div className="flex flex-col gap-6">
+      {/* Banner — same coral identity as the member app */}
+      <div className="relative flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-3xl bg-gradient-to-br from-coral-400 via-coral-500 to-coral-700 px-8 py-8 text-white shadow-(--shadow-card-hover)">
+        <div className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full bg-white/15 blur-2xl" aria-hidden />
+        <div className="pointer-events-none absolute -bottom-28 left-1/3 size-64 rounded-full bg-coral-800/30 blur-3xl" aria-hidden />
+        <div className="relative">
+          <span className="text-xs font-bold uppercase tracking-widest text-white/75">Welcome back</span>
+          <h1 className="mt-1.5 mb-2 font-display text-3xl font-extrabold text-white drop-shadow-sm">Admin Dashboard</h1>
+          <p className="max-w-xl text-[15px] text-white/85">
             {stats?.district_name ? (
-              <>Managing <strong style={{ color: '#c4b5fd' }}>{stats.district_name}</strong> district — configure forms, upload tutorials, and control assessments.</>
+              <>
+                Managing <strong className="text-white">{stats.district_name}</strong> district — configure forms,
+                upload tutorials, and control assessments.
+              </>
             ) : (
               'Manage your platform from here — configure forms, upload tutorials, and control assessments.'
             )}
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="relative flex items-center gap-3">
           {stats?.district_name && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px',
-              background: 'rgba(139,92,246,0.15)', borderRadius: '12px', border: '1px solid rgba(139,92,246,0.3)',
-            }}>
-              <MapPin size={18} style={{ color: '#c4b5fd' }} />
-              <span style={{ fontWeight: 700, fontSize: '1rem', color: '#c4b5fd' }}>{stats.district_name}</span>
+            <div className="flex items-center gap-2 rounded-xl border border-white/25 bg-white/15 px-4 py-2.5">
+              <MapPin className="size-4.5" />
+              <span className="font-bold">{stats.district_name}</span>
             </div>
           )}
-          <div className="admin-welcome-icon">🛡️</div>
+          <span className="flex size-12 items-center justify-center rounded-2xl bg-white/15">
+            <Shield className="size-6" />
+          </span>
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="admin-stats-grid">
+      {/* Stats */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map(card => (
-          <div key={card.label} className="admin-stat-card">
-            <div className="admin-stat-icon" style={{ backgroundColor: card.bg, color: card.color }}>
-              <card.icon size={24} />
-            </div>
-            <div>
-              <span className="admin-stat-value">{card.value}</span>
-              <span className="admin-stat-label">{card.label}</span>
-            </div>
-          </div>
+          <StatCard key={card.label} icon={card.icon} label={card.label} value={card.value} tone={card.tone} />
         ))}
       </div>
 
-      {/* Quick Actions */}
-      <h2 className="admin-section-title">Quick Actions</h2>
-      <div className="admin-actions-grid">
+      {/* Quick actions */}
+      <h2 className="mt-2 font-display text-xl font-bold text-ink">Quick Actions</h2>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {quickActions.map(action => (
-          <button
+          <Card
             key={action.path}
-            className="admin-action-card"
+            interactive
             onClick={() => navigate(action.path)}
+            className="flex items-center justify-between gap-4 p-5"
           >
-            <div>
-              <h3 className="admin-action-title">{action.label}</h3>
-              <p className="admin-action-desc">{action.desc}</p>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">{action.icon}</span>
+              <div>
+                <h3 className="font-display font-bold text-ink">{action.label}</h3>
+                <p className="text-sm text-ink-muted">{action.desc}</p>
+              </div>
             </div>
-            <ArrowRight size={20} style={{ color: action.color, flexShrink: 0 }} />
-          </button>
+            <ArrowRight className="size-5 shrink-0 text-primary" />
+          </Card>
         ))}
       </div>
     </div>

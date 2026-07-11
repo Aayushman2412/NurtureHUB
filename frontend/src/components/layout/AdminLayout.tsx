@@ -1,8 +1,12 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, Video, ClipboardList, LogOut, Shield, MapPin, ChevronDown, Building2, Sun, Moon } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import {
+  LayoutDashboard, FileText, Video, ClipboardList, LogOut, Shield, MapPin, ChevronDown, Building2, Sun, Moon,
+} from 'lucide-react';
 import client from '../../api/client';
 import { useTheme } from '../../context/ThemeContext';
+import { Avatar, Dropdown } from '../ui';
+import { cn } from '../../utils/cn';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -26,16 +30,14 @@ const navItems = [
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { darkMode, toggleDarkMode } = useTheme();
-  
+
   const [districts, setDistricts] = useState<ProgramDistrict[]>([]);
   const [selectedSlug, setSelectedSlug] = useState<string>(localStorage.getItem('nh_admin_district') || '');
-  const [showSwitcher, setShowSwitcher] = useState(false);
-  const switcherRef = useRef<HTMLDivElement>(null);
 
   const loadDistricts = () => {
-    client.get('/api/admin/districts')
+    client
+      .get('/api/admin/districts')
       .then(res => {
         setDistricts(res.data);
         if (!selectedSlug && res.data.length > 0) {
@@ -50,14 +52,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   useEffect(() => {
     loadDistricts();
 
-    // Listen to document clicks for click-outside close
-    const handleClickOutside = (event: MouseEvent) => {
-      if (switcherRef.current && !switcherRef.current.contains(event.target as Node)) {
-        setShowSwitcher(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-
     // Keep switcher updated on district changes
     const handleDistrictChange = () => {
       const current = localStorage.getItem('nh_admin_district') || '';
@@ -67,7 +61,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     window.addEventListener('district-changed', handleDistrictChange);
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('district-changed', handleDistrictChange);
     };
   }, [selectedSlug]);
@@ -75,7 +68,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const handleSwitchDistrict = (slug: string) => {
     setSelectedSlug(slug);
     localStorage.setItem('nh_admin_district', slug);
-    setShowSwitcher(false);
     window.dispatchEvent(new Event('district-changed'));
   };
 
@@ -91,158 +83,100 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const selectedDistrict = districts.find(d => d.slug === selectedSlug);
 
   return (
-    <div className="admin-layout">
-      {/* Sidebar */}
-      <aside className="admin-sidebar">
-        <div className="admin-sidebar-header">
-          <div className="admin-logo-icon">
-            <Shield size={22} />
+    <div className="min-h-screen bg-background">
+      {/* Sidebar — same coral identity as the member app */}
+      <aside className="fixed inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-surface">
+        {/* Header */}
+        <div className="flex items-center gap-3 border-b border-border px-5 py-5">
+          <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-coral-400 to-coral-600 text-white">
+            <Shield className="size-5" />
+          </span>
+          <div className="flex-1">
+            <h2 className="font-display text-base font-extrabold leading-tight">NurtureHUB</h2>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
+              Admin Panel
+            </span>
           </div>
-          <div style={{ flex: 1 }}>
-            <h2 className="admin-brand">NurtureHUB</h2>
-            <span className="admin-brand-sub">Admin Panel</span>
-          </div>
-          {/* Theme Toggle in Admin Panel Sidebar Header */}
           <button
             onClick={toggleDarkMode}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: darkMode ? '#fcd34d' : '#94a3b8',
-              padding: '6px',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'background 0.2s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.08)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
             title="Toggle theme mode"
+            className="flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer"
           >
-            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+            {darkMode ? <Sun className="size-4.5" /> : <Moon className="size-4.5" />}
           </button>
         </div>
 
-        {/* District Switcher Container with Ref */}
-        <div ref={switcherRef} className="admin-district-switcher" style={{ position: 'relative' }}>
-          <button
-            onClick={() => setShowSwitcher(!showSwitcher)}
-            className="admin-district-btn"
-            style={{
-              width: 'calc(100% - 24px)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              padding: '10px 14px',
-              borderRadius: '10px',
-              border: darkMode ? '1px solid rgba(139, 92, 246, 0.25)' : '1px solid var(--border-color)',
-              background: darkMode 
-                ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(99, 102, 241, 0.08))'
-                : 'var(--bg-primary)',
-              color: 'var(--text-primary)',
-              cursor: 'pointer',
-              fontSize: '0.8125rem',
-              fontWeight: 600,
-              transition: 'all 0.2s',
-              margin: '12px 12px 8px 12px',
-              boxSizing: 'border-box',
-            }}
-          >
-            <MapPin size={16} style={{ color: '#a78bfa', flexShrink: 0 }} />
-            <span style={{ flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {selectedDistrict?.name || 'Select District'}
-            </span>
-            <ChevronDown size={14} style={{ opacity: 0.6, flexShrink: 0, transform: showSwitcher ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-          </button>
-
-          {showSwitcher && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '100%',
-                left: '12px',
-                right: '12px',
-                backgroundColor: darkMode ? '#1e1b4b' : 'var(--bg-secondary)',
-                border: darkMode ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid var(--border-color)',
-                borderRadius: '10px',
-                padding: '6px',
-                zIndex: 100,
-                boxShadow: '0 12px 40px rgba(0,0,0,0.25)',
-                maxHeight: '220px',
-                overflowY: 'auto',
-              }}
-            >
-              {districts.map(d => (
-                <button
-                  key={d.slug}
-                  onClick={() => handleSwitchDistrict(d.slug)}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '9px 12px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: d.slug === selectedSlug 
-                      ? 'rgba(139, 92, 246, 0.15)' 
-                      : 'transparent',
-                    color: d.slug === selectedSlug 
-                      ? '#a78bfa' 
-                      : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    fontSize: '0.8125rem',
-                    fontWeight: d.slug === selectedSlug ? 700 : 500,
-                    transition: 'all 0.15s',
-                    textAlign: 'left',
-                  }}
-                  onMouseEnter={e => { if (d.slug !== selectedSlug) (e.target as HTMLElement).style.background = 'rgba(99,102,241,0.05)'; }}
-                  onMouseLeave={e => { if (d.slug !== selectedSlug) (e.target as HTMLElement).style.background = 'transparent'; }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <MapPin size={13} />
+        {/* District switcher */}
+        <div className="px-3 pt-3">
+          <Dropdown
+            className="w-full"
+            trigger={open => (
+              <button
+                className="flex w-full items-center gap-2.5 rounded-lg border border-border bg-surface-sunken px-3.5 py-2.5 text-[13px] font-semibold text-ink hover:border-border-strong cursor-pointer"
+              >
+                <MapPin className="size-4 shrink-0 text-primary" />
+                <span className="flex-1 truncate text-left">{selectedDistrict?.name || 'Select District'}</span>
+                <ChevronDown className={cn('size-3.5 shrink-0 opacity-60 transition-transform', open && 'rotate-180')} />
+              </button>
+            )}
+            items={districts.map(d => ({
+              key: d.slug,
+              selected: d.slug === selectedSlug,
+              onSelect: () => handleSwitchDistrict(d.slug),
+              label: (
+                <span className="flex w-full items-center justify-between gap-2">
+                  <span className="flex items-center gap-2">
+                    <MapPin className="size-3.5" />
                     {d.name}
                   </span>
-                  <span style={{ fontSize: '0.6875rem', opacity: 0.6 }}>{d.user_count} users</span>
-                </button>
-              ))}
-            </div>
-          )}
+                  <span className="text-[11px] opacity-60">{d.user_count} users</span>
+                </span>
+              ),
+            }))}
+          />
         </div>
 
-        <nav className="admin-nav">
+        {/* Nav */}
+        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
           {navItems.map(item => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.end}
-              className={({ isActive }) => `admin-nav-link ${isActive ? 'active' : ''}`}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold transition-colors',
+                  isActive
+                    ? 'bg-coral-50 text-primary dark:bg-coral-500/10'
+                    : 'text-ink-muted hover:bg-surface-sunken hover:text-ink',
+                )
+              }
             >
-              <item.icon size={18} />
+              <item.icon className="size-[18px]" />
               <span>{item.label}</span>
             </NavLink>
           ))}
         </nav>
 
-        <div className="admin-sidebar-footer">
-          <div className="admin-user-info">
-            <div className="admin-avatar">{adminName.charAt(0).toUpperCase()}</div>
-            <div>
-              <div className="admin-user-name">{adminName}</div>
-              <div className="admin-user-role">Super Admin</div>
-            </div>
+        {/* Footer */}
+        <div className="flex items-center gap-3 border-t border-border p-3">
+          <Avatar name={adminName} size="md" />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold text-ink">{adminName}</div>
+            <div className="text-xs text-ink-muted">Super Admin</div>
           </div>
-          <button onClick={handleLogout} className="admin-logout-btn" title="Logout">
-            <LogOut size={18} />
+          <button
+            onClick={handleLogout}
+            title="Logout"
+            className="flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer"
+          >
+            <LogOut className="size-4.5" />
           </button>
         </div>
       </aside>
 
-      {/* Main content area */}
-      <main className="admin-main">
-        {children}
+      <main className="min-h-screen pl-64">
+        <div className="p-6 lg:p-8">{children}</div>
       </main>
     </div>
   );

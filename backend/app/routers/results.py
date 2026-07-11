@@ -4,13 +4,13 @@ from typing import List
 from app.database import get_db
 from app.models import TestAttempt, Test, Question, TestAnswer, QuestionOption
 from app.schemas import TestAttemptOut, DetailedResultResponse, DetailedAnswerOut, QuestionOptionOut
-from app.dependencies import get_current_user
+from app.dependencies import get_verified_user
 from app.models import User
 
 router = APIRouter(prefix="/api/results", tags=["results"])
 
 @router.get("", response_model=List[TestAttemptOut])
-def get_results_list(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_results_list(current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
     attempts = db.query(TestAttempt).filter(
         TestAttempt.user_id == current_user.id,
         TestAttempt.submitted_at.isnot(None)
@@ -18,7 +18,7 @@ def get_results_list(current_user: User = Depends(get_current_user), db: Session
     return attempts
 
 @router.get("/{attempt_id}", response_model=DetailedResultResponse)
-def get_detailed_result(attempt_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_detailed_result(attempt_id: int, current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
     attempt = db.query(TestAttempt).filter(
         TestAttempt.id == attempt_id,
         TestAttempt.user_id == current_user.id

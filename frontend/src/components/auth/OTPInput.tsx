@@ -83,32 +83,23 @@ const OTPInput: React.FC<OTPInputProps> = ({ length = 6, onComplete }) => {
   };
 
   return (
-    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', margin: '24px 0' }}>
+    <div className="my-6 flex justify-center gap-3">
       {code.map((num, i) => (
         <input
           key={i}
           // @ts-ignore
           ref={(el) => (inputsRef.current[i] = el as HTMLInputElement)}
           type="text"
+          inputMode="numeric"
           maxLength={1}
           value={num}
           onChange={(e) => handleChange(e.target.value, i)}
           onKeyDown={(e) => handleKeyDown(e, i)}
           onPaste={handlePaste}
-          style={{
-            width: '48px',
-            height: '56px',
-            fontSize: '1.5rem',
-            fontWeight: '700',
-            textAlign: 'center',
-            borderRadius: 'var(--radius-md)',
-            border: '2px solid var(--border-color)',
-            backgroundColor: 'var(--bg-secondary)',
-            color: 'var(--text-primary)',
-            boxShadow: 'var(--shadow-xs)',
-            transition: 'border-color var(--transition-fast)'
-          }}
-          className="otp-field"
+          aria-label={`Digit ${i + 1}`}
+          className="h-14 w-12 rounded-lg border-2 border-border-strong/60 bg-surface text-center
+                     font-display text-2xl font-bold text-ink shadow-xs outline-none
+                     transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
         />
       ))}
     </div>

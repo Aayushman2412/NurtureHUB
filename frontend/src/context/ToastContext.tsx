@@ -41,8 +41,8 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         position="top-right"
         toastOptions={{
           style: {
-            fontFamily: "var(--font-display, 'Plus Jakarta Sans', sans-serif)",
-            borderRadius: "var(--radius-lg, 8px)"
+            fontFamily: "var(--font-display, 'Figtree', sans-serif)",
+            borderRadius: "var(--radius-lg, 12px)"
           }
         }}
       />
