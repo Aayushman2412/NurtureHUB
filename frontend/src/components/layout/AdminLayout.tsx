@@ -144,7 +144,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
           {navItems.map(item => (
             <NavLink
-              key={item.to}
+              key={item.label}
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
