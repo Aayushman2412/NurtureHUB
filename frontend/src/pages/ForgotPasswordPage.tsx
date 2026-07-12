@@ -14,7 +14,7 @@ const ForgotPasswordPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const { forgotPassword, resetPassword } = useAuth();
-  const { showToast } = useToast();
+  const { showToast, updateToast } = useToast();
   const navigate = useNavigate();
 
   const handleSendCode = async (e: React.FormEvent) => {
@@ -25,14 +25,14 @@ const ForgotPasswordPage: React.FC = () => {
     }
 
     setLoading(true);
-    showToast('Sending reset code...', 'info');
+    const toastId = showToast('Sending reset code...', 'loading');
 
     try {
       await forgotPassword(email);
-      showToast('If registered, a 6-digit reset code has been sent to your email.', 'success');
+      updateToast(toastId, 'If registered, a 6-digit reset code has been sent to your email.', 'success');
       setSubmitted(true);
     } catch (err: any) {
-      showToast(err.response?.data?.detail || 'Failed to request reset link', 'error');
+      updateToast(toastId, err.response?.data?.detail || 'Failed to request reset link', 'error');
     } finally {
       setLoading(false);
     }
@@ -51,14 +51,14 @@ const ForgotPasswordPage: React.FC = () => {
     }
 
     setLoading(true);
-    showToast('Resetting password...', 'info');
+    const toastId = showToast('Resetting password...', 'loading');
 
     try {
       await resetPassword(email, code, newPassword);
-      showToast('Password reset successfully! You can now sign in with your new password.', 'success');
+      updateToast(toastId, 'Password reset successfully! You can now sign in with your new password.', 'success');
       navigate('/login');
     } catch (err: any) {
-      showToast(err.response?.data?.detail || 'Invalid or expired verification code', 'error');
+      updateToast(toastId, err.response?.data?.detail || 'Invalid or expired verification code', 'error');
     } finally {
       setLoading(false);
     }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import client from '../../api/client';
 import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown, Edit3, Save, Eye } from 'lucide-react';
-import { Button, Card, Checkbox, Input, Modal, PageHeader, PageLoader, Select } from '../../components/ui';
+import { Button, Card, Checkbox, FieldLabel, Input, Modal, PageHeader, PageLoader, Select } from '../../components/ui';
 import { inputClasses } from '../../components/ui/Input';
 import { cn } from '../../utils/cn';
 
@@ -27,10 +27,6 @@ const FIELD_TYPES = [
   { value: 'radio', label: 'Radio Group' },
   { value: 'textarea', label: 'Text Area' },
 ];
-
-const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <label className="mb-1.5 block text-xs font-semibold text-ink-muted">{children}</label>
-);
 
 const AdminFormBuilderPage: React.FC = () => {
   const [fields, setFields] = useState<FormField[]>([]);
@@ -160,7 +156,7 @@ const AdminFormBuilderPage: React.FC = () => {
     onAdd: () => void;
   }> = ({ options, onRemove, optionLabel, setOptionLabel, onAdd }) => (
     <div className="mt-4">
-      <Label>Options</Label>
+      <FieldLabel size="sm">Options</FieldLabel>
       <div className="flex flex-wrap gap-2">
         {options.map((opt, oi) => (
           <span
@@ -250,11 +246,11 @@ const AdminFormBuilderPage: React.FC = () => {
                 <div className="mt-4 border-t border-border pt-4">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
-                      <Label>Label</Label>
+                      <FieldLabel size="sm">Label</FieldLabel>
                       <Input value={field.label} onChange={e => updateField(field.id, { label: e.target.value })} />
                     </div>
                     <div>
-                      <Label>Type</Label>
+                      <FieldLabel size="sm">Type</FieldLabel>
                       <Select
                         value={field.type}
                         onChange={e =>
@@ -270,7 +266,7 @@ const AdminFormBuilderPage: React.FC = () => {
                       </Select>
                     </div>
                     <div>
-                      <Label>Placeholder</Label>
+                      <FieldLabel size="sm">Placeholder</FieldLabel>
                       <Input
                         value={field.placeholder}
                         onChange={e => updateField(field.id, { placeholder: e.target.value })}
@@ -358,7 +354,7 @@ const AdminFormBuilderPage: React.FC = () => {
       >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <Label>Field Label *</Label>
+            <FieldLabel size="sm">Field Label *</FieldLabel>
             <Input
               placeholder="e.g. Aadhar Number"
               value={newField.label}
@@ -366,7 +362,7 @@ const AdminFormBuilderPage: React.FC = () => {
             />
           </div>
           <div>
-            <Label>Type</Label>
+            <FieldLabel size="sm">Type</FieldLabel>
             <Select
               value={newField.type}
               onChange={e =>
@@ -383,7 +379,7 @@ const AdminFormBuilderPage: React.FC = () => {
             </Select>
           </div>
           <div>
-            <Label>Placeholder</Label>
+            <FieldLabel size="sm">Placeholder</FieldLabel>
             <Input
               placeholder="e.g. Enter your ID..."
               value={newField.placeholder}

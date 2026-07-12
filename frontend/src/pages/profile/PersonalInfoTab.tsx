@@ -1,6 +1,6 @@
 import React from 'react';
 import { User, Phone, Calendar } from 'lucide-react';
-import { Input, Radio } from '../../components/ui';
+import { Field, Input, Radio } from '../../components/ui';
 
 export interface PersonalInfoValues {
   fullName: string;
@@ -14,19 +14,6 @@ export interface PersonalInfoValues {
 interface PersonalInfoTabProps extends PersonalInfoValues {
   onChange: <K extends keyof PersonalInfoValues>(key: K, value: PersonalInfoValues[K]) => void;
 }
-
-const Field: React.FC<{ label: string; htmlFor?: string; children: React.ReactNode }> = ({
-  label,
-  htmlFor,
-  children,
-}) => (
-  <div>
-    <label htmlFor={htmlFor} className="mb-2 block text-sm font-semibold text-ink">
-      {label}
-    </label>
-    {children}
-  </div>
-);
 
 const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
   fullName,

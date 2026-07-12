@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
 import client from '../api/client';
-import { Button, Input, Radio, Select } from '../components/ui';
+import { Button, Field, Input, Radio, Select } from '../components/ui';
 
 interface StateOption {
   id: number;
@@ -40,19 +40,6 @@ interface ExperienceRangeOption {
   id: number;
   label: string;
 }
-
-const Field: React.FC<{ label: string; htmlFor?: string; children: React.ReactNode }> = ({
-  label,
-  htmlFor,
-  children,
-}) => (
-  <div>
-    <label htmlFor={htmlFor} className="mb-2 block text-sm font-semibold text-ink">
-      {label}
-    </label>
-    {children}
-  </div>
-);
 
 const SectionTitle: React.FC<{ index: number; children: React.ReactNode }> = ({ index, children }) => (
   <div className="mb-4 flex items-center gap-2 border-b-2 border-coral-100 pb-2 text-[13px] font-bold
@@ -98,7 +85,7 @@ const RegistrationPage: React.FC = () => {
   const [qualificationOtherDetail, setQualificationOtherDetail] = useState('');
 
   const { updateProfile } = useAuth();
-  const { showToast } = useToast();
+  const { showToast, updateToast } = useToast();
   const navigate = useNavigate();
 
   // Load initial dropdown fields
@@ -213,7 +200,7 @@ const RegistrationPage: React.FC = () => {
     }
 
     setLoading(true);
-    showToast('Submitting profile details...', 'info');
+    const toastId = showToast('Submitting profile details...', 'loading');
 
     try {
       const selectedDistrict = districtsList.find(d => d.id === Number(selectedDistrictId))?.name || undefined;
@@ -240,10 +227,10 @@ const RegistrationPage: React.FC = () => {
         district: selectedDistrict,
         work_center_name: selectedFacilityName,
       });
-      showToast('Registration completed successfully! Welcome to NurtureHUB.', 'success');
+      updateToast(toastId, 'Registration completed successfully! Welcome to NurtureHUB.', 'success');
       navigate('/dashboard');
     } catch {
-      showToast('Failed to save profile registration. Please try again.', 'error');
+      updateToast(toastId, 'Failed to save profile registration. Please try again.', 'error');
     } finally {
       setLoading(false);
     }

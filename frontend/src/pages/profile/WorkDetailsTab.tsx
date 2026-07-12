@@ -1,6 +1,6 @@
 import React from 'react';
 import { Briefcase } from 'lucide-react';
-import { Input, Select } from '../../components/ui';
+import { Field, Input, Select } from '../../components/ui';
 
 export interface Option {
   id: number;
@@ -56,19 +56,6 @@ interface WorkDetailsTabProps {
   onRole: (v: string) => void;
   onWorkCenterType: (v: string) => void;
 }
-
-const Field: React.FC<{ label: string; htmlFor?: string; children: React.ReactNode }> = ({
-  label,
-  htmlFor,
-  children,
-}) => (
-  <div>
-    <label htmlFor={htmlFor} className="mb-2 block text-sm font-semibold text-ink">
-      {label}
-    </label>
-    {children}
-  </div>
-);
 
 const num = (v: string): number | '' => (v ? Number(v) : '');
 

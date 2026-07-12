@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
 import GoogleButton from '../components/auth/GoogleButton';
-import { Button, Input, PasswordInput } from '../components/ui';
+import { Button, Divider, Input, PasswordInput } from '../components/ui';
 
 const SignupPage: React.FC = () => {
   const [fullName, setFullName] = useState('');
@@ -13,7 +13,7 @@ const SignupPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const { register } = useAuth();
-  const { showToast } = useToast();
+  const { showToast, updateToast } = useToast();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,15 +29,15 @@ const SignupPage: React.FC = () => {
     }
 
     setLoading(true);
-    showToast('Creating account...', 'info');
+    const toastId = showToast('Creating account...', 'loading');
 
     try {
       await register(email, password, fullName);
-      showToast('Account created! A verification code has been sent to your email.', 'success');
+      updateToast(toastId, 'Account created! A verification code has been sent to your email.', 'success');
       navigate('/verify');
     } catch (err: any) {
       const errorMsg = err.response?.data?.detail || 'Registration failed. Email might already exist.';
-      showToast(errorMsg, 'error');
+      updateToast(toastId, errorMsg, 'error');
     } finally {
       setLoading(false);
     }
@@ -97,11 +97,7 @@ const SignupPage: React.FC = () => {
           {loading ? 'Creating account...' : 'Create Account'}
         </Button>
 
-        <div className="my-1 flex items-center gap-3" aria-hidden>
-          <div className="h-px flex-1 bg-border" />
-          <span className="text-xs uppercase tracking-wider text-ink-faint">Or sign up with</span>
-          <div className="h-px flex-1 bg-border" />
-        </div>
+        <Divider label="Or sign up with" className="my-1" />
 
         <GoogleButton />
 

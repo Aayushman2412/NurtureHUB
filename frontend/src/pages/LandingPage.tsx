@@ -59,7 +59,7 @@ const LandingPage: React.FC = () => {
           </span>
           <div>
             <span className="block font-display text-lg font-extrabold leading-tight">NurtureHUB</span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+            <span className="hidden text-[10px] font-bold uppercase tracking-widest text-primary sm:block">
               ICDS Professional Portal
             </span>
           </div>
@@ -89,7 +89,7 @@ const LandingPage: React.FC = () => {
       </nav>
 
       {/* ── Hero ────────────────────────────────────────── */}
-      <section className="relative overflow-hidden px-6 py-20 text-center sm:py-28">
+      <section className="relative overflow-hidden px-6 py-14 text-center sm:py-20 lg:py-28">
         <div className="absolute -top-40 left-1/2 size-[560px] -translate-x-1/2 rounded-full bg-coral-200/30 blur-3xl dark:bg-coral-500/10" aria-hidden />
         <div className="absolute -bottom-56 right-[10%] size-96 rounded-full bg-sage-300/30 blur-3xl dark:bg-sage-500/10" aria-hidden />
 
@@ -106,12 +106,12 @@ const LandingPage: React.FC = () => {
             NurtureHUB is the training &amp; assessment home for ICDS professionals — standardized
             tutorials, fair assessments, and a clear record of your growth.
           </p>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <Button size="lg" onClick={handleCTA} iconRight={<ArrowRight className="size-4.5" />}>
+          <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <Button size="lg" onClick={handleCTA} iconRight={<ArrowRight className="size-4.5" />} className="w-full sm:w-auto">
               {isAuthenticated ? 'Continue your journey' : 'Start learning today'}
             </Button>
             {!isAuthenticated && (
-              <Button size="lg" variant="outline" onClick={() => navigate('/login')}>
+              <Button size="lg" variant="outline" onClick={() => navigate('/login')} className="w-full sm:w-auto">
                 I already have an account
               </Button>
             )}

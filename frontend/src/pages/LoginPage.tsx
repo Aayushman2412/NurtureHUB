@@ -6,21 +6,7 @@ import AuthLayout from '../components/auth/AuthLayout';
 import GoogleButton from '../components/auth/GoogleButton';
 import client from '../api/client';
 import { Mail, ArrowLeft, Shield } from 'lucide-react';
-import { Button, Input, PasswordInput } from '../components/ui';
-
-const FormLabel: React.FC<{ htmlFor: string; children: React.ReactNode }> = ({ htmlFor, children }) => (
-  <label htmlFor={htmlFor} className="mb-2 block text-sm font-semibold text-ink">
-    {children}
-  </label>
-);
-
-const Divider: React.FC<{ label: string }> = ({ label }) => (
-  <div className="flex items-center gap-3" aria-hidden>
-    <div className="h-px flex-1 bg-border" />
-    <span className="text-xs text-ink-faint">{label}</span>
-    <div className="h-px flex-1 bg-border" />
-  </div>
-);
+import { Button, Divider, FieldLabel, Input, PasswordInput } from '../components/ui';
 
 const BackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   <button
@@ -44,7 +30,7 @@ const LoginPage: React.FC = () => {
   const [adminLoading, setAdminLoading] = useState(false);
 
   const { login } = useAuth();
-  const { showToast } = useToast();
+  const { showToast, updateToast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -63,11 +49,11 @@ const LoginPage: React.FC = () => {
     }
 
     setLoading(true);
-    showToast('Signing in...', 'info');
+    const toastId = showToast('Signing in...', 'loading');
 
     try {
       const response = await login(email, password);
-      showToast('Welcome back to NurtureHUB!', 'success');
+      updateToast(toastId, 'Welcome back to NurtureHUB!', 'success');
 
       // Handle page routing according to user auth states
       if (!response.is_verified) {
@@ -79,7 +65,7 @@ const LoginPage: React.FC = () => {
       }
     } catch (err: any) {
       const errorMsg = err.response?.data?.detail || 'Invalid email or password';
-      showToast(errorMsg, 'error');
+      updateToast(toastId, errorMsg, 'error');
     } finally {
       setLoading(false);
     }
@@ -112,7 +98,7 @@ const LoginPage: React.FC = () => {
       <AuthLayout title="Admin Access" subtitle="Enter administrator credentials to access the management panel.">
         <form onSubmit={handleAdminLogin} className="flex flex-col gap-5">
           <div>
-            <FormLabel htmlFor="admin-email">Admin Email</FormLabel>
+            <FieldLabel htmlFor="admin-email">Admin Email</FieldLabel>
             <Input
               id="admin-email"
               type="email"
@@ -124,7 +110,7 @@ const LoginPage: React.FC = () => {
             />
           </div>
           <div>
-            <FormLabel htmlFor="admin-password">Password</FormLabel>
+            <FieldLabel htmlFor="admin-password">Password</FieldLabel>
             <PasswordInput
               id="admin-password"
               placeholder="••••••••"
@@ -197,7 +183,7 @@ const LoginPage: React.FC = () => {
     <AuthLayout title="Sign In" subtitle="Enter your email and password to access your training dashboard.">
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <div>
-          <FormLabel htmlFor="email-input">Email Address</FormLabel>
+          <FieldLabel htmlFor="email-input">Email Address</FieldLabel>
           <Input
             id="email-input"
             type="email"

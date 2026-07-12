@@ -14,7 +14,7 @@ import WorkDetailsTab, {
 
 const ProfilePage: React.FC = () => {
   const { user, updateProfile } = useAuth();
-  const { showToast } = useToast();
+  const { showToast, updateToast } = useToast();
 
   const [activeTab, setActiveTab] = useState<'personal' | 'professional'>('personal');
   const [loading, setLoading] = useState(false);
@@ -206,7 +206,7 @@ const ProfilePage: React.FC = () => {
     }
 
     setLoading(true);
-    showToast('Saving profile updates...', 'info');
+    const toastId = showToast('Saving profile updates...', 'loading');
 
     try {
       const selectedDistrict =
@@ -240,9 +240,9 @@ const ProfilePage: React.FC = () => {
         district: selectedDistrict,
         work_center_name: selectedFacilityName,
       });
-      showToast('Profile updated successfully!', 'success');
+      updateToast(toastId, 'Profile updated successfully!', 'success');
     } catch {
-      showToast('Failed to update profile details', 'error');
+      updateToast(toastId, 'Failed to update profile details', 'error');
     } finally {
       setLoading(false);
     }
