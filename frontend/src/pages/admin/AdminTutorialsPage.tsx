@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import client from '../../api/client';
 import { Plus, Trash2, Edit3, Save, X, ChevronDown, ChevronUp, Video, Play, Layers } from 'lucide-react';
-import { Button, Card, Input, Modal, PageHeader, PageLoader } from '../../components/ui';
+import { Button, Card, FieldLabel, Input, Modal, PageHeader, PageLoader } from '../../components/ui';
 import { inputClasses } from '../../components/ui/Input';
 import { cn } from '../../utils/cn';
 
@@ -35,10 +35,6 @@ const formatTime = (secs: number): string => {
   const s = secs % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
-
-const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <label className="mb-1.5 block text-xs font-semibold text-ink-muted">{children}</label>
-);
 
 const AdminTutorialsPage: React.FC = () => {
   const [stages, setStages] = useState<Stage[]>([]);
@@ -255,16 +251,16 @@ const AdminTutorialsPage: React.FC = () => {
                       <div className="mt-4 border-t border-border pt-4">
                         {editGrid(
                           <>
-                            <div><Label>Title</Label><Input value={tut.title} onChange={e => updateTutorial(tut.id, { title: e.target.value })} /></div>
-                            <div><Label>Module #</Label><Input value={tut.module_number} onChange={e => updateTutorial(tut.id, { module_number: e.target.value })} /></div>
-                            <div><Label>YouTube URL</Label><Input value={tut.youtube_url} onChange={e => updateTutorial(tut.id, { youtube_url: e.target.value })} /></div>
-                            <div><Label>Duration (min)</Label><Input type="number" value={tut.duration_minutes} onChange={e => updateTutorial(tut.id, { duration_minutes: parseInt(e.target.value) || 0 })} /></div>
-                            <div><Label>Start (seconds)</Label><Input type="number" value={tut.start_seconds} onChange={e => updateTutorial(tut.id, { start_seconds: parseInt(e.target.value) || 0 })} /></div>
-                            <div><Label>End (seconds)</Label><Input type="number" value={tut.end_seconds} onChange={e => updateTutorial(tut.id, { end_seconds: parseInt(e.target.value) || 0 })} /></div>
+                            <div><FieldLabel size="sm">Title</FieldLabel><Input value={tut.title} onChange={e => updateTutorial(tut.id, { title: e.target.value })} /></div>
+                            <div><FieldLabel size="sm">Module #</FieldLabel><Input value={tut.module_number} onChange={e => updateTutorial(tut.id, { module_number: e.target.value })} /></div>
+                            <div><FieldLabel size="sm">YouTube URL</FieldLabel><Input value={tut.youtube_url} onChange={e => updateTutorial(tut.id, { youtube_url: e.target.value })} /></div>
+                            <div><FieldLabel size="sm">Duration (min)</FieldLabel><Input type="number" value={tut.duration_minutes} onChange={e => updateTutorial(tut.id, { duration_minutes: parseInt(e.target.value) || 0 })} /></div>
+                            <div><FieldLabel size="sm">Start (seconds)</FieldLabel><Input type="number" value={tut.start_seconds} onChange={e => updateTutorial(tut.id, { start_seconds: parseInt(e.target.value) || 0 })} /></div>
+                            <div><FieldLabel size="sm">End (seconds)</FieldLabel><Input type="number" value={tut.end_seconds} onChange={e => updateTutorial(tut.id, { end_seconds: parseInt(e.target.value) || 0 })} /></div>
                           </>,
                         )}
                         <div className="mt-3">
-                          <Label>Description</Label>
+                          <FieldLabel size="sm">Description</FieldLabel>
                           <textarea
                             className={cn(inputClasses(), 'resize-y')}
                             rows={2}
@@ -283,16 +279,16 @@ const AdminTutorialsPage: React.FC = () => {
                     <h4 className="mb-3 font-bold text-coral-700 dark:text-coral-300">Add New Tutorial</h4>
                     {editGrid(
                       <>
-                        <div><Label>Title *</Label><Input placeholder="Tutorial title" value={newTut.title} onChange={e => setNewTut({ ...newTut, title: e.target.value })} /></div>
-                        <div><Label>Module #</Label><Input placeholder="Module 1.4" value={newTut.module_number} onChange={e => setNewTut({ ...newTut, module_number: e.target.value })} /></div>
-                        <div><Label>YouTube URL *</Label><Input placeholder="https://youtube.com/watch?v=..." value={newTut.youtube_url} onChange={e => setNewTut({ ...newTut, youtube_url: e.target.value })} /></div>
-                        <div><Label>Duration (min)</Label><Input type="number" value={newTut.duration_minutes} onChange={e => setNewTut({ ...newTut, duration_minutes: parseInt(e.target.value) || 0 })} /></div>
-                        <div><Label>Start (seconds)</Label><Input type="number" value={newTut.start_seconds} onChange={e => setNewTut({ ...newTut, start_seconds: parseInt(e.target.value) || 0 })} /></div>
-                        <div><Label>End (seconds)</Label><Input type="number" value={newTut.end_seconds} onChange={e => setNewTut({ ...newTut, end_seconds: parseInt(e.target.value) || 0 })} /></div>
+                        <div><FieldLabel size="sm">Title *</FieldLabel><Input placeholder="Tutorial title" value={newTut.title} onChange={e => setNewTut({ ...newTut, title: e.target.value })} /></div>
+                        <div><FieldLabel size="sm">Module #</FieldLabel><Input placeholder="Module 1.4" value={newTut.module_number} onChange={e => setNewTut({ ...newTut, module_number: e.target.value })} /></div>
+                        <div><FieldLabel size="sm">YouTube URL *</FieldLabel><Input placeholder="https://youtube.com/watch?v=..." value={newTut.youtube_url} onChange={e => setNewTut({ ...newTut, youtube_url: e.target.value })} /></div>
+                        <div><FieldLabel size="sm">Duration (min)</FieldLabel><Input type="number" value={newTut.duration_minutes} onChange={e => setNewTut({ ...newTut, duration_minutes: parseInt(e.target.value) || 0 })} /></div>
+                        <div><FieldLabel size="sm">Start (seconds)</FieldLabel><Input type="number" value={newTut.start_seconds} onChange={e => setNewTut({ ...newTut, start_seconds: parseInt(e.target.value) || 0 })} /></div>
+                        <div><FieldLabel size="sm">End (seconds)</FieldLabel><Input type="number" value={newTut.end_seconds} onChange={e => setNewTut({ ...newTut, end_seconds: parseInt(e.target.value) || 0 })} /></div>
                       </>,
                     )}
                     <div className="mt-3">
-                      <Label>Description</Label>
+                      <FieldLabel size="sm">Description</FieldLabel>
                       <textarea
                         className={cn(inputClasses(), 'resize-y')}
                         rows={2}
@@ -354,7 +350,7 @@ const AdminTutorialsPage: React.FC = () => {
       >
         <div className="flex flex-col gap-3">
           <div>
-            <Label>Stage Title *</Label>
+            <FieldLabel size="sm">Stage Title *</FieldLabel>
             <Input
               placeholder="e.g. Advanced Field Operations"
               value={newStageTitle}
@@ -362,7 +358,7 @@ const AdminTutorialsPage: React.FC = () => {
             />
           </div>
           <div>
-            <Label>Description</Label>
+            <FieldLabel size="sm">Description</FieldLabel>
             <textarea
               className={cn(inputClasses(), 'resize-y')}
               rows={3}

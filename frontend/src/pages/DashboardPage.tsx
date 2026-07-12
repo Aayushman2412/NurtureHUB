@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getDashboardData } from '../api/dashboard';
 import { BookOpen, Award, CheckCircle2, ChevronRight, Lock, Trophy, PlayCircle } from 'lucide-react';
-import { Badge, Button, Card, PageLoader, ProgressBar, StatCard } from '../components/ui';
+import { Badge, Button, Card, PageLoader, ProgressBar, ProgressRing, StatCard, WelcomeBanner } from '../components/ui';
 
 interface Achievement {
   id: number;
@@ -77,51 +77,23 @@ const DashboardPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Welcome Banner */}
-      <div className="relative flex flex-wrap items-center justify-between gap-5 overflow-hidden rounded-3xl bg-gradient-to-br from-coral-400 via-coral-500 to-coral-700 px-8 py-8 shadow-(--shadow-card-hover)">
-        {/* Decorative depth */}
-        <div className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full bg-white/15 blur-2xl" aria-hidden />
-        <div className="pointer-events-none absolute -bottom-28 left-1/3 size-64 rounded-full bg-coral-800/30 blur-3xl" aria-hidden />
-
-        <div className="relative">
-          <span className="text-xs font-bold uppercase tracking-widest text-white/75">
-            {user?.program_district?.name ? `${user.program_district.name} District` : 'Welcome back, Supervisor'}
-          </span>
-          <h2 className="mt-1.5 mb-2 font-display text-3xl font-extrabold text-white drop-shadow-sm">
+      {/* Welcome Banner — shared component, styled once (adapts light/dark) */}
+      <WelcomeBanner
+        eyebrow={user?.program_district?.name ? `${user.program_district.name} District` : 'Welcome back, Supervisor'}
+        title={
+          <>
             {user?.full_name || 'Healthcare Worker'} <span className="align-middle">🌱</span>
-          </h2>
-          <p className="max-w-md text-[15px] text-white/85">
-            You have completed {data.tutorials_completed} of {data.total_tutorials} video lessons. Keep up the good work!
-          </p>
-        </div>
-
-        {/* Progress ring */}
-        <div className="relative flex items-center gap-4">
-          <div className="relative flex size-24 items-center justify-center">
-            <svg className="absolute size-full -rotate-90" viewBox="0 0 96 96">
-              <circle cx="48" cy="48" r="40" stroke="rgba(255,255,255,0.25)" strokeWidth="7" fill="transparent" />
-              <circle
-                cx="48"
-                cy="48"
-                r="40"
-                stroke="white"
-                strokeWidth="7"
-                fill="transparent"
-                strokeDasharray={2 * Math.PI * 40}
-                strokeDashoffset={2 * Math.PI * 40 * (1 - data.progress_percentage / 100)}
-                strokeLinecap="round"
-                className="transition-[stroke-dashoffset] duration-700 [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.15))]"
-              />
-            </svg>
-            <span className="font-display text-xl font-extrabold text-white">{Math.round(data.progress_percentage)}%</span>
-          </div>
-          <span className="text-sm font-semibold leading-tight text-white/80">
-            Overall
-            <br />
-            Progress
-          </span>
-        </div>
-      </div>
+          </>
+        }
+        subtitle={`You have completed ${data.tutorials_completed} of ${data.total_tutorials} video lessons. Keep up the good work!`}
+      >
+        <ProgressRing value={data.progress_percentage} size={92} />
+        <span className="text-sm font-semibold leading-tight text-ink-muted">
+          Overall
+          <br />
+          Progress
+        </span>
+      </WelcomeBanner>
 
       {/* Metrics */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">

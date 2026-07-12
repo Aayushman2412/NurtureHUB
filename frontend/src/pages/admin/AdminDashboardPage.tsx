@@ -1,8 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../../api/client';
-import { Users, Layers, Video, ClipboardList, FileText, Zap, ArrowRight, MapPin, Shield } from 'lucide-react';
-import { Card, StatCard } from '../../components/ui';
+import {
+  Users, Layers, Video, ClipboardList, FileText, Zap, ArrowRight, MapPin, Shield,
+  Landmark, FilePenLine, Clapperboard, ClipboardCheck,
+} from 'lucide-react';
+import { Card, StatCard, WelcomeBanner } from '../../components/ui';
 
 interface Stats {
   total_users: number;
@@ -55,44 +58,38 @@ const AdminDashboardPage: React.FC = () => {
   ];
 
   const quickActions = [
-    { label: 'Manage Districts', desc: 'Add, edit, or remove program districts', path: '/admin/districts', icon: '🏛️' },
-    { label: 'Configure Registration Form', desc: 'Add, remove, or reorder registration fields', path: '/admin/form-builder', icon: '📝' },
-    { label: 'Manage Tutorials & Stages', desc: 'Upload YouTube videos, clip sections, manage stages', path: '/admin/tutorials', icon: '🎬' },
-    { label: 'Test Manager', desc: 'Upload questions, start/stop tests, download results', path: '/admin/tests', icon: '📋' },
+    { label: 'Manage Districts', desc: 'Add, edit, or remove program districts', path: '/admin/districts', icon: Landmark },
+    { label: 'Configure Registration Form', desc: 'Add, remove, or reorder registration fields', path: '/admin/form-builder', icon: FilePenLine },
+    { label: 'Manage Tutorials & Stages', desc: 'Upload YouTube videos, clip sections, manage stages', path: '/admin/tutorials', icon: Clapperboard },
+    { label: 'Test Manager', desc: 'Upload questions, start/stop tests, download results', path: '/admin/tests', icon: ClipboardCheck },
   ];
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Banner — same coral identity as the member app */}
-      <div className="relative flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-3xl bg-gradient-to-br from-coral-400 via-coral-500 to-coral-700 px-8 py-8 text-white shadow-(--shadow-card-hover)">
-        <div className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full bg-white/15 blur-2xl" aria-hidden />
-        <div className="pointer-events-none absolute -bottom-28 left-1/3 size-64 rounded-full bg-coral-800/30 blur-3xl" aria-hidden />
-        <div className="relative">
-          <span className="text-xs font-bold uppercase tracking-widest text-white/75">Welcome back</span>
-          <h1 className="mt-1.5 mb-2 font-display text-3xl font-extrabold text-white drop-shadow-sm">Admin Dashboard</h1>
-          <p className="max-w-xl text-[15px] text-white/85">
-            {stats?.district_name ? (
-              <>
-                Managing <strong className="text-white">{stats.district_name}</strong> district — configure forms,
-                upload tutorials, and control assessments.
-              </>
-            ) : (
-              'Manage your platform from here — configure forms, upload tutorials, and control assessments.'
-            )}
-          </p>
-        </div>
-        <div className="relative flex items-center gap-3">
-          {stats?.district_name && (
-            <div className="flex items-center gap-2 rounded-xl border border-white/25 bg-white/15 px-4 py-2.5">
-              <MapPin className="size-4.5" />
-              <span className="font-bold">{stats.district_name}</span>
-            </div>
-          )}
-          <span className="flex size-12 items-center justify-center rounded-2xl bg-white/15">
-            <Shield className="size-6" />
-          </span>
-        </div>
-      </div>
+      <WelcomeBanner
+        eyebrow="Welcome back"
+        title="Admin Dashboard"
+        subtitle={
+          stats?.district_name ? (
+            <>
+              Managing <strong className="font-bold text-ink">{stats.district_name}</strong> district — configure forms,
+              upload tutorials, and control assessments.
+            </>
+          ) : (
+            'Manage your platform from here — configure forms, upload tutorials, and control assessments.'
+          )
+        }
+      >
+        {stats?.district_name && (
+          <div className="flex items-center gap-2 rounded-xl border border-coral-100 bg-coral-50 px-4 py-2.5 text-coral-700 dark:border-coral-500/20 dark:bg-coral-500/10 dark:text-coral-300">
+            <MapPin className="size-4.5" />
+            <span className="font-bold">{stats.district_name}</span>
+          </div>
+        )}
+        <span className="flex size-12 items-center justify-center rounded-2xl bg-coral-50 text-coral-600 dark:bg-coral-500/10 dark:text-coral-300">
+          <Shield className="size-6" />
+        </span>
+      </WelcomeBanner>
 
       {/* Stats */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -112,7 +109,9 @@ const AdminDashboardPage: React.FC = () => {
             className="flex items-center justify-between gap-4 p-5"
           >
             <div className="flex items-center gap-3">
-              <span className="text-2xl">{action.icon}</span>
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-coral-50 text-coral-600 dark:bg-coral-500/10 dark:text-coral-300">
+                <action.icon className="size-5.5" />
+              </span>
               <div>
                 <h3 className="font-display font-bold text-ink">{action.label}</h3>
                 <p className="text-sm text-ink-muted">{action.desc}</p>

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import {
   Alert, Badge, Button, Card, EmptyState, Input, Modal, PageHeader, PageLoader, Spinner, Table, TBody, Td, Th, THead, Tr,
+  FieldLabel,
 } from '../../components/ui';
 import { inputClasses } from '../../components/ui/Input';
 import { cn } from '../../utils/cn';
@@ -48,10 +49,6 @@ interface ResultData {
     score_pct: number;
   }[];
 }
-
-const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <label className="mb-1.5 block text-xs font-semibold text-ink-muted">{children}</label>
-);
 
 const hex = (h: string) => h.replace('#', '');
 
@@ -331,11 +328,11 @@ const AdminTestsPage: React.FC = () => {
               <div className="border-t border-border p-5">
                 {/* Settings */}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <div><Label>Title</Label><Input value={test.title} onChange={e => updateTest(test.id, { title: e.target.value })} /></div>
-                  <div><Label>Stage ID</Label><Input type="number" value={test.stage_id} onChange={e => updateTest(test.id, { stage_id: parseInt(e.target.value) || 1 })} /></div>
-                  <div><Label>Duration (min)</Label><Input type="number" value={test.duration_minutes} onChange={e => updateTest(test.id, { duration_minutes: parseInt(e.target.value) || 10 })} /></div>
-                  <div><Label>Pass %</Label><Input type="number" value={test.passing_score_pct} onChange={e => updateTest(test.id, { passing_score_pct: parseInt(e.target.value) || 70 })} /></div>
-                  <div><Label>Max Attempts</Label><Input type="number" value={test.max_attempts} onChange={e => updateTest(test.id, { max_attempts: parseInt(e.target.value) || 3 })} /></div>
+                  <div><FieldLabel size="sm">Title</FieldLabel><Input value={test.title} onChange={e => updateTest(test.id, { title: e.target.value })} /></div>
+                  <div><FieldLabel size="sm">Stage ID</FieldLabel><Input type="number" value={test.stage_id} onChange={e => updateTest(test.id, { stage_id: parseInt(e.target.value) || 1 })} /></div>
+                  <div><FieldLabel size="sm">Duration (min)</FieldLabel><Input type="number" value={test.duration_minutes} onChange={e => updateTest(test.id, { duration_minutes: parseInt(e.target.value) || 10 })} /></div>
+                  <div><FieldLabel size="sm">Pass %</FieldLabel><Input type="number" value={test.passing_score_pct} onChange={e => updateTest(test.id, { passing_score_pct: parseInt(e.target.value) || 70 })} /></div>
+                  <div><FieldLabel size="sm">Max Attempts</FieldLabel><Input type="number" value={test.max_attempts} onChange={e => updateTest(test.id, { max_attempts: parseInt(e.target.value) || 3 })} /></div>
                 </div>
 
                 {/* Upload */}
@@ -420,14 +417,14 @@ const AdminTestsPage: React.FC = () => {
         }
       >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div><Label>Title *</Label><Input placeholder="e.g. Mid-term Assessment" value={newTest.title} onChange={e => setNewTest({ ...newTest, title: e.target.value })} /></div>
-          <div><Label>Stage ID</Label><Input type="number" value={newTest.stage_id} onChange={e => setNewTest({ ...newTest, stage_id: parseInt(e.target.value) || 1 })} /></div>
-          <div><Label>Duration (min)</Label><Input type="number" value={newTest.duration_minutes} onChange={e => setNewTest({ ...newTest, duration_minutes: parseInt(e.target.value) || 10 })} /></div>
-          <div><Label>Passing %</Label><Input type="number" value={newTest.passing_score_pct} onChange={e => setNewTest({ ...newTest, passing_score_pct: parseInt(e.target.value) || 70 })} /></div>
-          <div><Label>Max Attempts</Label><Input type="number" value={newTest.max_attempts} onChange={e => setNewTest({ ...newTest, max_attempts: parseInt(e.target.value) || 3 })} /></div>
+          <div><FieldLabel size="sm">Title *</FieldLabel><Input placeholder="e.g. Mid-term Assessment" value={newTest.title} onChange={e => setNewTest({ ...newTest, title: e.target.value })} /></div>
+          <div><FieldLabel size="sm">Stage ID</FieldLabel><Input type="number" value={newTest.stage_id} onChange={e => setNewTest({ ...newTest, stage_id: parseInt(e.target.value) || 1 })} /></div>
+          <div><FieldLabel size="sm">Duration (min)</FieldLabel><Input type="number" value={newTest.duration_minutes} onChange={e => setNewTest({ ...newTest, duration_minutes: parseInt(e.target.value) || 10 })} /></div>
+          <div><FieldLabel size="sm">Passing %</FieldLabel><Input type="number" value={newTest.passing_score_pct} onChange={e => setNewTest({ ...newTest, passing_score_pct: parseInt(e.target.value) || 70 })} /></div>
+          <div><FieldLabel size="sm">Max Attempts</FieldLabel><Input type="number" value={newTest.max_attempts} onChange={e => setNewTest({ ...newTest, max_attempts: parseInt(e.target.value) || 3 })} /></div>
         </div>
         <div className="mt-3">
-          <Label>Description</Label>
+          <FieldLabel size="sm">Description</FieldLabel>
           <textarea
             className={cn(inputClasses(), 'resize-y')}
             rows={3}
