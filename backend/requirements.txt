@@ -11,3 +11,4 @@ google-auth>=2.28.0
 requests>=2.31.0
 aiosmtplib>=3.0.0
 slowapi>=0.1.9
+websockets>=12.0

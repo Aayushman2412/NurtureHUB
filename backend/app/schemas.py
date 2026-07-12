@@ -185,12 +185,40 @@ class TutorialOut(BaseModel):
     module_number: Optional[str] = None
     duration_minutes: int
     video_url: Optional[str] = None
+    youtube_url: Optional[str] = None
+    start_seconds: Optional[int] = None
+    end_seconds: Optional[int] = None
     gradient_colors: Optional[str] = None
     order_index: int
     is_completed: bool = False
+    # Per-user watch tracking
+    watch_pct: float = 0
+    watch_time_seconds: float = 0
+    last_position_seconds: float = 0
+    # Post-tutorial quiz
+    quiz_available: bool = False  # enabled (stage+tutorial) and has questions
+    quiz_status: str = "pending"  # pending | completed | skipped
+    quiz_score: Optional[float] = None
+    quiz_total: Optional[int] = None
 
     class Config:
         from_attributes = True
+
+class StageTestInfo(BaseModel):
+    """Summary of the test living in a test-phase stage, for dashboard cards."""
+    id: int
+    title: str
+    status: str
+    test_type: Optional[str] = None
+    scheduled_at: Optional[datetime] = None
+    duration_minutes: int = 0
+    attempts_count: int = 0
+    is_passed: bool = False
+    is_submitted: bool = False
+    is_locked: bool = False
+    # True only when the lock is because required videos aren't done (vs. admin
+    # simply not having started the test yet) — lets the dashboard show the right message.
+    needs_videos: bool = False
 
 class StageOut(BaseModel):
     id: int
@@ -198,13 +226,58 @@ class StageOut(BaseModel):
     title: str
     description: Optional[str] = None
     order_index: int
+    stage_type: str = "tutorials"
+    quiz_enabled: bool = True
     is_locked: bool = True
     tutorials_completed: int = 0
     total_tutorials: int = 0
     tutorials: List[TutorialOut] = []
+    test: Optional[StageTestInfo] = None
 
     class Config:
         from_attributes = True
+
+# Watch-progress heartbeat sent by the player every few seconds
+class TutorialProgressUpdate(BaseModel):
+    position_seconds: float = Field(ge=0)
+    watched_delta_seconds: float = Field(ge=0, le=120)  # time actually played since last beat
+    duration_seconds: Optional[float] = Field(default=None, ge=0)
+
+# Post-tutorial quiz schemas
+class TutorialQuizOptionOut(BaseModel):
+    id: int
+    label: str
+    text: str
+
+    class Config:
+        from_attributes = True
+
+class TutorialQuizQuestionOut(BaseModel):
+    id: int
+    text: str
+    order_index: int
+    options: List[TutorialQuizOptionOut]
+
+    class Config:
+        from_attributes = True
+
+class TutorialQuizOut(BaseModel):
+    tutorial_id: int
+    quiz_available: bool
+    questions: List[TutorialQuizQuestionOut] = []
+
+class QuizAnswerSubmit(BaseModel):
+    question_id: int
+    selected_option_id: Optional[int] = None
+
+class TutorialQuizSubmitRequest(BaseModel):
+    answers: List[QuizAnswerSubmit]
+
+class TutorialQuizSubmitResponse(BaseModel):
+    tutorial_id: int
+    correct_count: int
+    total_questions: int
+    score_pct: float
 
 # Test Schemas
 class QuestionOptionOut(BaseModel):
@@ -234,7 +307,11 @@ class TestOut(BaseModel):
     duration_minutes: int
     passing_score_pct: int
     max_attempts: int
+    status: str = "draft"
+    test_type: Optional[str] = None
+    scheduled_at: Optional[datetime] = None
     is_locked: bool = True
+    lock_reason: Optional[str] = None
     best_score: Optional[float] = None
     attempts_count: int = 0
     is_passed: bool = False
@@ -318,6 +395,9 @@ class DashboardData(BaseModel):
     total_tutorials: int
     tests_passed: int
     total_tests: int
+    # True once every tutorial is completed and every test has been submitted —
+    # the user is done and waiting for the admin to publish results.
+    awaiting_results: bool = False
     achievements: List[AchievementOut]
     activities: List[DashboardActivity]
     stages: List[StageOut]

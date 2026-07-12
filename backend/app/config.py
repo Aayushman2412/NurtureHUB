@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     # Google OAuth
     GOOGLE_CLIENT_ID: str = Field(default="", validation_alias="GOOGLE_CLIENT_ID")
 
+    # Demo/mock data. True seeds demo districts, users, tutorials, tests and
+    # enables demo fallbacks in admin reports. Set SEED_DEMO_DATA=false in
+    # production so only essential metadata is seeded and no fabricated rows
+    # ever appear in reports/exports.
+    SEED_DEMO_DATA: bool = Field(default=True, validation_alias="SEED_DEMO_DATA")
+
     # SMTP/Email settings for OTP
     SMTP_HOST: str = Field(default="smtp.gmail.com", validation_alias="SMTP_HOST")
     SMTP_PORT: int = Field(default=587, validation_alias="SMTP_PORT")

@@ -1,31 +1,66 @@
+import asyncio
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from sqlalchemy import inspect, text
 
 from app.config import settings
 from app.database import Base, engine, SessionLocal
+from app.migrations import run_column_migrations
 from app.seed import seed_database
 from app.rate_limit import limiter
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.routers import auth, users, tutorials, tests, results, notifications, dashboard, metadata, admin
+from app.routers import ws_routes
+import app.models_live  # noqa: F401 — registers live monitoring tables with Base
+from app.models_live import LiveSession
+from app.ws_manager import manager
+from app.event_processor import build_candidate_state_from_session
+
+# How often the sweeper runs, and how long a candidate can be silent before we
+# downgrade its live status. Heartbeats arrive every 30s, so 90s = 3 missed beats.
+STALE_SWEEP_INTERVAL_SECONDS = 15
+STALE_TIMEOUT_SECONDS = 90
 
 
-def ensure_schema():
+async def _stale_candidate_sweeper():
     """
-    Lightweight, idempotent column reconciliation for columns added to models
-    after their table already exists (create_all only creates missing tables,
-    not missing columns). Adopt Alembic for real migrations before production.
+    Background task: periodically downgrade the status of LiveSessions whose
+    candidate has stopped sending heartbeats. Sessions still socket-connected but
+    silent become `idle`; sessions whose socket is gone become `disconnected`.
+    Any subsequent event flips them back to `active` (see event_processor).
     """
-    inspector = inspect(engine)
-    if "users" not in inspector.get_table_names():
-        return
-    existing = {c["name"] for c in inspector.get_columns("users")}
-    if "otp_attempts" not in existing:
-        print("Schema: adding users.otp_attempts")
-        with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE users ADD COLUMN otp_attempts INTEGER NOT NULL DEFAULT 0"))
+    while True:
+        try:
+            await asyncio.sleep(STALE_SWEEP_INTERVAL_SECONDS)
+            stale_attempt_ids = manager.get_stale_candidates(timeout_seconds=STALE_TIMEOUT_SECONDS)
+            if not stale_attempt_ids:
+                continue
+
+            db = SessionLocal()
+            try:
+                for attempt_id in stale_attempt_ids:
+                    session = db.query(LiveSession).filter(
+                        LiveSession.attempt_id == attempt_id
+                    ).first()
+                    if not session or session.status in ("submitted", "auto_submitted"):
+                        continue
+
+                    new_status = "idle" if manager.is_candidate_connected(attempt_id) else "disconnected"
+                    if session.status != new_status:
+                        session.status = new_status
+                        db.commit()
+                        await manager.broadcast_to_admins(session.test_id, {
+                            "type": "CANDIDATE_UPDATE",
+                            "data": build_candidate_state_from_session(session),
+                        })
+            finally:
+                db.close()
+        except asyncio.CancelledError:
+            break
+        except Exception as e:  # never let the sweeper kill the loop
+            print(f"[stale_sweeper] error: {e}")
 
 
 @asynccontextmanager
@@ -33,17 +68,16 @@ async def lifespan(app: FastAPI):
     # 0. Refuse to boot on insecure config when APP_ENV=production
     settings.validate_production()
 
-    # 1. Create database tables automatically
+    # 1. Create tables, then reconcile any columns added to models after their
+    #    table already existed (create_all only creates missing tables).
     print("Creating database tables...")
     Base.metadata.create_all(bind=engine)
-
-    # 2. Reconcile columns added after tables already existed
     try:
-        ensure_schema()
+        run_column_migrations()
     except Exception as e:
-        print(f"Error reconciling schema on startup: {e}")
+        print(f"Error running column migrations: {e}")
 
-    # 3. Seed database
+    # 2. Seed database
     db = SessionLocal()
     try:
         seed_database(db)
@@ -52,8 +86,17 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
+    # 3. Start the live-monitoring stale-candidate sweeper
+    sweeper_task = asyncio.create_task(_stale_candidate_sweeper())
+
     yield
-    # Cleanup if needed on shutdown
+
+    # Cleanup on shutdown
+    sweeper_task.cancel()
+    try:
+        await sweeper_task
+    except asyncio.CancelledError:
+        pass
 
 
 app = FastAPI(
@@ -87,6 +130,7 @@ app.include_router(dashboard.router)
 app.include_router(metadata.router)
 app.include_router(admin.auth_router)  # public: /api/admin/login
 app.include_router(admin.router)       # guarded: all other /api/admin/*
+app.include_router(ws_routes.router)
 
 
 @app.get("/")
