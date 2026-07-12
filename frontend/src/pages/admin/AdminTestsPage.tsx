@@ -1,12 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import client from '../../api/client';
 import * as XLSX from 'xlsx';
 import {
-  Trash2, Save, Upload, Play, Square, Download, ChevronDown, ChevronUp, FileSpreadsheet, ClipboardList, AlertCircle,
+  Trash2, Save, Upload, Play, Square, Download, ChevronDown, ChevronUp, FileSpreadsheet, ClipboardList,
+  AlertCircle, Radio, CalendarClock,
 } from 'lucide-react';
 import {
-  Alert, Badge, Button, Card, EmptyState, Input, Modal, PageHeader, PageLoader, Spinner, Table, TBody, Td, Th, THead, Tr,
-  FieldLabel,
+  Alert, Badge, Button, Card, EmptyState, Input, Modal, PageHeader, PageLoader, Select, Spinner, Table,
+  TBody, Td, Th, THead, Tr, FieldLabel,
 } from '../../components/ui';
 import { inputClasses } from '../../components/ui/Input';
 import { cn } from '../../utils/cn';
@@ -32,6 +34,8 @@ interface Test {
   passing_score_pct: number;
   max_attempts: number;
   status: string;
+  test_type: 'formative' | 'screening' | null;
+  scheduled_at: string | null;
   started_at: string | null;
   ended_at: string | null;
   questions: Question[];
@@ -52,7 +56,16 @@ interface ResultData {
 
 const hex = (h: string) => h.replace('#', '');
 
+// Convert an ISO datetime to the value shape <input type="datetime-local"> needs.
+const toLocalInputValue = (iso: string | null): string => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 const AdminTestsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [tests, setTests] = useState<Test[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedTest, setExpandedTest] = useState<number | null>(null);
@@ -70,7 +83,12 @@ const AdminTestsPage: React.FC = () => {
     duration_minutes: 10,
     passing_score_pct: 70,
     max_attempts: 3,
+    test_type: '',
   });
+
+  // Scheduling modal state
+  const [scheduleTest, setScheduleTest] = useState<Test | null>(null);
+  const [scheduleValue, setScheduleValue] = useState('');
 
   const getDistrict = () => localStorage.getItem('nh_admin_district') || 'jalna';
 
@@ -93,11 +111,17 @@ const AdminTestsPage: React.FC = () => {
 
   const createTest = () => {
     if (!newTest.title.trim()) return;
-    client.post(`/api/admin/tests?district=${getDistrict()}`, { ...newTest, questions: [] }).then(() => {
-      fetchTests();
-      setShowAddTest(false);
-      setNewTest({ title: '', description: '', stage_id: 1, duration_minutes: 10, passing_score_pct: 70, max_attempts: 3 });
-    });
+    client
+      .post(`/api/admin/tests?district=${getDistrict()}`, {
+        ...newTest,
+        test_type: newTest.test_type || null,
+        questions: [],
+      })
+      .then(() => {
+        fetchTests();
+        setShowAddTest(false);
+        setNewTest({ title: '', description: '', stage_id: 1, duration_minutes: 10, passing_score_pct: 70, max_attempts: 3, test_type: '' });
+      });
   };
 
   const updateTest = (id: number, updates: Partial<Test>) => {
@@ -110,12 +134,29 @@ const AdminTestsPage: React.FC = () => {
   };
 
   const startTest = (id: number) => {
+    if (!confirm('Start this test now? Eligible users will immediately be able to take it.')) return;
     client.post(`/api/admin/tests/${id}/start?district=${getDistrict()}`).then(fetchTests);
   };
 
   const endTest = (id: number) => {
     if (!confirm('End this test now? Users will no longer be able to take it.')) return;
     client.post(`/api/admin/tests/${id}/end?district=${getDistrict()}`).then(fetchTests);
+  };
+
+  const openSchedule = (test: Test) => {
+    setScheduleValue(toLocalInputValue(test.scheduled_at));
+    setScheduleTest(test);
+  };
+
+  const saveSchedule = () => {
+    if (!scheduleTest) return;
+    const iso = scheduleValue ? new Date(scheduleValue).toISOString() : null;
+    client
+      .put(`/api/admin/tests/${scheduleTest.id}/schedule?district=${getDistrict()}`, { scheduled_at: iso })
+      .then(() => {
+        setScheduleTest(null);
+        fetchTests();
+      });
   };
 
   const viewResults = (testId: number) => {
@@ -218,6 +259,8 @@ const AdminTestsPage: React.FC = () => {
         return <Badge variant="success">🟢 Active</Badge>;
       case 'ended':
         return <Badge variant="error">🔴 Ended</Badge>;
+      case 'scheduled':
+        return <Badge variant="warning">🗓 Scheduled</Badge>;
       default:
         return <Badge variant="neutral">📝 Draft</Badge>;
     }
@@ -257,32 +300,53 @@ const AdminTestsPage: React.FC = () => {
               onClick={() => setExpandedTest(expandedTest === test.id ? null : test.id)}
             >
               <div>
-                <div className="mb-1 flex items-center gap-2">
+                <div className="mb-1 flex flex-wrap items-center gap-2">
                   <span className="text-xs font-bold uppercase tracking-wider text-coral-600 dark:text-coral-300">
                     Stage {test.stage_id}
                   </span>
+                  {test.test_type && (
+                    <Badge variant="info">
+                      {test.test_type === 'formative' ? 'Formative' : 'Screening'}
+                    </Badge>
+                  )}
                   {statusBadge(test.status)}
                 </div>
                 <h3 className="font-display text-lg font-bold text-ink">{test.title}</h3>
                 <p className="text-sm text-ink-muted">{test.description}</p>
                 <span className="text-xs text-ink-faint">
                   {test.questions.length} questions • {test.duration_minutes}min • Pass: {test.passing_score_pct}%
+                  {test.scheduled_at && test.status !== 'active' && test.status !== 'ended' && (
+                    <> • 🗓 Goes live: {new Date(test.scheduled_at).toLocaleString()}</>
+                  )}
                 </span>
               </div>
               <div className="flex flex-col items-end gap-1.5">
-                <div className="flex items-center gap-1.5">
-                  {test.status === 'draft' && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      iconLeft={<Play className="size-3.5" />}
-                      onClick={e => {
-                        e.stopPropagation();
-                        startTest(test.id);
-                      }}
-                    >
-                      Start
-                    </Button>
+                <div className="flex flex-wrap items-center justify-end gap-1.5">
+                  {(test.status === 'draft' || test.status === 'scheduled') && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        iconLeft={<CalendarClock className="size-3.5" />}
+                        onClick={e => {
+                          e.stopPropagation();
+                          openSchedule(test);
+                        }}
+                      >
+                        Schedule
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        iconLeft={<Play className="size-3.5" />}
+                        onClick={e => {
+                          e.stopPropagation();
+                          startTest(test.id);
+                        }}
+                      >
+                        Start
+                      </Button>
+                    </>
                   )}
                   {test.status === 'active' && (
                     <Button
@@ -297,7 +361,7 @@ const AdminTestsPage: React.FC = () => {
                       End
                     </Button>
                   )}
-                  {test.status === 'ended' && (
+                  {(test.status === 'ended' || test.status === 'active') && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -310,6 +374,17 @@ const AdminTestsPage: React.FC = () => {
                       Results
                     </Button>
                   )}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    iconLeft={<Radio className="size-3.5" />}
+                    onClick={e => {
+                      e.stopPropagation();
+                      navigate(`/admin/tests/${test.id}/monitor`);
+                    }}
+                  >
+                    Monitor Live
+                  </Button>
                   <button
                     className={iconBtn}
                     onClick={e => {
@@ -333,6 +408,17 @@ const AdminTestsPage: React.FC = () => {
                   <div><FieldLabel size="sm">Duration (min)</FieldLabel><Input type="number" value={test.duration_minutes} onChange={e => updateTest(test.id, { duration_minutes: parseInt(e.target.value) || 10 })} /></div>
                   <div><FieldLabel size="sm">Pass %</FieldLabel><Input type="number" value={test.passing_score_pct} onChange={e => updateTest(test.id, { passing_score_pct: parseInt(e.target.value) || 70 })} /></div>
                   <div><FieldLabel size="sm">Max Attempts</FieldLabel><Input type="number" value={test.max_attempts} onChange={e => updateTest(test.id, { max_attempts: parseInt(e.target.value) || 3 })} /></div>
+                  <div>
+                    <FieldLabel size="sm">Test Type</FieldLabel>
+                    <Select
+                      value={test.test_type || ''}
+                      onChange={e => updateTest(test.id, { test_type: (e.target.value || null) as Test['test_type'] })}
+                    >
+                      <option value="">—</option>
+                      <option value="formative">Formative</option>
+                      <option value="screening">Screening</option>
+                    </Select>
+                  </div>
                 </div>
 
                 {/* Upload */}
@@ -422,6 +508,14 @@ const AdminTestsPage: React.FC = () => {
           <div><FieldLabel size="sm">Duration (min)</FieldLabel><Input type="number" value={newTest.duration_minutes} onChange={e => setNewTest({ ...newTest, duration_minutes: parseInt(e.target.value) || 10 })} /></div>
           <div><FieldLabel size="sm">Passing %</FieldLabel><Input type="number" value={newTest.passing_score_pct} onChange={e => setNewTest({ ...newTest, passing_score_pct: parseInt(e.target.value) || 70 })} /></div>
           <div><FieldLabel size="sm">Max Attempts</FieldLabel><Input type="number" value={newTest.max_attempts} onChange={e => setNewTest({ ...newTest, max_attempts: parseInt(e.target.value) || 3 })} /></div>
+          <div>
+            <FieldLabel size="sm">Test Type</FieldLabel>
+            <Select value={newTest.test_type} onChange={e => setNewTest({ ...newTest, test_type: e.target.value })}>
+              <option value="">—</option>
+              <option value="formative">Formative</option>
+              <option value="screening">Screening</option>
+            </Select>
+          </div>
         </div>
         <div className="mt-3">
           <FieldLabel size="sm">Description</FieldLabel>
@@ -433,6 +527,40 @@ const AdminTestsPage: React.FC = () => {
             onChange={e => setNewTest({ ...newTest, description: e.target.value })}
           />
         </div>
+      </Modal>
+
+      {/* Schedule modal */}
+      <Modal
+        open={scheduleTest !== null}
+        onClose={() => setScheduleTest(null)}
+        title={scheduleTest ? `Schedule: ${scheduleTest.title}` : 'Schedule'}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setScheduleValue('')}>
+              Clear
+            </Button>
+            <Button variant="outline" onClick={() => setScheduleTest(null)}>
+              Cancel
+            </Button>
+            <Button iconLeft={<Save className="size-4" />} onClick={saveSchedule}>
+              Save Schedule
+            </Button>
+          </>
+        }
+      >
+        <p className="mt-0 text-sm text-ink-muted">
+          This tentative date &amp; time is shown on every user's dashboard. The test only becomes takeable when you
+          press <strong className="text-ink">Start</strong> — the schedule is informational.
+        </p>
+        <div className="mt-3">
+          <FieldLabel size="sm">Tentative go-live date &amp; time</FieldLabel>
+          <Input type="datetime-local" value={scheduleValue} onChange={e => setScheduleValue(e.target.value)} />
+        </div>
+        {scheduleValue && (
+          <p className="mt-2 mb-0 text-sm text-primary">
+            Users will see: “Tentative test date: {new Date(scheduleValue).toLocaleString()}”
+          </p>
+        )}
       </Modal>
 
       {/* Results modal */}
