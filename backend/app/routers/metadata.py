@@ -39,9 +39,36 @@ def get_facilities(block_id: Optional[int] = Query(None), db: Session = Depends(
     return query.all()
 
 @router.get("/qualifications", response_model=List[schemas.EducationalQualificationOut])
-def get_qualifications(db: Session = Depends(get_db)):
-    return db.query(models.EducationalQualification).all()
+def get_qualifications(department_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    query = db.query(models.EducationalQualification)
+    if department_id is not None:
+        query = query.filter(models.EducationalQualification.department_id == department_id)
+    return query.order_by(models.EducationalQualification.order_index).all()
 
 @router.get("/experience-ranges", response_model=List[schemas.ExperienceRangeOut])
 def get_experience_ranges(db: Session = Depends(get_db)):
     return db.query(models.ExperienceRange).order_by(models.ExperienceRange.order_index).all()
+
+
+# ── Learner Registration professional-axis cascades ──
+
+@router.get("/departments", response_model=List[schemas.DepartmentOut])
+def get_departments(db: Session = Depends(get_db)):
+    return db.query(models.Department).order_by(models.Department.order_index).all()
+
+@router.get("/designations", response_model=List[schemas.DesignationOut])
+def get_designations(department_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    query = db.query(models.Designation)
+    if department_id is not None:
+        query = query.filter(models.Designation.department_id == department_id)
+    return query.order_by(models.Designation.order_index).all()
+
+@router.get("/facility-types", response_model=List[schemas.FacilityTypeOut])
+def get_facility_types(designation_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    # Filtered by designation → return only its mapped facility types. If the designation
+    # has no mapping (empty), fall back to the full list. No filter → full list.
+    if designation_id is not None:
+        designation = db.query(models.Designation).filter(models.Designation.id == designation_id).first()
+        if designation is not None and designation.facility_types:
+            return sorted(designation.facility_types, key=lambda ft: ft.order_index)
+    return db.query(models.FacilityType).order_by(models.FacilityType.order_index).all()

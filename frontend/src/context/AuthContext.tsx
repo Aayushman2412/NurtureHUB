@@ -35,6 +35,25 @@ export interface User {
   program_district_id: number | null;
   program_district: { id: number; name: string; slug: string; is_active: boolean } | null;
   created_at: string;
+
+  // ── Learner Registration: professional-axis FKs + extension fields ──
+  department_id: number | null;
+  designation_id: number | null;
+  facility_type_id: number | null;
+  department_other: string | null;
+  marital_status: string | null;
+  has_children: boolean | null;
+  number_children: number | null;
+  residence_distance_km: number | null;
+  years_service: number | null;
+  years_designation: number | null;
+  years_facility: number | null;
+  internet_workplace: string | null;
+  nutrition_training: string | null;
+  pregnancy_nutrition_training: string | null;
+  breastfeeding_training: string | null;
+  complementary_feeding_training: string | null;
+  growth_monitoring_training: string | null;
 }
 
 interface AuthContextType {

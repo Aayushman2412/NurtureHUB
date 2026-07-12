@@ -15,7 +15,7 @@ const Stepper: React.FC<StepperProps> = ({ steps, current, className }) => (
       const done = i < current;
       const active = i === current;
       return (
-        <li key={step} className="flex items-center gap-2 min-w-0">
+        <li className={cn('flex items-center gap-2 min-w-0', active && 'shrink-0')} key={step}>
           {i > 0 && <span className={cn('h-px w-6 sm:w-10', done || active ? 'bg-primary' : 'bg-border')} />}
           <span
             className={cn(
@@ -30,8 +30,12 @@ const Stepper: React.FC<StepperProps> = ({ steps, current, className }) => (
           </span>
           <span
             className={cn(
-              'text-sm truncate max-sm:hidden',
-              active ? 'font-semibold text-ink' : 'text-ink-muted',
+              'text-sm',
+              // The active step's label is always fully visible; inactive labels
+              // give way (truncate, and hide on small screens) under space pressure.
+              active
+                ? 'font-semibold text-ink whitespace-nowrap'
+                : 'text-ink-muted truncate max-sm:hidden',
             )}
           >
             {step}

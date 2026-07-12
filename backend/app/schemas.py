@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 
@@ -53,6 +53,39 @@ class EducationalQualificationOut(BaseModel):
     id: int
     qualification_name: str
     has_semi_open_input: bool
+    department_id: Optional[int] = None
+    order_index: int = 0
+
+    class Config:
+        from_attributes = True
+
+
+class DepartmentOut(BaseModel):
+    id: int
+    code: str
+    name: str
+    order_index: int
+
+    class Config:
+        from_attributes = True
+
+
+class DesignationOut(BaseModel):
+    id: int
+    department_id: int
+    name: str
+    order_index: int
+    is_other: bool
+
+    class Config:
+        from_attributes = True
+
+
+class FacilityTypeOut(BaseModel):
+    id: int
+    name: str
+    order_index: int
+    is_other: bool
 
     class Config:
         from_attributes = True
@@ -129,6 +162,36 @@ class UserProfileUpdate(BaseModel):
     district: Optional[str] = None
     avatar_initials: Optional[str] = None
 
+    # ── Learner Registration: professional-axis FKs + extension fields ──
+    department_id: Optional[int] = None
+    designation_id: Optional[int] = None
+    facility_type_id: Optional[int] = None
+    department_other: Optional[str] = None
+    marital_status: Optional[str] = None
+    has_children: Optional[bool] = None
+    number_children: Optional[int] = Field(default=None, ge=0, le=30)
+    residence_distance_km: Optional[float] = Field(default=None, ge=0, le=100)
+    years_service: Optional[float] = Field(default=None, ge=0, le=50)
+    years_designation: Optional[float] = Field(default=None, ge=0, le=50)
+    years_facility: Optional[float] = Field(default=None, ge=0, le=50)
+    internet_workplace: Optional[str] = None
+    nutrition_training: Optional[str] = None
+    pregnancy_nutrition_training: Optional[str] = None
+    breastfeeding_training: Optional[str] = None
+    complementary_feeding_training: Optional[str] = None
+    growth_monitoring_training: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _check_year_consistency(self):
+        # Cross-field checks only when both operands are present in this payload
+        # (partial profile edits may send one without the other).
+        if self.years_service is not None:
+            if self.years_designation is not None and self.years_designation > self.years_service:
+                raise ValueError("Years in current designation cannot exceed total years of service.")
+            if self.years_facility is not None and self.years_facility > self.years_service:
+                raise ValueError("Years at current facility cannot exceed total years of service.")
+        return self
+
 class UserOut(BaseModel):
     id: int
     email: str
@@ -156,6 +219,25 @@ class UserOut(BaseModel):
     program_district_id: Optional[int] = None
     created_at: datetime
 
+    # ── Learner Registration: professional-axis FKs + extension fields ──
+    department_id: Optional[int] = None
+    designation_id: Optional[int] = None
+    facility_type_id: Optional[int] = None
+    department_other: Optional[str] = None
+    marital_status: Optional[str] = None
+    has_children: Optional[bool] = None
+    number_children: Optional[int] = None
+    residence_distance_km: Optional[float] = None
+    years_service: Optional[float] = None
+    years_designation: Optional[float] = None
+    years_facility: Optional[float] = None
+    internet_workplace: Optional[str] = None
+    nutrition_training: Optional[str] = None
+    pregnancy_nutrition_training: Optional[str] = None
+    breastfeeding_training: Optional[str] = None
+    complementary_feeding_training: Optional[str] = None
+    growth_monitoring_training: Optional[str] = None
+
     # Nested relations (lazy loaded via ORM)
     state: Optional[StateOut] = None
     district_rel: Optional[DistrictOut] = None
@@ -164,6 +246,9 @@ class UserOut(BaseModel):
     facility: Optional[FacilityOut] = None
     qualification: Optional[EducationalQualificationOut] = None
     experience_range: Optional[ExperienceRangeOut] = None
+    department_ref: Optional[DepartmentOut] = None
+    designation_rel: Optional[DesignationOut] = None
+    facility_type_rel: Optional[FacilityTypeOut] = None
     program_district: Optional[ProgramDistrictOut] = None
 
     class Config:

@@ -28,13 +28,14 @@ from app.models import (
     Stage, Tutorial, TutorialQuestion, TutorialQuestionOption,
     Test, Question, QuestionOption, Achievement,
     State, District, Block, Village, Facility, EducationalQualification, ExperienceRange,
-    ProgramDistrict, User,
+    ProgramDistrict, User, Department, Designation, FacilityType,
 )
 
 
 def seed_database(db: Session):
     _seed_metadata(db)
     _seed_achievements(db)
+    _seed_professional_axis(db)   # LR reference data — essential, always seeded
 
     if not settings.SEED_DEMO_DATA:
         print("SEED_DEMO_DATA is false — skipping demo districts, users and content.")
@@ -835,3 +836,120 @@ DEMO_FLOWS = {
         },
     },
 }
+
+
+# ═══════════════════════════════════════════════
+# Learner Registration — professional-axis reference data
+# (from the EP HST "LR notes" sheet). Powers the cascading dropdowns:
+# Department → Designation → Facility type, and Department → Education.
+# ═══════════════════════════════════════════════
+
+def _seed_professional_axis(db: Session):
+    """Seed departments, designations, facility types (+ designation→facility-type
+    mapping) and the department-scoped educational qualification lists. Runs once,
+    guarded by an empty departments table. Deliberately REPLACES any pre-existing
+    generic educational_qualifications with the LR dept-scoped lists (per spec)."""
+    if db.query(Department).count() > 0:
+        return
+    print("Seeding professional-axis master data (departments, designations, facility types, education)...")
+
+    # ── Departments ──
+    hfw = Department(code="HFW", name="Health & Family Welfare Department (HFW)", order_index=0)
+    wcd = Department(code="WCD", name="Women & Child Development Department (WCD)", order_index=1)
+    other_dept = Department(code="OTHER", name="Other", order_index=2)
+    db.add_all([hfw, wcd, other_dept])
+    db.commit()
+
+    # ── Facility types (ordered by frequency); keyed by a short alias for mapping ──
+    ft_specs = [
+        ("Anganwadi Centre (AWC)", "AWC"),
+        ("Sub-centre (SC)", "SC"),
+        ("Health & Wellness Centre (HWC)", "HWC"),
+        ("Primary Health Centre (PHC)", "PHC"),
+        ("Community Health Centre (CHC)", "CHC"),
+        ("Taluk Hospital (TH)", "TH"),
+        ("District Hospital (DH)", "DH"),
+        ("Medical College Hospital", "MCH"),
+        ("ICDS Project Office (CDPO Office)", "ICDS_PO"),
+        ("Taluk Health Office (THO)", "THO"),
+        ("District Health Office (DHO)", "DHO"),
+        ("District ICDS Office", "DICDS"),
+        ("Other (Specify)", "OTHER"),
+    ]
+    ft = {}
+    for i, (name, alias) in enumerate(ft_specs):
+        obj = FacilityType(name=name, order_index=i, is_other=(alias == "OTHER"))
+        db.add(obj)
+        ft[alias] = obj
+    db.commit()
+
+    # ── Designations (name, [facility-type aliases]) ordered by frequency. An empty
+    #    list means the sheet gives no posting mapping → UI falls back to all types. ──
+    hfw_desigs = [
+        ("ASHA", ["SC"]),
+        ("ANM", ["SC", "HWC"]),
+        ("CHO (Community Health Officer)", ["HWC"]),
+        ("Staff Nurse", ["PHC", "CHC", "TH", "DH"]),
+        ("ASHA Facilitator", ["PHC"]),
+        ("MLHP (Mid-Level Health Provider)", ["HWC"]),
+        ("MPHW (Male)", ["SC", "HWC"]),
+        ("Health Assistant (Female)", ["PHC"]),
+        ("Health Assistant (Male)", ["PHC"]),
+        ("Health Inspector", ["PHC", "THO"]),
+        ("Lab Technician", ["PHC", "CHC", "TH", "DH"]),
+        ("Pharmacist", ["PHC", "CHC", "TH", "DH"]),
+        ("Medical Officer", ["PHC", "CHC", "TH", "DH"]),
+        ("Specialist Medical Officer", ["DH", "MCH"]),
+        ("Block Health Education Officer", []),
+        ("Taluk Health Officer", ["THO"]),
+        ("District Health Officer", ["DHO"]),
+        ("District Epidemiologist", ["DHO"]),
+        ("District Surveillance Officer", ["DHO"]),
+        ("Programme Manager", ["DHO"]),
+        ("Data Entry Operator", ["PHC", "THO", "DHO"]),
+        ("Nutrition Counsellor", ["PHC", "DH", "DICDS"]),
+        ("Counsellor", []),
+        ("Physiotherapist", []),
+        ("Other (Specify)", []),
+    ]
+    wcd_desigs = [
+        ("Anganwadi Worker (AWW)", ["AWC"]),
+        ("Lady Supervisor", ["ICDS_PO"]),
+        ("Child Development Project Officer (CDPO)", ["ICDS_PO"]),
+        ("District Programme Officer", ["DICDS"]),
+        ("Poshan Coordinator", ["DICDS", "ICDS_PO"]),
+        ("Nutrition Counsellor", ["PHC", "DH", "DICDS"]),
+        ("Other (Specify)", []),
+    ]
+    for dept, desigs in ((hfw, hfw_desigs), (wcd, wcd_desigs)):
+        for i, (name, aliases) in enumerate(desigs):
+            d = Designation(
+                department_id=dept.id, name=name, order_index=i,
+                is_other=name.startswith("Other"),
+            )
+            d.facility_types = [ft[a] for a in aliases]
+            db.add(d)
+    db.commit()
+
+    # ── Department-scoped education: REPLACE the generic list with the LR lists ──
+    db.query(EducationalQualification).delete()
+    db.commit()
+    hfw_edu = [
+        "No formal education", "Primary (I–IV)", "Upper Primary (V–VII)", "High School (VIII–X)",
+        "PUC (XI–XII)", "ANM", "GNM", "B.Sc. Nursing", "Post Basic B.Sc. Nursing", "M.Sc. Nursing",
+        "MBBS", "BAMS", "BHMS", "BDS", "BPT", "B.Pharm", "M.Pharm", "MPH", "MD/MS", "Diploma",
+        "Graduate", "Postgraduate", "PhD", "Other",
+    ]
+    wcd_edu = [
+        "No formal education", "Primary (I–IV)", "Upper Primary (V–VII)", "High School (VIII–X)",
+        "PUC (XI–XII)", "Anganwadi Training Certificate", "Diploma", "Graduate", "Postgraduate",
+        "BSW", "MSW", "Nutrition/Home Science", "Other",
+    ]
+    for dept, names in ((hfw, hfw_edu), (wcd, wcd_edu)):
+        for i, name in enumerate(names):
+            db.add(EducationalQualification(
+                qualification_name=name, department_id=dept.id, order_index=i,
+                has_semi_open_input=(name == "Other"),
+            ))
+    db.commit()
+    print("Professional-axis master data seeded.")

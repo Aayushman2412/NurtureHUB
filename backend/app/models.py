@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Float, Text, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Float, Text, Table, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -39,12 +39,33 @@ class User(Base):
     qualification_id = Column(Integer, ForeignKey("educational_qualifications.id"), nullable=True)
     experience_range_id = Column(Integer, ForeignKey("experience_ranges.id"), nullable=True)
     qualification_other_detail = Column(String, nullable=True)
-    department = Column(String, nullable=True)
-    role = Column(String, nullable=True)
-    work_center_type = Column(String, nullable=True)
+    department = Column(String, nullable=True)          # legacy string, kept for back-compat display
+    role = Column(String, nullable=True)                # legacy string (designation name)
+    work_center_type = Column(String, nullable=True)    # legacy string (facility type name)
     work_center_name = Column(String, nullable=True)
     district = Column(String, nullable=True)
     avatar_initials = Column(String, nullable=True)
+
+    # ── Learner Registration (LR) professional-axis FKs — master-data backed cascades ──
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+    designation_id = Column(Integer, ForeignKey("designations.id"), nullable=True)
+    facility_type_id = Column(Integer, ForeignKey("facility_types.id"), nullable=True)
+
+    # ── Learner Registration (LR) extension fields (from EP HST "LR" tool) ──
+    department_other = Column(String, nullable=True)          # shown only when department = Other
+    marital_status = Column(String, nullable=True)            # Never married;Married;Widowed;Divorced;Separated
+    has_children = Column(Boolean, nullable=True)
+    number_children = Column(Integer, nullable=True)          # shown only when has_children = True
+    residence_distance_km = Column(Float, nullable=True)      # 0–100 km, one decimal
+    years_service = Column(Float, nullable=True)              # total years of service (0–50)
+    years_designation = Column(Float, nullable=True)          # years in current designation (<= years_service)
+    years_facility = Column(Float, nullable=True)             # years at current facility (<= years_service)
+    internet_workplace = Column(String, nullable=True)        # Always/Often/Sometimes/Rarely/Never
+    nutrition_training = Column(String, nullable=True)        # training-recency questions
+    pregnancy_nutrition_training = Column(String, nullable=True)
+    breastfeeding_training = Column(String, nullable=True)
+    complementary_feeding_training = Column(String, nullable=True)
+    growth_monitoring_training = Column(String, nullable=True)
     is_verified = Column(Boolean, default=False, nullable=False)
     is_admin = Column(Boolean, default=False, nullable=False)
     otp_code = Column(String, nullable=True)  # stores a bcrypt hash of the OTP, never plaintext
@@ -63,6 +84,9 @@ class User(Base):
     facility = relationship("Facility")
     qualification = relationship("EducationalQualification")
     experience_range = relationship("ExperienceRange")
+    department_ref = relationship("Department")
+    designation_rel = relationship("Designation")
+    facility_type_rel = relationship("FacilityType")
     program_district = relationship("ProgramDistrict", back_populates="users")
     tutorial_progress = relationship("UserTutorialProgress", back_populates="user", cascade="all, delete-orphan")
     test_attempts = relationship("TestAttempt", back_populates="user", cascade="all, delete-orphan")
@@ -396,6 +420,11 @@ class EducationalQualification(Base):
     id = Column(Integer, primary_key=True, index=True)
     qualification_name = Column(String, nullable=False)
     has_semi_open_input = Column(Boolean, default=False, nullable=False)
+    # LR: qualification lists are department-specific (HFW vs WCD). Null = shared/generic (legacy rows).
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+    order_index = Column(Integer, default=0, nullable=False)  # by prevalence
+
+    department = relationship("Department")
 
 
 class ExperienceRange(Base):
@@ -404,3 +433,58 @@ class ExperienceRange(Base):
     id = Column(Integer, primary_key=True, index=True)
     label = Column(String, nullable=False)
     order_index = Column(Integer, default=0, nullable=False)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Professional-axis master data — powers the Learner Registration cascading
+# dropdowns (Department → Designation → Facility type, and Department → Education).
+# The frontend fetches these from /api/metadata/* so option lists live in the
+# backend, not hardcoded in the form. See the EP HST "LR notes" sheet.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Which facility types a given designation can be posted at (LR-notes mapping).
+designation_facility_types = Table(
+    "designation_facility_types",
+    Base.metadata,
+    Column("designation_id", Integer, ForeignKey("designations.id", ondelete="CASCADE"), primary_key=True),
+    Column("facility_type_id", Integer, ForeignKey("facility_types.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+class Department(Base):
+    __tablename__ = "departments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String, unique=True, nullable=False)   # HFW | WCD | OTHER
+    name = Column(String, nullable=False)
+    order_index = Column(Integer, default=0, nullable=False)
+
+    designations = relationship("Designation", back_populates="department", cascade="all, delete-orphan")
+
+
+class Designation(Base):
+    __tablename__ = "designations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    department_id = Column(Integer, ForeignKey("departments.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String, nullable=False)
+    order_index = Column(Integer, default=0, nullable=False)   # ordered by frequency
+    is_other = Column(Boolean, default=False, nullable=False)  # "Other (Specify)" → free-text follow-up
+
+    department = relationship("Department", back_populates="designations")
+    facility_types = relationship(
+        "FacilityType", secondary=designation_facility_types, back_populates="designations"
+    )
+
+
+class FacilityType(Base):
+    __tablename__ = "facility_types"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    order_index = Column(Integer, default=0, nullable=False)
+    is_other = Column(Boolean, default=False, nullable=False)
+
+    designations = relationship(
+        "Designation", secondary=designation_facility_types, back_populates="facility_types"
+    )

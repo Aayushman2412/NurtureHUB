@@ -4,6 +4,8 @@ export { default as Card, CardHeader, CardBody, CardFooter } from './Card';
 export { default as Input, inputClasses } from './Input';
 export { default as PasswordInput } from './PasswordInput';
 export { default as Select } from './Select';
+export { default as SelectField } from './SelectField';
+export type { SelectFieldOption, SelectFieldProps } from './SelectField';
 export { Checkbox, Radio } from './Checkbox';
 export { default as Badge } from './Badge';
 export type { BadgeVariant } from './Badge';
