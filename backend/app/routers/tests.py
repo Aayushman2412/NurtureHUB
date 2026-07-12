@@ -6,9 +6,41 @@ from app.database import get_db
 from app.models import Stage, Test, Question, QuestionOption, TestAttempt, TestAnswer, Tutorial, UserTutorialProgress, Notification
 from app.schemas import TestOut, StartAttemptResponse, TestSubmitRequest, TestSubmitResponse, QuestionOut, QuestionOptionOut
 from app.dependencies import get_verified_user
+from app.flow import ensure_awaiting_results_notification, test_lock_state
 from app.models import User
+from app.timeutils import to_utc
 
 router = APIRouter(prefix="/api/tests", tags=["tests"])
+
+
+def _test_out(db: Session, current_user: User, test: Test) -> TestOut:
+    is_locked, lock_reason = test_lock_state(db, current_user, test)
+
+    attempts = db.query(TestAttempt).filter(
+        TestAttempt.user_id == current_user.id,
+        TestAttempt.test_id == test.id,
+        TestAttempt.submitted_at.isnot(None)
+    ).all()
+
+    return TestOut(
+        id=test.id,
+        stage_id=test.stage_id,
+        title=test.title,
+        description=test.description,
+        total_questions=test.total_questions,
+        duration_minutes=test.duration_minutes,
+        passing_score_pct=test.passing_score_pct,
+        max_attempts=test.max_attempts,
+        status=test.status,
+        test_type=test.test_type,
+        scheduled_at=to_utc(test.scheduled_at),
+        is_locked=is_locked,
+        lock_reason=lock_reason,
+        best_score=max([att.score for att in attempts]) if attempts else None,
+        attempts_count=len(attempts),
+        is_passed=any(att.is_passed for att in attempts),
+    )
+
 
 @router.get("", response_model=List[TestOut])
 def get_tests(current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
@@ -21,111 +53,31 @@ def get_tests(current_user: User = Depends(get_verified_user), db: Session = Dep
         Stage.program_district_id == current_user.program_district_id
     ).all()}
 
-    tests = db.query(Test).filter(Test.stage_id.in_(district_stage_ids)).all() if district_stage_ids else []
-    
-    # Get completed tutorial IDs for the current user
-    completed_progress = db.query(UserTutorialProgress).filter(
-        UserTutorialProgress.user_id == current_user.id,
-        UserTutorialProgress.is_completed == True
-    ).all()
-    completed_tutorial_ids = {p.tutorial_id for p in completed_progress}
-    
-    response = []
-    for test in tests:
-        # Get all tutorials for the test's stage
-        stage_tutorials = db.query(Tutorial).filter(Tutorial.stage_id == test.stage_id).all()
-        stage_tutorial_ids = {t.id for t in stage_tutorials}
-        
-        # Test is locked if there are tutorials in the stage and the user hasn't completed all of them
-        is_locked = False
-        if stage_tutorial_ids:
-            completed_in_stage = stage_tutorial_ids.intersection(completed_tutorial_ids)
-            if len(completed_in_stage) < len(stage_tutorial_ids):
-                is_locked = True
-                
-        # If the stage itself is locked (depends on previous stage's test pass), then the test is also locked
-        # Find if there is a previous stage test (within same district)
-        prev_test = db.query(Test).join(Test.stage).filter(
-            Test.stage_id < test.stage_id,
-            Stage.program_district_id == current_user.program_district_id
-        ).order_by(Test.stage_id.desc()).first()
-        if prev_test:
-            prev_passed = db.query(TestAttempt).filter(
-                TestAttempt.user_id == current_user.id,
-                TestAttempt.test_id == prev_test.id,
-                TestAttempt.is_passed == True
-            ).first()
-            if not prev_passed:
-                is_locked = True
-                
-        # Get attempts statistics
-        attempts = db.query(TestAttempt).filter(
-            TestAttempt.user_id == current_user.id,
-            TestAttempt.test_id == test.id,
-            TestAttempt.submitted_at.isnot(None)
-        ).all()
-        
-        attempts_count = len(attempts)
-        is_passed = any(att.is_passed for att in attempts)
-        best_score = max([att.score for att in attempts]) if attempts else None
-        
-        response.append(
-            TestOut(
-                id=test.id,
-                stage_id=test.stage_id,
-                title=test.title,
-                description=test.description,
-                total_questions=test.total_questions,
-                duration_minutes=test.duration_minutes,
-                passing_score_pct=test.passing_score_pct,
-                max_attempts=test.max_attempts,
-                is_locked=is_locked,
-                best_score=best_score,
-                attempts_count=attempts_count,
-                is_passed=is_passed
-            )
-        )
-        
-    return response
+    tests = db.query(Test).join(Stage, Test.stage_id == Stage.id).filter(
+        Test.stage_id.in_(district_stage_ids)
+    ).order_by(Stage.order_index).all() if district_stage_ids else []
+
+    return [_test_out(db, current_user, test) for test in tests]
 
 @router.get("/{id}", response_model=TestOut)
 def get_test_details(id: int, current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
     test = db.query(Test).filter(Test.id == id).first()
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
-        
-    # Standard metadata calculations
-    attempts = db.query(TestAttempt).filter(
-        TestAttempt.user_id == current_user.id,
-        TestAttempt.test_id == test.id,
-        TestAttempt.submitted_at.isnot(None)
-    ).all()
-    
-    attempts_count = len(attempts)
-    is_passed = any(att.is_passed for att in attempts)
-    best_score = max([att.score for att in attempts]) if attempts else None
-    
-    return TestOut(
-        id=test.id,
-        stage_id=test.stage_id,
-        title=test.title,
-        description=test.description,
-        total_questions=test.total_questions,
-        duration_minutes=test.duration_minutes,
-        passing_score_pct=test.passing_score_pct,
-        max_attempts=test.max_attempts,
-        is_locked=False, # Lock check is done in list or endpoint-level
-        best_score=best_score,
-        attempts_count=attempts_count,
-        is_passed=is_passed
-    )
+
+    return _test_out(db, current_user, test)
 
 @router.post("/{id}/start", response_model=StartAttemptResponse)
 def start_test_attempt(id: int, current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
     test = db.query(Test).filter(Test.id == id).first()
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
-        
+
+    # Hard server-side gate: eligibility (required videos) + admin lifecycle.
+    is_locked, lock_reason = test_lock_state(db, current_user, test)
+    if is_locked:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=lock_reason)
+
     # Check attempts count limit
     past_attempts = db.query(TestAttempt).filter(
         TestAttempt.user_id == current_user.id,
@@ -248,10 +200,13 @@ def submit_test_attempt(
         message=f"You completed the test '{test.title}' with a score of {pct_score:.1f}% ({correct_count}/{len(questions)} correct)."
     )
     db.add(notif)
-    
+
+    # If this was the last outstanding item, tell the user to wait for results.
+    ensure_awaiting_results_notification(db, current_user)
+
     db.commit()
     db.refresh(attempt)
-    
+
     return {
         "attempt_id": attempt.id,
         "score": pct_score,

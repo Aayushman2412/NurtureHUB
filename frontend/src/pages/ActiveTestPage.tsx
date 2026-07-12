@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { submitAttempt } from '../api/tests';
 import { useToast } from '../context/ToastContext';
-import { AlertCircle, Clock, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTestEventEmitter } from '../hooks/useTestEventEmitter';
+import { AlertCircle, Clock, Eye, ChevronLeft, ChevronRight, Wifi, WifiOff, AlertTriangle } from 'lucide-react';
 import { Button, Card, Modal } from '../components/ui';
 import { cn } from '../utils/cn';
 
@@ -113,6 +114,33 @@ const ActiveTestPage: React.FC = () => {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const timerRef = useRef<any>(null);
+  const questionStartRef = useRef<number>(Date.now());
+
+  // ── Live monitoring event emitter ──
+  const {
+    emitEvent,
+    isConnected: wsConnected,
+    warningMessage,
+    forceSubmitTriggered,
+    clearWarning,
+  } = useTestEventEmitter({ attemptId: attempt_id, enabled: true });
+
+  // Handle admin force-submit
+  useEffect(() => {
+    if (forceSubmitTriggered) {
+      showToast('Your test has been submitted by the administrator.', 'warning');
+      performSubmission();
+    }
+  }, [forceSubmitTriggered]);
+
+  // Emit QUESTION_VIEWED on question navigation
+  useEffect(() => {
+    questionStartRef.current = Date.now();
+    emitEvent('QUESTION_VIEWED', {
+      question_id: questions[currentIdx]?.id,
+      question_number: currentIdx + 1,
+    });
+  }, [currentIdx]);
 
   // Persist answers to localStorage whenever they change
   useEffect(() => {
@@ -161,6 +189,7 @@ const ActiveTestPage: React.FC = () => {
 
   const handleAutoSubmit = async () => {
     showToast("Time's up! Submitting your answers automatically.", 'warning');
+    emitEvent('TEST_AUTO_SUBMITTED');
     await performSubmission();
   };
 
@@ -195,6 +224,8 @@ const ActiveTestPage: React.FC = () => {
   };
 
   const handleSelectOption = (questionId: number, optionId: number) => {
+    const timeOnQuestion = Date.now() - questionStartRef.current;
+    const isChange = answers[questionId]?.selected_option_id != null;
     setAnswers(prev => ({
       ...prev,
       [questionId]: {
@@ -202,6 +233,12 @@ const ActiveTestPage: React.FC = () => {
         is_marked_for_review: prev[questionId]?.is_marked_for_review || false,
       },
     }));
+    emitEvent(isChange ? 'ANSWER_CHANGED' : 'ANSWER_SELECTED', {
+      question_id: questionId,
+      selected_option_id: optionId,
+      time_on_question_ms: timeOnQuestion,
+    });
+    questionStartRef.current = Date.now();
   };
 
   const handleToggleReview = (questionId: number) => {
@@ -215,6 +252,7 @@ const ActiveTestPage: React.FC = () => {
         },
       };
     });
+    emitEvent('ANSWER_MARKED_REVIEW', { question_id: questionId });
   };
 
   const handleClearAnswer = (questionId: number) => {
@@ -228,6 +266,7 @@ const ActiveTestPage: React.FC = () => {
       }
       return copy;
     });
+    emitEvent('ANSWER_CLEARED', { question_id: questionId });
   };
 
   const getTimerClass = () => {
@@ -258,6 +297,20 @@ const ActiveTestPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Live monitoring connection indicator */}
+          <div
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-bold',
+              wsConnected
+                ? 'border-success-500/40 bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-500'
+                : 'border-amber-500/40 bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-500',
+            )}
+            title={wsConnected ? 'Live monitoring connected' : 'Reconnecting to live monitoring'}
+          >
+            {wsConnected ? <Wifi className="size-3.5" /> : <WifiOff className="size-3.5" />}
+            <span>{wsConnected ? 'Live' : 'Reconnecting...'}</span>
+          </div>
+
           <div
             className={cn(
               'flex items-center gap-2 rounded-lg border px-3.5 py-2 font-bold',
@@ -268,7 +321,14 @@ const ActiveTestPage: React.FC = () => {
             <span className="font-mono text-lg">{formatTime(timeRemaining)}</span>
           </div>
 
-          <Button onClick={() => setShowConfirm(true)}>Finish Test</Button>
+          <Button
+            onClick={() => {
+              emitEvent('TEST_SUBMITTED');
+              setShowConfirm(true);
+            }}
+          >
+            Finish Test
+          </Button>
         </div>
       </div>
 
@@ -452,6 +512,22 @@ const ActiveTestPage: React.FC = () => {
             {unansweredCount}
           </dd>
         </dl>
+      </Modal>
+
+      {/* Admin warning modal (live monitoring) */}
+      <Modal
+        open={!!warningMessage}
+        onClose={clearWarning}
+        title="Administrator Warning"
+        size="sm"
+        footer={<Button onClick={clearWarning}>I Understand</Button>}
+      >
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="flex size-14 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-500/15">
+            <AlertTriangle className="size-7 text-amber-500" />
+          </div>
+          <p className="text-sm leading-relaxed text-ink-muted">{warningMessage}</p>
+        </div>
       </Modal>
     </div>
   );

@@ -33,8 +33,11 @@ import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import StyleguidePage from './pages/dev/StyleguidePage';
 import AdminFormBuilderPage from './pages/admin/AdminFormBuilderPage';
 import AdminTutorialsPage from './pages/admin/AdminTutorialsPage';
+import AdminTutorialTrackingPage from './pages/admin/AdminTutorialTrackingPage';
+import AdminResultsPage from './pages/admin/AdminResultsPage';
 import AdminTestsPage from './pages/admin/AdminTestsPage';
 import AdminDistrictsPage from './pages/admin/AdminDistrictsPage';
+import AdminLiveMonitorPage from './pages/admin/AdminLiveMonitorPage';
 
 // --- Route Guards ---
 
@@ -129,7 +132,10 @@ const AppRoutes: React.FC = () => {
       <Route path="/admin/districts" element={<AdminRoute><AdminDistrictsPage /></AdminRoute>} />
       <Route path="/admin/form-builder" element={<AdminRoute><AdminFormBuilderPage /></AdminRoute>} />
       <Route path="/admin/tutorials" element={<AdminRoute><AdminTutorialsPage /></AdminRoute>} />
+      <Route path="/admin/tutorial-tracking" element={<AdminRoute><AdminTutorialTrackingPage /></AdminRoute>} />
+      <Route path="/admin/results" element={<AdminRoute><AdminResultsPage /></AdminRoute>} />
       <Route path="/admin/tests" element={<AdminRoute><AdminTestsPage /></AdminRoute>} />
+      <Route path="/admin/tests/:testId/monitor" element={<AdminRoute><AdminLiveMonitorPage /></AdminRoute>} />
 
       {/* Dev-only styleguide */}
       {import.meta.env.DEV && <Route path="/dev/styleguide" element={<StyleguidePage />} />}

@@ -64,3 +64,8 @@ def get_current_admin(token: str = Depends(oauth2_scheme)) -> dict:
             detail="Administrator privileges required",
         )
     return {"email": payload.get("sub"), "is_admin": True}
+
+
+def get_admin_email(admin: dict = Depends(get_current_admin)) -> str:
+    """Convenience dependency returning just the admin's email (for audit fields)."""
+    return admin.get("email") or ""

@@ -14,6 +14,10 @@ interface Test {
   duration_minutes: number;
   passing_score_pct: number;
   max_attempts: number;
+  status: 'draft' | 'scheduled' | 'active' | 'ended';
+  scheduled_at: string | null;
+  is_locked: boolean;
+  lock_reason: string | null;
   attempts_count: number;
   is_passed: boolean;
 }
@@ -71,6 +75,14 @@ const TestInstructionsPage: React.FC = () => {
   if (loading) return <PageLoader label="Loading assessment settings…" />;
   if (!test) return null;
 
+  const startLabel = starting
+    ? 'Starting...'
+    : test.is_locked
+      ? test.status !== 'active'
+        ? 'Not Started by Admin'
+        : 'Locked'
+      : 'Start Assessment';
+
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <div>
@@ -118,6 +130,17 @@ const TestInstructionsPage: React.FC = () => {
           </ul>
         </div>
 
+        {/* Lock notice */}
+        {test.is_locked && (
+          <Alert
+            variant="info"
+            title={test.status !== 'active' ? 'Not started by admin' : 'Assessment locked'}
+            className="mb-9"
+          >
+            {test.lock_reason || 'This assessment is not available yet. Please check back later.'}
+          </Alert>
+        )}
+
         {/* Warning */}
         <Alert variant="warning" title="Attempt limits" className="mb-9">
           You have completed {test.attempts_count} of your {test.max_attempts} allowed attempts for this assessment.
@@ -129,8 +152,14 @@ const TestInstructionsPage: React.FC = () => {
           <Button variant="outline" size="lg" onClick={() => navigate('/tests')} disabled={starting}>
             Cancel
           </Button>
-          <Button size="lg" onClick={handleStart} loading={starting}>
-            {starting ? 'Starting...' : 'Start Assessment'}
+          <Button
+            size="lg"
+            onClick={handleStart}
+            loading={starting}
+            disabled={starting || test.is_locked}
+            title={test.is_locked ? test.lock_reason || 'Not available yet' : undefined}
+          >
+            {startLabel}
           </Button>
         </div>
       </Card>

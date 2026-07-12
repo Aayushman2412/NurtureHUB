@@ -5,6 +5,7 @@ from app.database import get_db
 from app.models import Stage, Tutorial, UserTutorialProgress, Test, TestAttempt, UserAchievement, Achievement
 from app.schemas import DashboardData, DashboardActivity, AchievementOut
 from app.dependencies import get_verified_user
+from app.flow import is_awaiting_results
 from app.models import User
 from app.routers.tutorials import get_stages
 
@@ -149,6 +150,7 @@ def get_dashboard_data(current_user: User = Depends(get_verified_user), db: Sess
         total_tutorials=total_tutorials,
         tests_passed=passed_tests,
         total_tests=total_tests,
+        awaiting_results=is_awaiting_results(db, current_user),
         achievements=achievements_out,
         activities=activities,
         stages=stages_out

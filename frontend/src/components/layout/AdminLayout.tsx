@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, Video, ClipboardList, LogOut, Shield, MapPin, ChevronDown, Building2, Sun, Moon,
+  MonitorPlay, GraduationCap, Radio,
 } from 'lucide-react';
 import client from '../../api/client';
 import { useTheme } from '../../context/ThemeContext';
@@ -25,7 +26,10 @@ const navItems = [
   { to: '/admin/districts', icon: Building2, label: 'Districts', end: false },
   { to: '/admin/form-builder', icon: FileText, label: 'Form Builder', end: false },
   { to: '/admin/tutorials', icon: Video, label: 'Tutorials', end: false },
+  { to: '/admin/tutorial-tracking', icon: MonitorPlay, label: 'Tutorial Tracking', end: false },
   { to: '/admin/tests', icon: ClipboardList, label: 'Test Manager', end: false },
+  { to: '/admin/tests', icon: Radio, label: 'Live Monitor', end: false },
+  { to: '/admin/results', icon: GraduationCap, label: 'Results', end: false },
 ];
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
@@ -140,7 +144,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
           {navItems.map(item => (
             <NavLink
-              key={item.to}
+              key={item.label}
               to={item.to}
               end={item.end}
               className={({ isActive }) =>

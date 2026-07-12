@@ -3,7 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getDashboardData } from '../api/dashboard';
-import { BookOpen, Award, CheckCircle2, ChevronRight, Lock, Trophy, PlayCircle } from 'lucide-react';
+import {
+  BookOpen,
+  Award,
+  CheckCircle2,
+  ChevronRight,
+  Lock,
+  Trophy,
+  PlayCircle,
+  CalendarClock,
+  FileText,
+  Hourglass,
+} from 'lucide-react';
 import { Badge, Button, Card, PageLoader, ProgressBar, ProgressRing, StatCard, WelcomeBanner } from '../components/ui';
 
 interface Achievement {
@@ -28,14 +39,30 @@ interface Tutorial {
   is_completed: boolean;
 }
 
+interface StageTest {
+  id: number;
+  title: string;
+  status: 'draft' | 'scheduled' | 'active' | 'ended';
+  test_type: 'formative' | 'screening' | null;
+  scheduled_at: string | null;
+  duration_minutes: number;
+  attempts_count: number;
+  is_passed: boolean;
+  is_submitted: boolean;
+  is_locked: boolean;
+  needs_videos: boolean;
+}
+
 interface Stage {
   id: number;
   title: string;
   description: string;
+  stage_type: 'tutorials' | 'test';
   is_locked: boolean;
   tutorials_completed: number;
   total_tutorials: number;
   tutorials: Tutorial[];
+  test: StageTest | null;
 }
 
 interface DashboardData {
@@ -44,10 +71,51 @@ interface DashboardData {
   total_tutorials: number;
   tests_passed: number;
   total_tests: number;
+  awaiting_results: boolean;
   achievements: Achievement[];
   activities: Activity[];
   stages: Stage[];
 }
+
+const formatScheduled = (iso: string | null): string => {
+  if (!iso) return 'To be announced';
+  return new Date(iso).toLocaleString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const testStatusBadge = (status: StageTest['status']) => {
+  switch (status) {
+    case 'active':
+      return <Badge variant="success">● Live Now</Badge>;
+    case 'scheduled':
+      return <Badge variant="info">Scheduled</Badge>;
+    case 'ended':
+      return <Badge variant="error">Ended</Badge>;
+    default:
+      return <Badge variant="neutral">Not Scheduled</Badge>;
+  }
+};
+
+const testPhaseMessage = (stg: Stage): string => {
+  const t = stg.test;
+  if (!t) return '';
+  if (t.is_submitted) {
+    return 'You have submitted this test. Results will be announced by the admin — please wait for further updates.';
+  }
+  if (t.test_type === 'formative') {
+    return 'Complete all required videos in Phase 1 before this test goes live. If you wish, you can also go ahead and watch the Phase 3 add-on videos in advance.';
+  }
+  if (t.test_type === 'screening') {
+    return 'Complete all add-on videos to become eligible for this test. While you wait, feel free to go back and revise the previous videos.';
+  }
+  return 'Complete all required videos to become eligible for this test.';
+};
 
 const DashboardPage: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -95,6 +163,22 @@ const DashboardPage: React.FC = () => {
         </span>
       </WelcomeBanner>
 
+      {/* Awaiting results banner — everything is done */}
+      {data.awaiting_results && (
+        <Card accent="amber" className="flex items-center gap-4 p-6">
+          <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600">
+            <Hourglass className="size-6" />
+          </div>
+          <div>
+            <h4 className="mb-1 font-display font-bold text-ink">All done — please wait for your results!</h4>
+            <p className="text-sm leading-snug text-ink-muted">
+              You have completed every tutorial and submitted all your tests. Results are being reviewed — you will
+              receive a notification as soon as they are announced.
+            </p>
+          </div>
+        </Card>
+      )}
+
       {/* Metrics */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
@@ -138,31 +222,98 @@ const DashboardPage: React.FC = () => {
 
           <div className="flex flex-col gap-5">
             {data.stages.map((stg, i) => {
+              const isTestPhase = stg.stage_type === 'test' || (!!stg.test && stg.tutorials.length === 0);
+
+              // ── Test phase card (formative / screening) ──
+              if (isTestPhase && stg.test) {
+                const t = stg.test;
+                const canTake = t.status === 'active' && !stg.is_locked && !t.is_submitted;
+                const accent = t.is_submitted || canTake ? 'sage' : 'amber';
+                return (
+                  <Card key={stg.id} accent={accent} className="p-6">
+                    <div className="mb-2 flex items-start justify-between gap-4">
+                      <div>
+                        <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-600">
+                          <FileText className="size-3" /> Phase {i + 1} •{' '}
+                          {t.test_type === 'screening' ? 'Screening Test' : 'Formative Test'}
+                        </span>
+                        <h4 className="mt-0.5 mb-1.5 font-display text-lg font-bold text-ink">{t.title}</h4>
+                        <p className="text-sm leading-snug text-ink-muted">{stg.description}</p>
+                      </div>
+                      {t.is_submitted ? (
+                        <Badge variant="success">
+                          <CheckCircle2 className="size-3" /> Submitted
+                        </Badge>
+                      ) : (
+                        testStatusBadge(t.status)
+                      )}
+                    </div>
+
+                    {/* Scheduled date/time */}
+                    <div className="mt-3.5 flex items-center gap-2.5 rounded-lg border border-dashed border-border bg-surface-sunken px-4 py-3">
+                      <CalendarClock className="size-[18px] flex-shrink-0 text-amber-600" />
+                      <div className="text-[13px]">
+                        <span className="block text-ink-faint">
+                          {t.status === 'active' ? 'Test is live — good luck!' : 'Tentative test date'}
+                        </span>
+                        <strong className="text-ink">
+                          {t.status === 'active' ? 'You can take it now' : formatScheduled(t.scheduled_at)}
+                        </strong>
+                        <span className="text-ink-faint"> • {t.duration_minutes} mins</span>
+                      </div>
+                    </div>
+
+                    {/* Guidance + action */}
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-4">
+                      <span className="min-w-[220px] flex-1 text-[13px] text-ink-faint">{testPhaseMessage(stg)}</span>
+                      {canTake ? (
+                        <Button
+                          size="sm"
+                          onClick={() => navigate('/tests')}
+                          iconRight={<ChevronRight className="size-3.5" />}
+                        >
+                          Take Test Now
+                        </Button>
+                      ) : t.is_locked && !t.is_submitted ? (
+                        <Badge variant="neutral">
+                          <Lock className="size-3" />{' '}
+                          {t.needs_videos ? 'Finish required videos first' : 'Waiting for admin to start'}
+                        </Badge>
+                      ) : null}
+                    </div>
+                  </Card>
+                );
+              }
+
+              // ── Tutorial phase card (basic / add-on videos) ──
               const pct = stg.total_tutorials
                 ? Math.round((stg.tutorials_completed / stg.total_tutorials) * 100)
                 : 0;
+              const completed = stg.total_tutorials > 0 && stg.tutorials_completed >= stg.total_tutorials;
               return (
-                <Card key={stg.id} accent={stg.is_locked ? undefined : 'coral'} locked={stg.is_locked} className="p-6">
+                <Card key={stg.id} accent="coral" className="p-6">
                   <div className="mb-2 flex items-start justify-between gap-4">
                     <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-primary">Phase {i + 1}</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                        Phase {i + 1} • Video Lessons
+                      </span>
                       <h4 className="mt-0.5 mb-1.5 font-display text-lg font-bold text-ink">{stg.title}</h4>
                       <p className="text-sm leading-snug text-ink-muted">{stg.description}</p>
                     </div>
-                    {stg.is_locked ? (
-                      <Badge variant="error">
-                        <Lock className="size-3" /> Locked
+                    {completed ? (
+                      <Badge variant="success">
+                        <CheckCircle2 className="size-3" /> Completed
                       </Badge>
                     ) : (
-                      <Badge variant="success">Unlocked</Badge>
+                      <Badge variant="coral">In Progress</Badge>
                     )}
                   </div>
 
-                  {!stg.is_locked && (
+                  {stg.total_tutorials > 0 && (
                     <div className="mt-5">
                       <div className="mb-1.5 flex justify-between text-xs font-semibold text-ink-muted">
                         <span>
-                          Tutorial Completed: {stg.tutorials_completed} of {stg.total_tutorials}
+                          Tutorials Completed: {stg.tutorials_completed} of {stg.total_tutorials}
                         </span>
                         <span>{pct}%</span>
                       </div>
@@ -171,20 +322,14 @@ const DashboardPage: React.FC = () => {
                   )}
 
                   <div className="mt-4 flex justify-end border-t border-border pt-4">
-                    {stg.is_locked ? (
-                      <span className="text-[13px] text-ink-faint">
-                        Complete previous assessments to unlock this phase.
-                      </span>
-                    ) : (
-                      <Button
-                        size="sm"
-                        onClick={() => navigate('/tutorials')}
-                        iconLeft={<PlayCircle className="size-4" />}
-                        iconRight={<ChevronRight className="size-3.5" />}
-                      >
-                        Resume Course
-                      </Button>
-                    )}
+                    <Button
+                      size="sm"
+                      onClick={() => navigate('/tutorials')}
+                      iconLeft={<PlayCircle className="size-4" />}
+                      iconRight={<ChevronRight className="size-3.5" />}
+                    >
+                      {stg.tutorials_completed > 0 ? 'Resume Videos' : 'Start Watching'}
+                    </Button>
                   </div>
                 </Card>
               );

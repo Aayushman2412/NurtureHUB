@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Float, Text
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Float, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -78,6 +78,11 @@ class Stage(Base):
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     order_index = Column(Integer, nullable=False, default=0)
+    # 'tutorials' -> phase of videos (Phase 1 basic / Phase 3 add-on)
+    # 'test'      -> phase holding a scheduled test (Phase 2 formative / Phase 4 screening)
+    stage_type = Column(String, nullable=False, default="tutorials")
+    # Phase-level master switch for post-tutorial quiz popups in this stage
+    quiz_enabled = Column(Boolean, default=True, nullable=False)
 
     # Relationships
     program_district = relationship("ProgramDistrict", back_populates="stages")
@@ -95,26 +100,94 @@ class Tutorial(Base):
     module_number = Column(String, nullable=True) # e.g. "Module 1"
     duration_minutes = Column(Integer, default=0)
     video_url = Column(String, nullable=True)
+    youtube_url = Column(String, nullable=True)
+    start_seconds = Column(Integer, nullable=True)
+    end_seconds = Column(Integer, nullable=True)
     gradient_colors = Column(String, nullable=True) # JSON or Comma-separated list for card gradients
     order_index = Column(Integer, default=0)
+    # Per-tutorial switch for the post-tutorial quiz popup (effective only if stage.quiz_enabled)
+    quiz_enabled = Column(Boolean, default=True, nullable=False)
 
     # Relationships
     stage = relationship("Stage", back_populates="tutorials")
     progress = relationship("UserTutorialProgress", back_populates="tutorial", cascade="all, delete-orphan")
+    quiz_questions = relationship(
+        "TutorialQuestion", back_populates="tutorial", cascade="all, delete-orphan",
+        order_by="TutorialQuestion.order_index"
+    )
 
 
 class UserTutorialProgress(Base):
     __tablename__ = "user_tutorial_progress"
+    # One progress row per (user, tutorial); guards the check-then-insert race in
+    # _get_or_create_progress when the video-end flush and complete calls arrive together.
+    __table_args__ = (UniqueConstraint("user_id", "tutorial_id", name="uq_user_tutorial"),)
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     tutorial_id = Column(Integer, ForeignKey("tutorials.id", ondelete="CASCADE"), nullable=False)
     is_completed = Column(Boolean, default=False, nullable=False)
     completed_at = Column(DateTime(timezone=True), nullable=True)
+    # Watch tracking (accumulated only while the video is actually playing)
+    watch_time_seconds = Column(Float, default=0, nullable=False)
+    watch_pct = Column(Float, default=0, nullable=False)  # 0-100, capped
+    last_position_seconds = Column(Float, default=0, nullable=False)
+    video_duration_seconds = Column(Float, nullable=True)  # duration reported by the player
+    # Post-tutorial quiz outcome: pending | completed | skipped
+    quiz_status = Column(String, default="pending", nullable=False)
+    quiz_score = Column(Float, nullable=True)   # correct answers
+    quiz_total = Column(Integer, nullable=True) # questions asked
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
     user = relationship("User", back_populates="tutorial_progress")
     tutorial = relationship("Tutorial", back_populates="progress")
+
+
+class TutorialQuestion(Base):
+    """A quiz question shown in the popup after a tutorial finishes."""
+    __tablename__ = "tutorial_questions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tutorial_id = Column(Integer, ForeignKey("tutorials.id", ondelete="CASCADE"), nullable=False)
+    text = Column(Text, nullable=False)
+    order_index = Column(Integer, default=0)
+
+    # Relationships
+    tutorial = relationship("Tutorial", back_populates="quiz_questions")
+    options = relationship(
+        "TutorialQuestionOption", back_populates="question", cascade="all, delete-orphan"
+    )
+
+
+class TutorialQuestionOption(Base):
+    __tablename__ = "tutorial_question_options"
+
+    id = Column(Integer, primary_key=True, index=True)
+    question_id = Column(Integer, ForeignKey("tutorial_questions.id", ondelete="CASCADE"), nullable=False)
+    label = Column(String, nullable=False)  # "A", "B", "C", "D"
+    text = Column(Text, nullable=False)
+    is_correct = Column(Boolean, default=False, nullable=False)
+
+    # Relationships
+    question = relationship("TutorialQuestion", back_populates="options")
+
+
+class TutorialQuizResponse(Base):
+    """One row per question answered in a post-tutorial quiz."""
+    __tablename__ = "tutorial_quiz_responses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    tutorial_id = Column(Integer, ForeignKey("tutorials.id", ondelete="CASCADE"), nullable=False)
+    question_id = Column(Integer, ForeignKey("tutorial_questions.id", ondelete="CASCADE"), nullable=False)
+    selected_option_id = Column(Integer, ForeignKey("tutorial_question_options.id", ondelete="SET NULL"), nullable=True)
+    is_correct = Column(Boolean, default=False, nullable=False)
+    answered_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User")
+    question = relationship("TutorialQuestion")
 
 
 class Test(Base):
@@ -128,6 +201,13 @@ class Test(Base):
     duration_minutes = Column(Integer, default=0)
     passing_score_pct = Column(Integer, default=50) # e.g., 50 means 50%
     max_attempts = Column(Integer, default=3)
+    # Lifecycle: draft -> (scheduled_at set) -> active (admin starts) -> ended (admin ends).
+    # Students may only start attempts while status == 'active'.
+    status = Column(String, nullable=False, default="draft")
+    test_type = Column(String, nullable=True)  # 'formative' | 'screening'
+    scheduled_at = Column(DateTime(timezone=True), nullable=True)  # tentative go-live shown to users
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    ended_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     stage = relationship("Stage", back_populates="tests")
@@ -233,6 +313,22 @@ class UserAchievement(Base):
     # Relationships
     user = relationship("User", back_populates="achievements")
     achievement = relationship("Achievement")
+
+
+class FaceToFaceSelection(Base):
+    """Users selected (via admin Excel upload) for face-to-face training."""
+    __tablename__ = "face_to_face_selections"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    program_district_id = Column(Integer, ForeignKey("program_districts.id", ondelete="CASCADE"), nullable=True)
+    uploaded_by = Column(String, nullable=True)  # admin email
+    notified = Column(Boolean, default=False, nullable=False)
+    selected_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User")
+    program_district = relationship("ProgramDistrict")
 
 
 class State(Base):
