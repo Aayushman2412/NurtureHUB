@@ -30,3 +30,10 @@ browser/
 *.log
 gh
 gh.tar.gz
+
+# Local dev artifacts (integration branch)
+backend/venv-win/
+*.db
+backend/nurturehub.db
+.claude/
+frontend/.env.local
