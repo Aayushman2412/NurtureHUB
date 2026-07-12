@@ -12,7 +12,7 @@ const OTPPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const { verifyOtp, forgotPassword } = useAuth();
-  const { showToast } = useToast();
+  const { showToast, updateToast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,11 +27,11 @@ const OTPPage: React.FC = () => {
 
   const handleVerify = async (otpCode: string) => {
     setLoading(true);
-    showToast('Verifying code...', 'info');
+    const toastId = showToast('Verifying code...', 'loading');
 
     try {
       const response = await verifyOtp(email, otpCode);
-      showToast('Account verified successfully!', 'success');
+      updateToast(toastId, 'Account verified successfully!', 'success');
 
       if (response.is_profile_complete) {
         navigate('/dashboard');
@@ -40,7 +40,7 @@ const OTPPage: React.FC = () => {
       }
     } catch (err: any) {
       const errorMsg = err.response?.data?.detail || 'Invalid or expired verification code';
-      showToast(errorMsg, 'error');
+      updateToast(toastId, errorMsg, 'error');
     } finally {
       setLoading(false);
     }
@@ -48,12 +48,12 @@ const OTPPage: React.FC = () => {
 
   const handleResend = async () => {
     setResending(true);
-    showToast('Requesting new code...', 'info');
+    const toastId = showToast('Requesting new code...', 'loading');
     try {
       await forgotPassword(email);
-      showToast('New verification code sent to your email.', 'success');
+      updateToast(toastId, 'New verification code sent to your email.', 'success');
     } catch {
-      showToast('Failed to resend code. Please try again.', 'error');
+      updateToast(toastId, 'Failed to resend code. Please try again.', 'error');
     } finally {
       setResending(false);
     }

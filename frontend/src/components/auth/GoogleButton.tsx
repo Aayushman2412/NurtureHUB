@@ -9,7 +9,7 @@ interface GoogleButtonProps {
 
 const GoogleButton: React.FC<GoogleButtonProps> = ({ onSuccessRedirect = '/dashboard' }) => {
   const { googleLogin } = useAuth();
-  const { showToast } = useToast();
+  const { showToast, updateToast, dismissToast } = useToast();
   const navigate = useNavigate();
 
   const handleGoogleClick = async () => {
@@ -19,7 +19,7 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({ onSuccessRedirect = '/dashb
     if (clientId) {
       // In a real browser environment, we'd trigger the Google Identity Services flow.
       // Below is the integration hook.
-      showToast('Initiating Google sign-in...', 'info');
+      const toastId = showToast('Initiating Google sign-in...', 'loading');
       try {
         // @ts-ignore
         const google = window.google;
@@ -29,18 +29,28 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({ onSuccessRedirect = '/dashb
             callback: async (response: any) => {
               try {
                 const res = await googleLogin(response.credential);
-                showToast('Signed in with Google successfully!', 'success');
+                updateToast(toastId, 'Signed in with Google successfully!', 'success');
                 if (res.is_profile_complete) {
                   navigate(onSuccessRedirect);
                 } else {
                   navigate('/register');
                 }
               } catch (e: any) {
-                showToast(e.response?.data?.detail || 'Google sign-in failed', 'error');
+                updateToast(toastId, e.response?.data?.detail || 'Google sign-in failed', 'error');
               }
             }
           });
-          google.accounts.id.prompt();
+          // Dismiss the loading toast if the user closes/skips the Google prompt
+          // (otherwise it would hang, since the success/error only fires via the callback).
+          google.accounts.id.prompt((notification: any) => {
+            if (
+              notification?.isNotDisplayed?.() ||
+              notification?.isSkippedMoment?.() ||
+              notification?.isDismissedMoment?.()
+            ) {
+              dismissToast(toastId);
+            }
+          });
           return;
         }
       } catch (err) {
@@ -49,24 +59,24 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({ onSuccessRedirect = '/dashb
     }
 
     // Fallback Mock Google Login flow if VITE_GOOGLE_CLIENT_ID is not configured
-    showToast('Simulating Google Sign-In for development...', 'info');
-    
+    const toastId = showToast('Simulating Google Sign-In for development...', 'loading');
+
     const testEmail = "ayushman2412@gmail.com";
     const formattedEmail = "ayushman2412";
     const mockToken = `mock_google_token_${formattedEmail}`;
-    
+
     setTimeout(async () => {
       try {
         const response = await googleLogin(mockToken);
-        showToast(`Signed in as Google account: ${testEmail}`, 'success');
-        
+        updateToast(toastId, `Signed in as Google account: ${testEmail}`, 'success');
+
         if (response.is_profile_complete) {
           navigate(onSuccessRedirect);
         } else {
           navigate('/register');
         }
       } catch (err: any) {
-        showToast(err.response?.data?.detail || 'Google sign-in simulation failed', 'error');
+        updateToast(toastId, err.response?.data?.detail || 'Google sign-in simulation failed', 'error');
       }
     }, 1000);
   };

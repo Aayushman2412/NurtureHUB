@@ -31,7 +31,7 @@ const Spec: React.FC<{ label: string; icon: React.ReactNode; value: string }> = 
 const TestInstructionsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { showToast } = useToast();
+  const { showToast, updateToast } = useToast();
 
   const [test, setTest] = useState<Test | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,15 +55,15 @@ const TestInstructionsPage: React.FC = () => {
   const handleStart = async () => {
     if (!test) return;
     setStarting(true);
-    showToast('Initializing active assessment session...', 'info');
+    const toastId = showToast('Initializing active assessment session...', 'loading');
 
     try {
       const attemptData = await startAttempt(test.id);
-      showToast('Assessment session started! Good luck.', 'success');
+      updateToast(toastId, 'Assessment session started! Good luck.', 'success');
       navigate(`/tests/${test.id}/take`, { state: { attemptData, testTitle: test.title } });
     } catch (err: any) {
       const msg = err.response?.data?.detail || 'Failed to start quiz attempt';
-      showToast(msg, 'error');
+      updateToast(toastId, msg, 'error');
       setStarting(false);
     }
   };
