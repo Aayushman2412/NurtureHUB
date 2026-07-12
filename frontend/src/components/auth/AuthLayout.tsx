@@ -25,7 +25,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
   const [selectedLang, setSelectedLang] = useState('English');
 
   return (
-    <div className="relative min-h-screen bg-background text-ink">
+    <div className="relative h-screen overflow-hidden bg-background text-ink">
       {/* Theme toggle, absolute top-right */}
       <button
         onClick={toggleDarkMode}
@@ -37,9 +37,9 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
         {darkMode ? <Sun className="size-4.5" /> : <Moon className="size-4.5" />}
       </button>
 
-      <div className="flex min-h-screen">
-        {/* Left: form panel (scrollable) */}
-        <div className="flex w-full flex-col overflow-y-auto px-6 py-6 sm:px-12 lg:w-1/2 lg:px-16">
+      <div className="flex h-full">
+        {/* Left: form panel (scrolls independently) */}
+        <div className="scrollbar-slim flex h-full w-full flex-col overflow-y-auto px-6 py-6 sm:px-12 lg:w-1/2 lg:px-16">
           {/* Language selector */}
           <div className="mb-6">
             <Dropdown
