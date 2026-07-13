@@ -14,6 +14,7 @@ export interface User {
   district_id: number | null;
   block_id: number | null;
   village_id: number | null;
+  village_name: string | null;
   facility_id: number | null;
   qualification_id: number | null;
   experience_range_id: number | null;

@@ -6,7 +6,7 @@ import {
 } from '../../components/ui';
 import { inputClasses } from '../../components/ui/Input';
 import {
-  BABIES_BORN, SEXES, DELIVERY_METHODS, DELIVERY_PLACES, BIRTH_CONDITIONS, childAge,
+  BABIES_BORN, GENDERS, DELIVERY_METHODS, DELIVERY_PLACES, BIRTH_CONDITIONS, childAge,
 } from '../../lib/childFields';
 import { validateChild, validateChildStep, CR_STEP_FIELDS, type ChildFormValues } from '../../lib/childSchema';
 import type { FieldErrors } from '../../lib/validation';
@@ -59,7 +59,7 @@ const ChildFormPage: React.FC = () => {
   const [dob, setDob] = useState('');
   const [birthWeight, setBirthWeight] = useState<number | ''>('');
   const [birthLength, setBirthLength] = useState<number | ''>('');
-  const [sex, setSex] = useState('');
+  const [gender, setGender] = useState('');
   const [previousLivingChildren, setPreviousLivingChildren] = useState<number | ''>('');
 
   // Step 2 — delivery & feeding
@@ -85,8 +85,8 @@ const ChildFormPage: React.FC = () => {
         setChildName(c.child_name ?? '');
         setDob(c.dob ?? '');
         setBirthWeight(c.birth_weight ?? '');
-        setBirthLength(c.birth_length ?? '');
-        setSex(c.sex ?? '');
+        setBirthLength(c.birth_length == null ? '' : Math.round(c.birth_length * 10) / 10);
+        setGender(c.gender ?? '');
         setPreviousLivingChildren(c.previous_living_children ?? '');
         setDeliveryMethod(c.delivery_method ?? '');
         setDeliveryPlace(c.delivery_place ?? '');
@@ -121,14 +121,14 @@ const ChildFormPage: React.FC = () => {
 
   const values: ChildFormValues = useMemo(() => ({
     babies_born: babiesBorn, adoption_date: adoptionDate, child_name: childName, dob,
-    birth_weight: birthWeight, birth_length: birthLength, sex, previous_living_children: previousLivingChildren,
+    birth_weight: birthWeight, birth_length: birthLength, gender, previous_living_children: previousLivingChildren,
     delivery_method: deliveryMethod, delivery_place: deliveryPlace, delivery_place_other: deliveryPlaceOther,
     bf_within_one_hour: bfWithinOneHour, ebf_during_stay: ebfDuringStay, ebf_reason: ebfReason,
     birth_conditions: birthConditions, pre_existing_other: preExistingOther,
-    showDeliveryPlaceOther, showEbfReason, showConditionOther,
-  }), [babiesBorn, adoptionDate, childName, dob, birthWeight, birthLength, sex, previousLivingChildren,
+    showDeliveryPlaceOther, showEbfReason, showConditionOther, isEdit,
+  }), [babiesBorn, adoptionDate, childName, dob, birthWeight, birthLength, gender, previousLivingChildren,
     deliveryMethod, deliveryPlace, deliveryPlaceOther, bfWithinOneHour, ebfDuringStay, ebfReason,
-    birthConditions, preExistingOther, showDeliveryPlaceOther, showEbfReason, showConditionOther]);
+    birthConditions, preExistingOther, showDeliveryPlaceOther, showEbfReason, showConditionOther, isEdit]);
 
   const next = () => {
     const stepErrs = validateChildStep(values, step);
@@ -140,7 +140,7 @@ const ChildFormPage: React.FC = () => {
   const buildPayload = (): ChildPayload => ({
     babies_born: babiesBorn || null, adoption_date: adoptionDate || null, child_name: childName,
     dob: dob || null, birth_weight: birthWeight === '' ? null : Number(birthWeight),
-    birth_length: birthLength === '' ? null : Number(birthLength), sex: sex || null,
+    birth_length: birthLength === '' ? null : Math.round(Number(birthLength) * 10) / 10, gender: gender || null,
     previous_living_children: previousLivingChildren === '' ? null : Number(previousLivingChildren),
     delivery_method: deliveryMethod || null, delivery_place: deliveryPlace || null,
     delivery_place_other: showDeliveryPlaceOther ? deliveryPlaceOther : null,
@@ -153,6 +153,12 @@ const ChildFormPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // A submit (e.g. Enter in a field) on a non-final step advances the wizard — never saves.
+    // Without this, edit mode (form pre-filled & valid) would save on the first Enter press.
+    if (step !== STEPS.length - 1) {
+      next();
+      return;
+    }
     const allErrs = validateChild(values);
     if (Object.keys(allErrs).length) {
       setErrors(allErrs);
@@ -225,8 +231,8 @@ const ChildFormPage: React.FC = () => {
                       error={!!errors.birth_length}
                       onChange={e => { setBirthLength(e.target.value === '' ? '' : Number(e.target.value)); clearError('birth_length'); }} />
                   </Field>
-                  <SelectField label="Sex" value={sex} onChange={v => { setSex(v); clearError('sex'); }}
-                    error={errors.sex} placeholder="Select" options={opts(SEXES)} />
+                  <SelectField label="Gender" value={gender} onChange={v => { setGender(v); clearError('gender'); }}
+                    error={errors.gender} placeholder="Select" options={opts(GENDERS)} />
                 </div>
                 <Field label="Previous living children (apart from this child)" error={errors.previous_living_children}>
                   <Input type="number" min={0} max={10} value={previousLivingChildren} error={!!errors.previous_living_children}

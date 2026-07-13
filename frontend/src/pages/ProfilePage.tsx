@@ -17,7 +17,7 @@ const emptyPersonal: PersonalInfoValues = {
 
 const emptyWork: WorkDetailsValues = {
   departmentId: '', departmentOther: '', designationId: '', facilityTypeId: '',
-  stateId: '', districtId: '', blockId: '', villageId: '', facilityId: '',
+  stateId: '', districtId: '', blockId: '', villageId: '', villageName: '', facilityId: '',
   residenceDistance: '', qualificationId: '', qualificationOther: '',
   yearsService: '', yearsDesignation: '', yearsFacility: '', internetWorkplace: '',
   trainings: {},
@@ -64,6 +64,7 @@ const ProfilePage: React.FC = () => {
       districtId: user.district_id ?? '',
       blockId: user.block_id ?? '',
       villageId: user.village_id ?? '',
+      villageName: user.village_name || '',
       facilityId: user.facility_id ?? '',
       residenceDistance: user.residence_distance_km ?? '',
       qualificationId: user.qualification_id ?? '',
@@ -77,6 +78,15 @@ const ProfilePage: React.FC = () => {
       ),
     });
   }, [user]);
+
+  // If the saved profile has a known village (id) but no free-text name yet, resolve the
+  // name from the loaded options so the combobox shows it.
+  useEffect(() => {
+    if (work.villageId && !work.villageName) {
+      const v = meta.villages.find(opt => opt.id === Number(work.villageId));
+      if (v) setWork(w => ({ ...w, villageName: v.name }));
+    }
+  }, [meta.villages, work.villageId, work.villageName]);
 
   // Clears the given error key(s) as the user edits — for trainings, clears the whole group.
   const clearError = (key: string) =>
@@ -107,14 +117,14 @@ const ProfilePage: React.FC = () => {
   };
   const onDesignation = (v: string) => { setWork(w => ({ ...w, designationId: numOr(v), facilityTypeId: '' })); clearError('designationId'); };
   const onState = (v: string) => {
-    setWork(w => ({ ...w, stateId: numOr(v), districtId: '', blockId: '', villageId: '', facilityId: '' }));
+    setWork(w => ({ ...w, stateId: numOr(v), districtId: '', blockId: '', villageId: '', villageName: '', facilityId: '' }));
     clearError('stateId');
   };
   const onDistrict = (v: string) => {
-    setWork(w => ({ ...w, districtId: numOr(v), blockId: '', villageId: '', facilityId: '' }));
+    setWork(w => ({ ...w, districtId: numOr(v), blockId: '', villageId: '', villageName: '', facilityId: '' }));
     clearError('districtId');
   };
-  const onBlock = (v: string) => { setWork(w => ({ ...w, blockId: numOr(v), villageId: '', facilityId: '' })); clearError('blockId'); };
+  const onBlock = (v: string) => { setWork(w => ({ ...w, blockId: numOr(v), villageId: '', villageName: '', facilityId: '' })); clearError('blockId'); };
 
   const selectedDept = meta.departments.find(d => d.id === Number(work.departmentId));
   const isOtherDept = selectedDept?.code === 'OTHER';
@@ -127,7 +137,7 @@ const ProfilePage: React.FC = () => {
     hasChildren: personal.hasChildren, numberChildren: personal.numberChildren,
     departmentId: work.departmentId, departmentOther: work.departmentOther, designationId: work.designationId,
     facilityTypeId: work.facilityTypeId, stateId: work.stateId, districtId: work.districtId, blockId: work.blockId,
-    villageId: work.villageId, facilityId: work.facilityId, residenceDistance: work.residenceDistance,
+    villageId: work.villageId, villageName: work.villageName, facilityId: work.facilityId, residenceDistance: work.residenceDistance,
     qualificationId: work.qualificationId, qualificationOther: work.qualificationOther,
     yearsService: work.yearsService, yearsDesignation: work.yearsDesignation, yearsFacility: work.yearsFacility,
     internetWorkplace: work.internetWorkplace, trainings: work.trainings,
@@ -178,7 +188,8 @@ const ProfilePage: React.FC = () => {
         state_id: Number(work.stateId),
         district_id: Number(work.districtId),
         block_id: Number(work.blockId),
-        village_id: Number(work.villageId),
+        village_id: work.villageId ? Number(work.villageId) : null,
+        village_name: work.villageId ? null : (work.villageName || null),
         facility_id: Number(work.facilityId),
         district: districtName,
         work_center_name: facilityName,

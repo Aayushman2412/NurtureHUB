@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../context/ToastContext';
 import {
@@ -41,7 +41,6 @@ const MotherFormPage: React.FC = () => {
   const [motherName, setMotherName] = useState('');
   const [adoptionDate, setAdoptionDate] = useState('');
   const [motherDob, setMotherDob] = useState('');
-  const [motherAge, setMotherAge] = useState<number | ''>('');
   const [weight, setWeight] = useState<number | ''>('');
   const [height, setHeight] = useState<number | ''>('');
   const [lmp, setLmp] = useState('');
@@ -76,8 +75,8 @@ const MotherFormPage: React.FC = () => {
     msg => showToast(msg, 'error'),
   );
 
-  // Auto-fill age from DOB (still editable).
-  useEffect(() => { if (motherDob) setMotherAge(ageFromDob(motherDob)); }, [motherDob]);
+  // Age is derived from DOB — display only, never an input (mirrors the learner form).
+  const motherAge = ageFromDob(motherDob);
 
   const eddLmp = eddFromLmp(lmp);
   const gest = gestationalAge(lmp);
@@ -187,15 +186,11 @@ const MotherFormPage: React.FC = () => {
                     <Input type="date" value={adoptionDate} max={new Date().toISOString().slice(0, 10)}
                       error={!!errors.adoption_date} onChange={e => { setAdoptionDate(e.target.value); clearError('adoption_date'); }} />
                   </Field>
-                  <Field label="Date of birth (optional)" error={errors.mother_dob}>
+                  <Field label="Date of birth" error={errors.mother_dob}>
                     <Input type="date" value={motherDob} max={new Date().toISOString().slice(0, 10)}
                       error={!!errors.mother_dob} onChange={e => { setMotherDob(e.target.value); clearError('mother_dob'); }} />
                   </Field>
-                  <Field label="Age (years)" error={errors.mother_age}>
-                    <Input type="number" min={10} max={50} placeholder="Auto from DOB" value={motherAge}
-                      error={!!errors.mother_age}
-                      onChange={e => { setMotherAge(e.target.value ? Number(e.target.value) : ''); clearError('mother_age'); }} />
-                  </Field>
+                  <ReadOnly label="Age (auto from DOB)" value={motherAge === '' ? '' : `${motherAge} years`} hint="Set DOB to calculate" />
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Weight at adoption (kg)" error={errors.weight}>

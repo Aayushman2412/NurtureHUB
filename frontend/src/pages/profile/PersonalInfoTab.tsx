@@ -64,7 +64,7 @@ const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
       </Field>
     </div>
 
-    <Field label="Sex" error={errors.gender}>
+    <Field label="Gender" error={errors.gender}>
       <div className="mt-1 flex gap-4">
         {GENDERS.map(option => (
           <Radio

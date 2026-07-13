@@ -17,8 +17,8 @@ export const motherSchema = z
     // Identity & clinical
     mother_name: requiredStr('Mother’s name is required (min 2 characters).').refine(v => v.trim().length >= 2, { message: 'Enter at least 2 characters.' }),
     adoption_date: requiredStr('Adoption date is required.'),
-    mother_dob: z.string().optional(),
-    mother_age: requiredRange(10, 50, 'Enter an age between 10 and 50.'),
+    mother_dob: requiredStr('Date of birth is required.'),
+    mother_age: z.union([z.number(), z.literal('')]).optional(),   // derived from DOB, display-only
     weight: requiredRange(35, 200, 'Enter a weight between 35 and 200 kg.'),
     height: requiredRange(100, 230, 'Enter a height between 100 and 230 cm.'),
     lmp: requiredStr('LMP is required.'),
@@ -63,8 +63,13 @@ export const motherSchema = z
     }
     const dob = toDate(v.mother_dob || '');
     if (dob && daysBetween(dob, today) > 0) ctx.addIssue({ code: 'custom', path: ['mother_dob'], message: 'Date of birth cannot be in the future.' });
+    if (typeof v.mother_age === 'number' && (v.mother_age < 10 || v.mother_age > 50))
+      ctx.addIssue({ code: 'custom', path: ['mother_dob'], message: 'Date of birth implies an age outside 10–50 years.' });
     const adoption = toDate(v.adoption_date);
-    if (adoption && daysBetween(adoption, today) > 0) ctx.addIssue({ code: 'custom', path: ['adoption_date'], message: 'Adoption date cannot be in the future.' });
+    if (adoption) {
+      if (daysBetween(adoption, today) > 0) ctx.addIssue({ code: 'custom', path: ['adoption_date'], message: 'Adoption date cannot be in the future.' });
+      if (dob && adoption < dob) ctx.addIssue({ code: 'custom', path: ['adoption_date'], message: 'Adoption date cannot be before the date of birth.' });
+    }
     if (v.mobile && v.alternate_mobile && digits(v.mobile) === digits(v.alternate_mobile))
       ctx.addIssue({ code: 'custom', path: ['alternate_mobile'], message: 'Alternate mobile must differ from the primary.' });
     if (v.showEducationField) {

@@ -36,6 +36,7 @@ class User(Base):
     district_id = Column(Integer, ForeignKey("districts.id"), nullable=True)
     block_id = Column(Integer, ForeignKey("blocks.id"), nullable=True)
     village_id = Column(Integer, ForeignKey("villages.id"), nullable=True)
+    village_name = Column(String, nullable=True)         # free-text village (when not in the master list)
     facility_id = Column(Integer, ForeignKey("facilities.id"), nullable=True)
     qualification_id = Column(Integer, ForeignKey("educational_qualifications.id"), nullable=True)
     experience_range_id = Column(Integer, ForeignKey("experience_ranges.id"), nullable=True)
@@ -660,7 +661,7 @@ class Child(Base):
     dob = Column(Date, nullable=True)                  # not future, not >365 days ago
     birth_weight = Column(Float, nullable=True)        # kg, 1.0–5.0
     birth_length = Column(Float, nullable=True)        # cm, 30.0–65.0
-    sex = Column(String, nullable=True)                # "Female" | "Male"
+    gender = Column(String, nullable=True)             # "Female" | "Male"
     previous_living_children = Column(Integer, nullable=True)  # 0–10
 
     # Delivery & feeding

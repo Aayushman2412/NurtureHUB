@@ -4,7 +4,7 @@
 
 export const BABIES_BORN = ['Single', 'Twins'];
 
-export const SEXES = ['Female', 'Male'];
+export const GENDERS = ['Female', 'Male'];
 
 export const DELIVERY_METHODS = [
   'Normal vaginal delivery',
