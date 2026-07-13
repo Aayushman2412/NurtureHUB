@@ -488,3 +488,143 @@ class FacilityType(Base):
     designations = relationship(
         "Designation", secondary=designation_facility_types, back_populates="facility_types"
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Mother Registration (MR) — a pregnant mother a learner "adopts"/registers.
+# Ownership: User (learner) → Mother → Child. Geography reuses states/districts/
+# blocks (taluk); HWC/PHC are new master tables. See the EP HST "MR" tool.
+# ─────────────────────────────────────────────────────────────────────────────
+
+class PHC(Base):
+    """Primary Health Centre — master list."""
+    __tablename__ = "phcs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    block_id = Column(Integer, ForeignKey("blocks.id", ondelete="CASCADE"), nullable=True)  # taluk
+
+
+class HWC(Base):
+    """Health & Wellness Centre — master list. Each HWC maps to exactly one PHC."""
+    __tablename__ = "hwcs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    block_id = Column(Integer, ForeignKey("blocks.id", ondelete="CASCADE"), nullable=True)  # taluk
+    phc_id = Column(Integer, ForeignKey("phcs.id"), nullable=True)
+
+    phc = relationship("PHC")
+
+
+class MotherEducationLevel(Base):
+    """Highest-education options for mothers (general population, distinct from LR)."""
+    __tablename__ = "mother_education_levels"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    order_index = Column(Integer, default=0, nullable=False)
+    # True for Diploma/Graduate/Postgraduate → the form then asks for field + degree.
+    requires_field = Column(Boolean, default=False, nullable=False)
+
+
+class EducationField(Base):
+    """Broad field of study (Health Sciences, Engineering, …) → cascades to degrees."""
+    __tablename__ = "education_fields"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    order_index = Column(Integer, default=0, nullable=False)
+
+    degrees = relationship("EducationDegree", back_populates="field", cascade="all, delete-orphan")
+
+
+class EducationDegree(Base):
+    """Specific degree/diploma, filtered by education field."""
+    __tablename__ = "education_degrees"
+
+    id = Column(Integer, primary_key=True, index=True)
+    field_id = Column(Integer, ForeignKey("education_fields.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String, nullable=False)
+    order_index = Column(Integer, default=0, nullable=False)
+
+    field = relationship("EducationField", back_populates="degrees")
+
+
+class Mother(Base):
+    __tablename__ = "mothers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    mother_uid = Column(String, unique=True, index=True, nullable=False)  # human-facing ID
+    registered_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Identity & clinical
+    mother_name = Column(String, nullable=False)
+    adoption_date = Column(Date, nullable=True)
+    mother_dob = Column(Date, nullable=True)          # "Preferred", not required
+    mother_age = Column(Integer, nullable=True)       # auto from DOB, editable; 10–50
+    weight = Column(Float, nullable=True)             # kg, 35.0–200.0
+    height = Column(Float, nullable=True)             # cm, 100.0–230.0
+    lmp = Column(Date, nullable=True)
+    edd_lmp = Column(Date, nullable=True)             # auto = LMP + 280 days (read-only)
+    edd_records = Column(Date, nullable=True)         # typed, "as per latest records"
+    mobile = Column(String, nullable=True)
+    alternate_mobile = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    # gestational weeks/months are time-relative → derived from lmp on read, not stored.
+
+    # Geography (state/district/taluk reuse the shared masters; village is free text)
+    state_id = Column(Integer, ForeignKey("states.id"), nullable=True)
+    district_id = Column(Integer, ForeignKey("districts.id"), nullable=True)
+    taluk_id = Column(Integer, ForeignKey("blocks.id"), nullable=True)
+    village = Column(String, nullable=True)
+    hwc_id = Column(Integer, ForeignKey("hwcs.id"), nullable=True)
+    phc_id = Column(Integer, ForeignKey("phcs.id"), nullable=True)
+
+    # Socio-demographic
+    education_id = Column(Integer, ForeignKey("mother_education_levels.id"), nullable=True)
+    education_field_id = Column(Integer, ForeignKey("education_fields.id"), nullable=True)
+    education_degree_id = Column(Integer, ForeignKey("education_degrees.id"), nullable=True)
+    occupation = Column(String, nullable=True)
+    occupation_other = Column(String, nullable=True)
+    ration_card = Column(String, nullable=True)
+    social_category = Column(String, nullable=True)
+
+    # Knowledge / attitudes / practice
+    nutrition_course = Column(Boolean, nullable=True)
+    nutrition_course_name = Column(String, nullable=True)
+    video_frequency = Column(String, nullable=True)
+    implement_video = Column(String, nullable=True)       # Likert
+    confidence_video = Column(String, nullable=True)      # Likert
+    willingness_hcw = Column(String, nullable=True)       # Likert
+    information_seeking = Column(String, nullable=True)   # Likert
+
+    registered_by = relationship("User")
+    state = relationship("State")
+    district = relationship("District")
+    taluk = relationship("Block")
+    hwc = relationship("HWC")
+    phc = relationship("PHC")
+    education = relationship("MotherEducationLevel")
+    education_field = relationship("EducationField")
+    education_degree = relationship("EducationDegree")
+    source_ratings = relationship(
+        "MotherSourceRating", back_populates="mother", cascade="all, delete-orphan"
+    )
+
+
+class MotherSourceRating(Base):
+    """Trust/willingness matrix — one row per (mother, information source)."""
+    __tablename__ = "mother_source_ratings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    mother_id = Column(Integer, ForeignKey("mothers.id", ondelete="CASCADE"), nullable=False)
+    source = Column(String, nullable=False)          # e.g. "doctor", "asha", "youtube"
+    trust = Column(Integer, nullable=True)           # 1–5
+    willingness = Column(Integer, nullable=True)     # 1–5
+
+    mother = relationship("Mother", back_populates="source_ratings")
+
+    __table_args__ = (UniqueConstraint("mother_id", "source", name="uq_mother_source"),)
