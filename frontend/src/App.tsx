@@ -24,6 +24,7 @@ import ProfilePage from './pages/ProfilePage';
 import MothersListPage from './pages/mothers/MothersListPage';
 import MotherFormPage from './pages/mothers/MotherFormPage';
 import MotherDetailPage from './pages/mothers/MotherDetailPage';
+import ChildFormPage from './pages/mothers/ChildFormPage';
 
 // Layout
 import { PageLoader } from './components/ui';
@@ -134,6 +135,10 @@ const AppRoutes: React.FC = () => {
       <Route path="/mothers" element={<CompleteRoute><MothersListPage /></CompleteRoute>} />
       <Route path="/mothers/new" element={<CompleteRoute><MotherFormPage /></CompleteRoute>} />
       <Route path="/mothers/:id" element={<CompleteRoute><MotherDetailPage /></CompleteRoute>} />
+
+      {/* Child Registration (nested under a mother) */}
+      <Route path="/mothers/:motherId/children/new" element={<CompleteRoute><ChildFormPage /></CompleteRoute>} />
+      <Route path="/mothers/:motherId/children/:childId" element={<CompleteRoute><ChildFormPage /></CompleteRoute>} />
 
       {/* Admin Panel Routes */}
       <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />

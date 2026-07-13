@@ -614,6 +614,9 @@ class Mother(Base):
     source_ratings = relationship(
         "MotherSourceRating", back_populates="mother", cascade="all, delete-orphan"
     )
+    children = relationship(
+        "Child", back_populates="mother", cascade="all, delete-orphan"
+    )
 
     # Gestational age is time-relative → derived from LMP, never stored.
     @property
@@ -638,3 +641,62 @@ class MotherSourceRating(Base):
     mother = relationship("Mother", back_populates="source_ratings")
 
     __table_args__ = (UniqueConstraint("mother_id", "source", name="uq_mother_source"),)
+
+
+class Child(Base):
+    """A child registered under a mother (mother-first ownership: learner → mother → child)."""
+    __tablename__ = "children"
+
+    id = Column(Integer, primary_key=True, index=True)
+    child_uid = Column(String, unique=True, index=True, nullable=False)  # human-facing ID
+    mother_id = Column(Integer, ForeignKey("mothers.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Birth
+    babies_born = Column(String, nullable=True)        # "Single" | "Twins"
+    adoption_date = Column(Date, nullable=True)        # not future, not >14 days ago
+    child_name = Column(String, nullable=False)        # temporary name allowed if unnamed
+    dob = Column(Date, nullable=True)                  # not future, not >365 days ago
+    birth_weight = Column(Float, nullable=True)        # kg, 1.0–5.0
+    birth_length = Column(Float, nullable=True)        # cm, 30.0–65.0
+    sex = Column(String, nullable=True)                # "Female" | "Male"
+    previous_living_children = Column(Integer, nullable=True)  # 0–10
+
+    # Delivery & feeding
+    delivery_method = Column(String, nullable=True)
+    delivery_place = Column(String, nullable=True)
+    delivery_place_other = Column(String, nullable=True)   # when delivery_place == "Other"
+    bf_within_one_hour = Column(Boolean, nullable=True)    # breastfeeding within 1h of birth
+    ebf_during_stay = Column(Boolean, nullable=True)       # exclusively breastfed during facility stay
+    ebf_reason = Column(String, nullable=True)             # when ebf_during_stay is False
+
+    # Pre-existing / birth conditions (multi-select → child table); free text for "Others"
+    pre_existing_other = Column(String, nullable=True)
+
+    mother = relationship("Mother", back_populates="children")
+    birth_conditions = relationship(
+        "ChildBirthCondition", back_populates="child", cascade="all, delete-orphan"
+    )
+
+    # Child age is time-relative → derived from DOB, never stored.
+    @property
+    def age_days(self):
+        return (date.today() - self.dob).days if self.dob else None
+
+    @property
+    def age_months(self):
+        return (date.today() - self.dob).days // 30 if self.dob else None
+
+
+class ChildBirthCondition(Base):
+    """Pre-existing/birth conditions checklist — one row per (child, condition)."""
+    __tablename__ = "child_birth_conditions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    child_id = Column(Integer, ForeignKey("children.id", ondelete="CASCADE"), nullable=False)
+    condition = Column(String, nullable=False)         # e.g. "Neonatal jaundice", "Others"
+
+    child = relationship("Child", back_populates="birth_conditions")
+
+    __table_args__ = (UniqueConstraint("child_id", "condition", name="uq_child_condition"),)

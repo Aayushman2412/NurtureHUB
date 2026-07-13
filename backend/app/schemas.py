@@ -254,6 +254,83 @@ class MotherListItem(BaseModel):
         from_attributes = True
 
 
+# --- Child Registration (CR) ---
+
+class ChildBirthConditionIn(BaseModel):
+    condition: str
+
+
+class ChildBirthConditionOut(ChildBirthConditionIn):
+    class Config:
+        from_attributes = True
+
+
+class ChildBase(BaseModel):
+    babies_born: Optional[str] = None
+    adoption_date: Optional[date] = None
+    child_name: str = Field(min_length=2)
+    dob: Optional[date] = None
+    birth_weight: Optional[float] = Field(default=None, ge=1.0, le=5.0)
+    birth_length: Optional[float] = Field(default=None, ge=30.0, le=65.0)
+    sex: Optional[str] = None
+    previous_living_children: Optional[int] = Field(default=None, ge=0, le=10)
+    delivery_method: Optional[str] = None
+    delivery_place: Optional[str] = None
+    delivery_place_other: Optional[str] = None
+    bf_within_one_hour: Optional[bool] = None
+    ebf_during_stay: Optional[bool] = None
+    ebf_reason: Optional[str] = None
+    pre_existing_other: Optional[str] = None
+    birth_conditions: List[ChildBirthConditionIn] = []
+
+    @model_validator(mode="after")
+    def _check(self):
+        today = date.today()
+        if self.dob:
+            if self.dob > today:
+                raise ValueError("Date of birth cannot be in the future.")
+            if (today - self.dob).days > 365:
+                raise ValueError("Date of birth cannot be more than 365 days before today.")
+        if self.adoption_date:
+            if self.adoption_date > today:
+                raise ValueError("Adoption date cannot be in the future.")
+            if (today - self.adoption_date).days > 14:
+                raise ValueError("Adoption date cannot be more than 14 days before today.")
+        return self
+
+
+class ChildCreate(ChildBase):
+    pass
+
+
+class ChildOut(ChildBase):
+    id: int
+    child_uid: str
+    mother_id: int
+    created_at: datetime
+    age_days: Optional[int] = None       # derived from DOB
+    age_months: Optional[int] = None     # derived from DOB
+    birth_conditions: List[ChildBirthConditionOut] = []
+
+    class Config:
+        from_attributes = True
+
+
+class ChildListItem(BaseModel):
+    """Compact row for a mother's children list."""
+    id: int
+    child_uid: str
+    child_name: str
+    sex: Optional[str] = None
+    dob: Optional[date] = None
+    birth_weight: Optional[float] = None
+    age_months: Optional[int] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class ExperienceRangeOut(BaseModel):
     id: int
     label: str
