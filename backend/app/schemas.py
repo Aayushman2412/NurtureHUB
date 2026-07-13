@@ -1,6 +1,6 @@
 import re
 from pydantic import BaseModel, EmailStr, Field, model_validator, field_validator
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, ClassVar
 from datetime import datetime, date
 
 # Metadata Schemas
@@ -207,6 +207,8 @@ class MotherBase(BaseModel):
             raise ValueError("Date of birth cannot be in the future.")
         if self.adoption_date and self.adoption_date > today:
             raise ValueError("Adoption date cannot be in the future.")
+        if self.adoption_date and self.mother_dob and self.adoption_date < self.mother_dob:
+            raise ValueError("Adoption date cannot be before the date of birth.")
         if self.lmp:
             if self.lmp > today:
                 raise ValueError("LMP cannot be in the future.")
@@ -266,13 +268,17 @@ class ChildBirthConditionOut(ChildBirthConditionIn):
 
 
 class ChildBase(BaseModel):
+    # "Freshness" upper bounds (adoption ≤14d, DOB ≤365d) apply at registration only.
+    # Updates/reads set this False so editing an aged record isn't blocked by time passing.
+    _enforce_freshness: ClassVar[bool] = True
+
     babies_born: Optional[str] = None
     adoption_date: Optional[date] = None
     child_name: str = Field(min_length=2)
     dob: Optional[date] = None
     birth_weight: Optional[float] = Field(default=None, ge=1.0, le=5.0)
     birth_length: Optional[float] = Field(default=None, ge=30.0, le=65.0)
-    sex: Optional[str] = None
+    gender: Optional[str] = None
     previous_living_children: Optional[int] = Field(default=None, ge=0, le=10)
     delivery_method: Optional[str] = None
     delivery_place: Optional[str] = None
@@ -283,19 +289,28 @@ class ChildBase(BaseModel):
     pre_existing_other: Optional[str] = None
     birth_conditions: List[ChildBirthConditionIn] = []
 
+    @field_validator("birth_length")
+    @classmethod
+    def _round_birth_length(cls, v):
+        # Normalise to 1 decimal place instead of rejecting — avoids trapping edits of
+        # existing records whose length was entered with more precision.
+        return round(v, 1) if v is not None else v
+
     @model_validator(mode="after")
     def _check(self):
         today = date.today()
         if self.dob:
             if self.dob > today:
                 raise ValueError("Date of birth cannot be in the future.")
-            if (today - self.dob).days > 365:
+            if self._enforce_freshness and (today - self.dob).days > 365:
                 raise ValueError("Date of birth cannot be more than 365 days before today.")
         if self.adoption_date:
             if self.adoption_date > today:
                 raise ValueError("Adoption date cannot be in the future.")
-            if (today - self.adoption_date).days > 14:
+            if self._enforce_freshness and (today - self.adoption_date).days > 14:
                 raise ValueError("Adoption date cannot be more than 14 days before today.")
+            if self.dob and self.adoption_date < self.dob:
+                raise ValueError("Adoption date cannot be before the date of birth.")
         return self
 
 
@@ -303,7 +318,13 @@ class ChildCreate(ChildBase):
     pass
 
 
+class ChildUpdate(ChildBase):
+    # Editing an existing child: don't re-apply the registration-time freshness bounds.
+    _enforce_freshness: ClassVar[bool] = False
+
+
 class ChildOut(ChildBase):
+    _enforce_freshness: ClassVar[bool] = False   # reads must never fail on an aged record
     id: int
     child_uid: str
     mother_id: int
@@ -321,7 +342,7 @@ class ChildListItem(BaseModel):
     id: int
     child_uid: str
     child_name: str
-    sex: Optional[str] = None
+    gender: Optional[str] = None
     dob: Optional[date] = None
     birth_weight: Optional[float] = None
     age_months: Optional[int] = None
@@ -391,6 +412,7 @@ class UserProfileUpdate(BaseModel):
     district_id: Optional[int] = None
     block_id: Optional[int] = None
     village_id: Optional[int] = None
+    village_name: Optional[str] = None
     facility_id: Optional[int] = None
     qualification_id: Optional[int] = None
     experience_range_id: Optional[int] = None
@@ -445,6 +467,7 @@ class UserOut(BaseModel):
     district_id: Optional[int] = None
     block_id: Optional[int] = None
     village_id: Optional[int] = None
+    village_name: Optional[str] = None
     facility_id: Optional[int] = None
     qualification_id: Optional[int] = None
     experience_range_id: Optional[int] = None

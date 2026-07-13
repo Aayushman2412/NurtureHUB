@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
-import { Button, Field, Input, Radio, SelectField, Stepper } from '../components/ui';
+import { Button, ComboBox, Field, Input, Radio, SelectField, Stepper } from '../components/ui';
 import { useLearnerMetadata } from '../hooks/useLearnerMetadata';
 import { GENDERS, MARITAL, INTERNET, TRAINING_RECENCY, TRAININGS, ageFromDob } from '../lib/learnerFields';
 import { validateLearner, validateLearnerStep, LR_STEP_FIELDS, type LearnerFormValues } from '../lib/learnerSchema';
@@ -41,6 +41,7 @@ const RegistrationPage: React.FC = () => {
   const [districtId, setDistrictId] = useState<number | ''>('');
   const [blockId, setBlockId] = useState<number | ''>('');
   const [villageId, setVillageId] = useState<number | ''>('');
+  const [villageName, setVillageName] = useState('');
   const [facilityId, setFacilityId] = useState<number | ''>('');
   const [residenceDistance, setResidenceDistance] = useState<number | ''>('');
 
@@ -80,11 +81,17 @@ const RegistrationPage: React.FC = () => {
   };
   const onDesignation = (v: string) => { setDesignationId(v ? Number(v) : ''); setFacilityTypeId(''); clearError('designationId'); };
   const onState = (v: string) => {
-    setStateId(v ? Number(v) : ''); setDistrictId(''); setBlockId(''); setVillageId(''); setFacilityId('');
+    setStateId(v ? Number(v) : ''); setDistrictId(''); setBlockId(''); setVillageId(''); setVillageName(''); setFacilityId('');
     clearError('stateId');
   };
-  const onDistrict = (v: string) => { setDistrictId(v ? Number(v) : ''); setBlockId(''); setVillageId(''); setFacilityId(''); clearError('districtId'); };
-  const onBlock = (v: string) => { setBlockId(v ? Number(v) : ''); setVillageId(''); setFacilityId(''); clearError('blockId'); };
+  const onDistrict = (v: string) => { setDistrictId(v ? Number(v) : ''); setBlockId(''); setVillageId(''); setVillageName(''); setFacilityId(''); clearError('districtId'); };
+  const onBlock = (v: string) => { setBlockId(v ? Number(v) : ''); setVillageId(''); setVillageName(''); setFacilityId(''); clearError('blockId'); };
+
+  // Village combobox: pick a known village (sets the id) or type a custom name (clears it).
+  const onVillagePick = (o: { value: number | string; label: string }) => {
+    setVillageId(Number(o.value)); setVillageName(o.label); clearError('villageName');
+  };
+  const onVillageType = (text: string) => { setVillageName(text); setVillageId(''); clearError('villageName'); };
 
   // Age is derived from DOB — display only, never an input.
   const age = ageFromDob(dob);
@@ -92,7 +99,7 @@ const RegistrationPage: React.FC = () => {
   const values: LearnerFormValues = {
     dob, age, gender, phone, alternatePhone, maritalStatus, hasChildren, numberChildren,
     departmentId, departmentOther, designationId, facilityTypeId, stateId, districtId, blockId,
-    villageId, facilityId, residenceDistance, qualificationId, qualificationOther,
+    villageId, villageName, facilityId, residenceDistance, qualificationId, qualificationOther,
     yearsService, yearsDesignation, yearsFacility, internetWorkplace, trainings,
     isOtherDept, showQualificationOther: showQualOther,
   };
@@ -144,7 +151,8 @@ const RegistrationPage: React.FC = () => {
         state_id: Number(stateId),
         district_id: Number(districtId),
         block_id: Number(blockId),
-        village_id: Number(villageId),
+        village_id: villageId ? Number(villageId) : null,
+        village_name: villageId ? null : (villageName || null),
         facility_id: Number(facilityId),
         district: districtName,
         work_center_name: facilityName,
@@ -199,7 +207,7 @@ const RegistrationPage: React.FC = () => {
                 </Field>
               </div>
 
-              <Field label="Sex" error={errors.gender}>
+              <Field label="Gender" error={errors.gender}>
                 <div className="mt-1 flex flex-wrap gap-4">
                   {GENDERS.map(o => (
                     <Radio key={o} name="gender" value={o} checked={gender === o}
@@ -280,9 +288,9 @@ const RegistrationPage: React.FC = () => {
                 placeholder="Select taluk" disabled={!districtId}
                 options={meta.blocks.map(b => ({ value: b.id, label: b.name }))} />
 
-              <SelectField label="Village" value={villageId} error={errors.villageId}
-                onChange={v => { setVillageId(v ? Number(v) : ''); clearError('villageId'); }}
-                placeholder="Select village" disabled={!blockId}
+              <ComboBox label="Village" value={villageName} error={errors.villageName}
+                onValueChange={onVillageType} onPick={onVillagePick}
+                placeholder="Search or type your village" disabled={!blockId}
                 options={meta.villages.map(v => ({ value: v.id, label: v.name }))} />
 
               <SelectField label="Facility Name" value={facilityId} error={errors.facilityId}

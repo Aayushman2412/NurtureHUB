@@ -12,7 +12,7 @@ export interface ChildPayload {
   dob?: string | null;
   birth_weight?: number | null;
   birth_length?: number | null;
-  sex?: string | null;
+  gender?: string | null;
   previous_living_children?: number | null;
   delivery_method?: string | null;
   delivery_place?: string | null;
@@ -28,7 +28,7 @@ export interface ChildListItem {
   id: number;
   child_uid: string;
   child_name: string;
-  sex: string | null;
+  gender: string | null;
   dob: string | null;
   birth_weight: number | null;
   age_months: number | null;

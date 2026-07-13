@@ -25,7 +25,7 @@ export const learnerSchema = z
     // Personal
     dob: requiredStr('Date of birth is required.'),
     age: z.union([z.number(), z.literal('')]).optional(),
-    gender: requiredStr('Please select your sex.'),
+    gender: requiredStr('Please select your gender.'),
     phone: z.string().refine(v => /^\d{10}$/.test(digits(v)), { message: 'Enter a valid 10-digit mobile number.' }),
     alternatePhone: z.string().optional()
       .refine(v => !v || /^\d{10}$/.test(digits(v)), { message: 'Alternate number must be 10 digits.' }),
@@ -40,7 +40,9 @@ export const learnerSchema = z
     stateId: requiredId('Please select a state.'),
     districtId: requiredId('Please select a district.'),
     blockId: requiredId('Please select a taluk.'),
-    villageId: requiredId('Please select a village.'),
+    // Village: a known village (villageId) OR a free-typed name (villageName); one required.
+    villageId: z.union([z.number(), z.literal('')]).optional(),
+    villageName: z.string().optional(),
     facilityId: requiredId('Please select a facility.'),
     residenceDistance: requiredRange(0, 100, 'Enter a distance between 0 and 100 km.'),
     // Education & experience
@@ -57,6 +59,8 @@ export const learnerSchema = z
     showQualificationOther: z.boolean().optional(),
   })
   .superRefine((v, ctx) => {
+    if (!(typeof v.villageId === 'number' && v.villageId > 0) && !v.villageName?.trim())
+      ctx.addIssue({ code: 'custom', path: ['villageName'], message: 'Please select or enter a village.' });
     for (const t of TRAININGS) {
       if (!v.trainings?.[t.key]?.trim())
         ctx.addIssue({ code: 'custom', path: ['trainings', t.key], message: 'Please answer this question.' });
@@ -81,7 +85,7 @@ export type LearnerFormValues = z.input<typeof learnerSchema>;
 export const LR_STEP_FIELDS: readonly (readonly string[])[] = [
   ['dob', 'age', 'gender', 'phone', 'alternatePhone', 'maritalStatus', 'hasChildren', 'numberChildren'],
   ['departmentId', 'departmentOther', 'designationId', 'facilityTypeId', 'stateId', 'districtId',
-    'blockId', 'villageId', 'facilityId', 'residenceDistance'],
+    'blockId', 'villageName', 'facilityId', 'residenceDistance'],
   ['qualificationId', 'qualificationOther', 'yearsService', 'yearsDesignation', 'yearsFacility', 'internetWorkplace'],
   ['trainings.nutrition_training', 'trainings.pregnancy_nutrition_training', 'trainings.breastfeeding_training',
     'trainings.complementary_feeding_training', 'trainings.growth_monitoring_training'],

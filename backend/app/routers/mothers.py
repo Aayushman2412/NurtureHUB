@@ -170,7 +170,7 @@ def get_child(
 def update_child(
     mother_id: int,
     child_id: int,
-    data: schemas.ChildCreate,
+    data: schemas.ChildUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):

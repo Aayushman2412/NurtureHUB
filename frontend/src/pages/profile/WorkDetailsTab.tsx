@@ -1,5 +1,5 @@
 import React from 'react';
-import { Field, Input, SelectField } from '../../components/ui';
+import { ComboBox, Field, Input, SelectField } from '../../components/ui';
 import type { LearnerMetadata } from '../../hooks/useLearnerMetadata';
 import { INTERNET, TRAINING_RECENCY, TRAININGS } from '../../lib/learnerFields';
 import type { FieldErrors } from '../../lib/validation';
@@ -13,6 +13,7 @@ export interface WorkDetailsValues {
   districtId: number | '';
   blockId: number | '';
   villageId: number | '';
+  villageName: string;
   facilityId: number | '';
   residenceDistance: number | '';
   qualificationId: number | '';
@@ -75,9 +76,11 @@ const WorkDetailsTab: React.FC<WorkDetailsTabProps> = ({
       placeholder="Select taluk" disabled={!values.districtId}
       options={meta.blocks.map(b => ({ value: b.id, label: b.name }))} />
 
-    <SelectField label="Workplace Village / City" value={values.villageId} error={errors.villageId}
-      onChange={v => onChange('villageId', numOr(v))} placeholder="Select village"
-      disabled={!values.blockId} options={meta.villages.map(v => ({ value: v.id, label: v.name }))} />
+    <ComboBox label="Workplace Village / City" value={values.villageName} error={errors.villageName}
+      onValueChange={t => { onChange('villageName', t); onChange('villageId', ''); }}
+      onPick={o => { onChange('villageName', o.label); onChange('villageId', Number(o.value)); }}
+      placeholder="Search or type your village" disabled={!values.blockId}
+      options={meta.villages.map(v => ({ value: v.id, label: v.name }))} />
 
     <SelectField label="Facility Name" value={values.facilityId} error={errors.facilityId}
       onChange={v => onChange('facilityId', numOr(v))} placeholder="Select facility"

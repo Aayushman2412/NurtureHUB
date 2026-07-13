@@ -83,7 +83,7 @@ const MotherDetailPage: React.FC = () => {
                   <div className="truncate text-sm font-semibold text-ink">{c.child_name}</div>
                   <div className="truncate text-xs text-ink-muted">
                     {c.child_uid}
-                    {c.sex ? ` · ${c.sex}` : ''}
+                    {c.gender ? ` · ${c.gender}` : ''}
                     {c.age_months != null ? ` · ${c.age_months} mo` : ''}
                     {c.birth_weight != null ? ` · ${c.birth_weight} kg` : ''}
                   </div>
