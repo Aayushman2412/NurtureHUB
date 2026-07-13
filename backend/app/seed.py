@@ -29,6 +29,7 @@ from app.models import (
     Test, Question, QuestionOption, Achievement,
     State, District, Block, Village, Facility, EducationalQualification, ExperienceRange,
     ProgramDistrict, User, Department, Designation, FacilityType,
+    MotherEducationLevel, EducationField, EducationDegree,
 )
 
 
@@ -36,6 +37,7 @@ def seed_database(db: Session):
     _seed_metadata(db)
     _seed_achievements(db)
     _seed_professional_axis(db)   # LR reference data — essential, always seeded
+    _seed_mother_reference(db)    # MR education cascade — essential, always seeded
 
     if not settings.SEED_DEMO_DATA:
         print("SEED_DEMO_DATA is false — skipping demo districts, users and content.")
@@ -953,3 +955,81 @@ def _seed_professional_axis(db: Session):
             ))
     db.commit()
     print("Professional-axis master data seeded.")
+
+
+# ═══════════════════════════════════════════════
+# Mother Registration — education cascade reference data
+# (from the EP HST "MR" + "MR notes" sheets). Education level → field → degree.
+# HWC/PHC and Karnataka geography rows are uploaded separately, not seeded here.
+# ═══════════════════════════════════════════════
+
+_MR_EDUCATION_LEVELS = [
+    ("Illiterate", False), ("No formal education", False), ("Lower Primary (I–IV)", False),
+    ("Higher Primary (V–VII)", False), ("High School (VIII–X)", False), ("PUC (XI–XII)", False),
+    ("Diploma", True), ("Graduate", True), ("Postgraduate", True),
+]
+
+# field name -> ordered degree list
+_MR_DEGREES = {
+    "Health Sciences": [
+        "Auxiliary Nurse Midwife (ANM)", "General Nursing and Midwifery (GNM)",
+        "Diploma in Pharmacy (D.Pharm)", "Diploma in Medical Laboratory Technology (DMLT)",
+        "Diploma in Nutrition and Dietetics", "Diploma in Public Health (DPH)",
+        "Bachelor of Medicine and Bachelor of Surgery (MBBS)", "Bachelor of Science in Nursing (B.Sc. Nursing)",
+        "Post Basic Bachelor of Science in Nursing (Post Basic B.Sc. Nursing)", "Bachelor of Dental Surgery (BDS)",
+        "Bachelor of Ayurvedic Medicine and Surgery (BAMS)", "Bachelor of Homeopathic Medicine and Surgery (BHMS)",
+        "Bachelor of Physiotherapy (BPT)", "Bachelor of Pharmacy (B.Pharm)",
+        "Bachelor of Science in Nutrition and Dietetics (B.Sc. Nutrition)",
+        "Bachelor of Science in Home Science (B.Sc. Home Science)",
+        "Bachelor of Science in Medical Laboratory Technology (B.Sc. MLT)", "Bachelor of Public Health (BPH)",
+        "Bachelor of Occupational Therapy (BOT)", "Bachelor of Optometry (B.Optom)",
+        "Doctor of Medicine (MD)", "Master of Surgery (MS)", "Master of Science in Nursing (M.Sc. Nursing)",
+        "Master of Public Health (MPH)", "Master of Science in Nutrition and Dietetics (M.Sc. Nutrition)",
+        "Master of Pharmacy (M.Pharm)", "Master of Dental Surgery (MDS)", "Master of Physiotherapy (MPT)",
+        "Master of Hospital Administration (MHA)", "Master of Occupational Therapy (MOT)",
+        "Doctor of Philosophy (PhD)", "Other",
+    ],
+    "Engineering & Technology": [
+        "Diploma in Engineering", "Bachelor of Engineering (BE)", "Bachelor of Technology (B.Tech)",
+        "Master of Engineering (ME)", "Master of Technology (M.Tech)", "Other",
+    ],
+    "Science": ["Bachelor of Science (B.Sc.)", "Master of Science (M.Sc.)", "Other"],
+    "Arts, Commerce & Humanities": [
+        "Bachelor of Arts (BA)", "Bachelor of Commerce (B.Com.)", "Master of Arts (MA)",
+        "Master of Commerce (M.Com.)", "Bachelor of Social Work (BSW)", "Master of Social Work (MSW)", "Other",
+    ],
+    "Management": ["Bachelor of Business Administration (BBA)", "Master of Business Administration (MBA)", "Other"],
+    "Law": ["Bachelor of Laws (LLB)", "Master of Laws (LLM)", "Other"],
+    "Agriculture": [
+        "Bachelor of Science in Agriculture (B.Sc. Agriculture)", "Master of Science in Agriculture (M.Sc. Agriculture)",
+        "Bachelor of Veterinary Science and Animal Husbandry (BVSc & AH)", "Master of Veterinary Science (MVSc)", "Other",
+    ],
+    "Education (Teaching)": [
+        "Diploma in Education (D.Ed.)", "Bachelor of Education (B.Ed.)", "Master of Education (M.Ed.)", "Other",
+    ],
+    "Computer Science & Information Technology": [
+        "Bachelor of Computer Applications (BCA)", "Master of Computer Applications (MCA)",
+        "Bachelor of Computer Science (B.Sc. Computer Science)", "Master of Computer Science (M.Sc. Computer Science)", "Other",
+    ],
+    "Other": ["Other"],
+}
+
+
+def _seed_mother_reference(db: Session):
+    """Seed mother education levels + the education field → degree cascade. Runs once,
+    guarded by an empty mother_education_levels table."""
+    if db.query(MotherEducationLevel).count() > 0:
+        return
+    print("Seeding mother-registration education reference data...")
+
+    for i, (name, requires_field) in enumerate(_MR_EDUCATION_LEVELS):
+        db.add(MotherEducationLevel(name=name, order_index=i, requires_field=requires_field))
+
+    for fi, (field_name, degrees) in enumerate(_MR_DEGREES.items()):
+        field = EducationField(name=field_name, order_index=fi)
+        db.add(field)
+        db.flush()  # need field.id for degrees
+        for di, deg in enumerate(degrees):
+            db.add(EducationDegree(field_id=field.id, name=deg, order_index=di))
+    db.commit()
+    print("Mother-registration education reference data seeded.")
