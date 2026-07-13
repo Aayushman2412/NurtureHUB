@@ -21,6 +21,9 @@ import ActiveTestPage from './pages/ActiveTestPage';
 import TestSubmittedPage from './pages/TestSubmittedPage';
 import ResultsPage from './pages/ResultsPage';
 import ProfilePage from './pages/ProfilePage';
+import MothersListPage from './pages/mothers/MothersListPage';
+import MotherFormPage from './pages/mothers/MotherFormPage';
+import MotherDetailPage from './pages/mothers/MotherDetailPage';
 
 // Layout
 import { PageLoader } from './components/ui';
@@ -126,6 +129,11 @@ const AppRoutes: React.FC = () => {
       <Route path="/tests/:id/submitted" element={<CompleteRoute><TestSubmittedPage /></CompleteRoute>} />
       <Route path="/results/:attemptId" element={<CompleteRoute><ResultsPage /></CompleteRoute>} />
       <Route path="/profile" element={<CompleteRoute><ProfilePage /></CompleteRoute>} />
+
+      {/* Mother Registration */}
+      <Route path="/mothers" element={<CompleteRoute><MothersListPage /></CompleteRoute>} />
+      <Route path="/mothers/new" element={<CompleteRoute><MotherFormPage /></CompleteRoute>} />
+      <Route path="/mothers/:id" element={<CompleteRoute><MotherDetailPage /></CompleteRoute>} />
 
       {/* Admin Panel Routes */}
       <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />

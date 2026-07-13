@@ -29,7 +29,7 @@ from app.models import (
     Test, Question, QuestionOption, Achievement,
     State, District, Block, Village, Facility, EducationalQualification, ExperienceRange,
     ProgramDistrict, User, Department, Designation, FacilityType,
-    MotherEducationLevel, EducationField, EducationDegree,
+    MotherEducationLevel, EducationField, EducationDegree, HWC, PHC,
 )
 
 
@@ -44,6 +44,7 @@ def seed_database(db: Session):
         return
 
     _seed_program_districts_and_users(db)
+    _seed_demo_hwc_phc(db)   # demo HWC/PHC so MR is testable; prod uploads real rows
 
     if db.query(Stage).count() > 0:
         print("Database already contains stage data, skipping content seeding.")
@@ -1033,3 +1034,29 @@ def _seed_mother_reference(db: Session):
             db.add(EducationDegree(field_id=field.id, name=deg, order_index=di))
     db.commit()
     print("Mother-registration education reference data seeded.")
+
+
+def _seed_demo_hwc_phc(db: Session):
+    """Demo HWC/PHC under the demo geography so MR is testable in dev. Guarded by an
+    empty hwcs table — in production the real (Karnataka) rows are uploaded instead."""
+    if db.query(HWC).count() > 0:
+        return
+    bhathat = db.query(Block).filter(Block.name == "Bhathat").first()
+    malihabad = db.query(Block).filter(Block.name == "Malihabad").first()
+    if not bhathat:
+        return
+    print("Seeding demo HWC/PHC...")
+    bhathat_phc = PHC(name="Bhathat PHC", block_id=bhathat.id)
+    db.add(bhathat_phc)
+    db.flush()
+    db.add_all([
+        HWC(name="Kalyanpur HWC", block_id=bhathat.id, phc_id=bhathat_phc.id),
+        HWC(name="Bhathat Khas HWC", block_id=bhathat.id, phc_id=bhathat_phc.id),
+    ])
+    if malihabad:
+        malihabad_phc = PHC(name="Malihabad PHC", block_id=malihabad.id)
+        db.add(malihabad_phc)
+        db.flush()
+        db.add(HWC(name="Malihabad HWC", block_id=malihabad.id, phc_id=malihabad_phc.id))
+    db.commit()
+    print("Demo HWC/PHC seeded.")

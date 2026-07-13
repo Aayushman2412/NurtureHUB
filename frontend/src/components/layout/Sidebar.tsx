@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Video, Award, User, LogOut, Sprout } from 'lucide-react';
+import { LayoutDashboard, Video, Award, User, LogOut, Sprout, Users } from 'lucide-react';
 import { Avatar } from '../ui';
 import { cn } from '../../utils/cn';
 
@@ -14,6 +14,7 @@ const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/tutorials', label: 'Tutorials', icon: Video },
   { to: '/tests', label: 'Assessments', icon: Award },
+  { to: '/mothers', label: 'Mothers', icon: Users },
   { to: '/profile', label: 'Profile', icon: User },
 ];
 
