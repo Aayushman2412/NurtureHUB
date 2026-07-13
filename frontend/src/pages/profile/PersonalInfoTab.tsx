@@ -1,29 +1,39 @@
 import React from 'react';
 import { User, Phone, Calendar } from 'lucide-react';
-import { Field, Input, Radio } from '../../components/ui';
+import { Field, Input, Radio, Select } from '../../components/ui';
+import { GENDERS, MARITAL, ageFromDob } from '../../lib/learnerFields';
+import type { FieldErrors } from '../../lib/validation';
 
 export interface PersonalInfoValues {
   fullName: string;
-  age: number | '';
   dob: string;
   gender: string;
   phone: string;
   alternatePhone: string;
+  maritalStatus: string;
+  hasChildren: string;              // 'Yes' | 'No' | ''
+  numberChildren: number | '';
 }
 
 interface PersonalInfoTabProps extends PersonalInfoValues {
+  errors: FieldErrors;
   onChange: <K extends keyof PersonalInfoValues>(key: K, value: PersonalInfoValues[K]) => void;
 }
 
 const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
   fullName,
-  age,
   dob,
   gender,
   phone,
   alternatePhone,
+  maritalStatus,
+  hasChildren,
+  numberChildren,
+  errors,
   onChange,
-}) => (
+}) => {
+  const age = ageFromDob(dob);
+  return (
   <div className="flex flex-col gap-5">
     <Field label="Full Name" htmlFor="fullname-input">
       <Input
@@ -37,63 +47,103 @@ const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
     </Field>
 
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-      <Field label="Date of Birth" htmlFor="dob-input">
+      <Field label="Date of Birth" htmlFor="dob-input" error={errors.dob}>
         <Input
           id="dob-input"
           type="date"
           leftIcon={<Calendar />}
           value={dob}
+          error={!!errors.dob}
           onChange={e => onChange('dob', e.target.value)}
-          required
         />
       </Field>
-      <Field label="Age" htmlFor="age-input">
-        <Input
-          id="age-input"
-          type="number"
-          value={age}
-          onChange={e => onChange('age', e.target.value ? Number(e.target.value) : '')}
-        />
+      <Field label="Age">
+        <div className="rounded-lg border border-border-strong/60 bg-surface-sunken px-3.5 py-2.5 text-sm">
+          {age === '' ? <span className="text-ink-faint">Calculated from date of birth</span> : `${age} years`}
+        </div>
       </Field>
     </div>
 
-    <Field label="Gender">
+    <Field label="Sex" error={errors.gender}>
       <div className="mt-1 flex gap-4">
-        {['Female', 'Male', 'Other'].map(option => (
+        {GENDERS.map(option => (
           <Radio
             key={option}
             name="gender"
             value={option}
             checked={gender === option}
             onChange={e => onChange('gender', e.target.value)}
-            required
             label={option}
           />
         ))}
       </div>
     </Field>
 
-    <Field label="Contact Phone" htmlFor="phone-input">
-      <Input
-        id="phone-input"
-        type="tel"
-        leftIcon={<Phone />}
-        value={phone}
-        onChange={e => onChange('phone', e.target.value)}
-        required
-      />
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+      <Field label="Contact Phone" htmlFor="phone-input" error={errors.phone}>
+        <Input
+          id="phone-input"
+          type="tel"
+          inputMode="numeric"
+          leftIcon={<Phone />}
+          value={phone}
+          error={!!errors.phone}
+          onChange={e => onChange('phone', e.target.value)}
+        />
+      </Field>
+      <Field label="Alternate Phone (Optional)" htmlFor="alternate-phone-input" error={errors.alternatePhone}>
+        <Input
+          id="alternate-phone-input"
+          type="tel"
+          inputMode="numeric"
+          leftIcon={<Phone />}
+          value={alternatePhone}
+          error={!!errors.alternatePhone}
+          onChange={e => onChange('alternatePhone', e.target.value)}
+        />
+      </Field>
+    </div>
+
+    <Field label="Marital Status" htmlFor="marital-select" error={errors.maritalStatus}>
+      <Select id="marital-select" value={maritalStatus} error={!!errors.maritalStatus}
+        onChange={e => onChange('maritalStatus', e.target.value)}>
+        <option value="">Select marital status</option>
+        {MARITAL.map(m => (
+          <option key={m} value={m}>{m}</option>
+        ))}
+      </Select>
     </Field>
 
-    <Field label="Alternate Phone (Optional)" htmlFor="alternate-phone-input">
-      <Input
-        id="alternate-phone-input"
-        type="tel"
-        leftIcon={<Phone />}
-        value={alternatePhone}
-        onChange={e => onChange('alternatePhone', e.target.value)}
-      />
+    <Field label="Do you have any children?" error={errors.hasChildren}>
+      <div className="mt-1 flex gap-4">
+        {['Yes', 'No'].map(option => (
+          <Radio
+            key={option}
+            name="has_children"
+            value={option}
+            checked={hasChildren === option}
+            onChange={e => onChange('hasChildren', e.target.value)}
+            label={option}
+          />
+        ))}
+      </div>
     </Field>
-  </div>
-);
+
+    {hasChildren === 'Yes' && (
+      <Field label="Number of children" htmlFor="number-children-input" error={errors.numberChildren}>
+        <Input
+          id="number-children-input"
+          type="number"
+          min={0}
+          placeholder="e.g. 2"
+          value={numberChildren}
+          error={!!errors.numberChildren}
+          onChange={e => onChange('numberChildren', e.target.value ? Number(e.target.value) : '')}
+        />
+      </Field>
+    )}
+    </div>
+  );
+};
 
 export default PersonalInfoTab;

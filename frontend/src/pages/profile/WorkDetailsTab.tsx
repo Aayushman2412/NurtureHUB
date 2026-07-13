@@ -1,222 +1,137 @@
 import React from 'react';
-import { Briefcase } from 'lucide-react';
-import { Field, Input, Select } from '../../components/ui';
+import { Field, Input, SelectField } from '../../components/ui';
+import type { LearnerMetadata } from '../../hooks/useLearnerMetadata';
+import { INTERNET, TRAINING_RECENCY, TRAININGS } from '../../lib/learnerFields';
+import type { FieldErrors } from '../../lib/validation';
 
-export interface Option {
-  id: number;
-  name: string;
-}
-export interface FacilityOption {
-  id: number;
-  name: string;
-  facility_type: string;
-}
-export interface QualificationOption {
-  id: number;
-  qualification_name: string;
-  has_semi_open_input: boolean;
-}
-export interface ExperienceRangeOption {
-  id: number;
-  label: string;
+export interface WorkDetailsValues {
+  departmentId: number | '';
+  departmentOther: string;
+  designationId: number | '';
+  facilityTypeId: number | '';
+  stateId: number | '';
+  districtId: number | '';
+  blockId: number | '';
+  villageId: number | '';
+  facilityId: number | '';
+  residenceDistance: number | '';
+  qualificationId: number | '';
+  qualificationOther: string;
+  yearsService: number | '';
+  yearsDesignation: number | '';
+  yearsFacility: number | '';
+  internetWorkplace: string;
+  trainings: Record<string, string>;
 }
 
 interface WorkDetailsTabProps {
-  // values
-  selectedStateId: number | '';
-  selectedDistrictId: number | '';
-  selectedBlockId: number | '';
-  selectedVillageId: number | '';
-  selectedFacilityId: number | '';
-  selectedQualificationId: number | '';
-  selectedExperienceRangeId: number | '';
-  qualificationOtherDetail: string;
-  department: string;
-  role: string;
-  workCenterType: string;
-  showOtherQualificationInput: boolean;
-  // option lists
-  statesList: Option[];
-  districtsList: Option[];
-  blocksList: Option[];
-  villagesList: Option[];
-  facilitiesList: FacilityOption[];
-  qualificationsList: QualificationOption[];
-  experienceRangesList: ExperienceRangeOption[];
-  // handlers
-  onState: (v: number | '') => void;
-  onDistrict: (v: number | '') => void;
-  onBlock: (v: number | '') => void;
-  onVillage: (v: number | '') => void;
-  onFacility: (v: number | '') => void;
-  onQualification: (v: number | '') => void;
-  onExperience: (v: number | '') => void;
-  onQualificationOther: (v: string) => void;
+  values: WorkDetailsValues;
+  meta: LearnerMetadata;
+  errors: FieldErrors;
+  isOtherDept: boolean;
+  showQualificationOther: boolean;
+  onChange: <K extends keyof WorkDetailsValues>(key: K, value: WorkDetailsValues[K]) => void;
+  // cascade handlers (set + reset dependents) live in the parent
   onDepartment: (v: string) => void;
-  onRole: (v: string) => void;
-  onWorkCenterType: (v: string) => void;
+  onDesignation: (v: string) => void;
+  onState: (v: string) => void;
+  onDistrict: (v: string) => void;
+  onBlock: (v: string) => void;
 }
 
-const num = (v: string): number | '' => (v ? Number(v) : '');
+const numOr = (v: string): number | '' => (v ? Number(v) : '');
 
-const WorkDetailsTab: React.FC<WorkDetailsTabProps> = props => (
+const WorkDetailsTab: React.FC<WorkDetailsTabProps> = ({
+  values, meta, errors, isOtherDept, showQualificationOther, onChange,
+  onDepartment, onDesignation, onState, onDistrict, onBlock,
+}) => (
   <div className="flex flex-col gap-5">
-    <Field label="State" htmlFor="state-select">
-      <Select
-        id="state-select"
-        value={props.selectedStateId}
-        onChange={e => props.onState(num(e.target.value))}
-        required
-      >
-        <option value="">Select State</option>
-        {props.statesList.map(s => (
-          <option key={s.id} value={s.id}>{s.name}</option>
-        ))}
-      </Select>
-    </Field>
+    <SelectField label="Department" value={values.departmentId} onChange={onDepartment} error={errors.departmentId}
+      placeholder="Select department" options={meta.departments.map(d => ({ value: d.id, label: d.name }))} />
 
-    <Field label="District" htmlFor="district-select">
-      <Select
-        id="district-select"
-        value={props.selectedDistrictId}
-        onChange={e => props.onDistrict(num(e.target.value))}
-        required
-        disabled={!props.selectedStateId}
-      >
-        <option value="">Select District</option>
-        {props.districtsList.map(d => (
-          <option key={d.id} value={d.id}>{d.name}</option>
-        ))}
-      </Select>
-    </Field>
-
-    <Field label="Department" htmlFor="dept-select">
-      <div className="relative">
-        <Briefcase className="pointer-events-none absolute left-3.5 top-1/2 z-1 size-[18px] -translate-y-1/2 text-ink-faint" />
-        <Select
-          id="dept-select"
-          value={props.department}
-          onChange={e => props.onDepartment(e.target.value)}
-          required
-          className="pl-11"
-        >
-          <option value="Women & Child Development (WCD)">Women &amp; Child Development (WCD)</option>
-          <option value="Department of Health and Family Welfare">Department of Health &amp; Family Welfare</option>
-          <option value="National Health Mission (NHM)">National Health Mission (NHM)</option>
-        </Select>
-      </div>
-    </Field>
-
-    <Field label="Administrative Block" htmlFor="block-select">
-      <Select
-        id="block-select"
-        value={props.selectedBlockId}
-        onChange={e => props.onBlock(num(e.target.value))}
-        required
-        disabled={!props.selectedDistrictId}
-      >
-        <option value="">Select Block</option>
-        {props.blocksList.map(b => (
-          <option key={b.id} value={b.id}>{b.name}</option>
-        ))}
-      </Select>
-    </Field>
-
-    <Field label="Type of Workplace" htmlFor="workplace-type-select">
-      <Select
-        id="workplace-type-select"
-        value={props.workCenterType}
-        onChange={e => props.onWorkCenterType(e.target.value)}
-        required
-      >
-        <option value="Anganwadi Center (AWC)">Anganwadi Center (AWC)</option>
-        <option value="Mini Anganwadi Center">Mini Anganwadi Center</option>
-        <option value="Sector Office">Sector Office</option>
-        <option value="Project Office (CDPO)">Project Office (CDPO)</option>
-        <option value="Primary Health Center (PHC)">Primary Health Center (PHC)</option>
-      </Select>
-    </Field>
-
-    <Field label="Facility Name" htmlFor="facility-select">
-      <Select
-        id="facility-select"
-        value={props.selectedFacilityId}
-        onChange={e => props.onFacility(num(e.target.value))}
-        required
-        disabled={!props.selectedBlockId}
-      >
-        <option value="">Select Facility</option>
-        {props.facilitiesList.map(f => (
-          <option key={f.id} value={f.id}>{f.name} ({f.facility_type})</option>
-        ))}
-      </Select>
-    </Field>
-
-    <Field label="Workplace Village / City" htmlFor="village-select">
-      <Select
-        id="village-select"
-        value={props.selectedVillageId}
-        onChange={e => props.onVillage(num(e.target.value))}
-        required
-        disabled={!props.selectedBlockId}
-      >
-        <option value="">Select Village / City</option>
-        {props.villagesList.map(v => (
-          <option key={v.id} value={v.id}>{v.name}</option>
-        ))}
-      </Select>
-    </Field>
-
-    <Field label="Designation / Role" htmlFor="role-select">
-      <Select id="role-select" value={props.role} onChange={e => props.onRole(e.target.value)} required>
-        <option value="Anganwadi Worker">Anganwadi Worker (AWW)</option>
-        <option value="Anganwadi Helper">Anganwadi Helper (AWH)</option>
-        <option value="Anganwadi Supervisor">Anganwadi Supervisor</option>
-        <option value="Child Development Project Officer">Child Development Project Officer (CDPO)</option>
-        <option value="ANM / Health Worker">ANM / Health Worker</option>
-      </Select>
-    </Field>
-
-    <Field label="Highest Educational Qualification" htmlFor="qualification-select">
-      <Select
-        id="qualification-select"
-        value={props.selectedQualificationId}
-        onChange={e => props.onQualification(num(e.target.value))}
-        required
-      >
-        <option value="">Select Qualification</option>
-        {props.qualificationsList.map(q => (
-          <option key={q.id} value={q.id}>{q.qualification_name}</option>
-        ))}
-      </Select>
-    </Field>
-
-    {props.showOtherQualificationInput && (
-      <Field label="Please specify qualification" htmlFor="qualification-other-detail">
-        <Input
-          id="qualification-other-detail"
-          type="text"
-          placeholder="Enter details..."
-          value={props.qualificationOtherDetail}
-          onChange={e => props.onQualificationOther(e.target.value)}
-          required
-        />
+    {isOtherDept && (
+      <Field label="Specify department" htmlFor="dept-other-input" error={errors.departmentOther}>
+        <Input id="dept-other-input" type="text" placeholder="Enter department" error={!!errors.departmentOther}
+          value={values.departmentOther} onChange={e => onChange('departmentOther', e.target.value)} required />
       </Field>
     )}
 
-    <Field label="Experience in Current Designation" htmlFor="experience-select">
-      <Select
-        id="experience-select"
-        value={props.selectedExperienceRangeId}
-        onChange={e => props.onExperience(num(e.target.value))}
-        required
-      >
-        <option value="">Select Experience Range</option>
-        {props.experienceRangesList.map(exp => (
-          <option key={exp.id} value={exp.id}>{exp.label}</option>
-        ))}
-      </Select>
+    <SelectField label="Designation" value={values.designationId} onChange={onDesignation} error={errors.designationId}
+      placeholder="Select designation" disabled={!values.departmentId}
+      options={meta.designations.map(d => ({ value: d.id, label: d.name }))} />
+
+    <SelectField label="Facility Type" value={values.facilityTypeId} error={errors.facilityTypeId}
+      onChange={v => onChange('facilityTypeId', numOr(v))} placeholder="Select facility type"
+      disabled={!values.designationId} options={meta.facilityTypes.map(f => ({ value: f.id, label: f.name }))} />
+
+    <SelectField label="State" value={values.stateId} onChange={onState} error={errors.stateId}
+      placeholder="Select state" options={meta.states.map(s => ({ value: s.id, label: s.name }))} />
+
+    <SelectField label="District" value={values.districtId} onChange={onDistrict} error={errors.districtId}
+      placeholder="Select district" disabled={!values.stateId}
+      options={meta.districts.map(d => ({ value: d.id, label: d.name }))} />
+
+    <SelectField label="Taluk / Block" value={values.blockId} onChange={onBlock} error={errors.blockId}
+      placeholder="Select taluk" disabled={!values.districtId}
+      options={meta.blocks.map(b => ({ value: b.id, label: b.name }))} />
+
+    <SelectField label="Workplace Village / City" value={values.villageId} error={errors.villageId}
+      onChange={v => onChange('villageId', numOr(v))} placeholder="Select village"
+      disabled={!values.blockId} options={meta.villages.map(v => ({ value: v.id, label: v.name }))} />
+
+    <SelectField label="Facility Name" value={values.facilityId} error={errors.facilityId}
+      onChange={v => onChange('facilityId', numOr(v))} placeholder="Select facility"
+      disabled={!values.blockId}
+      options={meta.facilities.map(f => ({ value: f.id, label: `${f.name} (${f.facility_type})` }))} />
+
+    <Field label="Distance from residence to workplace (km)" htmlFor="residence-distance-input" error={errors.residenceDistance}>
+      <Input id="residence-distance-input" type="number" min={0} max={100} step={0.1} placeholder="e.g. 5.5"
+        value={values.residenceDistance} error={!!errors.residenceDistance}
+        onChange={e => onChange('residenceDistance', numOr(e.target.value))} />
     </Field>
+
+    <SelectField label="Highest Educational Qualification" value={values.qualificationId} error={errors.qualificationId}
+      onChange={v => onChange('qualificationId', numOr(v))}
+      placeholder={values.departmentId ? 'Select qualification' : 'Select a department first'}
+      disabled={!values.departmentId}
+      options={meta.qualifications.map(q => ({ value: q.id, label: q.qualification_name }))} />
+
+    {showQualificationOther && (
+      <Field label="Please specify qualification" htmlFor="qualification-other-input" error={errors.qualificationOther}>
+        <Input id="qualification-other-input" type="text" placeholder="Enter details..." error={!!errors.qualificationOther}
+          value={values.qualificationOther} onChange={e => onChange('qualificationOther', e.target.value)} required />
+      </Field>
+    )}
+
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+      <Field label="Total years of service" htmlFor="years-service-input" error={errors.yearsService}>
+        <Input id="years-service-input" type="number" min={0} max={50} step={0.1} placeholder="0–50"
+          value={values.yearsService} error={!!errors.yearsService}
+          onChange={e => onChange('yearsService', numOr(e.target.value))} />
+      </Field>
+      <Field label="Years in current designation" htmlFor="years-designation-input" error={errors.yearsDesignation}>
+        <Input id="years-designation-input" type="number" min={0} max={50} step={0.1} placeholder="years"
+          value={values.yearsDesignation} error={!!errors.yearsDesignation}
+          onChange={e => onChange('yearsDesignation', numOr(e.target.value))} />
+      </Field>
+      <Field label="Years at current facility" htmlFor="years-facility-input" error={errors.yearsFacility}>
+        <Input id="years-facility-input" type="number" min={0} max={50} step={0.1} placeholder="years"
+          value={values.yearsFacility} error={!!errors.yearsFacility}
+          onChange={e => onChange('yearsFacility', numOr(e.target.value))} />
+      </Field>
+    </div>
+
+    <SelectField label="Is internet connectivity adequate in your work area?" value={values.internetWorkplace}
+      error={errors.internetWorkplace}
+      onChange={v => onChange('internetWorkplace', v)} placeholder="Select one"
+      options={INTERNET.map(i => ({ value: i, label: i }))} />
+
+    {TRAININGS.map(t => (
+      <SelectField key={t.key} label={t.label} value={values.trainings[t.key] ?? ''}
+        error={errors[`trainings.${t.key}`]}
+        onChange={v => onChange('trainings', { ...values.trainings, [t.key]: v })}
+        placeholder="Select one" options={TRAINING_RECENCY.map(r => ({ value: r, label: r }))} />
+    ))}
   </div>
 );
 

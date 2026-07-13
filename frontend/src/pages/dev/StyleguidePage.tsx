@@ -5,7 +5,8 @@ import {
 import {
   Alert, Avatar, Badge, Button, Card, CardBody, Checkbox, Chip, Dropdown, EmptyState,
   Input, Modal, PageHeader, PageLoader, PasswordInput, ProgressBar, ProgressRing, Radio,
-  Select, Skeleton, Spinner, StatCard, Stepper, Table, Tabs, TBody, Td, Th, THead, Tr,
+  RatingGrid, SearchableSelect, Select, Skeleton, Spinner, StatCard, Stepper, Table, Tabs,
+  TBody, Td, Th, THead, Tr,
 } from '../../components/ui';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -22,6 +23,8 @@ const StyleguidePage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [tab, setTab] = useState('personal');
   const [chip, setChip] = useState('all');
+  const [facility, setFacility] = useState<number | ''>('');
+  const [ratings, setRatings] = useState<Record<string, Record<string, number>>>({});
 
   return (
     <div className="min-h-screen bg-background text-ink p-8 max-w-6xl mx-auto">
@@ -191,6 +194,43 @@ const StyleguidePage: React.FC = () => {
             You answered 18 of 20 questions. 2 are marked for review. Once submitted you cannot change answers.
           </p>
         </Modal>
+      </Section>
+
+      <Section title="SearchableSelect">
+        <div className="w-full max-w-sm">
+          <SearchableSelect
+            label="Facility Name"
+            value={facility}
+            onChange={v => setFacility(v ? Number(v) : '')}
+            placeholder="Select facility"
+            options={[
+              { value: 1, label: 'Kalyanpur AWC (Anganwadi Center)' },
+              { value: 2, label: 'Bhathat PHC (Primary Health Center)' },
+              { value: 3, label: 'Malihabad CHC (Community Health Center)' },
+              { value: 4, label: 'Patna Sadar Sub-centre' },
+            ]}
+          />
+        </div>
+      </Section>
+
+      <Section title="RatingGrid (trust / willingness matrix)">
+        <div className="w-full">
+          <RatingGrid
+            rowHeader="Source"
+            rows={[
+              { key: 'doctor', label: 'Doctor' },
+              { key: 'asha', label: 'ASHA' },
+              { key: 'youtube', label: 'YouTube / Social media' },
+            ]}
+            columns={[
+              { key: 'trust', label: 'Trust (1–5)' },
+              { key: 'willingness', label: 'Willingness (1–5)' },
+            ]}
+            value={ratings}
+            onChange={(row, col, n) =>
+              setRatings(prev => ({ ...prev, [row]: { ...prev[row], [col]: n } }))}
+          />
+        </div>
       </Section>
 
       <div className="pb-16">

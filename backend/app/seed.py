@@ -28,19 +28,23 @@ from app.models import (
     Stage, Tutorial, TutorialQuestion, TutorialQuestionOption,
     Test, Question, QuestionOption, Achievement,
     State, District, Block, Village, Facility, EducationalQualification, ExperienceRange,
-    ProgramDistrict, User,
+    ProgramDistrict, User, Department, Designation, FacilityType,
+    MotherEducationLevel, EducationField, EducationDegree, HWC, PHC,
 )
 
 
 def seed_database(db: Session):
     _seed_metadata(db)
     _seed_achievements(db)
+    _seed_professional_axis(db)   # LR reference data — essential, always seeded
+    _seed_mother_reference(db)    # MR education cascade — essential, always seeded
 
     if not settings.SEED_DEMO_DATA:
         print("SEED_DEMO_DATA is false — skipping demo districts, users and content.")
         return
 
     _seed_program_districts_and_users(db)
+    _seed_demo_hwc_phc(db)   # demo HWC/PHC so MR is testable; prod uploads real rows
 
     if db.query(Stage).count() > 0:
         print("Database already contains stage data, skipping content seeding.")
@@ -835,3 +839,224 @@ DEMO_FLOWS = {
         },
     },
 }
+
+
+# ═══════════════════════════════════════════════
+# Learner Registration — professional-axis reference data
+# (from the EP HST "LR notes" sheet). Powers the cascading dropdowns:
+# Department → Designation → Facility type, and Department → Education.
+# ═══════════════════════════════════════════════
+
+def _seed_professional_axis(db: Session):
+    """Seed departments, designations, facility types (+ designation→facility-type
+    mapping) and the department-scoped educational qualification lists. Runs once,
+    guarded by an empty departments table. Deliberately REPLACES any pre-existing
+    generic educational_qualifications with the LR dept-scoped lists (per spec)."""
+    if db.query(Department).count() > 0:
+        return
+    print("Seeding professional-axis master data (departments, designations, facility types, education)...")
+
+    # ── Departments ──
+    hfw = Department(code="HFW", name="Health & Family Welfare Department (HFW)", order_index=0)
+    wcd = Department(code="WCD", name="Women & Child Development Department (WCD)", order_index=1)
+    other_dept = Department(code="OTHER", name="Other", order_index=2)
+    db.add_all([hfw, wcd, other_dept])
+    db.commit()
+
+    # ── Facility types (ordered by frequency); keyed by a short alias for mapping ──
+    ft_specs = [
+        ("Anganwadi Centre (AWC)", "AWC"),
+        ("Sub-centre (SC)", "SC"),
+        ("Health & Wellness Centre (HWC)", "HWC"),
+        ("Primary Health Centre (PHC)", "PHC"),
+        ("Community Health Centre (CHC)", "CHC"),
+        ("Taluk Hospital (TH)", "TH"),
+        ("District Hospital (DH)", "DH"),
+        ("Medical College Hospital", "MCH"),
+        ("ICDS Project Office (CDPO Office)", "ICDS_PO"),
+        ("Taluk Health Office (THO)", "THO"),
+        ("District Health Office (DHO)", "DHO"),
+        ("District ICDS Office", "DICDS"),
+        ("Other (Specify)", "OTHER"),
+    ]
+    ft = {}
+    for i, (name, alias) in enumerate(ft_specs):
+        obj = FacilityType(name=name, order_index=i, is_other=(alias == "OTHER"))
+        db.add(obj)
+        ft[alias] = obj
+    db.commit()
+
+    # ── Designations (name, [facility-type aliases]) ordered by frequency. An empty
+    #    list means the sheet gives no posting mapping → UI falls back to all types. ──
+    hfw_desigs = [
+        ("ASHA", ["SC"]),
+        ("ANM", ["SC", "HWC"]),
+        ("CHO (Community Health Officer)", ["HWC"]),
+        ("Staff Nurse", ["PHC", "CHC", "TH", "DH"]),
+        ("ASHA Facilitator", ["PHC"]),
+        ("MLHP (Mid-Level Health Provider)", ["HWC"]),
+        ("MPHW (Male)", ["SC", "HWC"]),
+        ("Health Assistant (Female)", ["PHC"]),
+        ("Health Assistant (Male)", ["PHC"]),
+        ("Health Inspector", ["PHC", "THO"]),
+        ("Lab Technician", ["PHC", "CHC", "TH", "DH"]),
+        ("Pharmacist", ["PHC", "CHC", "TH", "DH"]),
+        ("Medical Officer", ["PHC", "CHC", "TH", "DH"]),
+        ("Specialist Medical Officer", ["DH", "MCH"]),
+        ("Block Health Education Officer", []),
+        ("Taluk Health Officer", ["THO"]),
+        ("District Health Officer", ["DHO"]),
+        ("District Epidemiologist", ["DHO"]),
+        ("District Surveillance Officer", ["DHO"]),
+        ("Programme Manager", ["DHO"]),
+        ("Data Entry Operator", ["PHC", "THO", "DHO"]),
+        ("Nutrition Counsellor", ["PHC", "DH", "DICDS"]),
+        ("Counsellor", []),
+        ("Physiotherapist", []),
+        ("Other (Specify)", []),
+    ]
+    wcd_desigs = [
+        ("Anganwadi Worker (AWW)", ["AWC"]),
+        ("Lady Supervisor", ["ICDS_PO"]),
+        ("Child Development Project Officer (CDPO)", ["ICDS_PO"]),
+        ("District Programme Officer", ["DICDS"]),
+        ("Poshan Coordinator", ["DICDS", "ICDS_PO"]),
+        ("Nutrition Counsellor", ["PHC", "DH", "DICDS"]),
+        ("Other (Specify)", []),
+    ]
+    for dept, desigs in ((hfw, hfw_desigs), (wcd, wcd_desigs)):
+        for i, (name, aliases) in enumerate(desigs):
+            d = Designation(
+                department_id=dept.id, name=name, order_index=i,
+                is_other=name.startswith("Other"),
+            )
+            d.facility_types = [ft[a] for a in aliases]
+            db.add(d)
+    db.commit()
+
+    # ── Department-scoped education: REPLACE the generic list with the LR lists ──
+    db.query(EducationalQualification).delete()
+    db.commit()
+    hfw_edu = [
+        "No formal education", "Primary (I–IV)", "Upper Primary (V–VII)", "High School (VIII–X)",
+        "PUC (XI–XII)", "ANM", "GNM", "B.Sc. Nursing", "Post Basic B.Sc. Nursing", "M.Sc. Nursing",
+        "MBBS", "BAMS", "BHMS", "BDS", "BPT", "B.Pharm", "M.Pharm", "MPH", "MD/MS", "Diploma",
+        "Graduate", "Postgraduate", "PhD", "Other",
+    ]
+    wcd_edu = [
+        "No formal education", "Primary (I–IV)", "Upper Primary (V–VII)", "High School (VIII–X)",
+        "PUC (XI–XII)", "Anganwadi Training Certificate", "Diploma", "Graduate", "Postgraduate",
+        "BSW", "MSW", "Nutrition/Home Science", "Other",
+    ]
+    for dept, names in ((hfw, hfw_edu), (wcd, wcd_edu)):
+        for i, name in enumerate(names):
+            db.add(EducationalQualification(
+                qualification_name=name, department_id=dept.id, order_index=i,
+                has_semi_open_input=(name == "Other"),
+            ))
+    db.commit()
+    print("Professional-axis master data seeded.")
+
+
+# ═══════════════════════════════════════════════
+# Mother Registration — education cascade reference data
+# (from the EP HST "MR" + "MR notes" sheets). Education level → field → degree.
+# HWC/PHC and Karnataka geography rows are uploaded separately, not seeded here.
+# ═══════════════════════════════════════════════
+
+_MR_EDUCATION_LEVELS = [
+    ("Illiterate", False), ("No formal education", False), ("Lower Primary (I–IV)", False),
+    ("Higher Primary (V–VII)", False), ("High School (VIII–X)", False), ("PUC (XI–XII)", False),
+    ("Diploma", True), ("Graduate", True), ("Postgraduate", True),
+]
+
+# field name -> ordered degree list
+_MR_DEGREES = {
+    "Health Sciences": [
+        "Auxiliary Nurse Midwife (ANM)", "General Nursing and Midwifery (GNM)",
+        "Diploma in Pharmacy (D.Pharm)", "Diploma in Medical Laboratory Technology (DMLT)",
+        "Diploma in Nutrition and Dietetics", "Diploma in Public Health (DPH)",
+        "Bachelor of Medicine and Bachelor of Surgery (MBBS)", "Bachelor of Science in Nursing (B.Sc. Nursing)",
+        "Post Basic Bachelor of Science in Nursing (Post Basic B.Sc. Nursing)", "Bachelor of Dental Surgery (BDS)",
+        "Bachelor of Ayurvedic Medicine and Surgery (BAMS)", "Bachelor of Homeopathic Medicine and Surgery (BHMS)",
+        "Bachelor of Physiotherapy (BPT)", "Bachelor of Pharmacy (B.Pharm)",
+        "Bachelor of Science in Nutrition and Dietetics (B.Sc. Nutrition)",
+        "Bachelor of Science in Home Science (B.Sc. Home Science)",
+        "Bachelor of Science in Medical Laboratory Technology (B.Sc. MLT)", "Bachelor of Public Health (BPH)",
+        "Bachelor of Occupational Therapy (BOT)", "Bachelor of Optometry (B.Optom)",
+        "Doctor of Medicine (MD)", "Master of Surgery (MS)", "Master of Science in Nursing (M.Sc. Nursing)",
+        "Master of Public Health (MPH)", "Master of Science in Nutrition and Dietetics (M.Sc. Nutrition)",
+        "Master of Pharmacy (M.Pharm)", "Master of Dental Surgery (MDS)", "Master of Physiotherapy (MPT)",
+        "Master of Hospital Administration (MHA)", "Master of Occupational Therapy (MOT)",
+        "Doctor of Philosophy (PhD)", "Other",
+    ],
+    "Engineering & Technology": [
+        "Diploma in Engineering", "Bachelor of Engineering (BE)", "Bachelor of Technology (B.Tech)",
+        "Master of Engineering (ME)", "Master of Technology (M.Tech)", "Other",
+    ],
+    "Science": ["Bachelor of Science (B.Sc.)", "Master of Science (M.Sc.)", "Other"],
+    "Arts, Commerce & Humanities": [
+        "Bachelor of Arts (BA)", "Bachelor of Commerce (B.Com.)", "Master of Arts (MA)",
+        "Master of Commerce (M.Com.)", "Bachelor of Social Work (BSW)", "Master of Social Work (MSW)", "Other",
+    ],
+    "Management": ["Bachelor of Business Administration (BBA)", "Master of Business Administration (MBA)", "Other"],
+    "Law": ["Bachelor of Laws (LLB)", "Master of Laws (LLM)", "Other"],
+    "Agriculture": [
+        "Bachelor of Science in Agriculture (B.Sc. Agriculture)", "Master of Science in Agriculture (M.Sc. Agriculture)",
+        "Bachelor of Veterinary Science and Animal Husbandry (BVSc & AH)", "Master of Veterinary Science (MVSc)", "Other",
+    ],
+    "Education (Teaching)": [
+        "Diploma in Education (D.Ed.)", "Bachelor of Education (B.Ed.)", "Master of Education (M.Ed.)", "Other",
+    ],
+    "Computer Science & Information Technology": [
+        "Bachelor of Computer Applications (BCA)", "Master of Computer Applications (MCA)",
+        "Bachelor of Computer Science (B.Sc. Computer Science)", "Master of Computer Science (M.Sc. Computer Science)", "Other",
+    ],
+    "Other": ["Other"],
+}
+
+
+def _seed_mother_reference(db: Session):
+    """Seed mother education levels + the education field → degree cascade. Runs once,
+    guarded by an empty mother_education_levels table."""
+    if db.query(MotherEducationLevel).count() > 0:
+        return
+    print("Seeding mother-registration education reference data...")
+
+    for i, (name, requires_field) in enumerate(_MR_EDUCATION_LEVELS):
+        db.add(MotherEducationLevel(name=name, order_index=i, requires_field=requires_field))
+
+    for fi, (field_name, degrees) in enumerate(_MR_DEGREES.items()):
+        field = EducationField(name=field_name, order_index=fi)
+        db.add(field)
+        db.flush()  # need field.id for degrees
+        for di, deg in enumerate(degrees):
+            db.add(EducationDegree(field_id=field.id, name=deg, order_index=di))
+    db.commit()
+    print("Mother-registration education reference data seeded.")
+
+
+def _seed_demo_hwc_phc(db: Session):
+    """Demo HWC/PHC under the demo geography so MR is testable in dev. Guarded by an
+    empty hwcs table — in production the real (Karnataka) rows are uploaded instead."""
+    if db.query(HWC).count() > 0:
+        return
+    bhathat = db.query(Block).filter(Block.name == "Bhathat").first()
+    malihabad = db.query(Block).filter(Block.name == "Malihabad").first()
+    if not bhathat:
+        return
+    print("Seeding demo HWC/PHC...")
+    bhathat_phc = PHC(name="Bhathat PHC", block_id=bhathat.id)
+    db.add(bhathat_phc)
+    db.flush()
+    db.add_all([
+        HWC(name="Kalyanpur HWC", block_id=bhathat.id, phc_id=bhathat_phc.id),
+        HWC(name="Bhathat Khas HWC", block_id=bhathat.id, phc_id=bhathat_phc.id),
+    ])
+    if malihabad:
+        malihabad_phc = PHC(name="Malihabad PHC", block_id=malihabad.id)
+        db.add(malihabad_phc)
+        db.flush()
+        db.add(HWC(name="Malihabad HWC", block_id=malihabad.id, phc_id=malihabad_phc.id))
+    db.commit()
+    print("Demo HWC/PHC seeded.")

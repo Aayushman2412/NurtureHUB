@@ -2,15 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { User, Briefcase } from 'lucide-react';
-import client from '../api/client';
 import { Avatar, Button, Card, Tabs } from '../components/ui';
-import PersonalInfoTab from './profile/PersonalInfoTab';
-import WorkDetailsTab, {
-  type Option as MetaOption,
-  type FacilityOption,
-  type QualificationOption,
-  type ExperienceRangeOption,
-} from './profile/WorkDetailsTab';
+import { useLearnerMetadata } from '../hooks/useLearnerMetadata';
+import { TRAININGS, ageFromDob } from '../lib/learnerFields';
+import { validateLearner, LR_STEP_FIELDS, type LearnerFormValues } from '../lib/learnerSchema';
+import type { FieldErrors } from '../lib/validation';
+import PersonalInfoTab, { type PersonalInfoValues } from './profile/PersonalInfoTab';
+import WorkDetailsTab, { type WorkDetailsValues } from './profile/WorkDetailsTab';
+
+const emptyPersonal: PersonalInfoValues = {
+  fullName: '', dob: '', gender: '', phone: '', alternatePhone: '',
+  maritalStatus: '', hasChildren: '', numberChildren: '',
+};
+
+const emptyWork: WorkDetailsValues = {
+  departmentId: '', departmentOther: '', designationId: '', facilityTypeId: '',
+  stateId: '', districtId: '', blockId: '', villageId: '', facilityId: '',
+  residenceDistance: '', qualificationId: '', qualificationOther: '',
+  yearsService: '', yearsDesignation: '', yearsFacility: '', internetWorkplace: '',
+  trainings: {},
+};
 
 const ProfilePage: React.FC = () => {
   const { user, updateProfile } = useAuth();
@@ -18,227 +29,173 @@ const ProfilePage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'personal' | 'professional'>('personal');
   const [loading, setLoading] = useState(false);
+  const [personal, setPersonal] = useState<PersonalInfoValues>(emptyPersonal);
+  const [work, setWork] = useState<WorkDetailsValues>(emptyWork);
+  const [errors, setErrors] = useState<FieldErrors>({});
 
-  // Form states
-  const [fullName, setFullName] = useState(user?.full_name || '');
-  const [age, setAge] = useState<number | ''>(user?.age || '');
-  const [dob, setDob] = useState(user?.date_of_birth || '');
-  const [gender, setGender] = useState(user?.gender || '');
-  const [phone, setPhone] = useState(user?.phone || '');
-  const [alternatePhone, setAlternatePhone] = useState(user?.alternate_phone || '');
-  const [department, setDepartment] = useState(user?.department || 'Women & Child Development (WCD)');
-  const [role, setRole] = useState(user?.role || 'Anganwadi Worker');
-  const [workCenterType, setWorkCenterType] = useState(user?.work_center_type || 'Anganwadi Center (AWC)');
-
-  // API Options List States
-  const [statesList, setStatesList] = useState<MetaOption[]>([]);
-  const [districtsList, setDistrictsList] = useState<MetaOption[]>([]);
-  const [blocksList, setBlocksList] = useState<MetaOption[]>([]);
-  const [villagesList, setVillagesList] = useState<MetaOption[]>([]);
-  const [facilitiesList, setFacilitiesList] = useState<FacilityOption[]>([]);
-  const [qualificationsList, setQualificationsList] = useState<QualificationOption[]>([]);
-  const [experienceRangesList, setExperienceRangesList] = useState<ExperienceRangeOption[]>([]);
-
-  // Selected Option States (Foreign Key IDs)
-  const [selectedStateId, setSelectedStateId] = useState<number | ''>(user?.state_id || '');
-  const [selectedDistrictId, setSelectedDistrictId] = useState<number | ''>(user?.district_id || '');
-  const [selectedBlockId, setSelectedBlockId] = useState<number | ''>(user?.block_id || '');
-  const [selectedVillageId, setSelectedVillageId] = useState<number | ''>(user?.village_id || '');
-  const [selectedFacilityId, setSelectedFacilityId] = useState<number | ''>(user?.facility_id || '');
-  const [selectedQualificationId, setSelectedQualificationId] = useState<number | ''>(user?.qualification_id || '');
-  const [selectedExperienceRangeId, setSelectedExperienceRangeId] = useState<number | ''>(
-    user?.experience_range_id || '',
+  const meta = useLearnerMetadata(
+    {
+      departmentId: work.departmentId, designationId: work.designationId,
+      stateId: work.stateId, districtId: work.districtId, blockId: work.blockId,
+    },
+    msg => showToast(msg, 'error'),
   );
-  const [qualificationOtherDetail, setQualificationOtherDetail] = useState(user?.qualification_other_detail || '');
 
-  // Sync form state when user changes
+  // Prefill both tabs from the loaded user.
   useEffect(() => {
-    if (user) {
-      setFullName(user.full_name || '');
-      setAge(user.age || '');
-      setDob(user.date_of_birth || '');
-      setGender(user.gender || '');
-      setPhone(user.phone || '');
-      setAlternatePhone(user.alternate_phone || '');
-      setDepartment(user.department || 'Women & Child Development (WCD)');
-      setRole(user.role || 'Anganwadi Worker');
-      setWorkCenterType(user.work_center_type || 'Anganwadi Center (AWC)');
-      setSelectedStateId(user.state_id || '');
-      setSelectedDistrictId(user.district_id || '');
-      setSelectedBlockId(user.block_id || '');
-      setSelectedVillageId(user.village_id || '');
-      setSelectedFacilityId(user.facility_id || '');
-      setSelectedQualificationId(user.qualification_id || '');
-      setSelectedExperienceRangeId(user.experience_range_id || '');
-      setQualificationOtherDetail(user.qualification_other_detail || '');
-    }
+    if (!user) return;
+    setPersonal({
+      fullName: user.full_name || '',
+      dob: user.date_of_birth || '',
+      gender: user.gender || '',
+      phone: user.phone || '',
+      alternatePhone: user.alternate_phone || '',
+      maritalStatus: user.marital_status || '',
+      hasChildren: user.has_children === null || user.has_children === undefined
+        ? '' : (user.has_children ? 'Yes' : 'No'),
+      numberChildren: user.number_children ?? '',
+    });
+    setWork({
+      departmentId: user.department_id ?? '',
+      departmentOther: user.department_other || '',
+      designationId: user.designation_id ?? '',
+      facilityTypeId: user.facility_type_id ?? '',
+      stateId: user.state_id ?? '',
+      districtId: user.district_id ?? '',
+      blockId: user.block_id ?? '',
+      villageId: user.village_id ?? '',
+      facilityId: user.facility_id ?? '',
+      residenceDistance: user.residence_distance_km ?? '',
+      qualificationId: user.qualification_id ?? '',
+      qualificationOther: user.qualification_other_detail || '',
+      yearsService: user.years_service ?? '',
+      yearsDesignation: user.years_designation ?? '',
+      yearsFacility: user.years_facility ?? '',
+      internetWorkplace: user.internet_workplace || '',
+      trainings: Object.fromEntries(
+        TRAININGS.map(t => [t.key, (user as Record<string, unknown>)[t.key] as string || '']),
+      ),
+    });
   }, [user]);
 
-  // Load initial dropdown fields
-  useEffect(() => {
-    const fetchInitialMetadata = async () => {
-      try {
-        const [statesRes, qualificationsRes, experienceRes] = await Promise.all([
-          client.get('/api/metadata/states'),
-          client.get('/api/metadata/qualifications'),
-          client.get('/api/metadata/experience-ranges'),
-        ]);
-        setStatesList(statesRes.data);
-        setQualificationsList(qualificationsRes.data);
-        setExperienceRangesList(experienceRes.data);
-      } catch {
-        showToast('Failed to load initial form options', 'error');
+  // Clears the given error key(s) as the user edits — for trainings, clears the whole group.
+  const clearError = (key: string) =>
+    setErrors(e => {
+      const next = { ...e };
+      if (key === 'trainings') {
+        for (const k of Object.keys(next)) if (k.startsWith('trainings.')) delete next[k];
+      } else {
+        delete next[key];
       }
-    };
-    fetchInitialMetadata();
-  }, []);
+      return Object.keys(next).length === Object.keys(e).length ? e : next;
+    });
 
-  // Fetch Districts on State change
-  useEffect(() => {
-    if (!selectedStateId) {
-      setDistrictsList([]);
-      return;
-    }
-    const fetchDistricts = async () => {
-      try {
-        const res = await client.get(`/api/metadata/districts?state_id=${selectedStateId}`);
-        setDistrictsList(res.data);
-      } catch {
-        showToast('Failed to load districts', 'error');
-      }
-    };
-    fetchDistricts();
-  }, [selectedStateId]);
-
-  // Fetch Blocks on District change
-  useEffect(() => {
-    if (!selectedDistrictId) {
-      setBlocksList([]);
-      return;
-    }
-    const fetchBlocks = async () => {
-      try {
-        const res = await client.get(`/api/metadata/blocks?district_id=${selectedDistrictId}`);
-        setBlocksList(res.data);
-      } catch {
-        showToast('Failed to load blocks', 'error');
-      }
-    };
-    fetchBlocks();
-  }, [selectedDistrictId]);
-
-  // Fetch Villages & Facilities on Block change
-  useEffect(() => {
-    if (!selectedBlockId) {
-      setVillagesList([]);
-      setFacilitiesList([]);
-      return;
-    }
-    const fetchVillagesAndFacilities = async () => {
-      try {
-        const [villagesRes, facilitiesRes] = await Promise.all([
-          client.get(`/api/metadata/villages?block_id=${selectedBlockId}`),
-          client.get(`/api/metadata/facilities?block_id=${selectedBlockId}`),
-        ]);
-        setVillagesList(villagesRes.data);
-        setFacilitiesList(facilitiesRes.data);
-      } catch {
-        showToast('Failed to load villages and facilities', 'error');
-      }
-    };
-    fetchVillagesAndFacilities();
-  }, [selectedBlockId]);
-
-  const selectedQualification = qualificationsList.find(q => q.id === Number(selectedQualificationId));
-  const showOtherQualificationInput = selectedQualification?.has_semi_open_input || false;
-
-  const handlePersonalChange = (key: string, value: string | number | '') => {
-    switch (key) {
-      case 'fullName':
-        return setFullName(value as string);
-      case 'age':
-        return setAge(value as number | '');
-      case 'dob':
-        return setDob(value as string);
-      case 'gender':
-        return setGender(value as string);
-      case 'phone':
-        return setPhone(value as string);
-      case 'alternatePhone':
-        return setAlternatePhone(value as string);
-    }
+  const onPersonal = <K extends keyof PersonalInfoValues>(key: K, value: PersonalInfoValues[K]) => {
+    setPersonal(p => ({ ...p, [key]: value }));
+    clearError(key as string);
+  };
+  const onWork = <K extends keyof WorkDetailsValues>(key: K, value: WorkDetailsValues[K]) => {
+    setWork(w => ({ ...w, [key]: value }));
+    clearError(key as string);
   };
 
-  // Cascading resets preserved from the original
-  const onState = (v: number | '') => {
-    setSelectedStateId(v);
-    setSelectedDistrictId('');
-    setSelectedBlockId('');
-    setSelectedVillageId('');
-    setSelectedFacilityId('');
+  const numOr = (v: string): number | '' => (v ? Number(v) : '');
+  // Cascade change handlers reset dependent selections (+ clear own error).
+  const onDepartment = (v: string) => {
+    setWork(w => ({ ...w, departmentId: numOr(v), designationId: '', facilityTypeId: '', qualificationId: '' }));
+    clearError('departmentId');
   };
-  const onDistrict = (v: number | '') => {
-    setSelectedDistrictId(v);
-    setSelectedBlockId('');
-    setSelectedVillageId('');
-    setSelectedFacilityId('');
+  const onDesignation = (v: string) => { setWork(w => ({ ...w, designationId: numOr(v), facilityTypeId: '' })); clearError('designationId'); };
+  const onState = (v: string) => {
+    setWork(w => ({ ...w, stateId: numOr(v), districtId: '', blockId: '', villageId: '', facilityId: '' }));
+    clearError('stateId');
   };
-  const onBlock = (v: number | '') => {
-    setSelectedBlockId(v);
-    setSelectedVillageId('');
-    setSelectedFacilityId('');
+  const onDistrict = (v: string) => {
+    setWork(w => ({ ...w, districtId: numOr(v), blockId: '', villageId: '', facilityId: '' }));
+    clearError('districtId');
+  };
+  const onBlock = (v: string) => { setWork(w => ({ ...w, blockId: numOr(v), villageId: '', facilityId: '' })); clearError('blockId'); };
+
+  const selectedDept = meta.departments.find(d => d.id === Number(work.departmentId));
+  const isOtherDept = selectedDept?.code === 'OTHER';
+  const selectedQual = meta.qualifications.find(q => q.id === Number(work.qualificationId));
+  const showQualificationOther = selectedQual?.has_semi_open_input ?? false;
+
+  const values: LearnerFormValues = {
+    dob: personal.dob, age: ageFromDob(personal.dob), gender: personal.gender, phone: personal.phone,
+    alternatePhone: personal.alternatePhone, maritalStatus: personal.maritalStatus,
+    hasChildren: personal.hasChildren, numberChildren: personal.numberChildren,
+    departmentId: work.departmentId, departmentOther: work.departmentOther, designationId: work.designationId,
+    facilityTypeId: work.facilityTypeId, stateId: work.stateId, districtId: work.districtId, blockId: work.blockId,
+    villageId: work.villageId, facilityId: work.facilityId, residenceDistance: work.residenceDistance,
+    qualificationId: work.qualificationId, qualificationOther: work.qualificationOther,
+    yearsService: work.yearsService, yearsDesignation: work.yearsDesignation, yearsFacility: work.yearsFacility,
+    internetWorkplace: work.internetWorkplace, trainings: work.trainings,
+    isOtherDept, showQualificationOther,
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (
-      !selectedStateId ||
-      !selectedDistrictId ||
-      !selectedBlockId ||
-      !selectedFacilityId ||
-      !selectedVillageId ||
-      !selectedQualificationId ||
-      !selectedExperienceRangeId
-    ) {
-      showToast('Please fill in all professional and educational details', 'warning');
+    const errs = validateLearner(values);
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      const personalKeys = new Set(LR_STEP_FIELDS[0]);
+      const hasPersonalError = Object.keys(errs).some(k => personalKeys.has(k));
+      setActiveTab(hasPersonalError ? 'personal' : 'professional');
+      showToast('Please fix the highlighted fields.', 'warning');
       return;
     }
 
     setLoading(true);
     const toastId = showToast('Saving profile updates...', 'loading');
-
     try {
-      const selectedDistrict =
-        districtsList.find(d => d.id === Number(selectedDistrictId))?.name || user?.district_rel?.name || null;
-      const selectedFacilityName =
-        facilitiesList.find(f => f.id === Number(selectedFacilityId))?.name || user?.facility?.name || null;
-      const selectedFacilityType =
-        facilitiesList.find(f => f.id === Number(selectedFacilityId))?.facility_type ||
-        user?.facility?.facility_type ||
-        null;
+      const designationName = meta.designations.find(d => d.id === Number(work.designationId))?.name;
+      const facilityTypeName = meta.facilityTypes.find(f => f.id === Number(work.facilityTypeId))?.name;
+      const districtName = meta.districts.find(d => d.id === Number(work.districtId))?.name;
+      const facilityName = meta.facilities.find(f => f.id === Number(work.facilityId))?.name;
 
       await updateProfile({
-        full_name: fullName,
-        age: age ? Number(age) : null,
-        date_of_birth: dob ? dob : null,
-        gender: gender || null,
-        phone: phone || null,
-        alternate_phone: alternatePhone || null,
-        state_id: Number(selectedStateId),
-        district_id: Number(selectedDistrictId),
-        block_id: Number(selectedBlockId),
-        village_id: Number(selectedVillageId),
-        facility_id: Number(selectedFacilityId),
-        qualification_id: Number(selectedQualificationId),
-        experience_range_id: Number(selectedExperienceRangeId),
-        qualification_other_detail: showOtherQualificationInput ? qualificationOtherDetail : null,
-        department,
-        role,
-        work_center_type: selectedFacilityType || workCenterType,
-        // Legacy fields backward compatibility
-        district: selectedDistrict,
-        work_center_name: selectedFacilityName,
+        full_name: personal.fullName,
+        age: ageFromDob(personal.dob) === '' ? null : Number(ageFromDob(personal.dob)),
+        date_of_birth: personal.dob || null,
+        gender: personal.gender || null,
+        phone: personal.phone || null,
+        alternate_phone: personal.alternatePhone || null,
+        marital_status: personal.maritalStatus || null,
+        has_children: personal.hasChildren === '' ? null : personal.hasChildren === 'Yes',
+        number_children: personal.hasChildren === 'Yes' && personal.numberChildren !== ''
+          ? Number(personal.numberChildren) : null,
+        // professional axis: FK + legacy string
+        department_id: Number(work.departmentId),
+        department: selectedDept?.name,
+        department_other: isOtherDept ? work.departmentOther : null,
+        designation_id: Number(work.designationId),
+        role: designationName,
+        facility_type_id: Number(work.facilityTypeId),
+        work_center_type: facilityTypeName,
+        // geography: FK + legacy string
+        state_id: Number(work.stateId),
+        district_id: Number(work.districtId),
+        block_id: Number(work.blockId),
+        village_id: Number(work.villageId),
+        facility_id: Number(work.facilityId),
+        district: districtName,
+        work_center_name: facilityName,
+        residence_distance_km: work.residenceDistance === '' ? null : Number(work.residenceDistance),
+        // education & experience
+        qualification_id: Number(work.qualificationId),
+        qualification_other_detail: showQualificationOther ? work.qualificationOther : null,
+        years_service: work.yearsService === '' ? null : Number(work.yearsService),
+        years_designation: work.yearsDesignation === '' ? null : Number(work.yearsDesignation),
+        years_facility: work.yearsFacility === '' ? null : Number(work.yearsFacility),
+        internet_workplace: work.internetWorkplace || null,
+        // training recency
+        nutrition_training: work.trainings.nutrition_training || null,
+        pregnancy_nutrition_training: work.trainings.pregnancy_nutrition_training || null,
+        breastfeeding_training: work.trainings.breastfeeding_training || null,
+        complementary_feeding_training: work.trainings.complementary_feeding_training || null,
+        growth_monitoring_training: work.trainings.growth_monitoring_training || null,
       });
       updateToast(toastId, 'Profile updated successfully!', 'success');
     } catch {
@@ -289,47 +246,20 @@ const ProfilePage: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="p-8">
           {activeTab === 'personal' ? (
-            <PersonalInfoTab
-              fullName={fullName}
-              age={age}
-              dob={dob}
-              gender={gender}
-              phone={phone}
-              alternatePhone={alternatePhone}
-              onChange={handlePersonalChange}
-            />
+            <PersonalInfoTab {...personal} errors={errors} onChange={onPersonal} />
           ) : (
             <WorkDetailsTab
-              selectedStateId={selectedStateId}
-              selectedDistrictId={selectedDistrictId}
-              selectedBlockId={selectedBlockId}
-              selectedVillageId={selectedVillageId}
-              selectedFacilityId={selectedFacilityId}
-              selectedQualificationId={selectedQualificationId}
-              selectedExperienceRangeId={selectedExperienceRangeId}
-              qualificationOtherDetail={qualificationOtherDetail}
-              department={department}
-              role={role}
-              workCenterType={workCenterType}
-              showOtherQualificationInput={showOtherQualificationInput}
-              statesList={statesList}
-              districtsList={districtsList}
-              blocksList={blocksList}
-              villagesList={villagesList}
-              facilitiesList={facilitiesList}
-              qualificationsList={qualificationsList}
-              experienceRangesList={experienceRangesList}
+              values={work}
+              meta={meta}
+              errors={errors}
+              isOtherDept={isOtherDept}
+              showQualificationOther={showQualificationOther}
+              onChange={onWork}
+              onDepartment={onDepartment}
+              onDesignation={onDesignation}
               onState={onState}
               onDistrict={onDistrict}
               onBlock={onBlock}
-              onVillage={setSelectedVillageId}
-              onFacility={setSelectedFacilityId}
-              onQualification={setSelectedQualificationId}
-              onExperience={setSelectedExperienceRangeId}
-              onQualificationOther={setQualificationOtherDetail}
-              onDepartment={setDepartment}
-              onRole={setRole}
-              onWorkCenterType={setWorkCenterType}
             />
           )}
 
