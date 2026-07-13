@@ -1,4 +1,5 @@
-from pydantic import BaseModel, EmailStr, Field, model_validator
+import re
+from pydantic import BaseModel, EmailStr, Field, model_validator, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 
@@ -86,6 +87,168 @@ class FacilityTypeOut(BaseModel):
     name: str
     order_index: int
     is_other: bool
+
+    class Config:
+        from_attributes = True
+
+
+# ── Mother Registration metadata ──
+
+class HWCOut(BaseModel):
+    id: int
+    name: str
+    block_id: Optional[int] = None
+    phc_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+class PHCOut(BaseModel):
+    id: int
+    name: str
+    block_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+class MotherEducationLevelOut(BaseModel):
+    id: int
+    name: str
+    order_index: int
+    requires_field: bool
+
+    class Config:
+        from_attributes = True
+
+
+class EducationFieldOut(BaseModel):
+    id: int
+    name: str
+    order_index: int
+
+    class Config:
+        from_attributes = True
+
+
+class EducationDegreeOut(BaseModel):
+    id: int
+    field_id: int
+    name: str
+    order_index: int
+
+    class Config:
+        from_attributes = True
+
+
+# ── Mother Registration record ──
+
+class MotherSourceRatingIn(BaseModel):
+    source: str
+    trust: Optional[int] = Field(default=None, ge=1, le=5)
+    willingness: Optional[int] = Field(default=None, ge=1, le=5)
+
+
+class MotherSourceRatingOut(MotherSourceRatingIn):
+    class Config:
+        from_attributes = True
+
+
+def _digits(v: str) -> str:
+    return re.sub(r"\D", "", v or "")
+
+
+class MotherBase(BaseModel):
+    mother_name: str = Field(min_length=2)
+    adoption_date: Optional[date] = None
+    mother_dob: Optional[date] = None
+    mother_age: Optional[int] = Field(default=None, ge=10, le=50)
+    weight: Optional[float] = Field(default=None, ge=35.0, le=200.0)
+    height: Optional[float] = Field(default=None, ge=100.0, le=230.0)
+    lmp: Optional[date] = None
+    edd_records: Optional[date] = None
+    mobile: Optional[str] = None
+    alternate_mobile: Optional[str] = None
+    email: Optional[EmailStr] = None
+    state_id: Optional[int] = None
+    district_id: Optional[int] = None
+    taluk_id: Optional[int] = None
+    village: Optional[str] = None
+    hwc_id: Optional[int] = None
+    phc_id: Optional[int] = None
+    education_id: Optional[int] = None
+    education_field_id: Optional[int] = None
+    education_degree_id: Optional[int] = None
+    occupation: Optional[str] = None
+    occupation_other: Optional[str] = None
+    ration_card: Optional[str] = None
+    social_category: Optional[str] = None
+    nutrition_course: Optional[bool] = None
+    nutrition_course_name: Optional[str] = None
+    video_frequency: Optional[str] = None
+    implement_video: Optional[str] = None
+    confidence_video: Optional[str] = None
+    willingness_hcw: Optional[str] = None
+    information_seeking: Optional[str] = None
+    source_ratings: List[MotherSourceRatingIn] = []
+
+    @field_validator("mobile", "alternate_mobile")
+    @classmethod
+    def _ten_digits(cls, v):
+        if v and len(_digits(v)) != 10:
+            raise ValueError("Mobile number must be exactly 10 digits.")
+        return v
+
+    @model_validator(mode="after")
+    def _check(self):
+        today = date.today()
+        if self.mother_dob and self.mother_dob > today:
+            raise ValueError("Date of birth cannot be in the future.")
+        if self.adoption_date and self.adoption_date > today:
+            raise ValueError("Adoption date cannot be in the future.")
+        if self.lmp:
+            if self.lmp > today:
+                raise ValueError("LMP cannot be in the future.")
+            if (today - self.lmp).days > 180:
+                raise ValueError("LMP cannot be more than 180 days before today.")
+        if self.mobile and self.alternate_mobile and _digits(self.mobile) == _digits(self.alternate_mobile):
+            raise ValueError("Alternate mobile must be different from the primary mobile.")
+        return self
+
+
+class MotherCreate(MotherBase):
+    pass
+
+
+class MotherOut(MotherBase):
+    id: int
+    mother_uid: str
+    registered_by_user_id: Optional[int] = None
+    created_at: datetime
+    edd_lmp: Optional[date] = None
+    gestational_weeks: Optional[int] = None    # derived from LMP
+    gestational_months: Optional[int] = None   # derived from LMP
+    source_ratings: List[MotherSourceRatingOut] = []
+    hwc: Optional[HWCOut] = None
+    phc: Optional[PHCOut] = None
+    education: Optional[MotherEducationLevelOut] = None
+    education_field: Optional[EducationFieldOut] = None
+    education_degree: Optional[EducationDegreeOut] = None
+
+    class Config:
+        from_attributes = True
+
+
+class MotherListItem(BaseModel):
+    """Compact row for the 'My Mothers' list."""
+    id: int
+    mother_uid: str
+    mother_name: str
+    village: Optional[str] = None
+    edd_records: Optional[date] = None
+    gestational_weeks: Optional[int] = None
+    created_at: datetime
 
     class Config:
         from_attributes = True

@@ -15,7 +15,7 @@ from app.rate_limit import limiter
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.routers import auth, users, tutorials, tests, results, notifications, dashboard, metadata, admin
-from app.routers import ws_routes
+from app.routers import ws_routes, mothers
 import app.models_live  # noqa: F401 — registers live monitoring tables with Base
 from app.models_live import LiveSession
 from app.ws_manager import manager
@@ -143,6 +143,7 @@ app.include_router(metadata.router)
 app.include_router(admin.auth_router)  # public: /api/admin/login
 app.include_router(admin.router)       # guarded: all other /api/admin/*
 app.include_router(ws_routes.router)
+app.include_router(mothers.router)
 
 
 @app.get("/")

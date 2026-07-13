@@ -72,3 +72,43 @@ def get_facility_types(designation_id: Optional[int] = Query(None), db: Session 
         if designation is not None and designation.facility_types:
             return sorted(designation.facility_types, key=lambda ft: ft.order_index)
     return db.query(models.FacilityType).order_by(models.FacilityType.order_index).all()
+
+
+# ── Mother Registration cascades ──
+
+@router.get("/education-levels", response_model=List[schemas.MotherEducationLevelOut])
+def get_education_levels(db: Session = Depends(get_db)):
+    return db.query(models.MotherEducationLevel).order_by(models.MotherEducationLevel.order_index).all()
+
+@router.get("/education-fields", response_model=List[schemas.EducationFieldOut])
+def get_education_fields(db: Session = Depends(get_db)):
+    return db.query(models.EducationField).order_by(models.EducationField.order_index).all()
+
+@router.get("/education-degrees", response_model=List[schemas.EducationDegreeOut])
+def get_education_degrees(field_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    query = db.query(models.EducationDegree)
+    if field_id is not None:
+        query = query.filter(models.EducationDegree.field_id == field_id)
+    return query.order_by(models.EducationDegree.order_index).all()
+
+@router.get("/hwcs", response_model=List[schemas.HWCOut])
+def get_hwcs(block_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    query = db.query(models.HWC)
+    if block_id is not None:  # block == taluk
+        query = query.filter(models.HWC.block_id == block_id)
+    return query.order_by(models.HWC.name).all()
+
+@router.get("/phcs", response_model=List[schemas.PHCOut])
+def get_phcs(
+    hwc_id: Optional[int] = Query(None),
+    block_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    # An HWC maps to exactly one PHC → return that one (auto-populate). Else list by taluk.
+    if hwc_id is not None:
+        hwc = db.query(models.HWC).filter(models.HWC.id == hwc_id).first()
+        return [hwc.phc] if hwc and hwc.phc else []
+    query = db.query(models.PHC)
+    if block_id is not None:
+        query = query.filter(models.PHC.block_id == block_id)
+    return query.order_by(models.PHC.name).all()

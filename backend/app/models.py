@@ -1,3 +1,4 @@
+from datetime import date
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Float, Text, Table, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -613,6 +614,15 @@ class Mother(Base):
     source_ratings = relationship(
         "MotherSourceRating", back_populates="mother", cascade="all, delete-orphan"
     )
+
+    # Gestational age is time-relative → derived from LMP, never stored.
+    @property
+    def gestational_weeks(self):
+        return (date.today() - self.lmp).days // 7 if self.lmp else None
+
+    @property
+    def gestational_months(self):
+        return (date.today() - self.lmp).days // 30 if self.lmp else None
 
 
 class MotherSourceRating(Base):
