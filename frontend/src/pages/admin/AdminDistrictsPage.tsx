@@ -121,10 +121,10 @@ const AdminDistrictsPage: React.FC = () => {
                         autoFocus
                         className="py-1.5"
                       />
-                      <Button variant="ghost" size="sm" onClick={() => handleUpdate(d.id)} disabled={saving} title="Save">
+                      <Button variant="ghost" size="sm" onClick={() => handleUpdate(d.id)} disabled={saving} title={t('districts.save')}>
                         <Save className="size-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setEditingId(null)} title="Cancel">
+                      <Button variant="ghost" size="sm" onClick={() => setEditingId(null)} title={t('districts.cancel')}>
                         <X className="size-4" />
                       </Button>
                     </div>
@@ -165,7 +165,7 @@ const AdminDistrictsPage: React.FC = () => {
                 >
                   {t('districts.rename')}
                 </Button>
-                <Button variant="danger" size="sm" onClick={() => handleDelete(d.id, d.name)} title="Delete">
+                <Button variant="danger" size="sm" onClick={() => handleDelete(d.id, d.name)} title={t('districts.delete')}>
                   <Trash2 className="size-3.5" />
                 </Button>
               </div>

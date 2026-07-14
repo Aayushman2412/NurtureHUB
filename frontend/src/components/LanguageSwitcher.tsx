@@ -11,7 +11,7 @@ interface LanguageSwitcherProps {
 
 /** Global language switcher — persists the choice (localStorage) via i18next. */
 const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ variant = 'pill' }) => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation('common');
   const current =
     SUPPORTED_LANGUAGES.find(l => l.code === i18n.resolvedLanguage) ?? SUPPORTED_LANGUAGES[0];
 
@@ -23,7 +23,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ variant = 'pill' })
   return (
     <Dropdown
       trigger={open => (
-        <button type="button" className={triggerClass} aria-label="Select language">
+        <button type="button" className={triggerClass} aria-label={t('language.select')}>
           <Globe className="size-4" />
           {current.native}
           <ChevronDown className={`size-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />

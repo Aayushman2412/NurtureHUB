@@ -36,5 +36,15 @@
       "quizRecorded": "Quiz responses recorded. Great job!",
       "quizSkipped": "Quiz skipped — you can revisit the video anytime."
     }
+  },
+  "quiz": {
+    "title": "Quick Check",
+    "continue": "Continue",
+    "skip": "Skip Quiz",
+    "submit": "Submit Answers ({{answered}}/{{total}})",
+    "submittedTitle": "Quiz Submitted!",
+    "submittedBody": "You answered <strong>{{correct}} of {{total}}</strong> questions correctly ({{pct}}%).",
+    "intro": "A few questions about “{{title}}”. Answering helps us confirm your learning — you may skip, but skips are recorded.",
+    "toastSubmitFailed": "Failed to submit quiz answers"
   }
 }

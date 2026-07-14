@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { CheckCircle, HelpCircle } from 'lucide-react';
 import { Modal, Button } from '../ui';
 import { cn } from '../../utils/cn';
@@ -27,6 +28,7 @@ const TutorialQuizModal: React.FC<TutorialQuizModalProps> = ({
   tutorialTitle,
   onClose,
 }) => {
+  const { t } = useTranslation('tutorials');
   const { showToast } = useToast();
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<number, number>>({});
@@ -63,7 +65,7 @@ const TutorialQuizModal: React.FC<TutorialQuizModalProps> = ({
       );
       setResult(res);
     } catch {
-      showToast('Failed to submit quiz answers', 'error');
+      showToast(t('quiz.toastSubmitFailed'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -88,21 +90,21 @@ const TutorialQuizModal: React.FC<TutorialQuizModalProps> = ({
       onClose={handleSkip}
       title={
         <span className="flex items-center gap-2">
-          <HelpCircle className="size-5 text-primary" /> Quick Check
+          <HelpCircle className="size-5 text-primary" /> {t('quiz.title')}
         </span>
       }
       footer={
         result ? (
-          <Button onClick={() => onClose('completed')}>Continue</Button>
+          <Button onClick={() => onClose('completed')}>{t('quiz.continue')}</Button>
         ) : (
           <>
-            <Button variant="outline" onClick={handleSkip}>Skip Quiz</Button>
+            <Button variant="outline" onClick={handleSkip}>{t('quiz.skip')}</Button>
             <Button
               onClick={handleSubmit}
               loading={submitting}
               disabled={answeredCount < questions.length}
             >
-              {`Submit Answers (${answeredCount}/${questions.length})`}
+              {t('quiz.submit', { answered: answeredCount, total: questions.length })}
             </Button>
           </>
         )
@@ -111,17 +113,20 @@ const TutorialQuizModal: React.FC<TutorialQuizModalProps> = ({
       {result ? (
         <div className="py-4 text-center">
           <CheckCircle className="mx-auto mb-3 size-12 text-success-500" />
-          <h3 className="font-display text-xl font-extrabold text-ink">Quiz Submitted!</h3>
+          <h3 className="font-display text-xl font-extrabold text-ink">{t('quiz.submittedTitle')}</h3>
           <p className="mt-2 text-ink-muted">
-            You answered <strong className="text-ink">{result.correct_count} of {result.total_questions}</strong>{' '}
-            questions correctly ({result.score_pct}%).
+            <Trans
+              t={t}
+              i18nKey="quiz.submittedBody"
+              components={{ strong: <strong className="text-ink" /> }}
+              values={{ correct: result.correct_count, total: result.total_questions, pct: result.score_pct }}
+            />
           </p>
         </div>
       ) : (
         <>
           <p className="mb-5 text-sm text-ink-muted">
-            A few questions about “{tutorialTitle}”. Answering helps us confirm your learning —
-            you may skip, but skips are recorded.
+            {t('quiz.intro', { title: tutorialTitle })}
           </p>
           <div className="flex flex-col gap-5">
             {questions.map((q, qi) => (

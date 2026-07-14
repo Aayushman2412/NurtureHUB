@@ -22,5 +22,13 @@
     "fallbackName": "User",
     "defaultRole": "ICDS Worker",
     "signOut": "Sign Out"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "readAll": "Read All",
+    "close": "Close",
+    "emptyTitle": "No notifications yet",
+    "emptyBody": "Updates about your training and assessments will appear here."
   }
 }

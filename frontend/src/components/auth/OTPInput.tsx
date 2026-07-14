@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface OTPInputProps {
   length?: number;
@@ -6,6 +7,7 @@ interface OTPInputProps {
 }
 
 const OTPInput: React.FC<OTPInputProps> = ({ length = 6, onComplete }) => {
+  const { t } = useTranslation('auth');
   const [code, setCode] = useState<string[]>(new Array(length).fill(''));
   const inputsRef = useRef<HTMLInputElement[]>([]);
 
@@ -96,7 +98,7 @@ const OTPInput: React.FC<OTPInputProps> = ({ length = 6, onComplete }) => {
           onChange={(e) => handleChange(e.target.value, i)}
           onKeyDown={(e) => handleKeyDown(e, i)}
           onPaste={handlePaste}
-          aria-label={`Digit ${i + 1}`}
+          aria-label={t('otp.digitAria', { n: i + 1 })}
           className="h-14 w-12 rounded-lg border-2 border-border-strong/60 bg-surface text-center
                      font-display text-2xl font-bold text-ink shadow-xs outline-none
                      transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
