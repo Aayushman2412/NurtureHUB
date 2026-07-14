@@ -1,0 +1,20 @@
+# Local Python env / caches — never copy into the image
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Secrets & local config (env comes from docker-compose)
+.env
+.env.*
+
+# VCS / editor / docs
+.git/
+.gitignore
+.vscode/
+.idea/
+*.md
