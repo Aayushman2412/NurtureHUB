@@ -1,0 +1,133 @@
+{
+  "fields": {
+    "fullName": "पूरा नाम",
+    "dob": "जन्म तिथि",
+    "ageYears": "आयु (वर्ष)",
+    "age": "आयु",
+    "ageCalculated": "जन्म तिथि से गणना की गई",
+    "ageValue": "{{age}} वर्ष",
+    "gender": "लिंग",
+    "mobileNumber": "मोबाइल नंबर",
+    "alternateNumber": "वैकल्पिक नंबर (वैकल्पिक)",
+    "contactPhone": "संपर्क फ़ोन",
+    "alternatePhone": "वैकल्पिक फ़ोन (वैकल्पिक)",
+    "phonePlaceholder": "10 अंकों का मोबाइल नंबर",
+    "optional": "वैकल्पिक",
+    "maritalStatus": "वैवाहिक स्थिति",
+    "hasChildren": "क्या आपके कोई बच्चे हैं?",
+    "numberChildren": "बच्चों की संख्या",
+    "numberChildrenPlaceholder": "उदा. 2",
+    "department": "विभाग",
+    "specifyDepartment": "विभाग निर्दिष्ट करें",
+    "enterDepartment": "विभाग दर्ज करें",
+    "designation": "पदनाम",
+    "facilityType": "सुविधा प्रकार",
+    "state": "राज्य",
+    "district": "ज़िला",
+    "block": "तालुक / ब्लॉक",
+    "village": "गाँव",
+    "villageCity": "कार्यस्थल गाँव / शहर",
+    "villagePlaceholder": "अपना गाँव खोजें या टाइप करें",
+    "facilityName": "सुविधा का नाम",
+    "residenceDistance": "निवास से कार्यस्थल की दूरी (किमी)",
+    "residenceDistancePlaceholder": "उदा. 5.5",
+    "qualification": "उच्चतम शैक्षणिक योग्यता",
+    "specifyQualification": "कृपया योग्यता निर्दिष्ट करें",
+    "enterDetails": "विवरण दर्ज करें",
+    "yearsService": "सेवा के कुल वर्ष",
+    "yearsServicePlaceholder": "0–50",
+    "yearsDesignation": "वर्तमान पदनाम में वर्ष",
+    "yearsFacility": "वर्तमान सुविधा में वर्ष",
+    "yearsPlaceholder": "वर्ष",
+    "internet": "क्या आपके कार्यक्षेत्र में इंटरनेट कनेक्टिविटी पर्याप्त है?"
+  },
+  "placeholders": {
+    "selectMarital": "वैवाहिक स्थिति चुनें",
+    "selectDepartment": "विभाग चुनें",
+    "selectDesignation": "पदनाम चुनें",
+    "selectFacilityType": "सुविधा प्रकार चुनें",
+    "selectState": "राज्य चुनें",
+    "selectDistrict": "ज़िला चुनें",
+    "selectTaluk": "तालुक चुनें",
+    "selectFacility": "सुविधा चुनें",
+    "selectQualification": "योग्यता चुनें",
+    "selectDeptFirst": "पहले एक विभाग चुनें",
+    "selectOne": "एक चुनें"
+  },
+  "options": {
+    "gender": {
+      "female": "महिला",
+      "male": "पुरुष",
+      "other": "अन्य"
+    },
+    "marital": {
+      "neverMarried": "अविवाहित",
+      "married": "विवाहित",
+      "widowed": "विधवा/विधुर",
+      "divorced": "तलाकशुदा",
+      "separated": "अलग हुए"
+    },
+    "internet": {
+      "always": "हमेशा",
+      "often": "अक्सर",
+      "sometimes": "कभी-कभी",
+      "rarely": "शायद ही कभी",
+      "never": "कभी नहीं"
+    },
+    "recency": {
+      "within3m": "पिछले 3 महीनों में",
+      "m4to6": "4–6 महीने पहले",
+      "m7to12": "7–12 महीने पहले",
+      "y1to2": "1–2 वर्ष पहले",
+      "moreThan2y": "2 वर्ष से अधिक पहले",
+      "neverAttended": "कभी शामिल नहीं हुए",
+      "dontKnow": "पता नहीं"
+    },
+    "yes": "हाँ",
+    "no": "नहीं"
+  },
+  "trainings": {
+    "nutrition_training": "आपने आखिरी बार पोषण से संबंधित कोई प्रशिक्षण कब लिया था?",
+    "pregnancy_nutrition_training": "आपने आखिरी बार गर्भावस्था पोषण से संबंधित प्रशिक्षण कब लिया था?",
+    "breastfeeding_training": "आपने आखिरी बार स्तनपान से संबंधित प्रशिक्षण कब लिया था?",
+    "complementary_feeding_training": "आपने आखिरी बार पूरक आहार से संबंधित प्रशिक्षण कब लिया था?",
+    "growth_monitoring_training": "आपने आखिरी बार वृद्धि निगरानी और वृद्धि चार्ट व्याख्या से संबंधित प्रशिक्षण कब लिया था?"
+  },
+  "registration": {
+    "title": "पंजीकरण पूर्ण करें",
+    "subtitle": "अपने सीखने और मूल्यांकन डैशबोर्ड को अनुकूलित करने के लिए नीचे अपना विवरण भरें।",
+    "steps": {
+      "personal": "व्यक्तिगत",
+      "work": "कार्य और स्थान",
+      "education": "शिक्षा",
+      "training": "प्रशिक्षण"
+    },
+    "sectionPersonal": "व्यक्तिगत विवरण",
+    "sectionWork": "कार्य और स्थान",
+    "sectionEducation": "शिक्षा और अनुभव",
+    "sectionTraining": "प्रशिक्षण इतिहास",
+    "back": "पीछे",
+    "continue": "जारी रखें",
+    "submitting": "जमा हो रहा है...",
+    "complete": "पंजीकरण पूर्ण करें ✓",
+    "toastSubmitting": "आपका पंजीकरण जमा किया जा रहा है...",
+    "toastSuccess": "पंजीकरण पूर्ण हुआ! NurtureHUB में आपका स्वागत है।",
+    "toastFail": "पंजीकरण सहेजने में विफल। कृपया पुनः प्रयास करें।"
+  },
+  "profile": {
+    "nameFallback": "स्वास्थ्य पेशेवर",
+    "roleFallback": "आईसीडीएस कार्यकर्ता",
+    "centerFallback": "आँगनवाड़ी केंद्र",
+    "emailLabel": "ईमेल:",
+    "joinedLabel": "शामिल हुए:",
+    "na": "लागू नहीं",
+    "tabPersonal": "व्यक्तिगत विवरण",
+    "tabProfessional": "व्यावसायिक जानकारी",
+    "saving": "सहेजा जा रहा है...",
+    "saveChanges": "प्रोफ़ाइल परिवर्तन सहेजें",
+    "toastFixFields": "कृपया हाइलाइट किए गए फ़ील्ड ठीक करें।",
+    "toastSaving": "प्रोफ़ाइल अपडेट सहेजे जा रहे हैं...",
+    "toastSuccess": "प्रोफ़ाइल सफलतापूर्वक अपडेट की गई!",
+    "toastFail": "प्रोफ़ाइल विवरण अपडेट करने में विफल"
+  }
+}

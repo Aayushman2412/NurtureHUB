@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { User, Briefcase } from 'lucide-react';
 import { Avatar, Button, Card, Tabs } from '../components/ui';
 import { useLearnerMetadata } from '../hooks/useLearnerMetadata';
-import { TRAININGS, ageFromDob } from '../lib/learnerFields';
+import { TRAINING_KEYS, ageFromDob } from '../lib/learnerFields';
 import { validateLearner, LR_STEP_FIELDS, type LearnerFormValues } from '../lib/learnerSchema';
 import type { FieldErrors } from '../lib/validation';
 import PersonalInfoTab, { type PersonalInfoValues } from './profile/PersonalInfoTab';
@@ -24,6 +25,7 @@ const emptyWork: WorkDetailsValues = {
 };
 
 const ProfilePage: React.FC = () => {
+  const { t } = useTranslation('learner');
   const { user, updateProfile } = useAuth();
   const { showToast, updateToast } = useToast();
 
@@ -74,7 +76,7 @@ const ProfilePage: React.FC = () => {
       yearsFacility: user.years_facility ?? '',
       internetWorkplace: user.internet_workplace || '',
       trainings: Object.fromEntries(
-        TRAININGS.map(t => [t.key, (user as unknown as Record<string, unknown>)[t.key] as string || '']),
+        TRAINING_KEYS.map(key => [key, (user as unknown as Record<string, unknown>)[key] as string || '']),
       ),
     });
   }, [user]);
@@ -153,12 +155,12 @@ const ProfilePage: React.FC = () => {
       const personalKeys = new Set(LR_STEP_FIELDS[0]);
       const hasPersonalError = Object.keys(errs).some(k => personalKeys.has(k));
       setActiveTab(hasPersonalError ? 'personal' : 'professional');
-      showToast('Please fix the highlighted fields.', 'warning');
+      showToast(t('profile.toastFixFields'), 'warning');
       return;
     }
 
     setLoading(true);
-    const toastId = showToast('Saving profile updates...', 'loading');
+    const toastId = showToast(t('profile.toastSaving'), 'loading');
     try {
       const designationName = meta.designations.find(d => d.id === Number(work.designationId))?.name;
       const facilityTypeName = meta.facilityTypes.find(f => f.id === Number(work.facilityTypeId))?.name;
@@ -208,9 +210,9 @@ const ProfilePage: React.FC = () => {
         complementary_feeding_training: work.trainings.complementary_feeding_training || null,
         growth_monitoring_training: work.trainings.growth_monitoring_training || null,
       });
-      updateToast(toastId, 'Profile updated successfully!', 'success');
+      updateToast(toastId, t('profile.toastSuccess'), 'success');
     } catch {
-      updateToast(toastId, 'Failed to update profile details', 'error');
+      updateToast(toastId, t('profile.toastFail'), 'error');
     } finally {
       setLoading(false);
     }
@@ -223,19 +225,19 @@ const ProfilePage: React.FC = () => {
         <Avatar name={user?.full_name || 'U'} size="xl" className="ring-4 ring-coral-100 dark:ring-coral-500/20" />
         <div className="min-w-0 flex-1">
           <h2 className="mb-1 font-display text-2xl font-extrabold text-ink">
-            {user?.full_name || 'Healthcare Professional'}
+            {user?.full_name || t('profile.nameFallback')}
           </h2>
           <p className="mb-3 text-sm text-ink-muted">
-            {user?.role || 'ICDS Worker'} • {user?.work_center_name || 'AWC Center'}
+            {user?.role || t('profile.roleFallback')} • {user?.work_center_name || t('profile.centerFallback')}
           </p>
           <div className="flex flex-wrap gap-x-6 gap-y-1 text-[13px] text-ink-faint">
             <span>
-              Email: <strong className="text-ink-muted">{user?.email}</strong>
+              {t('profile.emailLabel')} <strong className="text-ink-muted">{user?.email}</strong>
             </span>
             <span>
-              Joined:{' '}
+              {t('profile.joinedLabel')}{' '}
               <strong className="text-ink-muted">
-                {user?.created_at ? new Date(user.created_at).toLocaleDateString('en-GB') : 'N/A'}
+                {user?.created_at ? new Date(user.created_at).toLocaleDateString('en-GB') : t('profile.na')}
               </strong>
             </span>
           </div>
@@ -249,8 +251,8 @@ const ProfilePage: React.FC = () => {
             value={activeTab}
             onChange={v => setActiveTab(v)}
             items={[
-              { value: 'personal', label: 'Personal Details', icon: <User className="size-4" /> },
-              { value: 'professional', label: 'Professional Info', icon: <Briefcase className="size-4" /> },
+              { value: 'personal', label: t('profile.tabPersonal'), icon: <User className="size-4" /> },
+              { value: 'professional', label: t('profile.tabProfessional'), icon: <Briefcase className="size-4" /> },
             ]}
           />
         </div>
@@ -276,7 +278,7 @@ const ProfilePage: React.FC = () => {
 
           <div className="mt-8 flex justify-end border-t border-border pt-5">
             <Button type="submit" size="lg" loading={loading}>
-              {loading ? 'Saving...' : 'Save Profile Changes'}
+              {loading ? t('profile.saving') : t('profile.saveChanges')}
             </Button>
           </div>
         </form>
