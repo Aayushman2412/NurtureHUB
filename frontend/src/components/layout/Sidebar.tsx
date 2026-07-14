@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LayoutDashboard, Video, Award, User, LogOut, Sprout, Users } from 'lucide-react';
@@ -11,14 +12,15 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/tutorials', label: 'Tutorials', icon: Video },
-  { to: '/tests', label: 'Assessments', icon: Award },
-  { to: '/mothers', label: 'Mothers', icon: Users },
-  { to: '/profile', label: 'Profile', icon: User },
+  { to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
+  { to: '/tutorials', labelKey: 'nav.tutorials', icon: Video },
+  { to: '/tests', labelKey: 'nav.assessments', icon: Award },
+  { to: '/mothers', labelKey: 'nav.mothers', icon: Users },
+  { to: '/profile', labelKey: 'nav.profile', icon: User },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation(['app', 'common']);
   const { user, logout } = useAuth();
 
   return (
@@ -46,7 +48,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-coral-400 to-coral-600">
               <Sprout className="size-5 text-white" />
             </span>
-            <span className="font-display text-lg font-extrabold">NurtureHUB</span>
+            <span className="font-display text-lg font-extrabold">{t('common:brand.name')}</span>
           </div>
 
           {/* Nav */}
@@ -66,7 +68,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 }
               >
                 <item.icon className="size-[18px]" />
-                <span>{item.label}</span>
+                <span>{t(item.labelKey)}</span>
               </NavLink>
             ))}
           </nav>
@@ -76,14 +78,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         {user && (
           <div className="border-t border-border p-3">
             <div className="flex items-center gap-3">
-              <Avatar name={user.full_name || 'User'} size="md" />
+              <Avatar name={user.full_name || t('app:user.fallbackName')} size="md" />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold text-ink">{user.full_name || 'User'}</div>
-                <div className="truncate text-xs text-ink-muted">{user.role || 'ICDS Worker'}</div>
+                <div className="truncate text-sm font-semibold text-ink">{user.full_name || t('app:user.fallbackName')}</div>
+                <div className="truncate text-xs text-ink-muted">{user.role || t('app:user.defaultRole')}</div>
               </div>
               <button
                 onClick={logout}
-                title="Sign Out"
+                title={t('app:user.signOut')}
                 className="flex size-8 items-center justify-center rounded-lg text-ink-muted
                            hover:bg-surface-sunken hover:text-ink cursor-pointer"
               >

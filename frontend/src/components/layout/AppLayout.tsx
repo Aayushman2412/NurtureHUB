@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import MainHeader from './MainHeader';
@@ -9,6 +10,7 @@ interface AppLayoutProps {
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+  const { t } = useTranslation('app');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -17,12 +19,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   const getHeaderTitle = () => {
     const path = location.pathname;
-    if (path === '/dashboard') return 'Dashboard';
-    if (path.startsWith('/tutorials')) return 'Training Modules';
-    if (path.startsWith('/tests')) return 'Assessments & Quizzes';
-    if (path.startsWith('/results')) return 'Assessment Performance';
-    if (path === '/profile') return 'Profile Settings';
-    return 'NurtureHUB';
+    if (path === '/dashboard') return t('headerTitle.dashboard');
+    if (path.startsWith('/tutorials')) return t('headerTitle.tutorials');
+    if (path.startsWith('/tests')) return t('headerTitle.tests');
+    if (path.startsWith('/results')) return t('headerTitle.results');
+    if (path === '/profile') return t('headerTitle.profile');
+    return t('headerTitle.default');
   };
 
   return (
