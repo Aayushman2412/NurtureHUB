@@ -1,0 +1,54 @@
+{
+  "layout": {
+    "panel": "Admin Panel",
+    "toggleTheme": "Toggle theme mode",
+    "selectDistrict": "Select District",
+    "usersCount": "{{n}} users",
+    "adminFallback": "Administrator",
+    "superAdmin": "Super Admin",
+    "logout": "Logout",
+    "nav": {
+      "dashboard": "Dashboard",
+      "districts": "Districts",
+      "formBuilder": "Form Builder",
+      "tutorials": "Tutorials",
+      "tutorialTracking": "Tutorial Tracking",
+      "testManager": "Test Manager",
+      "liveMonitor": "Live Monitor",
+      "results": "Results"
+    }
+  },
+  "dashboard": {
+    "eyebrow": "Welcome back",
+    "title": "Admin Dashboard",
+    "subtitleDistrict": "Managing <strong>{{district}}</strong> district — configure forms, upload tutorials, and control assessments.",
+    "subtitleDefault": "Manage your platform from here — configure forms, upload tutorials, and control assessments.",
+    "quickActions": "Quick Actions",
+    "stats": {
+      "districtUsers": "District Users",
+      "trainingStages": "Training Stages",
+      "tutorials": "Tutorials",
+      "assessments": "Assessments",
+      "formFields": "Form Fields",
+      "activeTests": "Active Tests"
+    },
+    "actions": {
+      "districts": {
+        "label": "Manage Districts",
+        "desc": "Add, edit, or remove program districts"
+      },
+      "form": {
+        "label": "Configure Registration Form",
+        "desc": "Add, remove, or reorder registration fields"
+      },
+      "tutorials": {
+        "label": "Manage Tutorials & Stages",
+        "desc": "Upload YouTube videos, clip sections, manage stages"
+      },
+      "tests": {
+        "label": "Test Manager",
+        "desc": "Upload questions, start/stop tests, download results"
+      }
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation, Trans } from 'react-i18next';
 import client from '../../api/client';
 import {
   Users, Layers, Video, ClipboardList, FileText, Zap, ArrowRight, MapPin, Shield,
@@ -22,6 +23,7 @@ type Tone = 'sage' | 'coral' | 'amber';
 const AdminDashboardPage: React.FC = () => {
   const [stats, setStats] = useState<Stats | null>(null);
   const navigate = useNavigate();
+  const { t } = useTranslation('admin');
 
   const loadStats = useCallback(() => {
     const district = localStorage.getItem('nh_admin_district') || '';
@@ -49,34 +51,36 @@ const AdminDashboardPage: React.FC = () => {
   }, [loadStats]);
 
   const cards: { icon: React.ReactNode; label: string; value: number; tone: Tone }[] = [
-    { icon: <Users />, label: 'District Users', value: stats?.total_users ?? 0, tone: 'coral' },
-    { icon: <Layers />, label: 'Training Stages', value: stats?.total_stages ?? 0, tone: 'sage' },
-    { icon: <Video />, label: 'Tutorials', value: stats?.total_tutorials ?? 0, tone: 'amber' },
-    { icon: <ClipboardList />, label: 'Assessments', value: stats?.total_tests ?? 0, tone: 'coral' },
-    { icon: <FileText />, label: 'Form Fields', value: stats?.total_form_fields ?? 0, tone: 'sage' },
-    { icon: <Zap />, label: 'Active Tests', value: stats?.active_tests ?? 0, tone: 'amber' },
+    { icon: <Users />, label: t('dashboard.stats.districtUsers'), value: stats?.total_users ?? 0, tone: 'coral' },
+    { icon: <Layers />, label: t('dashboard.stats.trainingStages'), value: stats?.total_stages ?? 0, tone: 'sage' },
+    { icon: <Video />, label: t('dashboard.stats.tutorials'), value: stats?.total_tutorials ?? 0, tone: 'amber' },
+    { icon: <ClipboardList />, label: t('dashboard.stats.assessments'), value: stats?.total_tests ?? 0, tone: 'coral' },
+    { icon: <FileText />, label: t('dashboard.stats.formFields'), value: stats?.total_form_fields ?? 0, tone: 'sage' },
+    { icon: <Zap />, label: t('dashboard.stats.activeTests'), value: stats?.active_tests ?? 0, tone: 'amber' },
   ];
 
   const quickActions = [
-    { label: 'Manage Districts', desc: 'Add, edit, or remove program districts', path: '/admin/districts', icon: Landmark },
-    { label: 'Configure Registration Form', desc: 'Add, remove, or reorder registration fields', path: '/admin/form-builder', icon: FilePenLine },
-    { label: 'Manage Tutorials & Stages', desc: 'Upload YouTube videos, clip sections, manage stages', path: '/admin/tutorials', icon: Clapperboard },
-    { label: 'Test Manager', desc: 'Upload questions, start/stop tests, download results', path: '/admin/tests', icon: ClipboardCheck },
+    { label: t('dashboard.actions.districts.label'), desc: t('dashboard.actions.districts.desc'), path: '/admin/districts', icon: Landmark },
+    { label: t('dashboard.actions.form.label'), desc: t('dashboard.actions.form.desc'), path: '/admin/form-builder', icon: FilePenLine },
+    { label: t('dashboard.actions.tutorials.label'), desc: t('dashboard.actions.tutorials.desc'), path: '/admin/tutorials', icon: Clapperboard },
+    { label: t('dashboard.actions.tests.label'), desc: t('dashboard.actions.tests.desc'), path: '/admin/tests', icon: ClipboardCheck },
   ];
 
   return (
     <div className="flex flex-col gap-6">
       <WelcomeBanner
-        eyebrow="Welcome back"
-        title="Admin Dashboard"
+        eyebrow={t('dashboard.eyebrow')}
+        title={t('dashboard.title')}
         subtitle={
           stats?.district_name ? (
-            <>
-              Managing <strong className="font-bold text-ink">{stats.district_name}</strong> district — configure forms,
-              upload tutorials, and control assessments.
-            </>
+            <Trans
+              t={t}
+              i18nKey="dashboard.subtitleDistrict"
+              components={{ strong: <strong className="font-bold text-ink" /> }}
+              values={{ district: stats.district_name }}
+            />
           ) : (
-            'Manage your platform from here — configure forms, upload tutorials, and control assessments.'
+            t('dashboard.subtitleDefault')
           )
         }
       >
@@ -99,7 +103,7 @@ const AdminDashboardPage: React.FC = () => {
       </div>
 
       {/* Quick actions */}
-      <h2 className="mt-2 font-display text-xl font-bold text-ink">Quick Actions</h2>
+      <h2 className="mt-2 font-display text-xl font-bold text-ink">{t('dashboard.quickActions')}</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {quickActions.map(action => (
           <Card

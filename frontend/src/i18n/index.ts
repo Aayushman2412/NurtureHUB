@@ -11,6 +11,7 @@ import enTests from './locales/en/tests.json';
 import enLearner from './locales/en/learner.json';
 import enMother from './locales/en/mother.json';
 import enLanding from './locales/en/landing.json';
+import enAdmin from './locales/en/admin.json';
 import hiCommon from './locales/hi/common.json';
 import hiAuth from './locales/hi/auth.json';
 import hiApp from './locales/hi/app.json';
@@ -20,6 +21,7 @@ import hiTests from './locales/hi/tests.json';
 import hiLearner from './locales/hi/learner.json';
 import hiMother from './locales/hi/mother.json';
 import hiLanding from './locales/hi/landing.json';
+import hiAdmin from './locales/hi/admin.json';
 
 /**
  * Languages the UI actually ships translations for. The switcher only offers
@@ -32,11 +34,11 @@ export const SUPPORTED_LANGUAGES = [
 
 export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 
-export const NAMESPACES = ['common', 'auth', 'app', 'tutorials', 'dashboard', 'tests', 'learner', 'mother', 'landing'] as const;
+export const NAMESPACES = ['common', 'auth', 'app', 'tutorials', 'dashboard', 'tests', 'learner', 'mother', 'landing', 'admin'] as const;
 
 const resources = {
-  en: { common: enCommon, auth: enAuth, app: enApp, tutorials: enTutorials, dashboard: enDashboard, tests: enTests, learner: enLearner, mother: enMother, landing: enLanding },
-  hi: { common: hiCommon, auth: hiAuth, app: hiApp, tutorials: hiTutorials, dashboard: hiDashboard, tests: hiTests, learner: hiLearner, mother: hiMother, landing: hiLanding },
+  en: { common: enCommon, auth: enAuth, app: enApp, tutorials: enTutorials, dashboard: enDashboard, tests: enTests, learner: enLearner, mother: enMother, landing: enLanding, admin: enAdmin },
+  hi: { common: hiCommon, auth: hiAuth, app: hiApp, tutorials: hiTutorials, dashboard: hiDashboard, tests: hiTests, learner: hiLearner, mother: hiMother, landing: hiLanding, admin: hiAdmin },
 } as const;
 
 i18n
