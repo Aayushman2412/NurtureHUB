@@ -1,0 +1,89 @@
+{
+  "loading": "ट्यूटोरियल लोड हो रहे हैं…",
+  "header": {
+    "title": "ट्यूटोरियल और चरण प्रबंधक",
+    "description": "प्रशिक्षण चरण, वीडियो ट्यूटोरियल (यूट्यूब सेक्शन या MP4), और ट्यूटोरियल के बाद के क्विज़ पॉपअप प्रबंधित करें।",
+    "addPhase": "चरण जोड़ें"
+  },
+  "preview": {
+    "title": "वीडियो पूर्वावलोकन (क्लिप किया हुआ)",
+    "clip": "सेक्शन: {{start}} → {{end}} ({{duration}} अवधि)"
+  },
+  "stage": {
+    "phaseLabel": "चरण {{n}}",
+    "testPhaseSuffix": " • टेस्ट चरण",
+    "testSummary": "एक निर्धारित टेस्ट रखता है (इसे टेस्ट प्रबंधन में प्रबंधित करें)",
+    "summary": "{{n}} ट्यूटोरियल • क्विज़ {{status}}",
+    "quizEnabled": "सक्षम",
+    "quizDisabled": "अक्षम",
+    "toggleQuizEnable": "पूरे चरण के लिए क्विज़ पॉपअप सक्षम करें",
+    "toggleQuizDisable": "पूरे चरण के लिए क्विज़ पॉपअप अक्षम करें",
+    "deletePhase": "चरण हटाएँ",
+    "confirmDelete": "इस चरण और इसके सभी ट्यूटोरियल को हटाएँ?",
+    "testPhaseNote": "यह एक टेस्ट चरण है — इसका टेस्ट, शेड्यूल और प्रश्न <strong>टेस्ट प्रबंधन</strong> में प्रबंधित करें।"
+  },
+  "tutorial": {
+    "meta": "{{module}} • {{minutes}} मिनट",
+    "clipSuffix": " • सेक्शन: {{start}}-{{end}}",
+    "mp4Suffix": " • MP4",
+    "quizLabel": "क्विज़: ",
+    "quizCount": "{{n}} प्रश्न",
+    "quizNone": "कोई नहीं",
+    "quizOff": " (बंद)",
+    "toggleQuizEnable": "इस ट्यूटोरियल के लिए क्विज़ पॉपअप सक्षम करें",
+    "toggleQuizDisable": "इस ट्यूटोरियल के लिए क्विज़ पॉपअप अक्षम करें",
+    "manageQuiz": "क्विज़ प्रश्न प्रबंधित करें",
+    "preview": "पूर्वावलोकन",
+    "edit": "संपादित करें",
+    "delete": "हटाएँ",
+    "confirmDelete": "इस ट्यूटोरियल को हटाएँ?",
+    "addToPhase": "इस चरण में ट्यूटोरियल जोड़ें"
+  },
+  "fields": {
+    "title": "शीर्षक",
+    "titleRequired": "शीर्षक *",
+    "moduleNumber": "मॉड्यूल #",
+    "youtubeUrl": "यूट्यूब URL",
+    "videoFileUrl": "वीडियो फ़ाइल URL (MP4)",
+    "durationMin": "अवधि (मिनट)",
+    "startSeconds": "प्रारंभ (सेकंड)",
+    "endSeconds": "समाप्त (सेकंड)",
+    "description": "विवरण"
+  },
+  "placeholders": {
+    "title": "ट्यूटोरियल शीर्षक",
+    "moduleNumber": "मॉड्यूल 1.4",
+    "youtubeUrl": "https://youtube.com/watch?v=...",
+    "videoFileUrl": "https://.../video.mp4 (यदि यूट्यूब नहीं है)",
+    "description": "संक्षिप्त विवरण...",
+    "phaseTitle": "उदा. चरण 5: रिफ्रेशर वीडियो",
+    "phaseDescription": "शिक्षार्थी क्या कवर करेंगे...",
+    "questionText": "प्रश्न पाठ"
+  },
+  "addTutorial": {
+    "heading": "नया ट्यूटोरियल जोड़ें",
+    "previewClip": "सेक्शन पूर्वावलोकन",
+    "cancel": "रद्द करें",
+    "submit": "ट्यूटोरियल जोड़ें"
+  },
+  "addPhaseModal": {
+    "title": "नया वीडियो चरण जोड़ें",
+    "cancel": "रद्द करें",
+    "create": "चरण बनाएँ",
+    "phaseTitleLabel": "चरण शीर्षक *",
+    "note": "यह एक वीडियो चरण बनाता है। निर्धारित टेस्ट <strong>टेस्ट प्रबंधन</strong> में प्रबंधित किए जाते हैं।"
+  },
+  "quiz": {
+    "modalTitle": "क्विज़ प्रश्न — {{title}}",
+    "cancel": "रद्द करें",
+    "saving": "सहेजा जा रहा है…",
+    "save": "क्विज़ सहेजें",
+    "intro": "उपयोगकर्ता ट्यूटोरियल पूरा करने के बाद पॉपअप में ये 3–5 प्रश्न देखते हैं। विकल्प C और D वैकल्पिक हैं।",
+    "questionLabel": "प्रश्न {{n}}",
+    "removeQuestion": "प्रश्न हटाएँ",
+    "optionLabel": "विकल्प {{letter}}",
+    "correctAnswer": "सही उत्तर",
+    "addQuestion": "प्रश्न जोड़ें",
+    "maxSuffix": "(अधिकतम 5)"
+  }
+}

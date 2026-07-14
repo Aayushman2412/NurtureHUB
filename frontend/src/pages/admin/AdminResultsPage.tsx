@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   Download, RefreshCw, Upload, Users, CheckCircle2, XCircle,
   GraduationCap, AlertCircle, Trash2, Search, Bell,
@@ -87,8 +89,12 @@ interface UploadSummary {
   already_selected: string[];
 }
 
-const testLabel = (t: TestMeta) =>
-  t.test_type === 'formative' ? 'Formative' : t.test_type === 'screening' ? 'Screening' : t.title;
+const testLabel = (test: TestMeta, t: TFunction) =>
+  test.test_type === 'formative'
+    ? t('testType.formative')
+    : test.test_type === 'screening'
+      ? t('testType.screening')
+      : test.title;
 
 const getDistrict = () => localStorage.getItem('nh_admin_district') || 'jalna';
 
@@ -96,6 +102,7 @@ const scoreColor = (score: number) =>
   score >= 75 ? 'text-success-600' : score >= 45 ? 'text-amber-600' : 'text-error-600';
 
 const AdminResultsPage: React.FC = () => {
+  const { t } = useTranslation('adminResults');
   const { showToast } = useToast();
   const [data, setData] = useState<ResultsData | null>(null);
   const [selections, setSelections] = useState<Selection[]>([]);
@@ -117,7 +124,7 @@ const AdminResultsPage: React.FC = () => {
         setLoading(false);
       })
       .catch(() => {
-        showToast('Failed to load results.', 'error');
+        showToast(t('toasts.loadFailed'), 'error');
         setLoading(false);
       });
   };
@@ -139,19 +146,22 @@ const AdminResultsPage: React.FC = () => {
   const downloadExcel = () => {
     if (!data) return;
     const headers = [
-      'User Name', 'Email',
-      'Tutorials Completed', 'Avg Watch %', 'Quizzes Answered', 'Quizzes Skipped', 'Quiz Accuracy %', 'Performance Score',
-      ...data.tests.flatMap(t => [
-        `${testLabel(t)} - Best Score %`,
-        `${testLabel(t)} - Attempts`,
-        `${testLabel(t)} - Passed`,
-        `${testLabel(t)} - Risk Score`,
-        `${testLabel(t)} - Tab Switches`,
-        `${testLabel(t)} - Fullscreen Exits`,
-        `${testLabel(t)} - Copy/Paste`,
-        `${testLabel(t)} - Flagged`,
-      ]),
-      'Completed Full Flow', 'Selected for Face-to-Face',
+      t('excel.userName'), t('excel.email'),
+      t('excel.tutorialsCompleted'), t('excel.avgWatch'), t('excel.quizzesAnswered'), t('excel.quizzesSkipped'), t('excel.quizAccuracy'), t('excel.performanceScore'),
+      ...data.tests.flatMap(test => {
+        const label = testLabel(test, t);
+        return [
+          t('excel.bestScore', { label }),
+          t('excel.attempts', { label }),
+          t('excel.passed', { label }),
+          t('excel.riskScore', { label }),
+          t('excel.tabSwitches', { label }),
+          t('excel.fullscreenExits', { label }),
+          t('excel.copyPaste', { label }),
+          t('excel.flagged', { label }),
+        ];
+      }),
+      t('excel.completedFullFlow'), t('excel.selectedForF2f'),
     ];
     const rows = data.users.map(u => [
       u.name, u.email,
@@ -161,21 +171,21 @@ const AdminResultsPage: React.FC = () => {
       u.summary.quizzes_skipped,
       u.summary.quiz_accuracy_pct,
       u.summary.performance_score,
-      ...data.tests.flatMap(t => {
-        const r = u.tests[String(t.id)];
+      ...data.tests.flatMap(test => {
+        const r = u.tests[String(test.id)];
         return r ? [
-          r.best_score ?? '—', r.attempts_count, r.is_passed ? 'Yes' : 'No',
+          r.best_score ?? '—', r.attempts_count, r.is_passed ? t('excel.yes') : t('excel.no'),
           r.max_risk_score, r.tab_switches, r.fullscreen_exits, r.copy_paste_events,
-          r.was_flagged ? 'Yes' : 'No',
-        ] : ['—', 0, 'No', 0, 0, 0, 0, 'No'];
+          r.was_flagged ? t('excel.yes') : t('excel.no'),
+        ] : ['—', 0, t('excel.no'), 0, 0, 0, 0, t('excel.no')];
       }),
-      u.completed_flow ? 'Yes' : 'No',
-      u.face_to_face.selected ? 'Yes' : 'No',
+      u.completed_flow ? t('excel.yes') : t('excel.no'),
+      u.face_to_face.selected ? t('excel.yes') : t('excel.no'),
     ]);
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    XLSX.utils.book_append_sheet(wb, ws, 'Combined Results');
+    XLSX.utils.book_append_sheet(wb, ws, t('excel.sheet'));
     XLSX.writeFile(wb, `results_${data.district}.xlsx`);
   };
 
@@ -203,7 +213,7 @@ const AdminResultsPage: React.FC = () => {
 
         if (emails.length === 0) {
           setUploadSummary({ matched: [], unmatched: [], already_selected: [] });
-          showToast('No email addresses found in the uploaded sheet.', 'warning');
+          showToast(t('toasts.noEmails'), 'warning');
           return;
         }
 
@@ -212,11 +222,11 @@ const AdminResultsPage: React.FC = () => {
           { emails, notify: true }
         );
         setUploadSummary(res.data);
-        showToast(`Selected & notified ${res.data.matched.length} user(s).`, 'success');
+        showToast(t('toasts.selectedNotified', { n: res.data.matched.length }), 'success');
         fetchData();
       } catch (err) {
         console.error('Failed to process selection file:', err);
-        showToast('Failed to process the selection file.', 'error');
+        showToast(t('toasts.processFailed'), 'error');
       } finally {
         setUploading(false);
       }
@@ -226,33 +236,33 @@ const AdminResultsPage: React.FC = () => {
   };
 
   const removeSelection = (userId: number) => {
-    if (!confirm('Remove this user from the face-to-face selection list?')) return;
+    if (!confirm(t('confirm.removeSelection'))) return;
     client.delete(`/api/admin/results/face-to-face/${userId}`)
       .then(() => {
-        showToast('Removed from selection.', 'success');
+        showToast(t('toasts.removed'), 'success');
         fetchData();
       })
-      .catch(() => showToast('Failed to remove selection.', 'error'));
+      .catch(() => showToast(t('toasts.removeFailed'), 'error'));
   };
 
-  if (loading) return <PageLoader label="Loading results…" />;
+  if (loading) return <PageLoader label={t('loading')} />;
 
   return (
     <div>
       <PageHeader
-        title="Results"
-        description={`Combined tutorial + test performance for ${data?.district_name || 'this district'}, including anti-cheat summaries. Upload the final selection list to notify users about face-to-face training.`}
+        title={t('header.title')}
+        description={t('header.description', { district: data?.district_name || t('header.thisDistrict') })}
         actions={
           <>
             <Button variant="outline" iconLeft={<RefreshCw className="size-4" />} onClick={fetchData}>
-              Refresh
+              {t('header.refresh')}
             </Button>
             <Button
               iconLeft={<Download className="size-4" />}
               onClick={downloadExcel}
               disabled={!data || data.users.length === 0}
             >
-              Download Excel
+              {t('header.downloadExcel')}
             </Button>
           </>
         }
@@ -262,7 +272,7 @@ const AdminResultsPage: React.FC = () => {
       <div className="mb-4 max-w-sm">
         <Input
           leftIcon={<Search className="size-4" />}
-          placeholder="Search by name or email…"
+          placeholder={t('searchPlaceholder')}
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -272,22 +282,22 @@ const AdminResultsPage: React.FC = () => {
       {!data || data.users.length === 0 ? (
         <EmptyState
           icon={<Users className="size-10" />}
-          title="No users yet"
-          description="No users registered in this district yet."
+          title={t('empty.usersTitle')}
+          description={t('empty.usersBody')}
         />
       ) : (
         <div className="mb-8">
           <Table density="compact">
             <THead>
               <Tr>
-                <Th className="sticky left-0 z-10 bg-surface-sunken">User</Th>
-                <Th className="text-center">Tutorials</Th>
-                <Th className="text-center">Performance</Th>
-                {data.tests.map(t => (
-                  <Th key={t.id} title={t.title} className="text-center">{testLabel(t)} Test</Th>
+                <Th className="sticky left-0 z-10 bg-surface-sunken">{t('table.colUser')}</Th>
+                <Th className="text-center">{t('table.colTutorials')}</Th>
+                <Th className="text-center">{t('table.colPerformance')}</Th>
+                {data.tests.map(test => (
+                  <Th key={test.id} title={test.title} className="text-center">{t('table.testSuffix', { label: testLabel(test, t) })}</Th>
                 ))}
-                <Th className="text-center">Flow Status</Th>
-                <Th className="text-center">Face-to-Face</Th>
+                <Th className="text-center">{t('table.colFlowStatus')}</Th>
+                <Th className="text-center">{t('table.colFaceToFace')}</Th>
               </Tr>
             </THead>
             <TBody>
@@ -302,28 +312,28 @@ const AdminResultsPage: React.FC = () => {
                       {u.summary.tutorials_completed}/{u.summary.total_tutorials}
                     </div>
                     <div className="text-[0.7rem] text-ink-faint">
-                      {u.summary.avg_watch_pct}% watched • quizzes {u.summary.quizzes_completed}✓ {u.summary.quizzes_skipped}⨯
+                      {t('table.watchedLine', { pct: u.summary.avg_watch_pct, done: u.summary.quizzes_completed, skipped: u.summary.quizzes_skipped })}
                     </div>
                   </Td>
                   <Td className="text-center">
                     <span className={cn('font-display font-extrabold', scoreColor(u.summary.performance_score))}>
                       {u.summary.performance_score}
                     </span>
-                    <span className="text-[0.7rem] text-ink-faint">/100</span>
+                    <span className="text-[0.7rem] text-ink-faint">{t('table.outOf100')}</span>
                   </Td>
-                  {data.tests.map(t => {
-                    const r = u.tests[String(t.id)];
+                  {data.tests.map(test => {
+                    const r = u.tests[String(test.id)];
                     if (!r || r.attempts_count === 0) {
-                      return <Td key={t.id} className="text-center text-ink-faint">Not attempted</Td>;
+                      return <Td key={test.id} className="text-center text-ink-faint">{t('table.notAttempted')}</Td>;
                     }
                     const riskAlert = r.was_flagged || r.max_risk_score >= 50;
                     return (
-                      <Td key={t.id} className="whitespace-nowrap text-center">
+                      <Td key={test.id} className="whitespace-nowrap text-center">
                         <div className={cn('font-bold', r.is_passed ? 'text-success-600' : 'text-error-600')}>
                           {r.best_score !== null ? `${Math.round(r.best_score)}%` : '—'} {r.is_passed ? '✓' : '✗'}
                         </div>
                         <div className={cn('text-[0.7rem]', riskAlert ? 'text-error-600' : 'text-ink-faint')}>
-                          risk {r.max_risk_score} • tabs {r.tab_switches} • fs {r.fullscreen_exits} • cp {r.copy_paste_events}
+                          {t('table.riskLine', { risk: r.max_risk_score, tabs: r.tab_switches, fs: r.fullscreen_exits, cp: r.copy_paste_events })}
                           {r.was_flagged ? ' • 🚩' : ''}
                         </div>
                       </Td>
@@ -331,14 +341,14 @@ const AdminResultsPage: React.FC = () => {
                   })}
                   <Td className="text-center">
                     {u.completed_flow ? (
-                      <Badge variant="success" size="sm">Completed</Badge>
+                      <Badge variant="success" size="sm">{t('status.completed')}</Badge>
                     ) : (
-                      <Badge variant="warning" size="sm">In progress</Badge>
+                      <Badge variant="warning" size="sm">{t('status.inProgress')}</Badge>
                     )}
                   </Td>
                   <Td className="text-center">
                     {u.face_to_face.selected ? (
-                      <Badge variant="coral" size="sm">Selected</Badge>
+                      <Badge variant="coral" size="sm">{t('status.selected')}</Badge>
                     ) : (
                       <span className="text-sm text-ink-faint">—</span>
                     )}
@@ -355,10 +365,10 @@ const AdminResultsPage: React.FC = () => {
         title={
           <span className="inline-flex items-center gap-2">
             <GraduationCap className="size-5 text-primary" />
-            Face-to-Face Training Selection
+            {t('f2f.title')}
           </span>
         }
-        description="Upload an Excel sheet containing the emails of selected users (any column). Every matched user immediately receives a notification that they are selected and should await further instructions."
+        description={t('f2f.description')}
         actions={
           <>
             <Button
@@ -366,7 +376,7 @@ const AdminResultsPage: React.FC = () => {
               loading={uploading}
               onClick={() => fileInputRef.current?.click()}
             >
-              {uploading ? 'Uploading…' : 'Upload Selection Excel'}
+              {uploading ? t('f2f.uploading') : t('f2f.uploadButton')}
             </Button>
             <input
               ref={fileInputRef}
@@ -383,18 +393,18 @@ const AdminResultsPage: React.FC = () => {
         <Card className="mb-4 p-4">
           <div className="flex flex-wrap gap-5 text-sm">
             <span className="inline-flex items-center gap-1.5 text-success-600">
-              <CheckCircle2 className="size-3.5" /> Selected &amp; notified: <strong>{uploadSummary.matched.length}</strong>
+              <CheckCircle2 className="size-3.5" /> {t('upload.selectedNotified')} <strong>{uploadSummary.matched.length}</strong>
             </span>
             <span className="inline-flex items-center gap-1.5 text-amber-600">
-              <Bell className="size-3.5" /> Already selected: <strong>{uploadSummary.already_selected.length}</strong>
+              <Bell className="size-3.5" /> {t('upload.alreadySelected')} <strong>{uploadSummary.already_selected.length}</strong>
             </span>
             <span className="inline-flex items-center gap-1.5 text-error-600">
-              <XCircle className="size-3.5" /> No matching user: <strong>{uploadSummary.unmatched.length}</strong>
+              <XCircle className="size-3.5" /> {t('upload.noMatch')} <strong>{uploadSummary.unmatched.length}</strong>
             </span>
           </div>
           {uploadSummary.unmatched.length > 0 && (
             <p className="mt-2 inline-flex items-start gap-1.5 text-sm text-ink-faint">
-              <AlertCircle className="size-3.5 shrink-0 translate-y-0.5" /> Unmatched emails: {uploadSummary.unmatched.join(', ')}
+              <AlertCircle className="size-3.5 shrink-0 translate-y-0.5" /> {t('upload.unmatchedEmails', { emails: uploadSummary.unmatched.join(', ') })}
             </p>
           )}
         </Card>
@@ -403,19 +413,19 @@ const AdminResultsPage: React.FC = () => {
       {selections.length === 0 ? (
         <EmptyState
           icon={<GraduationCap className="size-10" />}
-          title="No selections yet"
-          description="No users selected for face-to-face training yet. Upload an Excel sheet to select and notify them."
+          title={t('empty.selectionsTitle')}
+          description={t('empty.selectionsBody')}
         />
       ) : (
         <Table density="compact">
           <THead>
             <Tr>
-              <Th>User</Th>
-              <Th>Email</Th>
-              <Th>Selected At</Th>
-              <Th>Uploaded By</Th>
-              <Th>Notified</Th>
-              <Th className="w-16 text-center">Remove</Th>
+              <Th>{t('selectionTable.colUser')}</Th>
+              <Th>{t('selectionTable.colEmail')}</Th>
+              <Th>{t('selectionTable.colSelectedAt')}</Th>
+              <Th>{t('selectionTable.colUploadedBy')}</Th>
+              <Th>{t('selectionTable.colNotified')}</Th>
+              <Th className="w-16 text-center">{t('selectionTable.colRemove')}</Th>
             </Tr>
           </THead>
           <TBody>
@@ -425,13 +435,13 @@ const AdminResultsPage: React.FC = () => {
                 <Td className="text-ink-muted">{sel.email}</Td>
                 <Td className="text-ink-muted">{sel.selected_at ? new Date(sel.selected_at).toLocaleString() : '—'}</Td>
                 <Td className="text-ink-muted">{sel.uploaded_by || '—'}</Td>
-                <Td>{sel.notified ? <span className="text-success-600">Yes</span> : 'No'}</Td>
+                <Td>{sel.notified ? <span className="text-success-600">{t('selectionTable.yes')}</span> : t('selectionTable.no')}</Td>
                 <Td className="text-center">
                   <Button
                     variant="ghost"
                     size="sm"
-                    aria-label="Remove from selection"
-                    title="Remove from selection"
+                    aria-label={t('selectionTable.removeAria')}
+                    title={t('selectionTable.removeAria')}
                     className="text-error-600 hover:text-error-600"
                     onClick={() => removeSelection(sel.user_id)}
                   >

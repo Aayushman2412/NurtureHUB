@@ -12,6 +12,12 @@ import enLearner from './locales/en/learner.json';
 import enMother from './locales/en/mother.json';
 import enLanding from './locales/en/landing.json';
 import enAdmin from './locales/en/admin.json';
+import enAdminResults from './locales/en/adminResults.json';
+import enAdminTests from './locales/en/adminTests.json';
+import enAdminTutorials from './locales/en/adminTutorials.json';
+import enAdminFormBuilder from './locales/en/adminFormBuilder.json';
+import enAdminLiveMonitor from './locales/en/adminLiveMonitor.json';
+import enValidation from './locales/en/validation.json';
 import hiCommon from './locales/hi/common.json';
 import hiAuth from './locales/hi/auth.json';
 import hiApp from './locales/hi/app.json';
@@ -22,6 +28,12 @@ import hiLearner from './locales/hi/learner.json';
 import hiMother from './locales/hi/mother.json';
 import hiLanding from './locales/hi/landing.json';
 import hiAdmin from './locales/hi/admin.json';
+import hiAdminResults from './locales/hi/adminResults.json';
+import hiAdminTests from './locales/hi/adminTests.json';
+import hiAdminTutorials from './locales/hi/adminTutorials.json';
+import hiAdminFormBuilder from './locales/hi/adminFormBuilder.json';
+import hiAdminLiveMonitor from './locales/hi/adminLiveMonitor.json';
+import hiValidation from './locales/hi/validation.json';
 
 /**
  * Languages the UI actually ships translations for. The switcher only offers
@@ -34,11 +46,24 @@ export const SUPPORTED_LANGUAGES = [
 
 export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 
-export const NAMESPACES = ['common', 'auth', 'app', 'tutorials', 'dashboard', 'tests', 'learner', 'mother', 'landing', 'admin'] as const;
+export const NAMESPACES = [
+  'common', 'auth', 'app', 'tutorials', 'dashboard', 'tests', 'learner', 'mother', 'landing',
+  'admin', 'adminResults', 'adminTests', 'adminTutorials', 'adminFormBuilder', 'adminLiveMonitor', 'validation',
+] as const;
 
 const resources = {
-  en: { common: enCommon, auth: enAuth, app: enApp, tutorials: enTutorials, dashboard: enDashboard, tests: enTests, learner: enLearner, mother: enMother, landing: enLanding, admin: enAdmin },
-  hi: { common: hiCommon, auth: hiAuth, app: hiApp, tutorials: hiTutorials, dashboard: hiDashboard, tests: hiTests, learner: hiLearner, mother: hiMother, landing: hiLanding, admin: hiAdmin },
+  en: {
+    common: enCommon, auth: enAuth, app: enApp, tutorials: enTutorials, dashboard: enDashboard, tests: enTests,
+    learner: enLearner, mother: enMother, landing: enLanding, admin: enAdmin, adminResults: enAdminResults,
+    adminTests: enAdminTests, adminTutorials: enAdminTutorials, adminFormBuilder: enAdminFormBuilder,
+    adminLiveMonitor: enAdminLiveMonitor, validation: enValidation,
+  },
+  hi: {
+    common: hiCommon, auth: hiAuth, app: hiApp, tutorials: hiTutorials, dashboard: hiDashboard, tests: hiTests,
+    learner: hiLearner, mother: hiMother, landing: hiLanding, admin: hiAdmin, adminResults: hiAdminResults,
+    adminTests: hiAdminTests, adminTutorials: hiAdminTutorials, adminFormBuilder: hiAdminFormBuilder,
+    adminLiveMonitor: hiAdminLiveMonitor, validation: hiValidation,
+  },
 } as const;
 
 i18n

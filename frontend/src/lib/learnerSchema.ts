@@ -3,6 +3,8 @@ import { toFieldErrors, pickErrors, type FieldErrors } from './validation';
 import { TRAININGS } from './learnerFields';
 
 // ── Reusable field validators (form state holds `number | ''` for empty selects) ──
+// NOTE: `msg` values are i18n keys (validation:*) resolved in toFieldErrors at
+// validation time — not literal English. Keeps error text translatable.
 const requiredId = (msg: string) =>
   z.union([z.number(), z.literal('')]).refine(v => typeof v === 'number' && v > 0, { message: msg });
 
@@ -23,35 +25,35 @@ const digits = (v: string) => v.replace(/\D/g, '');
 export const learnerSchema = z
   .object({
     // Personal
-    dob: requiredStr('Date of birth is required.'),
+    dob: requiredStr('validation:common.dobRequired'),
     age: z.union([z.number(), z.literal('')]).optional(),
-    gender: requiredStr('Please select your gender.'),
-    phone: z.string().refine(v => /^\d{10}$/.test(digits(v)), { message: 'Enter a valid 10-digit mobile number.' }),
+    gender: requiredStr('validation:learner.gender'),
+    phone: z.string().refine(v => /^\d{10}$/.test(digits(v)), { message: 'validation:common.phone10' }),
     alternatePhone: z.string().optional()
-      .refine(v => !v || /^\d{10}$/.test(digits(v)), { message: 'Alternate number must be 10 digits.' }),
-    maritalStatus: requiredStr('Please select marital status.'),
-    hasChildren: requiredStr('Please answer this question.'),
+      .refine(v => !v || /^\d{10}$/.test(digits(v)), { message: 'validation:common.altPhone10' }),
+    maritalStatus: requiredStr('validation:learner.marital'),
+    hasChildren: requiredStr('validation:common.answerQuestion'),
     numberChildren: z.union([z.number(), z.literal('')]).optional(),
     // Work & location
-    departmentId: requiredId('Please select a department.'),
+    departmentId: requiredId('validation:learner.department'),
     departmentOther: z.string().optional(),
-    designationId: requiredId('Please select a designation.'),
-    facilityTypeId: requiredId('Please select a facility type.'),
-    stateId: requiredId('Please select a state.'),
-    districtId: requiredId('Please select a district.'),
-    blockId: requiredId('Please select a taluk.'),
+    designationId: requiredId('validation:learner.designation'),
+    facilityTypeId: requiredId('validation:learner.facilityType'),
+    stateId: requiredId('validation:common.selectState'),
+    districtId: requiredId('validation:common.selectDistrict'),
+    blockId: requiredId('validation:common.selectTaluk'),
     // Village: a known village (villageId) OR a free-typed name (villageName); one required.
     villageId: z.union([z.number(), z.literal('')]).optional(),
     villageName: z.string().optional(),
-    facilityId: requiredId('Please select a facility.'),
-    residenceDistance: requiredRange(0, 100, 'Enter a distance between 0 and 100 km.'),
+    facilityId: requiredId('validation:learner.facility'),
+    residenceDistance: requiredRange(0, 100, 'validation:learner.distance'),
     // Education & experience
-    qualificationId: requiredId('Please select a qualification.'),
+    qualificationId: requiredId('validation:learner.qualification'),
     qualificationOther: z.string().optional(),
-    yearsService: requiredRange(0, 50, 'Enter total years of service (0–50).'),
-    yearsDesignation: requiredRange(0, 50, 'Enter years in current designation (0–50).'),
-    yearsFacility: requiredRange(0, 50, 'Enter years at current facility (0–50).'),
-    internetWorkplace: requiredStr('Please select one.'),
+    yearsService: requiredRange(0, 50, 'validation:learner.yearsService'),
+    yearsDesignation: requiredRange(0, 50, 'validation:learner.yearsDesignation'),
+    yearsFacility: requiredRange(0, 50, 'validation:learner.yearsFacility'),
+    internetWorkplace: requiredStr('validation:common.selectOne'),
     // Training recency — a keyed record; each expected key is checked in superRefine.
     trainings: z.record(z.string(), z.string()),
     // Derived flags (inform conditionals; not stored as form fields)
@@ -60,22 +62,22 @@ export const learnerSchema = z
   })
   .superRefine((v, ctx) => {
     if (!(typeof v.villageId === 'number' && v.villageId > 0) && !v.villageName?.trim())
-      ctx.addIssue({ code: 'custom', path: ['villageName'], message: 'Please select or enter a village.' });
+      ctx.addIssue({ code: 'custom', path: ['villageName'], message: 'validation:learner.village' });
     for (const t of TRAININGS) {
       if (!v.trainings?.[t.key]?.trim())
-        ctx.addIssue({ code: 'custom', path: ['trainings', t.key], message: 'Please answer this question.' });
+        ctx.addIssue({ code: 'custom', path: ['trainings', t.key], message: 'validation:common.answerQuestion' });
     }
     if (v.hasChildren === 'Yes' && (v.numberChildren === '' || v.numberChildren === undefined))
-      ctx.addIssue({ code: 'custom', path: ['numberChildren'], message: 'Please enter the number of children.' });
+      ctx.addIssue({ code: 'custom', path: ['numberChildren'], message: 'validation:learner.numberChildren' });
     if (v.isOtherDept && !v.departmentOther?.trim())
-      ctx.addIssue({ code: 'custom', path: ['departmentOther'], message: 'Please specify the department.' });
+      ctx.addIssue({ code: 'custom', path: ['departmentOther'], message: 'validation:learner.departmentOther' });
     if (v.showQualificationOther && !v.qualificationOther?.trim())
-      ctx.addIssue({ code: 'custom', path: ['qualificationOther'], message: 'Please specify your qualification.' });
+      ctx.addIssue({ code: 'custom', path: ['qualificationOther'], message: 'validation:learner.qualificationOther' });
     if (typeof v.yearsService === 'number') {
       if (typeof v.yearsDesignation === 'number' && v.yearsDesignation > v.yearsService)
-        ctx.addIssue({ code: 'custom', path: ['yearsDesignation'], message: 'Cannot exceed total years of service.' });
+        ctx.addIssue({ code: 'custom', path: ['yearsDesignation'], message: 'validation:learner.cannotExceedService' });
       if (typeof v.yearsFacility === 'number' && v.yearsFacility > v.yearsService)
-        ctx.addIssue({ code: 'custom', path: ['yearsFacility'], message: 'Cannot exceed total years of service.' });
+        ctx.addIssue({ code: 'custom', path: ['yearsFacility'], message: 'validation:learner.cannotExceedService' });
     }
   });
 

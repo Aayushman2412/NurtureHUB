@@ -1,0 +1,198 @@
+{
+  "loading": {
+    "title": "Connecting to Live Feed…",
+    "subtitle": "Establishing real-time connection for test monitoring"
+  },
+  "connError": {
+    "title": "Live feed unavailable",
+    "back": "Back to Test Manager"
+  },
+  "header": {
+    "titleFallback": "Test Monitor",
+    "live": "Live",
+    "description": "{{questions}} questions · {{minutes}} min duration",
+    "descriptionFallback": "Real-time test monitoring",
+    "reportTitle": "Download the full performance + anti-cheat report as Excel",
+    "report": "Report",
+    "connected": "Connected",
+    "reconnecting": "Reconnecting…",
+    "watching": "{{n}} watching"
+  },
+  "reconnectBanner": "Live connection lost — attempting to reconnect…",
+  "stats": {
+    "totalCandidates": "Total Candidates",
+    "activeNow": "Active Now",
+    "highRisk": "High Risk",
+    "flagged": "Flagged",
+    "avgProgress": "Avg Progress",
+    "avgAccuracy": "Avg Accuracy"
+  },
+  "controls": {
+    "searchPlaceholder": "Search by name or email…",
+    "sort": {
+      "riskScore": "Risk Score",
+      "timeRemaining": "Time Remaining",
+      "questionsDone": "Questions Done",
+      "accuracy": "Accuracy",
+      "tabSwitches": "Tab Switches"
+    },
+    "ascending": "Ascending",
+    "descending": "Descending",
+    "toggleSortOrder": "Toggle sort order",
+    "gridView": "Grid View",
+    "gridViewAria": "Grid view",
+    "tableView": "Table View",
+    "tableViewAria": "Table view"
+  },
+  "filters": {
+    "all": "All"
+  },
+  "status": {
+    "active": "Active",
+    "idle": "Idle",
+    "started": "Started",
+    "not_started": "Not Started",
+    "submitted": "Submitted",
+    "auto_submitted": "Auto-Submitted",
+    "disconnected": "Disconnected"
+  },
+  "showingCount": "Showing {{shown}} of {{total}} candidates",
+  "empty": {
+    "title": "No candidates found",
+    "waiting": "Waiting for candidates to connect…",
+    "adjustFilters": "Try adjusting your filters"
+  },
+  "riskScoreTitle": "Risk Score: {{score}}/100",
+  "qShort": "Q{{n}}",
+  "card": {
+    "unknownUser": "Unknown User",
+    "progress": "Progress",
+    "tabSwitchesTitle": "{{n}} tab switches",
+    "flaggedTitle": "Flagged",
+    "flag": "Flag",
+    "unflag": "Unflag",
+    "removeFlag": "Remove Flag",
+    "sendWarning": "Send Warning",
+    "viewDetails": "View Details"
+  },
+  "table": {
+    "candidate": "Candidate",
+    "status": "Status",
+    "progress": "Progress",
+    "accuracy": "Accuracy",
+    "timeLeft": "Time Left",
+    "currentQ": "Current Q",
+    "risk": "Risk",
+    "tabSwitches": "Tab Switches",
+    "actions": "Actions",
+    "unknown": "Unknown",
+    "flag": "Flag",
+    "unflag": "Unflag",
+    "warn": "Warn",
+    "sendWarningAria": "Send warning"
+  },
+  "detail": {
+    "loading": "Loading candidate details…",
+    "flagged": "Flagged",
+    "progress": "Progress",
+    "behavioralIndicators": "Behavioral Indicators",
+    "suspiciousFlags": "Suspicious Activity Flags",
+    "activityTimeline": "Activity Timeline (Recent)",
+    "adminActions": "Admin Actions",
+    "stats": {
+      "questionsAttempted": "Questions Attempted",
+      "correctAnswers": "Correct Answers",
+      "wrongAnswers": "Wrong Answers",
+      "accuracy": "Accuracy",
+      "timeRemaining": "Time Remaining",
+      "currentQuestion": "Current Question",
+      "avgTimeQuestion": "Avg Time/Question",
+      "fastestQuestion": "Fastest Question"
+    },
+    "behavioral": {
+      "tabSwitches": "{{n}} tab switches",
+      "fullscreenExits": "{{n}} fullscreen exits",
+      "copyPaste": "{{n}} copy/paste"
+    },
+    "footer": {
+      "removeFlag": "Remove Flag",
+      "flagUser": "Flag User",
+      "sendWarning": "Send Warning",
+      "addNote": "Add Note",
+      "forceSubmit": "Force Submit"
+    }
+  },
+  "actionModal": {
+    "titleForceSubmit": "Force Submit Test",
+    "titleSendWarning": "Send Warning",
+    "titleAddNote": "Add Violation Note",
+    "cancel": "Cancel",
+    "confirmForceSubmit": "Force Submit",
+    "confirmSendWarning": "Send Warning",
+    "confirmSaveNote": "Save Note",
+    "targetLabel": "Target:",
+    "forceSubmitWarning": "This will immediately submit the candidate's test. This action cannot be undone.",
+    "placeholderWarning": "Enter warning message…",
+    "placeholderNote": "Enter violation notes…",
+    "placeholderForceSubmit": "Reason for force submission…"
+  },
+  "actions": {
+    "flaggedByAdmin": "Flagged by admin"
+  },
+  "eventTypes": {
+    "HEARTBEAT": "Heartbeat",
+    "QUESTION_VIEWED": "Question Viewed",
+    "ANSWER_SELECTED": "Answer Selected",
+    "ANSWER_CHANGED": "Answer Changed",
+    "ANSWER_CLEARED": "Answer Cleared",
+    "ANSWER_MARKED_REVIEW": "Answer Marked Review",
+    "TEST_SUBMITTED": "Test Submitted",
+    "TEST_AUTO_SUBMITTED": "Test Auto-Submitted",
+    "TAB_SWITCH": "Tab Switch",
+    "FULLSCREEN_EXIT": "Fullscreen Exit",
+    "WINDOW_BLUR": "Window Blur",
+    "WINDOW_FOCUS": "Window Focus",
+    "COPY_PASTE_DETECTED": "Copy Paste Detected"
+  },
+  "actionTypes": {
+    "FLAG": "Flag",
+    "UNFLAG": "Unflag",
+    "FORCE_SUBMIT": "Force Submit",
+    "SEND_WARNING": "Send Warning",
+    "ADD_NOTE": "Add Note"
+  },
+  "export": {
+    "sheet": "Test Report",
+    "yes": "Yes",
+    "no": "No",
+    "headers": {
+      "candidateName": "Candidate Name",
+      "email": "Email",
+      "status": "Status",
+      "ipAddress": "IP Address",
+      "connectedAt": "Connected At",
+      "questionsAttempted": "Questions Attempted",
+      "totalQuestions": "Total Questions",
+      "correct": "Correct",
+      "wrong": "Wrong",
+      "accuracyPct": "Accuracy %",
+      "timeSpent": "Time Spent (s)",
+      "avgTimeQuestion": "Avg Time/Question (ms)",
+      "fastestQ": "Fastest Q (ms)",
+      "slowestQ": "Slowest Q (ms)",
+      "tabSwitches": "Tab Switches",
+      "fullscreenExits": "Fullscreen Exits",
+      "windowBlurs": "Window Blurs",
+      "copyPasteEvents": "Copy/Paste Events",
+      "questionSwitches": "Question Switches",
+      "idlePeriods": "Idle Periods",
+      "riskScore": "Risk Score",
+      "flagged": "Flagged",
+      "flagReason": "Flag Reason",
+      "suspiciousFlags": "Suspicious Flags",
+      "finalScorePct": "Final Score %",
+      "passed": "Passed",
+      "submittedAt": "Submitted At"
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import client from '../../api/client';
 import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown, Edit3, Save, Eye } from 'lucide-react';
 import { Button, Card, Checkbox, FieldLabel, Input, Modal, PageHeader, PageLoader, Select } from '../../components/ui';
@@ -19,16 +20,11 @@ interface FormField {
   options: FieldOption[] | null;
 }
 
-const FIELD_TYPES = [
-  { value: 'text', label: 'Text Input' },
-  { value: 'number', label: 'Number Input' },
-  { value: 'date', label: 'Date Picker' },
-  { value: 'dropdown', label: 'Dropdown Select' },
-  { value: 'radio', label: 'Radio Group' },
-  { value: 'textarea', label: 'Text Area' },
-];
+const FIELD_TYPE_VALUES = ['text', 'number', 'date', 'dropdown', 'radio', 'textarea'] as const;
 
 const AdminFormBuilderPage: React.FC = () => {
+  const { t } = useTranslation('adminFormBuilder');
+  const fieldTypes = FIELD_TYPE_VALUES.map(value => ({ value, label: t(`fieldTypes.${value}`) }));
   const [fields, setFields] = useState<FormField[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -79,7 +75,7 @@ const AdminFormBuilderPage: React.FC = () => {
   };
 
   const removeField = (id: string) => {
-    if (!confirm('Remove this field from the registration form?')) return;
+    if (!confirm(t('confirmRemove'))) return;
     saveConfig(fields.filter(f => f.id !== id));
   };
 
@@ -141,7 +137,7 @@ const AdminFormBuilderPage: React.FC = () => {
     return map[type] || '📝';
   };
 
-  if (loading) return <PageLoader label="Loading form configuration…" />;
+  if (loading) return <PageLoader label={t('loading')} />;
 
   const iconBtn =
     'flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer disabled:opacity-40 disabled:pointer-events-none';
@@ -156,7 +152,7 @@ const AdminFormBuilderPage: React.FC = () => {
     onAdd: () => void;
   }> = ({ options, onRemove, optionLabel, setOptionLabel, onAdd }) => (
     <div className="mt-4">
-      <FieldLabel size="sm">Options</FieldLabel>
+      <FieldLabel size="sm">{t('options.title')}</FieldLabel>
       <div className="flex flex-wrap gap-2">
         {options.map((opt, oi) => (
           <span
@@ -172,13 +168,13 @@ const AdminFormBuilderPage: React.FC = () => {
       </div>
       <div className="mt-2 flex gap-2">
         <Input
-          placeholder="New option label"
+          placeholder={t('options.newPlaceholder')}
           value={optionLabel}
           onChange={e => setOptionLabel(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && onAdd()}
         />
         <Button size="sm" onClick={onAdd}>
-          Add
+          {t('actions.add')}
         </Button>
       </div>
     </div>
@@ -187,15 +183,15 @@ const AdminFormBuilderPage: React.FC = () => {
   return (
     <div>
       <PageHeader
-        title="Registration Form Builder"
-        description="Add, remove, and reorder fields in the user registration form. Changes are saved automatically."
+        title={t('header.title')}
+        description={t('header.description')}
         actions={
           <>
             <Button variant="outline" iconLeft={<Eye className="size-4" />} onClick={() => setShowPreview(!showPreview)}>
-              {showPreview ? 'Hide Preview' : 'Preview Form'}
+              {showPreview ? t('header.hidePreview') : t('header.previewForm')}
             </Button>
             <Button iconLeft={<Plus className="size-4" />} onClick={() => setShowAddModal(true)}>
-              Add Field
+              {t('header.addField')}
             </Button>
           </>
         }
@@ -212,31 +208,31 @@ const AdminFormBuilderPage: React.FC = () => {
                 <div className="min-w-0 flex-1">
                   <span className="block truncate font-semibold text-ink">{field.label}</span>
                   <span className="text-xs text-ink-faint">
-                    {FIELD_TYPES.find(t => t.value === field.type)?.label} •{' '}
-                    {field.required ? 'Required' : 'Optional'}
-                    {field.options ? ` • ${field.options.length} options` : ''}
+                    {fieldTypes.find(ft => ft.value === field.type)?.label} •{' '}
+                    {field.required ? t('field.required') : t('field.optional')}
+                    {field.options ? ` • ${t('field.optionsCount', { n: field.options.length })}` : ''}
                   </span>
                 </div>
                 <div className="flex gap-1">
-                  <button onClick={() => moveField(idx, 'up')} disabled={idx === 0} className={iconBtn} title="Move up">
+                  <button onClick={() => moveField(idx, 'up')} disabled={idx === 0} className={iconBtn} title={t('actions.moveUp')}>
                     <ChevronUp className="size-4" />
                   </button>
                   <button
                     onClick={() => moveField(idx, 'down')}
                     disabled={idx === fields.length - 1}
                     className={iconBtn}
-                    title="Move down"
+                    title={t('actions.moveDown')}
                   >
                     <ChevronDown className="size-4" />
                   </button>
                   <button
                     onClick={() => setEditingField(editingField === field.id ? null : field.id)}
                     className={iconBtn}
-                    title="Edit"
+                    title={t('actions.edit')}
                   >
                     <Edit3 className="size-4" />
                   </button>
-                  <button onClick={() => removeField(field.id)} className={dangerIconBtn} title="Remove">
+                  <button onClick={() => removeField(field.id)} className={dangerIconBtn} title={t('actions.remove')}>
                     <Trash2 className="size-4" />
                   </button>
                 </div>
@@ -246,11 +242,11 @@ const AdminFormBuilderPage: React.FC = () => {
                 <div className="mt-4 border-t border-border pt-4">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
-                      <FieldLabel size="sm">Label</FieldLabel>
+                      <FieldLabel size="sm">{t('editor.label')}</FieldLabel>
                       <Input value={field.label} onChange={e => updateField(field.id, { label: e.target.value })} />
                     </div>
                     <div>
-                      <FieldLabel size="sm">Type</FieldLabel>
+                      <FieldLabel size="sm">{t('editor.type')}</FieldLabel>
                       <Select
                         value={field.type}
                         onChange={e =>
@@ -260,13 +256,13 @@ const AdminFormBuilderPage: React.FC = () => {
                           })
                         }
                       >
-                        {FIELD_TYPES.map(t => (
-                          <option key={t.value} value={t.value}>{t.label}</option>
+                        {fieldTypes.map(ft => (
+                          <option key={ft.value} value={ft.value}>{ft.label}</option>
                         ))}
                       </Select>
                     </div>
                     <div>
-                      <FieldLabel size="sm">Placeholder</FieldLabel>
+                      <FieldLabel size="sm">{t('editor.placeholder')}</FieldLabel>
                       <Input
                         value={field.placeholder}
                         onChange={e => updateField(field.id, { placeholder: e.target.value })}
@@ -274,7 +270,7 @@ const AdminFormBuilderPage: React.FC = () => {
                     </div>
                     <div className="flex items-center pt-6">
                       <Checkbox
-                        label="Required"
+                        label={t('field.required')}
                         checked={field.required}
                         onChange={e => updateField(field.id, { required: e.target.checked })}
                       />
@@ -299,7 +295,7 @@ const AdminFormBuilderPage: React.FC = () => {
         {/* Preview */}
         {showPreview && (
           <Card className="p-6">
-            <h3 className="mb-4 font-display font-bold text-ink">Form Preview</h3>
+            <h3 className="mb-4 font-display font-bold text-ink">{t('preview.title')}</h3>
             <div className="flex flex-col gap-4">
               {fields.map(field => (
                 <div key={field.id}>
@@ -314,7 +310,7 @@ const AdminFormBuilderPage: React.FC = () => {
                   )}
                   {field.type === 'dropdown' && (
                     <Select>
-                      <option>{field.placeholder || 'Select...'}</option>
+                      <option>{field.placeholder || t('preview.selectPlaceholder')}</option>
                       {field.options?.map((o, i) => (
                         <option key={i}>{o.label}</option>
                       ))}
@@ -340,29 +336,29 @@ const AdminFormBuilderPage: React.FC = () => {
       <Modal
         open={showAddModal}
         onClose={() => setShowAddModal(false)}
-        title="Add New Form Field"
+        title={t('addModal.title')}
         footer={
           <>
             <Button variant="outline" onClick={() => setShowAddModal(false)}>
-              Cancel
+              {t('actions.cancel')}
             </Button>
             <Button iconLeft={<Save className="size-4" />} onClick={addField} disabled={!newField.label.trim()}>
-              Add Field
+              {t('header.addField')}
             </Button>
           </>
         }
       >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <FieldLabel size="sm">Field Label *</FieldLabel>
+            <FieldLabel size="sm">{t('addModal.fieldLabel')}</FieldLabel>
             <Input
-              placeholder="e.g. Aadhar Number"
+              placeholder={t('addModal.labelPlaceholder')}
               value={newField.label}
               onChange={e => setNewField({ ...newField, label: e.target.value })}
             />
           </div>
           <div>
-            <FieldLabel size="sm">Type</FieldLabel>
+            <FieldLabel size="sm">{t('editor.type')}</FieldLabel>
             <Select
               value={newField.type}
               onChange={e =>
@@ -373,22 +369,22 @@ const AdminFormBuilderPage: React.FC = () => {
                 })
               }
             >
-              {FIELD_TYPES.map(t => (
-                <option key={t.value} value={t.value}>{t.label}</option>
+              {fieldTypes.map(ft => (
+                <option key={ft.value} value={ft.value}>{ft.label}</option>
               ))}
             </Select>
           </div>
           <div>
-            <FieldLabel size="sm">Placeholder</FieldLabel>
+            <FieldLabel size="sm">{t('editor.placeholder')}</FieldLabel>
             <Input
-              placeholder="e.g. Enter your ID..."
+              placeholder={t('addModal.placeholderPlaceholder')}
               value={newField.placeholder}
               onChange={e => setNewField({ ...newField, placeholder: e.target.value })}
             />
           </div>
           <div className="flex items-center pt-6">
             <Checkbox
-              label="Required"
+              label={t('field.required')}
               checked={newField.required}
               onChange={e => setNewField({ ...newField, required: e.target.checked })}
             />

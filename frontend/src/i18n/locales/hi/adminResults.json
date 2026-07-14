@@ -1,0 +1,95 @@
+{
+  "loading": "परिणाम लोड हो रहे हैं…",
+  "searchPlaceholder": "नाम या ईमेल से खोजें…",
+  "header": {
+    "title": "परिणाम",
+    "description": "{{district}} के लिए संयुक्त ट्यूटोरियल + परीक्षा प्रदर्शन, जिसमें एंटी-चीट सारांश शामिल हैं। उपयोगकर्ताओं को आमने-सामने प्रशिक्षण के बारे में सूचित करने के लिए अंतिम चयन सूची अपलोड करें।",
+    "thisDistrict": "इस ज़िले",
+    "refresh": "रीफ़्रेश करें",
+    "downloadExcel": "एक्सेल डाउनलोड करें"
+  },
+  "testType": {
+    "formative": "रचनात्मक",
+    "screening": "स्क्रीनिंग"
+  },
+  "table": {
+    "colUser": "उपयोगकर्ता",
+    "colTutorials": "ट्यूटोरियल",
+    "colPerformance": "प्रदर्शन",
+    "testSuffix": "{{label}} परीक्षा",
+    "colFlowStatus": "प्रवाह स्थिति",
+    "colFaceToFace": "आमने-सामने",
+    "notAttempted": "प्रयास नहीं किया",
+    "watchedLine": "{{pct}}% देखा • क्विज़ {{done}}✓ {{skipped}}⨯",
+    "riskLine": "जोखिम {{risk}} • टैब {{tabs}} • fs {{fs}} • cp {{cp}}",
+    "outOf100": "/100"
+  },
+  "status": {
+    "completed": "पूर्ण",
+    "inProgress": "प्रगति में",
+    "selected": "चयनित"
+  },
+  "empty": {
+    "usersTitle": "अभी कोई उपयोगकर्ता नहीं",
+    "usersBody": "इस ज़िले में अभी कोई उपयोगकर्ता पंजीकृत नहीं है।",
+    "selectionsTitle": "अभी कोई चयन नहीं",
+    "selectionsBody": "आमने-सामने प्रशिक्षण के लिए अभी तक किसी उपयोगकर्ता का चयन नहीं हुआ है। उन्हें चुनने और सूचित करने के लिए एक एक्सेल शीट अपलोड करें।"
+  },
+  "f2f": {
+    "title": "आमने-सामने प्रशिक्षण चयन",
+    "description": "चयनित उपयोगकर्ताओं के ईमेल (किसी भी कॉलम में) वाली एक एक्सेल शीट अपलोड करें। प्रत्येक मिलान उपयोगकर्ता को तुरंत एक सूचना मिलती है कि वे चयनित हैं और उन्हें आगे के निर्देशों की प्रतीक्षा करनी चाहिए।",
+    "uploading": "अपलोड हो रहा है…",
+    "uploadButton": "चयन एक्सेल अपलोड करें"
+  },
+  "upload": {
+    "selectedNotified": "चयनित और सूचित:",
+    "alreadySelected": "पहले से चयनित:",
+    "noMatch": "कोई मिलान उपयोगकर्ता नहीं:",
+    "unmatchedEmails": "बेमेल ईमेल: {{emails}}"
+  },
+  "selectionTable": {
+    "colUser": "उपयोगकर्ता",
+    "colEmail": "ईमेल",
+    "colSelectedAt": "चयनित समय",
+    "colUploadedBy": "द्वारा अपलोड किया गया",
+    "colNotified": "सूचित",
+    "colRemove": "हटाएँ",
+    "yes": "हाँ",
+    "no": "नहीं",
+    "removeAria": "चयन से हटाएँ"
+  },
+  "excel": {
+    "sheet": "संयुक्त परिणाम",
+    "userName": "उपयोगकर्ता नाम",
+    "email": "ईमेल",
+    "tutorialsCompleted": "पूर्ण ट्यूटोरियल",
+    "avgWatch": "औसत देखा %",
+    "quizzesAnswered": "उत्तर दिए क्विज़",
+    "quizzesSkipped": "छोड़े गए क्विज़",
+    "quizAccuracy": "क्विज़ सटीकता %",
+    "performanceScore": "प्रदर्शन स्कोर",
+    "bestScore": "{{label}} - सर्वोत्तम स्कोर %",
+    "attempts": "{{label}} - प्रयास",
+    "passed": "{{label}} - उत्तीर्ण",
+    "riskScore": "{{label}} - जोखिम स्कोर",
+    "tabSwitches": "{{label}} - टैब स्विच",
+    "fullscreenExits": "{{label}} - फ़ुलस्क्रीन निकास",
+    "copyPaste": "{{label}} - कॉपी/पेस्ट",
+    "flagged": "{{label}} - चिह्नित",
+    "completedFullFlow": "पूर्ण प्रवाह पूरा किया",
+    "selectedForF2f": "आमने-सामने के लिए चयनित",
+    "yes": "हाँ",
+    "no": "नहीं"
+  },
+  "toasts": {
+    "loadFailed": "परिणाम लोड करने में विफल।",
+    "noEmails": "अपलोड की गई शीट में कोई ईमेल पता नहीं मिला।",
+    "selectedNotified": "{{n}} उपयोगकर्ता को चयनित और सूचित किया गया।",
+    "processFailed": "चयन फ़ाइल संसाधित करने में विफल।",
+    "removed": "चयन से हटाया गया।",
+    "removeFailed": "चयन हटाने में विफल।"
+  },
+  "confirm": {
+    "removeSelection": "इस उपयोगकर्ता को आमने-सामने चयन सूची से हटाएँ?"
+  }
+}

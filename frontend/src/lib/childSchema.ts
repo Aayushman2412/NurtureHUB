@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { toFieldErrors, pickErrors, type FieldErrors } from './validation';
 
+// `msg` values are i18n keys (validation:*) resolved in toFieldErrors at validation time.
 const requiredStr = (msg: string) => z.string().refine(v => v.trim().length > 0, { message: msg });
 const requiredRange = (min: number, max: number, msg: string) =>
   z.union([z.number(), z.literal('')]).refine(v => typeof v === 'number' && v >= min && v <= max, { message: msg });
@@ -11,20 +12,20 @@ const daysBetween = (a: Date, b: Date) => Math.floor((a.getTime() - b.getTime())
 export const childSchema = z
   .object({
     // Birth
-    babies_born: requiredStr('Please select whether this was a single or twin birth.'),
-    adoption_date: requiredStr('Date of adoption is required.'),
-    child_name: requiredStr('Baby’s name is required (min 2 characters).').refine(v => v.trim().length >= 2, { message: 'Enter at least 2 characters.' }),
-    dob: requiredStr('Date of birth is required.'),
-    birth_weight: requiredRange(1, 5, 'Enter a birth weight between 1.0 and 5.0 kg.'),
-    birth_length: requiredRange(30, 65, 'Enter a birth length between 30 and 65 cm.'),
-    gender: requiredStr('Please select the gender.'),
-    previous_living_children: requiredRange(0, 10, 'Enter a number between 0 and 10.'),
+    babies_born: requiredStr('validation:child.babiesBorn'),
+    adoption_date: requiredStr('validation:child.adoptionRequired'),
+    child_name: requiredStr('validation:child.nameRequired').refine(v => v.trim().length >= 2, { message: 'validation:common.min2Chars' }),
+    dob: requiredStr('validation:common.dobRequired'),
+    birth_weight: requiredRange(1, 5, 'validation:child.birthWeight'),
+    birth_length: requiredRange(30, 65, 'validation:child.birthLength'),
+    gender: requiredStr('validation:child.gender'),
+    previous_living_children: requiredRange(0, 10, 'validation:child.previousChildren'),
     // Delivery & feeding
-    delivery_method: requiredStr('Please select the delivery method.'),
-    delivery_place: requiredStr('Please select the place of delivery.'),
+    delivery_method: requiredStr('validation:child.deliveryMethod'),
+    delivery_place: requiredStr('validation:child.deliveryPlace'),
     delivery_place_other: z.string().optional(),
-    bf_within_one_hour: requiredStr('Please answer this question.'),
-    ebf_during_stay: requiredStr('Please answer this question.'),
+    bf_within_one_hour: requiredStr('validation:common.answerQuestion'),
+    ebf_during_stay: requiredStr('validation:common.answerQuestion'),
     ebf_reason: z.string().optional(),
     // Conditions (not required; "Others" reveals a text field)
     birth_conditions: z.array(z.string()),
@@ -39,21 +40,21 @@ export const childSchema = z
     const today = new Date();
     const dob = toDate(v.dob);
     if (dob) {
-      if (daysBetween(dob, today) > 0) ctx.addIssue({ code: 'custom', path: ['dob'], message: 'Date of birth cannot be in the future.' });
-      else if (!v.isEdit && daysBetween(today, dob) > 365) ctx.addIssue({ code: 'custom', path: ['dob'], message: 'Date of birth cannot be more than 365 days ago.' });
+      if (daysBetween(dob, today) > 0) ctx.addIssue({ code: 'custom', path: ['dob'], message: 'validation:common.dobFuture' });
+      else if (!v.isEdit && daysBetween(today, dob) > 365) ctx.addIssue({ code: 'custom', path: ['dob'], message: 'validation:child.dob365' });
     }
     const adoption = toDate(v.adoption_date);
     if (adoption) {
-      if (daysBetween(adoption, today) > 0) ctx.addIssue({ code: 'custom', path: ['adoption_date'], message: 'Adoption date cannot be in the future.' });
-      else if (!v.isEdit && daysBetween(today, adoption) > 14) ctx.addIssue({ code: 'custom', path: ['adoption_date'], message: 'Adoption date cannot be more than 14 days ago.' });
-      if (dob && adoption < dob) ctx.addIssue({ code: 'custom', path: ['adoption_date'], message: 'Adoption date cannot be before the date of birth.' });
+      if (daysBetween(adoption, today) > 0) ctx.addIssue({ code: 'custom', path: ['adoption_date'], message: 'validation:common.adoptionFuture' });
+      else if (!v.isEdit && daysBetween(today, adoption) > 14) ctx.addIssue({ code: 'custom', path: ['adoption_date'], message: 'validation:child.adoption14' });
+      if (dob && adoption < dob) ctx.addIssue({ code: 'custom', path: ['adoption_date'], message: 'validation:common.adoptionBeforeDob' });
     }
     if (v.showDeliveryPlaceOther && !v.delivery_place_other?.trim())
-      ctx.addIssue({ code: 'custom', path: ['delivery_place_other'], message: 'Please specify the place of delivery.' });
+      ctx.addIssue({ code: 'custom', path: ['delivery_place_other'], message: 'validation:child.deliveryPlaceOther' });
     if (v.showEbfReason && !v.ebf_reason?.trim())
-      ctx.addIssue({ code: 'custom', path: ['ebf_reason'], message: 'Please give the reason exclusive breastfeeding was not done.' });
+      ctx.addIssue({ code: 'custom', path: ['ebf_reason'], message: 'validation:child.ebfReason' });
     if (v.showConditionOther && !v.pre_existing_other?.trim())
-      ctx.addIssue({ code: 'custom', path: ['pre_existing_other'], message: 'Please specify the other condition(s).' });
+      ctx.addIssue({ code: 'custom', path: ['pre_existing_other'], message: 'validation:child.conditionOther' });
   });
 
 export type ChildFormValues = z.input<typeof childSchema>;

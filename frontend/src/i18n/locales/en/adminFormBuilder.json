@@ -1,0 +1,51 @@
+{
+  "loading": "Loading form configuration…",
+  "header": {
+    "title": "Registration Form Builder",
+    "description": "Add, remove, and reorder fields in the user registration form. Changes are saved automatically.",
+    "previewForm": "Preview Form",
+    "hidePreview": "Hide Preview",
+    "addField": "Add Field"
+  },
+  "fieldTypes": {
+    "text": "Text Input",
+    "number": "Number Input",
+    "date": "Date Picker",
+    "dropdown": "Dropdown Select",
+    "radio": "Radio Group",
+    "textarea": "Text Area"
+  },
+  "field": {
+    "required": "Required",
+    "optional": "Optional",
+    "optionsCount": "{{n}} options"
+  },
+  "actions": {
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "edit": "Edit",
+    "remove": "Remove",
+    "add": "Add",
+    "cancel": "Cancel"
+  },
+  "confirmRemove": "Remove this field from the registration form?",
+  "editor": {
+    "label": "Label",
+    "type": "Type",
+    "placeholder": "Placeholder"
+  },
+  "options": {
+    "title": "Options",
+    "newPlaceholder": "New option label"
+  },
+  "preview": {
+    "title": "Form Preview",
+    "selectPlaceholder": "Select..."
+  },
+  "addModal": {
+    "title": "Add New Form Field",
+    "fieldLabel": "Field Label *",
+    "labelPlaceholder": "e.g. Aadhar Number",
+    "placeholderPlaceholder": "e.g. Enter your ID..."
+  }
+}
