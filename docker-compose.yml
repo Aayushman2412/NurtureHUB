@@ -1,0 +1,66 @@
+name: nurturehub
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nurturehub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nurturehub}
+      POSTGRES_DB: ${POSTGRES_DB:-nurturehub}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nurturehub} -d ${POSTGRES_DB:-nurturehub}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nurturehub}:${POSTGRES_PASSWORD:-nurturehub}@db:5432/${POSTGRES_DB:-nurturehub}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-supersecretkeyfornurturehubdevelopment12345}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-NurtureHUB <noreply@nurturehub.org>}
+    # Bound to localhost by default (host-only API/docs access at /docs). In
+    # production the SPA reaches the backend via the frontend nginx proxy, not this.
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:${BACKEND_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/').status==200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 45s   # allow time for migrations + seed on first boot
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Empty => same-origin; nginx proxies /api and /ws to the backend.
+        VITE_API_URL: ${VITE_API_URL:-}
+        VITE_WS_URL: ${VITE_WS_URL:-}
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    depends_on:
+      backend:
+        condition: service_healthy
+    # Bound to localhost by default so a host-level nginx/TLS proxy is the only
+    # public entrypoint. Set BIND_ADDR=0.0.0.0 to expose it directly.
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:${FRONTEND_PORT:-8080}:80"
+    restart: unless-stopped
+
+volumes:
+  db_data:
