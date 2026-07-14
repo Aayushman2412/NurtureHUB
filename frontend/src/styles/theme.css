@@ -76,8 +76,10 @@
   --color-info-600: var(--color-coral-600);
 
   /* ── Typography ────────────────────────────────────────────── */
-  --font-display: 'Figtree', ui-sans-serif, system-ui, sans-serif;
-  --font-body: 'Nunito Sans', ui-sans-serif, system-ui, sans-serif;
+  /* 'Noto Sans Devanagari' is a fallback so Hindi (and other Devanagari) text
+     renders in a proper typeface — Figtree/Nunito Sans don't cover the script. */
+  --font-display: 'Figtree', 'Noto Sans Devanagari', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Nunito Sans', 'Noto Sans Devanagari', ui-sans-serif, system-ui, sans-serif;
 
   /* ── Radius (nudged up for warmer geometry) ────────────────── */
   --radius-sm: 6px;

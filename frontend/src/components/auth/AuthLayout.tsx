@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
-import { Sun, Moon, Globe, ChevronDown, BookOpen, Award, Sprout } from 'lucide-react';
+import { Sun, Moon, BookOpen, Award, Sprout } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Dropdown } from '../ui';
+import LanguageSwitcher from '../LanguageSwitcher';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -10,19 +11,9 @@ interface AuthLayoutProps {
   subtitle: string;
 }
 
-const languages = [
-  { name: 'English', native: 'English' },
-  { name: 'Hindi', native: 'हिंदी' },
-  { name: 'Tamil', native: 'தமிழ்' },
-  { name: 'Telugu', native: 'తెలుగు' },
-  { name: 'Marathi', native: 'मराठी' },
-  { name: 'Bengali', native: 'বাংলা' },
-  { name: 'Kannada', native: 'ಕನ್ನಡ' },
-];
-
 const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) => {
   const { darkMode, toggleDarkMode } = useTheme();
-  const [selectedLang, setSelectedLang] = useState('English');
+  const { t } = useTranslation(['auth', 'common']);
 
   return (
     <div className="relative h-screen overflow-hidden bg-background text-ink">
@@ -42,31 +33,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
         <div className="scrollbar-slim flex h-full w-full flex-col overflow-y-auto px-6 py-6 sm:px-12 lg:w-1/2 lg:px-16">
           {/* Language selector */}
           <div className="mb-6">
-            <Dropdown
-              trigger={open => (
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-full border border-border bg-surface
-                             px-4 py-2 text-sm font-semibold text-ink-muted hover:text-ink
-                             transition-colors cursor-pointer"
-                >
-                  <Globe className="size-4" />
-                  {selectedLang}
-                  <ChevronDown className={`size-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
-                </button>
-              )}
-              items={languages.map(lang => ({
-                key: lang.name,
-                selected: lang.name === selectedLang,
-                label: (
-                  <span className="flex w-full items-center justify-between gap-4">
-                    {lang.name}
-                    <span className="text-xs opacity-60">{lang.native}</span>
-                  </span>
-                ),
-                onSelect: () => setSelectedLang(lang.name),
-              }))}
-            />
+            <LanguageSwitcher />
           </div>
 
           {/* Centered form content */}
@@ -76,9 +43,9 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
                 <Sprout className="size-7 text-white" />
               </span>
               <div>
-                <span className="block font-display text-2xl font-extrabold">NurtureHUB</span>
+                <span className="block font-display text-2xl font-extrabold">{t('common:brand.name')}</span>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
-                  ICDS Training Platform
+                  {t('common:brand.tagline')}
                 </span>
               </div>
             </div>
@@ -91,10 +58,10 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
 
           {/* Footer-lite */}
           <div className="mt-6 flex w-full items-center justify-between text-[13px] text-ink-faint">
-            <p>© 2026 NurtureHUB. All rights reserved.</p>
+            <p>{t('common:footer.rights')}</p>
             <div className="flex gap-4">
-              <Link to="#" className="hover:text-ink-muted transition-colors">Privacy Policy</Link>
-              <Link to="#" className="hover:text-ink-muted transition-colors">Terms</Link>
+              <Link to="#" className="hover:text-ink-muted transition-colors">{t('common:footer.privacy')}</Link>
+              <Link to="#" className="hover:text-ink-muted transition-colors">{t('common:footer.terms')}</Link>
             </div>
           </div>
         </div>
@@ -113,29 +80,28 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
                 <Sprout className="size-11 text-sage-600 dark:text-sage-300" />
               </div>
               <h3 className="font-display text-3xl font-extrabold leading-tight">
-                Nurturing Skills, Elevating Communities
+                {t('auth:panel.heading')}
               </h3>
               <div className="mt-4 h-1 w-16 rounded-full bg-coral-500" aria-hidden />
             </div>
 
             <p className="mb-8 text-ink-muted">
-              Access standardized training videos, complete knowledge-check assessments, unlock
-              specialized badges, and monitor your personal growth journey.
+              {t('auth:panel.body')}
             </p>
 
             <div className="grid grid-cols-2 gap-4 text-left">
               <div className="rounded-2xl border border-border bg-surface/70 p-5 backdrop-blur-sm">
                 <BookOpen className="mb-3 size-6 text-coral-600 dark:text-coral-300" />
-                <h4 className="font-display text-sm font-bold">Training Modules</h4>
+                <h4 className="font-display text-sm font-bold">{t('auth:panel.modulesTitle')}</h4>
                 <p className="mt-1 text-xs text-ink-muted">
-                  Interactive video tutorials designed specifically for ICDS &amp; Anganwadi workflows.
+                  {t('auth:panel.modulesBody')}
                 </p>
               </div>
               <div className="rounded-2xl border border-border bg-surface/70 p-5 backdrop-blur-sm">
                 <Award className="mb-3 size-6 text-coral-600 dark:text-coral-300" />
-                <h4 className="font-display text-sm font-bold">Assessments &amp; Badges</h4>
+                <h4 className="font-display text-sm font-bold">{t('auth:panel.badgesTitle')}</h4>
                 <p className="mt-1 text-xs text-ink-muted">
-                  Structured knowledge checks to verify learning and earn official milestone badges.
+                  {t('auth:panel.badgesBody')}
                 </p>
               </div>
             </div>

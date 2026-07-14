@@ -1,0 +1,14 @@
+{
+  "brand": {
+    "name": "NurtureHUB",
+    "tagline": "ICDS Training Platform"
+  },
+  "footer": {
+    "rights": "© 2026 NurtureHUB. All rights reserved.",
+    "privacy": "Privacy Policy",
+    "terms": "Terms"
+  },
+  "language": {
+    "label": "Language"
+  }
+}

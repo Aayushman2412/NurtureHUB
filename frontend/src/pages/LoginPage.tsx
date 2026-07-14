@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -8,18 +9,22 @@ import client from '../api/client';
 import { Mail, ArrowLeft, Shield } from 'lucide-react';
 import { Button, Divider, FieldLabel, Input, PasswordInput } from '../components/ui';
 
-const BackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="mx-auto mt-2 inline-flex items-center gap-2 text-sm font-medium text-ink-muted
-               hover:text-ink transition-colors cursor-pointer"
-  >
-    <ArrowLeft className="size-4" /> Back to sign-in options
-  </button>
-);
+const BackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
+  const { t } = useTranslation('auth');
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mx-auto mt-2 inline-flex items-center gap-2 text-sm font-medium text-ink-muted
+                 hover:text-ink transition-colors cursor-pointer"
+    >
+      <ArrowLeft className="size-4" /> {t('login.backToOptions')}
+    </button>
+  );
+};
 
 const LoginPage: React.FC = () => {
+  const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -37,23 +42,23 @@ const LoginPage: React.FC = () => {
   // If redirected because session expired, show toast
   React.useEffect(() => {
     if (searchParams.get('expired') === 'true') {
-      showToast('Your session has expired. Please log in again.', 'warning');
+      showToast(t('login.toast.sessionExpired'), 'warning');
     }
   }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      showToast('Please fill in all fields', 'warning');
+      showToast(t('login.toast.fillAll'), 'warning');
       return;
     }
 
     setLoading(true);
-    const toastId = showToast('Signing in...', 'loading');
+    const toastId = showToast(t('login.toast.signingIn'), 'loading');
 
     try {
       const response = await login(email, password);
-      updateToast(toastId, 'Welcome back to NurtureHUB!', 'success');
+      updateToast(toastId, t('login.toast.welcomeBack'), 'success');
 
       // Handle page routing according to user auth states
       if (!response.is_verified) {
@@ -64,7 +69,7 @@ const LoginPage: React.FC = () => {
         navigate('/dashboard');
       }
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || 'Invalid email or password';
+      const errorMsg = err.response?.data?.detail || t('login.toast.invalidCreds');
       updateToast(toastId, errorMsg, 'error');
     } finally {
       setLoading(false);
@@ -74,7 +79,7 @@ const LoginPage: React.FC = () => {
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adminEmail || !adminPassword) {
-      showToast('Please enter admin credentials', 'warning');
+      showToast(t('login.toast.enterAdminCreds'), 'warning');
       return;
     }
     setAdminLoading(true);
@@ -83,10 +88,10 @@ const LoginPage: React.FC = () => {
       localStorage.setItem('nh_admin', 'true');
       localStorage.setItem('nh_admin_token', res.data.access_token);
       localStorage.setItem('nh_admin_name', res.data.admin_name);
-      showToast('Admin access granted!', 'success');
+      showToast(t('login.toast.adminGranted'), 'success');
       navigate('/admin');
     } catch (err: any) {
-      showToast(err.response?.data?.detail || 'Invalid admin credentials', 'error');
+      showToast(err.response?.data?.detail || t('login.toast.invalidAdmin'), 'error');
     } finally {
       setAdminLoading(false);
     }
@@ -95,10 +100,10 @@ const LoginPage: React.FC = () => {
   // Admin Login Form view
   if (showAdminForm) {
     return (
-      <AuthLayout title="Admin Access" subtitle="Enter administrator credentials to access the management panel.">
+      <AuthLayout title={t('login.adminTitle')} subtitle={t('login.adminSubtitle')}>
         <form onSubmit={handleAdminLogin} className="flex flex-col gap-5">
           <div>
-            <FieldLabel htmlFor="admin-email">Admin Email</FieldLabel>
+            <FieldLabel htmlFor="admin-email">{t('login.adminEmail')}</FieldLabel>
             <Input
               id="admin-email"
               type="email"
@@ -110,7 +115,7 @@ const LoginPage: React.FC = () => {
             />
           </div>
           <div>
-            <FieldLabel htmlFor="admin-password">Password</FieldLabel>
+            <FieldLabel htmlFor="admin-password">{t('fields.password')}</FieldLabel>
             <PasswordInput
               id="admin-password"
               placeholder="••••••••"
@@ -129,7 +134,7 @@ const LoginPage: React.FC = () => {
             iconLeft={<Shield className="size-4.5" />}
             className="mt-2"
           >
-            {adminLoading ? 'Authenticating...' : 'Login as Admin'}
+            {adminLoading ? t('login.authenticating') : t('login.loginAsAdmin')}
           </Button>
           <BackButton onClick={() => setShowAdminForm(false)} />
         </form>
@@ -139,7 +144,7 @@ const LoginPage: React.FC = () => {
 
   if (!showEmailForm) {
     return (
-      <AuthLayout title="Welcome" subtitle="Please choose a method to access your training dashboard.">
+      <AuthLayout title={t('login.welcomeTitle')} subtitle={t('login.welcomeSubtitle')}>
         <div className="flex w-full flex-col gap-4">
           <Button
             type="button"
@@ -148,14 +153,14 @@ const LoginPage: React.FC = () => {
             iconLeft={<Mail className="size-4.5" />}
             onClick={() => setShowEmailForm(true)}
           >
-            Sign in with Email
+            {t('login.signInWithEmail')}
           </Button>
 
-          <Divider label="or continue with" />
+          <Divider label={t('login.orContinueWith')} />
 
           <GoogleButton />
 
-          <Divider label="admin access" />
+          <Divider label={t('login.adminAccess')} />
 
           <Button
             type="button"
@@ -165,13 +170,13 @@ const LoginPage: React.FC = () => {
             iconLeft={<Shield className="size-4.5" />}
             onClick={() => setShowAdminForm(true)}
           >
-            Login as Admin
+            {t('login.loginAsAdmin')}
           </Button>
 
           <p className="mt-6 text-center text-sm text-ink-muted">
-            Don't have an account?{' '}
+            {t('login.noAccount')}{' '}
             <Link to="/signup" className="font-semibold text-primary hover:text-primary-hover">
-              Create account
+              {t('login.createAccount')}
             </Link>
           </p>
         </div>
@@ -180,14 +185,14 @@ const LoginPage: React.FC = () => {
   }
 
   return (
-    <AuthLayout title="Sign In" subtitle="Enter your email and password to access your training dashboard.">
+    <AuthLayout title={t('login.signInTitle')} subtitle={t('login.signInSubtitle')}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <div>
-          <FieldLabel htmlFor="email-input">Email Address</FieldLabel>
+          <FieldLabel htmlFor="email-input">{t('fields.email')}</FieldLabel>
           <Input
             id="email-input"
             type="email"
-            placeholder="e.g. name@department.gov"
+            placeholder={t('fields.emailPlaceholder')}
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
@@ -198,10 +203,10 @@ const LoginPage: React.FC = () => {
         <div>
           <div className="mb-2 flex items-center justify-between">
             <label htmlFor="password-input" className="text-sm font-semibold text-ink">
-              Password
+              {t('fields.password')}
             </label>
             <Link to="/forgot-password" className="text-[13px] font-semibold text-primary hover:text-primary-hover">
-              Forgot password?
+              {t('login.forgotPassword')}
             </Link>
           </div>
           <PasswordInput
@@ -215,7 +220,7 @@ const LoginPage: React.FC = () => {
         </div>
 
         <Button type="submit" size="lg" fullWidth loading={loading} className="mt-2">
-          {loading ? 'Signing in...' : 'Sign In'}
+          {loading ? t('login.signingIn') : t('login.signIn')}
         </Button>
 
         <BackButton onClick={() => setShowEmailForm(false)} />
