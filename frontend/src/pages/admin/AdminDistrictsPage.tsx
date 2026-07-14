@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import client from '../../api/client';
 import { Plus, Trash2, Edit3, Save, X, MapPin, Users, CheckCircle2 } from 'lucide-react';
 import { Button, Card, EmptyState, Input, Modal, PageHeader, PageLoader } from '../../components/ui';
@@ -12,6 +13,7 @@ interface ProgramDistrict {
 }
 
 const AdminDistrictsPage: React.FC = () => {
+  const { t } = useTranslation('admin');
   const [districts, setDistricts] = useState<ProgramDistrict[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -44,7 +46,7 @@ const AdminDistrictsPage: React.FC = () => {
       loadDistricts();
       window.dispatchEvent(new Event('district-changed'));
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to create district');
+      alert(err.response?.data?.detail || t('districts.errCreate'));
     } finally {
       setSaving(false);
     }
@@ -59,38 +61,33 @@ const AdminDistrictsPage: React.FC = () => {
       loadDistricts();
       window.dispatchEvent(new Event('district-changed'));
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to update district');
+      alert(err.response?.data?.detail || t('districts.errUpdate'));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id: number, name: string) => {
-    if (
-      !confirm(
-        `Delete district "${name}"? All associated stages, tutorials, and tests will be removed. Users will be unassigned.`,
-      )
-    )
-      return;
+    if (!confirm(t('districts.confirmDelete', { name }))) return;
     try {
       await client.delete(`/api/admin/districts/${id}`);
       loadDistricts();
       window.dispatchEvent(new Event('district-changed'));
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to delete district');
+      alert(err.response?.data?.detail || t('districts.errDelete'));
     }
   };
 
-  if (loading) return <PageLoader label="Loading districts…" />;
+  if (loading) return <PageLoader label={t('districts.loading')} />;
 
   return (
     <div>
       <PageHeader
-        title="District Management"
-        description="Add, edit, or remove program districts. Each district has its own registration form, tutorials, and assessments."
+        title={t('districts.title')}
+        description={t('districts.description')}
         actions={
           <Button iconLeft={<Plus className="size-4" />} onClick={() => setShowAddModal(true)}>
-            Add District
+            {t('districts.add')}
           </Button>
         }
       />
@@ -98,11 +95,11 @@ const AdminDistrictsPage: React.FC = () => {
       {districts.length === 0 ? (
         <EmptyState
           icon={<MapPin />}
-          title="No districts configured yet"
-          description="Create your first program district to get started."
+          title={t('districts.emptyTitle')}
+          description={t('districts.emptyBody')}
           action={
             <Button iconLeft={<Plus className="size-4" />} onClick={() => setShowAddModal(true)}>
-              Add Your First District
+              {t('districts.addFirst')}
             </Button>
           }
         />
@@ -144,14 +141,14 @@ const AdminDistrictsPage: React.FC = () => {
                 <span className="flex items-center gap-1.5 text-ink-muted">
                   <Users className="size-3.5" />
                   <span>
-                    <strong className="text-ink">{d.user_count}</strong> users
+                    <strong className="text-ink">{d.user_count}</strong> {t('districts.users')}
                   </span>
                 </span>
                 <span
                   className={`flex items-center gap-1.5 font-semibold ${d.is_active ? 'text-success-600' : 'text-error-600'}`}
                 >
                   <CheckCircle2 className="size-3.5" />
-                  {d.is_active ? 'Active' : 'Inactive'}
+                  {d.is_active ? t('districts.active') : t('districts.inactive')}
                 </span>
               </div>
 
@@ -166,7 +163,7 @@ const AdminDistrictsPage: React.FC = () => {
                     setEditName(d.name);
                   }}
                 >
-                  Rename
+                  {t('districts.rename')}
                 </Button>
                 <Button variant="danger" size="sm" onClick={() => handleDelete(d.id, d.name)} title="Delete">
                   <Trash2 className="size-3.5" />
@@ -181,29 +178,28 @@ const AdminDistrictsPage: React.FC = () => {
       <Modal
         open={showAddModal}
         onClose={() => setShowAddModal(false)}
-        title="Add New District"
+        title={t('districts.addModalTitle')}
         footer={
           <>
             <Button variant="outline" onClick={() => setShowAddModal(false)}>
-              Cancel
+              {t('districts.cancel')}
             </Button>
             <Button iconLeft={<Plus className="size-4" />} onClick={handleAdd} disabled={!newName.trim() || saving}>
-              {saving ? 'Creating...' : 'Create District'}
+              {saving ? t('districts.creating') : t('districts.create')}
             </Button>
           </>
         }
       >
-        <label className="mb-2 block text-sm font-semibold text-ink">District Name *</label>
+        <label className="mb-2 block text-sm font-semibold text-ink">{t('districts.nameLabel')}</label>
         <Input
-          placeholder="e.g. Indore, Bhopal, Assam..."
+          placeholder={t('districts.namePlaceholder')}
           value={newName}
           onChange={e => setNewName(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleAdd()}
           autoFocus
         />
         <p className="mt-2 text-xs text-ink-faint">
-          A unique slug will be auto-generated from the name. The district will get its own registration form,
-          tutorials, and tests.
+          {t('districts.nameHelp')}
         </p>
       </Modal>
     </div>
