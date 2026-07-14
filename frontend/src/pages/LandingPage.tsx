@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation, Trans } from 'react-i18next';
 import {
   Award, BookOpen, ChartLine, MapPin, ShieldCheck, Sprout, Users, ArrowRight, Sun, Moon,
 } from 'lucide-react';
@@ -10,32 +11,30 @@ import { Button } from '../components/ui';
 const features = [
   {
     icon: BookOpen,
-    title: 'Structured Training',
-    body: 'Standardized video modules built for ICDS & Anganwadi workflows — learn at your own pace, stage by stage.',
+    key: 'training',
     tone: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-500/15',
   },
   {
     icon: Award,
-    title: 'Assessments & Badges',
-    body: 'Knowledge checks after every phase verify learning and earn official milestone badges for your profile.',
+    key: 'assessments',
     tone: 'text-coral-600 bg-coral-50 dark:text-coral-300 dark:bg-coral-500/15',
   },
   {
     icon: ChartLine,
-    title: 'Growth Tracking',
-    body: 'A personal dashboard monitors progress, unlocks new stages, and keeps your development on course.',
+    key: 'growth',
     tone: 'text-sage-700 bg-sage-50 dark:text-sage-300 dark:bg-sage-500/15',
   },
-];
+] as const;
 
 const stats = [
-  { icon: Users, value: 'Frontline first', label: 'Built for Anganwadi workers, helpers & supervisors' },
-  { icon: MapPin, value: 'District-aware', label: 'Content and cohorts organized by your district' },
-  { icon: ShieldCheck, value: 'Officially recognized', label: 'Progress and badges your department can trust' },
-];
+  { icon: Users, key: 'frontline' },
+  { icon: MapPin, key: 'district' },
+  { icon: ShieldCheck, key: 'official' },
+] as const;
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation(['landing', 'common']);
   const { isAuthenticated, isVerified, isProfileComplete } = useAuth();
   const { darkMode, toggleDarkMode } = useTheme();
 
@@ -58,16 +57,16 @@ const LandingPage: React.FC = () => {
             <Sprout className="size-6 text-white" />
           </span>
           <div>
-            <span className="block font-display text-lg font-extrabold leading-tight">NurtureHUB</span>
+            <span className="block font-display text-lg font-extrabold leading-tight">{t('common:brand.name')}</span>
             <span className="hidden text-[10px] font-bold uppercase tracking-widest text-primary sm:block">
-              ICDS Professional Portal
+              {t('landing:nav.badge')}
             </span>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={toggleDarkMode}
-            title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            title={darkMode ? t('common:theme.light') : t('common:theme.dark')}
             className="flex size-10 items-center justify-center rounded-full border border-border bg-surface
                        text-ink-muted transition-colors hover:text-ink cursor-pointer"
           >
@@ -75,14 +74,14 @@ const LandingPage: React.FC = () => {
           </button>
           {isAuthenticated ? (
             <Button onClick={handleCTA} iconRight={<ArrowRight className="size-4" />}>
-              Go to App
+              {t('landing:nav.goToApp')}
             </Button>
           ) : (
             <>
               <Button variant="ghost" onClick={() => navigate('/login')} className="max-sm:hidden">
-                Sign In
+                {t('landing:nav.signIn')}
               </Button>
-              <Button onClick={() => navigate('/signup')}>Register</Button>
+              <Button onClick={() => navigate('/signup')}>{t('landing:nav.register')}</Button>
             </>
           )}
         </div>
@@ -96,23 +95,21 @@ const LandingPage: React.FC = () => {
         <div className="relative mx-auto max-w-3xl">
           <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-ink-muted">
             <Sprout className="size-3.5 text-sage-600 dark:text-sage-300" />
-            Nurturing skills, elevating communities
+            {t('landing:hero.eyebrow')}
           </span>
           <h1 className="font-display text-4xl font-extrabold leading-tight sm:text-6xl">
-            Grow the skills that help
-            <span className="text-primary"> children thrive</span>
+            <Trans t={t} i18nKey="landing:hero.title" components={{ hl: <span className="text-primary" /> }} />
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg text-ink-muted">
-            NurtureHUB is the training &amp; assessment home for ICDS professionals — standardized
-            tutorials, fair assessments, and a clear record of your growth.
+            {t('landing:hero.subtitle')}
           </p>
           <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4">
             <Button size="lg" onClick={handleCTA} iconRight={<ArrowRight className="size-4.5" />} className="w-full sm:w-auto">
-              {isAuthenticated ? 'Continue your journey' : 'Start learning today'}
+              {isAuthenticated ? t('landing:hero.ctaContinue') : t('landing:hero.ctaStart')}
             </Button>
             {!isAuthenticated && (
               <Button size="lg" variant="outline" onClick={() => navigate('/login')} className="w-full sm:w-auto">
-                I already have an account
+                {t('landing:hero.haveAccount')}
               </Button>
             )}
           </div>
@@ -124,15 +121,15 @@ const LandingPage: React.FC = () => {
         <div className="grid gap-6 md:grid-cols-3">
           {features.map(f => (
             <div
-              key={f.title}
+              key={f.key}
               className="rounded-2xl border border-border bg-surface p-7 shadow-(--shadow-card)
                          transition-all duration-200 hover:-translate-y-1 hover:shadow-(--shadow-card-hover)"
             >
               <span className={`mb-5 inline-flex size-12 items-center justify-center rounded-xl ${f.tone}`}>
                 <f.icon className="size-6" />
               </span>
-              <h3 className="font-display text-lg font-bold">{f.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-ink-muted">{f.body}</p>
+              <h3 className="font-display text-lg font-bold">{t(`landing:features.${f.key}.title`)}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-ink-muted">{t(`landing:features.${f.key}.body`)}</p>
             </div>
           ))}
         </div>
@@ -140,13 +137,13 @@ const LandingPage: React.FC = () => {
         {/* Trust strip */}
         <div className="mt-6 grid gap-6 rounded-2xl border border-border bg-gradient-to-br from-sage-50 to-cream-100 p-8 dark:from-sage-950/40 dark:to-surface md:grid-cols-3">
           {stats.map(s => (
-            <div key={s.value} className="flex items-start gap-4">
+            <div key={s.key} className="flex items-start gap-4">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface text-coral-600 shadow-sm dark:text-coral-300">
                 <s.icon className="size-5" />
               </span>
               <div>
-                <div className="font-display font-bold">{s.value}</div>
-                <div className="mt-0.5 text-sm text-ink-muted">{s.label}</div>
+                <div className="font-display font-bold">{t(`landing:stats.${s.key}.value`)}</div>
+                <div className="mt-0.5 text-sm text-ink-muted">{t(`landing:stats.${s.key}.label`)}</div>
               </div>
             </div>
           ))}
@@ -158,11 +155,11 @@ const LandingPage: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-ink-faint">
           <div className="flex items-center gap-2">
             <Sprout className="size-4 text-sage-600 dark:text-sage-300" />
-            <span>© 2026 NurtureHUB. All rights reserved.</span>
+            <span>{t('common:footer.rights')}</span>
           </div>
           <div className="flex gap-6">
-            <Link to="#" className="transition-colors hover:text-ink-muted">Privacy Policy</Link>
-            <Link to="#" className="transition-colors hover:text-ink-muted">Terms</Link>
+            <Link to="#" className="transition-colors hover:text-ink-muted">{t('common:footer.privacy')}</Link>
+            <Link to="#" className="transition-colors hover:text-ink-muted">{t('common:footer.terms')}</Link>
           </div>
         </div>
       </footer>
