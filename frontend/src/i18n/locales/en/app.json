@@ -1,0 +1,34 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "tutorials": "Tutorials",
+    "assessments": "Assessments",
+    "mothers": "Mothers",
+    "profile": "Profile"
+  },
+  "headerTitle": {
+    "dashboard": "Dashboard",
+    "tutorials": "Training Modules",
+    "tests": "Assessments & Quizzes",
+    "results": "Assessment Performance",
+    "profile": "Profile Settings",
+    "default": "NurtureHUB"
+  },
+  "header": {
+    "toggleMenu": "Toggle menu",
+    "notifications": "Notifications"
+  },
+  "user": {
+    "fallbackName": "User",
+    "defaultRole": "ICDS Worker",
+    "signOut": "Sign Out"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "readAll": "Read All",
+    "close": "Close",
+    "emptyTitle": "No notifications yet",
+    "emptyBody": "Updates about your training and assessments will appear here."
+  }
+}

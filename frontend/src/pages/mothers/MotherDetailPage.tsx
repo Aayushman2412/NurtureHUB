@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Plus, Baby, ChevronRight } from 'lucide-react';
 import { Badge, Button, Card, EmptyState, PageHeader, PageLoader } from '../../components/ui';
 import { useToast } from '../../context/ToastContext';
@@ -17,6 +18,7 @@ const MotherDetailPage: React.FC = () => {
   const { id } = useParams();
   const motherId = Number(id);
   const navigate = useNavigate();
+  const { t } = useTranslation('mother');
   const { showToast } = useToast();
   const [mother, setMother] = useState<Mother | null>(null);
   const [children, setChildren] = useState<ChildListItem[]>([]);
@@ -25,11 +27,12 @@ const MotherDetailPage: React.FC = () => {
   useEffect(() => {
     Promise.all([getMother(motherId), listChildren(motherId)])
       .then(([m, kids]) => { setMother(m); setChildren(kids); })
-      .catch(() => showToast('Failed to load mother', 'error'))
+      .catch(() => showToast(t('detail.loadFailed'), 'error'))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [motherId]);
 
-  if (loading) return <PageLoader label="Loading" className="min-h-60" />;
+  if (loading) return <PageLoader label={t('detail.loading')} className="min-h-60" />;
   if (!mother) return null;
 
   return (
@@ -38,34 +41,34 @@ const MotherDetailPage: React.FC = () => {
         title={mother.mother_name}
         description={mother.mother_uid}
         backTo="/mothers"
-        actions={<Badge variant="info">{mother.gestational_weeks != null ? `${mother.gestational_weeks} weeks` : 'Registered'}</Badge>}
+        actions={<Badge variant="info">{mother.gestational_weeks != null ? t('detail.weeks', { n: mother.gestational_weeks }) : t('detail.registered')}</Badge>}
       />
 
       <Card className="p-6">
-        <h3 className="mb-3 font-display text-lg font-bold text-ink">Clinical</h3>
-        <Row label="Age" value={mother.mother_age ? `${mother.mother_age} years` : null} />
-        <Row label="Weight / Height" value={mother.weight && mother.height ? `${mother.weight} kg · ${mother.height} cm` : null} />
-        <Row label="LMP" value={mother.lmp} />
-        <Row label="EDD (LMP / records)" value={`${mother.edd_lmp || '—'} / ${mother.edd_records || '—'}`} />
-        <Row label="Gestational age" value={mother.gestational_weeks != null ? `${mother.gestational_weeks} weeks · ${mother.gestational_months} months` : null} />
-        <Row label="Mobile" value={mother.mobile} />
+        <h3 className="mb-3 font-display text-lg font-bold text-ink">{t('detail.clinical')}</h3>
+        <Row label={t('detail.rowAge')} value={mother.mother_age ? t('detail.ageValue', { n: mother.mother_age }) : null} />
+        <Row label={t('detail.rowWeightHeight')} value={mother.weight && mother.height ? t('detail.weightHeightValue', { weight: mother.weight, height: mother.height }) : null} />
+        <Row label={t('detail.rowLmp')} value={mother.lmp} />
+        <Row label={t('detail.rowEdd')} value={`${mother.edd_lmp || '—'} / ${mother.edd_records || '—'}`} />
+        <Row label={t('detail.rowGestational')} value={mother.gestational_weeks != null ? t('detail.gestationalValue', { weeks: mother.gestational_weeks, months: mother.gestational_months }) : null} />
+        <Row label={t('detail.rowMobile')} value={mother.mobile} />
       </Card>
 
       <Card className="p-6">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-display text-lg font-bold text-ink">
-            Children {children.length > 0 && <span className="text-ink-muted">({children.length})</span>}
+            {t('detail.children')} {children.length > 0 && <span className="text-ink-muted">({children.length})</span>}
           </h3>
           <Button variant="secondary" onClick={() => navigate(`/mothers/${motherId}/children/new`)}>
-            <Plus className="size-4" /> Add child
+            <Plus className="size-4" /> {t('detail.addChild')}
           </Button>
         </div>
 
         {children.length === 0 ? (
           <EmptyState
             icon={<Baby />}
-            title="No children registered"
-            description="Add a child once the baby is born — it will be linked to this mother."
+            title={t('detail.childrenEmptyTitle')}
+            description={t('detail.childrenEmptyBody')}
           />
         ) : (
           <div className="flex flex-col gap-2">
@@ -83,7 +86,7 @@ const MotherDetailPage: React.FC = () => {
                   <div className="truncate text-sm font-semibold text-ink">{c.child_name}</div>
                   <div className="truncate text-xs text-ink-muted">
                     {c.child_uid}
-                    {c.gender ? ` · ${c.gender}` : ''}
+                    {c.gender ? ` · ${t(`options.gender.${c.gender}`)}` : ''}
                     {c.age_months != null ? ` · ${c.age_months} mo` : ''}
                     {c.birth_weight != null ? ` · ${c.birth_weight} kg` : ''}
                   </div>

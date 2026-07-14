@@ -1,0 +1,290 @@
+{
+  "list": {
+    "title": "मेरी माताएँ",
+    "description": "वे माताएँ जिन्हें आपने कार्यक्रम में पंजीकृत किया है।",
+    "register": "माता पंजीकृत करें",
+    "loading": "माताएँ लोड हो रही हैं",
+    "loadFailed": "माताओं को लोड करने में विफल",
+    "emptyTitle": "अभी तक कोई माता पंजीकृत नहीं",
+    "emptyBody": "उसके रिकॉर्ड एकत्र करना शुरू करने के लिए पहली माता को पंजीकृत करें जिसे आप ट्रैक कर रही हैं।",
+    "table": {
+      "motherId": "माता आईडी",
+      "name": "नाम",
+      "village": "गाँव",
+      "gestationalAge": "गर्भकालीन आयु",
+      "edd": "ईडीडी"
+    },
+    "weeks": "{{n}} सप्ताह"
+  },
+  "detail": {
+    "loading": "लोड हो रहा है",
+    "loadFailed": "माता को लोड करने में विफल",
+    "registered": "पंजीकृत",
+    "weeks": "{{n}} सप्ताह",
+    "clinical": "क्लिनिकल",
+    "rowAge": "आयु",
+    "rowWeightHeight": "वज़न / ऊँचाई",
+    "rowLmp": "एलएमपी",
+    "rowEdd": "ईडीडी (एलएमपी / रिकॉर्ड)",
+    "rowGestational": "गर्भकालीन आयु",
+    "rowMobile": "मोबाइल",
+    "ageValue": "{{n}} वर्ष",
+    "weightHeightValue": "{{weight}} किग्रा · {{height}} सेमी",
+    "gestationalValue": "{{weeks}} सप्ताह · {{months}} महीने",
+    "children": "बच्चे",
+    "addChild": "बच्चा जोड़ें",
+    "childrenEmptyTitle": "कोई बच्चा पंजीकृत नहीं",
+    "childrenEmptyBody": "बच्चे के जन्म के बाद एक बच्चा जोड़ें — यह इस माता से जुड़ जाएगा।"
+  },
+  "form": {
+    "title": "एक माता पंजीकृत करें",
+    "description": "एक गर्भवती माता को कार्यक्रम में नामांकित करें।",
+    "steps": {
+      "identity": "पहचान और क्लिनिकल",
+      "location": "स्थान और पृष्ठभूमि",
+      "knowledge": "ज्ञान और दृष्टिकोण"
+    },
+    "sectionIdentity": "पहचान और क्लिनिकल",
+    "sectionLocation": "स्थान और पृष्ठभूमि",
+    "sectionKnowledge": "ज्ञान और दृष्टिकोण",
+    "motherName": "माता का नाम",
+    "adoptionDate": "अपनाने की तिथि",
+    "dob": "जन्म तिथि",
+    "age": "आयु (जन्म तिथि से स्वतः)",
+    "ageHint": "गणना के लिए जन्म तिथि सेट करें",
+    "ageValue": "{{n}} वर्ष",
+    "weight": "अपनाने के समय वज़न (किग्रा)",
+    "height": "अपनाने के समय ऊँचाई (सेमी)",
+    "lmp": "अंतिम मासिक धर्म (एलएमपी)",
+    "eddLmp": "एलएमपी के अनुसार ईडीडी (स्वतः)",
+    "eddLmpHint": "गणना के लिए एलएमपी सेट करें",
+    "gestationalAge": "गर्भकालीन आयु",
+    "gestationalHint": "गणना के लिए एलएमपी सेट करें",
+    "gestationalValue": "{{weeks}} सप्ताह · {{months}} महीने",
+    "eddRecords": "नवीनतम रिकॉर्ड के अनुसार ईडीडी",
+    "mobile": "मोबाइल नंबर",
+    "mobilePlaceholder": "10 अंकों का",
+    "alternateMobile": "वैकल्पिक मोबाइल (वैकल्पिक)",
+    "email": "ईमेल (वैकल्पिक)",
+    "state": "राज्य",
+    "district": "ज़िला",
+    "taluk": "तालुक",
+    "village": "गाँव",
+    "hwc": "स्वास्थ्य एवं कल्याण केंद्र (HWC)",
+    "phc": "प्राथमिक स्वास्थ्य केंद्र (स्वतः)",
+    "phcHint": "चयनित HWC से स्वतः भर जाता है",
+    "education": "उच्चतम शिक्षा",
+    "educationField": "अध्ययन का क्षेत्र",
+    "degree": "डिग्री / डिप्लोमा",
+    "occupation": "व्यवसाय",
+    "occupationOther": "व्यवसाय निर्दिष्ट करें",
+    "rationCard": "राशन कार्ड प्रकार",
+    "socialCategory": "सामाजिक श्रेणी",
+    "nutritionCourse": "क्या आपने पोषण, गर्भावस्था या शिशु देखभाल पर कोई प्रमाणपत्र पाठ्यक्रम/प्रशिक्षण पूरा किया है?",
+    "nutritionCourseName": "पाठ्यक्रम निर्दिष्ट करें",
+    "videoFrequency": "आप सोशल मीडिया पर स्वास्थ्य संबंधी वीडियो कितनी बार देखती हैं?",
+    "ratingsQuestion": "प्रत्येक स्रोत के लिए, रेट करें कि आप उस पर कितना भरोसा करती हैं और उसकी सलाह मानने के लिए कितनी इच्छुक हैं",
+    "placeholders": {
+      "selectState": "राज्य चुनें",
+      "selectDistrict": "ज़िला चुनें",
+      "selectTaluk": "तालुक चुनें",
+      "searchHwc": "HWC खोजें",
+      "selectEducation": "शिक्षा स्तर चुनें",
+      "selectField": "क्षेत्र चुनें",
+      "searchDegree": "डिग्री खोजें",
+      "selectOccupation": "व्यवसाय चुनें",
+      "selectRationCard": "राशन कार्ड चुनें",
+      "selectSocialCategory": "सामाजिक श्रेणी चुनें",
+      "selectFrequency": "आवृत्ति चुनें",
+      "selectOne": "एक चुनें"
+    },
+    "ratingGrid": {
+      "rowHeader": "स्रोत",
+      "trust": "भरोसा (1–5)",
+      "willingness": "इच्छा (1–5)"
+    },
+    "cancel": "रद्द करें",
+    "back": "पीछे",
+    "continue": "जारी रखें",
+    "registering": "पंजीकृत किया जा रहा है...",
+    "register": "माता पंजीकृत करें ✓",
+    "toastRegistering": "माता पंजीकृत की जा रही है...",
+    "toastSuccess": "{{name}} ({{uid}}) पंजीकृत किया गया।",
+    "toastFail": "पंजीकरण विफल। कृपया पुनः प्रयास करें।"
+  },
+  "child": {
+    "titleNew": "एक बच्चा पंजीकृत करें",
+    "titleEdit": "बच्चा संपादित करें",
+    "descLinked": "{{name}} से जुड़ा",
+    "descLinkedFallback": "चयनित माता से जुड़ा।",
+    "steps": {
+      "birth": "जन्म विवरण",
+      "delivery": "प्रसव और आहार"
+    },
+    "sectionBirth": "जन्म विवरण",
+    "sectionDelivery": "प्रसव और आहार",
+    "babiesBorn": "इस प्रसव में जन्मे शिशु",
+    "childName": "शिशु का नाम",
+    "adoptionDate": "अपनाने की तिथि",
+    "dob": "जन्म तिथि",
+    "age": "आयु (स्वतः)",
+    "ageHint": "गणना के लिए जन्म तिथि सेट करें",
+    "ageValue": "{{days}} दिन · {{months}} महीने",
+    "birthWeight": "जन्म के समय वज़न (किग्रा)",
+    "birthWeightPlaceholder": "1.000–5.000",
+    "birthLength": "जन्म के समय लंबाई (सेमी)",
+    "birthLengthPlaceholder": "30.0–65.0",
+    "gender": "लिंग",
+    "previousChildren": "पहले से जीवित बच्चे (इस बच्चे के अलावा)",
+    "deliveryMethod": "प्रसव विधि",
+    "deliveryPlace": "प्रसव स्थान",
+    "deliveryPlaceOther": "अन्य प्रसव स्थान निर्दिष्ट करें",
+    "bfWithinHour": "क्या जन्म के एक घंटे के भीतर स्तनपान शुरू किया गया था?",
+    "ebfDuringStay": "क्या प्रसव के बाद सुविधा में रहने के दौरान शिशु को केवल स्तनपान कराया गया था?",
+    "ebfReason": "यदि नहीं, तो कारण बताएँ",
+    "birthConditions": "जन्म के समय पूर्व-मौजूदा अस्वस्थता की स्थितियाँ (सभी लागू चुनें)",
+    "conditionOther": "अन्य स्वास्थ्य स्थिति निर्दिष्ट करें",
+    "placeholders": {
+      "select": "चुनें",
+      "selectDeliveryMethod": "प्रसव विधि चुनें",
+      "selectPlace": "प्रसव स्थान चुनें"
+    },
+    "loading": "लोड हो रहा है",
+    "loadFailed": "बच्चे को लोड करने में विफल",
+    "cancel": "रद्द करें",
+    "back": "पीछे",
+    "continue": "जारी रखें",
+    "saving": "सहेजा जा रहा है...",
+    "saveChild": "बच्चा सहेजें ✓",
+    "registerChild": "बच्चा पंजीकृत करें ✓",
+    "toastSaving": "बच्चा सहेजा जा रहा है...",
+    "toastRegistering": "बच्चा पंजीकृत किया जा रहा है...",
+    "toastSuccessSaved": "{{name}} ({{uid}}) सहेजा गया।",
+    "toastSuccessRegistered": "{{name}} ({{uid}}) पंजीकृत किया गया।",
+    "toastFailSave": "सहेजने में विफल। कृपया पुनः प्रयास करें।",
+    "toastFailRegister": "पंजीकरण विफल। कृपया पुनः प्रयास करें।"
+  },
+  "options": {
+    "yes": "हाँ",
+    "no": "नहीं",
+    "occupation": {
+      "Homemaker": "गृहिणी",
+      "Agriculture": "कृषि",
+      "Skilled Manual Worker": "कुशल शारीरिक श्रमिक",
+      "Semi-skilled Worker": "अर्ध-कुशल श्रमिक",
+      "Unskilled Worker": "अकुशल श्रमिक",
+      "Service Provider": "सेवा प्रदाता",
+      "Semi-professional": "अर्ध-पेशेवर",
+      "Professional": "पेशेवर",
+      "Entrepreneur/Small Business": "उद्यमी/लघु व्यवसाय",
+      "Other": "अन्य"
+    },
+    "rationCard": {
+      "AAY": "एएवाई (AAY)",
+      "Eligible for AAY but not applied": "एएवाई के लिए पात्र पर आवेदन नहीं किया",
+      "BPL": "बीपीएल (BPL)",
+      "Eligible for BPL but not applied": "बीपीएल के लिए पात्र पर आवेदन नहीं किया",
+      "APL": "एपीएल (APL)",
+      "No ration card": "कोई राशन कार्ड नहीं",
+      "Others": "अन्य"
+    },
+    "socialCategory": {
+      "ST": "एसटी (ST)",
+      "SC": "एससी (SC)",
+      "OBC": "ओबीसी (OBC)",
+      "General": "सामान्य",
+      "Do not know": "पता नहीं",
+      "Prefer not to say": "बताना नहीं चाहती"
+    },
+    "videoFrequency": {
+      "Daily": "प्रतिदिन",
+      "Alternate day / 2–3 times per week": "वैकल्पिक दिन / सप्ताह में 2–3 बार",
+      "Once a week": "सप्ताह में एक बार",
+      "2–3 times per month": "महीने में 2–3 बार",
+      "About once a month": "लगभग महीने में एक बार",
+      "Less than once a month": "महीने में एक बार से कम",
+      "Never": "कभी नहीं"
+    },
+    "likert": {
+      "implement_video": {
+        "Never": "कभी नहीं",
+        "Rarely": "शायद ही कभी",
+        "Sometimes": "कभी-कभी",
+        "Often": "अक्सर",
+        "Always": "हमेशा"
+      },
+      "confidence_video": {
+        "Not at all confident": "बिल्कुल आत्मविश्वास नहीं",
+        "Slightly confident": "थोड़ा आत्मविश्वास",
+        "Moderately confident": "मध्यम आत्मविश्वास",
+        "Very confident": "बहुत आत्मविश्वास",
+        "Extremely confident": "अत्यधिक आत्मविश्वास"
+      },
+      "willingness_hcw": {
+        "Very unwilling": "बहुत अनिच्छुक",
+        "Unwilling": "अनिच्छुक",
+        "Neutral": "तटस्थ",
+        "Willing": "इच्छुक",
+        "Very willing": "बहुत इच्छुक"
+      },
+      "information_seeking": {
+        "Never": "कभी नहीं",
+        "Rarely": "शायद ही कभी",
+        "Sometimes": "कभी-कभी",
+        "Often": "अक्सर",
+        "Always": "हमेशा"
+      }
+    },
+    "likertQuestion": {
+      "implement_video": "आप स्वास्थ्य संबंधी वीडियो से मिली सलाह का कितनी बार पालन करती हैं?",
+      "confidence_video": "एक विश्वसनीय शैक्षिक वीडियो देखने के बाद कोई नई स्वास्थ्य पद्धति आज़माने में आप कितनी आत्मविश्वासी हैं?",
+      "willingness_hcw": "यदि कोई स्वास्थ्यकर्मी आपको कोई नई स्वास्थ्य पद्धति सिखाता है, तो आप उसे आज़माने के लिए कितनी इच्छुक हैं?",
+      "information_seeking": "जब आपके मन में गर्भावस्था, स्तनपान या शिशु को आहार देने के बारे में कोई प्रश्न होता था, तो आप कितनी बार सक्रिय रूप से जानकारी खोजती थीं?"
+    },
+    "source": {
+      "doctor": "डॉक्टर",
+      "staff_nurse": "स्टाफ नर्स",
+      "anm": "एएनएम",
+      "asha": "आशा",
+      "anganwadi_worker": "आँगनवाड़ी कार्यकर्ता",
+      "nutritionist": "पोषण विशेषज्ञ/आहार विशेषज्ञ",
+      "family": "परिवार के सदस्य",
+      "friends": "मित्र/पड़ोसी",
+      "youtube": "यूट्यूब/सोशल मीडिया"
+    },
+    "babiesBorn": {
+      "Single": "एकल",
+      "Twins": "जुड़वाँ"
+    },
+    "gender": {
+      "Female": "महिला",
+      "Male": "पुरुष"
+    },
+    "deliveryMethod": {
+      "Normal vaginal delivery": "सामान्य योनि प्रसव",
+      "Caesarean section": "सिज़ेरियन सेक्शन",
+      "Assisted vaginal delivery": "सहायता प्राप्त योनि प्रसव"
+    },
+    "deliveryPlace": {
+      "District Hospital (DH)": "ज़िला अस्पताल (DH)",
+      "Rural Hospital (RH)": "ग्रामीण अस्पताल (RH)",
+      "Sub-District Hospital (SDH)": "उप-ज़िला अस्पताल (SDH)",
+      "Community Health Centre (CHC)": "सामुदायिक स्वास्थ्य केंद्र (CHC)",
+      "Primary Health Centre (PHC)": "प्राथमिक स्वास्थ्य केंद्र (PHC)",
+      "Sub-centre (SC)": "उप-केंद्र (SC)",
+      "Private Hospital/Nursing Home": "निजी अस्पताल/नर्सिंग होम",
+      "Home": "घर",
+      "Other": "अन्य"
+    },
+    "birthCondition": {
+      "None": "कोई नहीं",
+      "Congenital anomaly/Birth defect": "जन्मजात विकृति/जन्म दोष",
+      "Birth asphyxia (difficulty breathing at birth)": "जन्म श्वासावरोध (जन्म के समय साँस लेने में कठिनाई)",
+      "Neonatal jaundice": "नवजात पीलिया",
+      "Respiratory distress/Breathing difficulty": "श्वसन संकट/साँस लेने में कठिनाई",
+      "Neonatal infection/Sepsis": "नवजात संक्रमण/सेप्सिस",
+      "Hypoglycaemia (low blood sugar)": "हाइपोग्लाइसीमिया (निम्न रक्त शर्करा)",
+      "Others": "अन्य"
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Bell, CheckCheck, X } from 'lucide-react';
 import { getNotifications, markAsRead, markAllAsRead } from '../../api/notifications';
 import { Button, EmptyState, Spinner } from '../ui';
@@ -19,6 +20,7 @@ interface NotificationPanelProps {
 }
 
 const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, onUpdateCount }) => {
+  const { t } = useTranslation('app');
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -101,7 +103,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
         <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
           <div className="flex items-center gap-2">
             <Bell className="size-5 text-primary" />
-            <span className="font-display font-bold">Notifications</span>
+            <span className="font-display font-bold">{t('notifications.title')}</span>
           </div>
           <div className="flex items-center gap-2">
             {notifications.some(n => !n.is_read) && (
@@ -110,14 +112,14 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
                 size="sm"
                 onClick={handleMarkAllRead}
                 iconLeft={<CheckCheck className="size-3.5" />}
-                title="Mark all as read"
+                title={t('notifications.markAllRead')}
               >
-                Read All
+                {t('notifications.readAll')}
               </Button>
             )}
             <button
               onClick={onClose}
-              aria-label="Close"
+              aria-label={t('notifications.close')}
               className="flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer"
             >
               <X className="size-5" />
@@ -134,8 +136,8 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
           ) : notifications.length === 0 ? (
             <EmptyState
               icon={<Bell />}
-              title="No notifications yet"
-              description="Updates about your training and assessments will appear here."
+              title={t('notifications.emptyTitle')}
+              description={t('notifications.emptyBody')}
               className="mt-6"
             />
           ) : (

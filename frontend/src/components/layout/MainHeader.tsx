@@ -1,8 +1,10 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Menu, Sun, Moon, Bell } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../ui';
+import LanguageSwitcher from '../LanguageSwitcher';
 
 interface MainHeaderProps {
   title: string;
@@ -21,6 +23,7 @@ const MainHeader: React.FC<MainHeaderProps> = ({
   onToggleNotifs,
   unreadNotifsCount,
 }) => {
+  const { t } = useTranslation(['app', 'common']);
   const { darkMode, toggleDarkMode } = useTheme();
   const { user } = useAuth();
 
@@ -28,7 +31,7 @@ const MainHeader: React.FC<MainHeaderProps> = ({
     <header className="sticky top-0 z-(--z-dropdown) flex items-center justify-between gap-4 border-b border-border bg-surface/85 px-5 py-3 backdrop-blur-md print:hidden">
       {/* Left: hamburger (mobile) + title */}
       <div className="flex items-center gap-3">
-        <button onClick={onToggleSidebar} className={`${iconBtn} lg:hidden`} aria-label="Toggle menu">
+        <button onClick={onToggleSidebar} className={`${iconBtn} lg:hidden`} aria-label={t('app:header.toggleMenu')}>
           <Menu className="size-6" />
         </button>
         <h1 className="font-display text-xl font-bold text-ink">{title}</h1>
@@ -36,15 +39,17 @@ const MainHeader: React.FC<MainHeaderProps> = ({
 
       {/* Right: actions + avatar */}
       <div className="flex items-center gap-2">
+        <LanguageSwitcher variant="compact" />
+
         <button
           onClick={toggleDarkMode}
           className={iconBtn}
-          title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          title={darkMode ? t('common:theme.light') : t('common:theme.dark')}
         >
           {darkMode ? <Sun className="size-5" /> : <Moon className="size-5" />}
         </button>
 
-        <button onClick={onToggleNotifs} className={`${iconBtn} relative`} title="Notifications">
+        <button onClick={onToggleNotifs} className={`${iconBtn} relative`} title={t('app:header.notifications')}>
           <Bell className="size-5" />
           {unreadNotifsCount > 0 && (
             <span className="absolute right-1 top-1 flex size-4.5 items-center justify-center rounded-full bg-error-500 text-[11px] font-bold text-white ring-2 ring-surface">

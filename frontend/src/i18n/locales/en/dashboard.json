@@ -1,0 +1,67 @@
+{
+  "loading": "Loading metrics…",
+  "toast": {
+    "loadFailed": "Failed to load dashboard metrics"
+  },
+  "welcome": {
+    "districtEyebrow": "{{district}} District",
+    "defaultEyebrow": "Welcome back, Supervisor",
+    "nameFallback": "Healthcare Worker",
+    "subtitle": "You have completed {{completed}} of {{total}} video lessons. Keep up the good work!",
+    "overall": "Overall",
+    "progress": "Progress"
+  },
+  "awaiting": {
+    "title": "All done — please wait for your results!",
+    "body": "You have completed every tutorial and submitted all your tests. Results are being reviewed — you will receive a notification as soon as they are announced."
+  },
+  "stats": {
+    "tutorials": "Completed Tutorials",
+    "assessments": "Assessments Passed",
+    "achievements": "Achievements Earned"
+  },
+  "timeline": "Training Progression Timeline",
+  "phase": "Phase {{n}}",
+  "test": {
+    "screeningLabel": "Screening Test",
+    "formativeLabel": "Formative Test",
+    "submitted": "Submitted",
+    "status": {
+      "live": "Live Now",
+      "scheduled": "Scheduled",
+      "ended": "Ended",
+      "notScheduled": "Not Scheduled"
+    },
+    "liveHeading": "Test is live — good luck!",
+    "tentativeHeading": "Tentative test date",
+    "takeNow": "You can take it now",
+    "toBeAnnounced": "To be announced",
+    "durationMins": "{{minutes}} mins",
+    "takeTest": "Take Test Now",
+    "finishVideos": "Finish required videos first",
+    "waitingAdmin": "Waiting for admin to start",
+    "message": {
+      "submitted": "You have submitted this test. Results will be announced by the admin — please wait for further updates.",
+      "formative": "Complete all required videos in Phase 1 before this test goes live. If you wish, you can also go ahead and watch the Phase 3 add-on videos in advance.",
+      "screening": "Complete all add-on videos to become eligible for this test. While you wait, feel free to go back and revise the previous videos.",
+      "default": "Complete all required videos to become eligible for this test."
+    }
+  },
+  "videos": {
+    "label": "Video Lessons",
+    "completed": "Completed",
+    "inProgress": "In Progress",
+    "tutorialsCompleted": "Tutorials Completed: {{completed}} of {{total}}",
+    "resume": "Resume Videos",
+    "start": "Start Watching"
+  },
+  "badges": {
+    "title": "Earned Badges",
+    "empty": "Complete courses & assessments to unlock achievements."
+  },
+  "activity": {
+    "title": "Recent Activity",
+    "empty": "No recent activity.",
+    "status": "Status: {{status}}"
+  }
+}

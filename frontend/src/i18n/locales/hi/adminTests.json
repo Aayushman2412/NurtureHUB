@@ -1,0 +1,102 @@
+{
+  "loading": "परीक्षाएँ लोड हो रही हैं…",
+  "header": {
+    "title": "परीक्षा प्रबंधक",
+    "description": "प्रश्न अपलोड करें, परीक्षा सत्र नियंत्रित करें, और रंग-कोडित परिणाम शीट डाउनलोड करें।",
+    "createTest": "परीक्षा बनाएँ"
+  },
+  "status": {
+    "active": "🟢 सक्रिय",
+    "ended": "🔴 समाप्त",
+    "scheduled": "🗓 निर्धारित",
+    "draft": "📝 मसौदा"
+  },
+  "testType": {
+    "formative": "रचनात्मक",
+    "screening": "स्क्रीनिंग"
+  },
+  "card": {
+    "stage": "चरण {{n}}",
+    "meta": "{{questions}} प्रश्न • {{minutes}}मिनट • उत्तीर्णांक: {{pass}}%",
+    "goesLive": "🗓 लाइव होगा: {{date}}"
+  },
+  "actions": {
+    "schedule": "निर्धारित करें",
+    "start": "शुरू करें",
+    "end": "समाप्त करें",
+    "results": "परिणाम",
+    "monitorLive": "लाइव निगरानी",
+    "createTest": "परीक्षा बनाएँ",
+    "cancel": "रद्द करें"
+  },
+  "fields": {
+    "title": "शीर्षक",
+    "titleRequired": "शीर्षक *",
+    "stageId": "चरण ID",
+    "duration": "अवधि (मिनट)",
+    "passPct": "उत्तीर्णांक %",
+    "passingPct": "उत्तीर्णांक %",
+    "maxAttempts": "अधिकतम प्रयास",
+    "testType": "परीक्षा प्रकार",
+    "description": "विवरण"
+  },
+  "upload": {
+    "button": "प्रश्न अपलोड करें (Excel/CSV)",
+    "formatHint": "Excel प्रारूप: प्रश्न पाठ | विकल्प A | विकल्प B | विकल्प C | विकल्प D | सही उत्तर"
+  },
+  "questionsTable": {
+    "question": "प्रश्न",
+    "answer": "उत्तर",
+    "marks": "अंक"
+  },
+  "questionsEmpty": {
+    "title": "अभी कोई प्रश्न नहीं",
+    "description": "प्रश्न भरने के लिए एक Excel/CSV फ़ाइल अपलोड करें।"
+  },
+  "createModal": {
+    "title": "नया मूल्यांकन बनाएँ",
+    "titlePlaceholder": "उदा. मध्यावधि मूल्यांकन",
+    "descPlaceholder": "संक्षिप्त विवरण..."
+  },
+  "scheduleModal": {
+    "title": "निर्धारित करें",
+    "titleWith": "निर्धारित करें: {{title}}",
+    "clear": "साफ़ करें",
+    "save": "शेड्यूल सहेजें",
+    "info": "यह संभावित तिथि और समय हर उपयोगकर्ता के डैशबोर्ड पर दिखाया जाता है। परीक्षा तभी देने योग्य बनती है जब आप <strong>शुरू करें</strong> दबाते हैं — शेड्यूल केवल सूचनात्मक है।",
+    "goLiveLabel": "संभावित लाइव तिथि और समय",
+    "preview": "उपयोगकर्ता देखेंगे: “संभावित परीक्षा तिथि: {{date}}”"
+  },
+  "resultsModal": {
+    "title": "परीक्षा परिणाम: {{title}}",
+    "loadingTitle": "लोड हो रहा है...",
+    "download": "Excel डाउनलोड करें (.xlsx)",
+    "table": {
+      "user": "उपयोगकर्ता",
+      "correct": "सही",
+      "wrong": "गलत",
+      "unattempted": "अप्रयासित",
+      "score": "स्कोर"
+    },
+    "legend": {
+      "correct": "सही",
+      "wrong": "गलत",
+      "unattempted": "अप्रयासित"
+    },
+    "emptyTitle": "कोई परिणाम उपलब्ध नहीं"
+  },
+  "confirm": {
+    "delete": "इस परीक्षा और इसके सभी प्रश्नों को हटाएँ?",
+    "start": "इस परीक्षा को अभी शुरू करें? पात्र उपयोगकर्ता तुरंत इसे दे सकेंगे।",
+    "end": "इस परीक्षा को अभी समाप्त करें? उपयोगकर्ता अब इसे नहीं दे सकेंगे।"
+  },
+  "excel": {
+    "sheet": "परिणाम",
+    "userName": "उपयोगकर्ता नाम",
+    "totalCorrect": "कुल सही",
+    "totalWrong": "कुल गलत",
+    "totalUnattempted": "कुल अप्रयासित",
+    "scorePct": "स्कोर %"
+  },
+  "qColumn": "प्र{{n}}"
+}

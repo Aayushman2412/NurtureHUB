@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { toFieldErrors, pickErrors, type FieldErrors } from './validation';
 import { MATRIX_SOURCES } from './motherFields';
 
+// `msg` values are i18n keys (validation:*) resolved in toFieldErrors at validation time.
 const requiredId = (msg: string) =>
   z.union([z.number(), z.literal('')]).refine(v => typeof v === 'number' && v > 0, { message: msg });
 const requiredStr = (msg: string) => z.string().refine(v => v.trim().length > 0, { message: msg });
@@ -15,40 +16,40 @@ const daysBetween = (a: Date, b: Date) => Math.floor((a.getTime() - b.getTime())
 export const motherSchema = z
   .object({
     // Identity & clinical
-    mother_name: requiredStr('Mother’s name is required (min 2 characters).').refine(v => v.trim().length >= 2, { message: 'Enter at least 2 characters.' }),
-    adoption_date: requiredStr('Adoption date is required.'),
-    mother_dob: requiredStr('Date of birth is required.'),
+    mother_name: requiredStr('validation:mother.nameRequired').refine(v => v.trim().length >= 2, { message: 'validation:common.min2Chars' }),
+    adoption_date: requiredStr('validation:mother.adoptionRequired'),
+    mother_dob: requiredStr('validation:common.dobRequired'),
     mother_age: z.union([z.number(), z.literal('')]).optional(),   // derived from DOB, display-only
-    weight: requiredRange(35, 200, 'Enter a weight between 35 and 200 kg.'),
-    height: requiredRange(100, 230, 'Enter a height between 100 and 230 cm.'),
-    lmp: requiredStr('LMP is required.'),
-    edd_records: requiredStr('Expected delivery date (records) is required.'),
-    mobile: z.string().refine(v => /^\d{10}$/.test(digits(v)), { message: 'Enter a valid 10-digit mobile number.' }),
-    alternate_mobile: z.string().optional().refine(v => !v || /^\d{10}$/.test(digits(v)), { message: 'Alternate number must be 10 digits.' }),
-    email: z.string().optional().refine(v => !v || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v), { message: 'Enter a valid email.' }),
+    weight: requiredRange(35, 200, 'validation:mother.weight'),
+    height: requiredRange(100, 230, 'validation:mother.height'),
+    lmp: requiredStr('validation:mother.lmpRequired'),
+    edd_records: requiredStr('validation:mother.eddRequired'),
+    mobile: z.string().refine(v => /^\d{10}$/.test(digits(v)), { message: 'validation:common.phone10' }),
+    alternate_mobile: z.string().optional().refine(v => !v || /^\d{10}$/.test(digits(v)), { message: 'validation:common.altPhone10' }),
+    email: z.string().optional().refine(v => !v || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v), { message: 'validation:common.email' }),
     // Socio-demographic & location
-    state_id: requiredId('Please select a state.'),
-    district_id: requiredId('Please select a district.'),
-    taluk_id: requiredId('Please select a taluk.'),
-    village: requiredStr('Village is required.'),
-    hwc_id: requiredId('Please select an HWC.'),
-    phc_id: requiredId('PHC is required.'),
-    education_id: requiredId('Please select an education level.'),
+    state_id: requiredId('validation:common.selectState'),
+    district_id: requiredId('validation:common.selectDistrict'),
+    taluk_id: requiredId('validation:common.selectTaluk'),
+    village: requiredStr('validation:mother.villageRequired'),
+    hwc_id: requiredId('validation:mother.hwc'),
+    phc_id: requiredId('validation:mother.phc'),
+    education_id: requiredId('validation:mother.education'),
     education_field_id: z.union([z.number(), z.literal('')]).optional(),
     education_degree_id: z.union([z.number(), z.literal('')]).optional(),
-    occupation: requiredStr('Please select an occupation.'),
+    occupation: requiredStr('validation:mother.occupation'),
     occupation_other: z.string().optional(),
-    ration_card: requiredStr('Please select a ration card type.'),
-    social_category: requiredStr('Please select a social category.'),
+    ration_card: requiredStr('validation:mother.rationCard'),
+    social_category: requiredStr('validation:mother.socialCategory'),
     // KAP
-    nutrition_course: requiredStr('Please answer this question.'),
+    nutrition_course: requiredStr('validation:common.answerQuestion'),
     nutrition_course_name: z.string().optional(),
-    video_frequency: requiredStr('Please select one.'),
+    video_frequency: requiredStr('validation:common.selectOne'),
     source_ratings: z.record(z.string(), z.object({ trust: z.number().optional(), willingness: z.number().optional() })),
-    implement_video: requiredStr('Please select one.'),
-    confidence_video: requiredStr('Please select one.'),
-    willingness_hcw: requiredStr('Please select one.'),
-    information_seeking: requiredStr('Please select one.'),
+    implement_video: requiredStr('validation:common.selectOne'),
+    confidence_video: requiredStr('validation:common.selectOne'),
+    willingness_hcw: requiredStr('validation:common.selectOne'),
+    information_seeking: requiredStr('validation:common.selectOne'),
     // Derived flags (drive conditional-required rules)
     showEducationField: z.boolean().optional(),
     showOccupationOther: z.boolean().optional(),
@@ -58,36 +59,36 @@ export const motherSchema = z
     const today = new Date();
     const lmp = toDate(v.lmp);
     if (lmp) {
-      if (daysBetween(lmp, today) > 0) ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'LMP cannot be in the future.' });
-      else if (daysBetween(today, lmp) > 180) ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'LMP cannot be more than 180 days ago.' });
+      if (daysBetween(lmp, today) > 0) ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.lmpFuture' });
+      else if (daysBetween(today, lmp) > 180) ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.lmp180' });
     }
     const dob = toDate(v.mother_dob || '');
-    if (dob && daysBetween(dob, today) > 0) ctx.addIssue({ code: 'custom', path: ['mother_dob'], message: 'Date of birth cannot be in the future.' });
+    if (dob && daysBetween(dob, today) > 0) ctx.addIssue({ code: 'custom', path: ['mother_dob'], message: 'validation:common.dobFuture' });
     if (typeof v.mother_age === 'number' && (v.mother_age < 10 || v.mother_age > 50))
-      ctx.addIssue({ code: 'custom', path: ['mother_dob'], message: 'Date of birth implies an age outside 10–50 years.' });
+      ctx.addIssue({ code: 'custom', path: ['mother_dob'], message: 'validation:mother.ageRange' });
     const adoption = toDate(v.adoption_date);
     if (adoption) {
-      if (daysBetween(adoption, today) > 0) ctx.addIssue({ code: 'custom', path: ['adoption_date'], message: 'Adoption date cannot be in the future.' });
-      if (dob && adoption < dob) ctx.addIssue({ code: 'custom', path: ['adoption_date'], message: 'Adoption date cannot be before the date of birth.' });
+      if (daysBetween(adoption, today) > 0) ctx.addIssue({ code: 'custom', path: ['adoption_date'], message: 'validation:common.adoptionFuture' });
+      if (dob && adoption < dob) ctx.addIssue({ code: 'custom', path: ['adoption_date'], message: 'validation:common.adoptionBeforeDob' });
     }
     if (v.mobile && v.alternate_mobile && digits(v.mobile) === digits(v.alternate_mobile))
-      ctx.addIssue({ code: 'custom', path: ['alternate_mobile'], message: 'Alternate mobile must differ from the primary.' });
+      ctx.addIssue({ code: 'custom', path: ['alternate_mobile'], message: 'validation:mother.altDiffers' });
     if (v.showEducationField) {
       if (!(typeof v.education_field_id === 'number' && v.education_field_id > 0))
-        ctx.addIssue({ code: 'custom', path: ['education_field_id'], message: 'Please select a field.' });
+        ctx.addIssue({ code: 'custom', path: ['education_field_id'], message: 'validation:mother.field' });
       if (!(typeof v.education_degree_id === 'number' && v.education_degree_id > 0))
-        ctx.addIssue({ code: 'custom', path: ['education_degree_id'], message: 'Please select a degree.' });
+        ctx.addIssue({ code: 'custom', path: ['education_degree_id'], message: 'validation:mother.degree' });
     }
     if (v.showOccupationOther && !v.occupation_other?.trim())
-      ctx.addIssue({ code: 'custom', path: ['occupation_other'], message: 'Please specify the occupation.' });
+      ctx.addIssue({ code: 'custom', path: ['occupation_other'], message: 'validation:mother.occupationOther' });
     if (v.showNutritionCourseName && !v.nutrition_course_name?.trim())
-      ctx.addIssue({ code: 'custom', path: ['nutrition_course_name'], message: 'Please specify the course.' });
+      ctx.addIssue({ code: 'custom', path: ['nutrition_course_name'], message: 'validation:mother.courseName' });
     // Matrix: every source needs both a trust and a willingness rating.
     const incomplete = MATRIX_SOURCES.some(s => {
       const r = v.source_ratings?.[s.key];
       return !(r && typeof r.trust === 'number' && typeof r.willingness === 'number');
     });
-    if (incomplete) ctx.addIssue({ code: 'custom', path: ['source_ratings'], message: 'Please rate trust and willingness for every source.' });
+    if (incomplete) ctx.addIssue({ code: 'custom', path: ['source_ratings'], message: 'validation:mother.ratings' });
   });
 
 export type MotherFormValues = z.input<typeof motherSchema>;

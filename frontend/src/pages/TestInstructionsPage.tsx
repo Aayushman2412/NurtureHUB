@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation, Trans } from 'react-i18next';
 import { getTestDetails, startAttempt } from '../api/tests';
 import { useToast } from '../context/ToastContext';
 import { Clock, HelpCircle, ChevronLeft, CheckSquare } from 'lucide-react';
@@ -35,6 +36,7 @@ const Spec: React.FC<{ label: string; icon: React.ReactNode; value: string }> = 
 const TestInstructionsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation('tests');
   const { showToast, updateToast } = useToast();
 
   const [test, setTest] = useState<Test | null>(null);
@@ -47,7 +49,7 @@ const TestInstructionsPage: React.FC = () => {
         const data = await getTestDetails(Number(id));
         setTest(data);
       } catch {
-        showToast('Failed to load assessment specifications', 'error');
+        showToast(t('instructions.toastLoadFailed'), 'error');
         navigate('/tests');
       } finally {
         setLoading(false);
@@ -59,29 +61,29 @@ const TestInstructionsPage: React.FC = () => {
   const handleStart = async () => {
     if (!test) return;
     setStarting(true);
-    const toastId = showToast('Initializing active assessment session...', 'loading');
+    const toastId = showToast(t('instructions.toastInitializing'), 'loading');
 
     try {
       const attemptData = await startAttempt(test.id);
-      updateToast(toastId, 'Assessment session started! Good luck.', 'success');
+      updateToast(toastId, t('instructions.toastStarted'), 'success');
       navigate(`/tests/${test.id}/take`, { state: { attemptData, testTitle: test.title } });
     } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Failed to start quiz attempt';
+      const msg = err.response?.data?.detail || t('instructions.toastStartFailed');
       updateToast(toastId, msg, 'error');
       setStarting(false);
     }
   };
 
-  if (loading) return <PageLoader label="Loading assessment settings…" />;
+  if (loading) return <PageLoader label={t('instructions.loading')} />;
   if (!test) return null;
 
   const startLabel = starting
-    ? 'Starting...'
+    ? t('instructions.starting')
     : test.is_locked
       ? test.status !== 'active'
-        ? 'Not Started by Admin'
-        : 'Locked'
-      : 'Start Assessment';
+        ? t('instructions.notStartedByAdmin')
+        : t('instructions.locked')
+      : t('common.startAssessment');
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -92,40 +94,61 @@ const TestInstructionsPage: React.FC = () => {
           onClick={() => navigate('/tests')}
           iconLeft={<ChevronLeft className="size-4" />}
         >
-          Back to Assessments
+          {t('common.backToAssessments')}
         </Button>
       </div>
 
       <Card className="p-8 sm:p-9">
-        <span className="text-xs font-bold uppercase tracking-wider text-primary">Instructions &amp; Regulations</span>
+        <span className="text-xs font-bold uppercase tracking-wider text-primary">{t('instructions.eyebrow')}</span>
         <h2 className="mt-1 mb-4 font-display text-3xl font-extrabold text-ink">{test.title}</h2>
         <p className="mb-8 text-[15px] leading-relaxed text-ink-muted">{test.description}</p>
 
         {/* Specs */}
         <div className="mb-8 grid grid-cols-1 gap-5 rounded-xl border border-border bg-surface-sunken p-5 sm:grid-cols-3">
-          <Spec label="Questions Count" icon={<HelpCircle className="size-[18px]" />} value={`${test.total_questions} Questions`} />
-          <Spec label="Duration Limit" icon={<Clock className="size-[18px]" />} value={`${test.duration_minutes} Minutes`} />
-          <Spec label="Passing Threshold" icon={<CheckSquare className="size-[18px]" />} value={`${test.passing_score_pct}% Score`} />
+          <Spec
+            label={t('instructions.specQuestionsLabel')}
+            icon={<HelpCircle className="size-[18px]" />}
+            value={t('instructions.specQuestionsValue', { total: test.total_questions })}
+          />
+          <Spec
+            label={t('instructions.specDurationLabel')}
+            icon={<Clock className="size-[18px]" />}
+            value={t('instructions.specDurationValue', { minutes: test.duration_minutes })}
+          />
+          <Spec
+            label={t('instructions.specPassingLabel')}
+            icon={<CheckSquare className="size-[18px]" />}
+            value={t('instructions.specPassingValue', { pct: test.passing_score_pct })}
+          />
         </div>
 
         {/* Guidelines */}
         <div className="mb-9 flex flex-col gap-4">
-          <h4 className="font-display text-base font-bold text-ink">Important Guidelines:</h4>
+          <h4 className="font-display text-base font-bold text-ink">{t('instructions.guidelinesTitle')}</h4>
           <ul className="flex list-disc flex-col gap-3 pl-5 text-sm leading-relaxed text-ink-muted">
-            <li>Ensure you have a stable network connection before starting.</li>
+            <li>{t('instructions.guidelines.network')}</li>
             <li>
-              Once you click <strong className="text-ink">Start</strong>, the active countdown timer will begin and
-              cannot be paused.
+              <Trans
+                t={t}
+                i18nKey="instructions.guidelines.timer"
+                components={{ strong: <strong className="text-ink" /> }}
+              />
             </li>
             <li>
-              You can flag questions using the <strong className="text-ink">Mark for Review</strong> toggle to skip and
-              revisit them later.
+              <Trans
+                t={t}
+                i18nKey="instructions.guidelines.markReview"
+                components={{ strong: <strong className="text-ink" /> }}
+              />
             </li>
-            <li>Do not close or refresh this tab during the quiz, as this will submit your answers automatically.</li>
+            <li>{t('instructions.guidelines.noRefresh')}</li>
             <li>
-              Upon passing this assessment with a score of{' '}
-              <strong className="text-ink">{test.passing_score_pct}% or higher</strong>, the next phase of your training
-              will unlock.
+              <Trans
+                t={t}
+                i18nKey="instructions.guidelines.unlock"
+                components={{ strong: <strong className="text-ink" /> }}
+                values={{ pct: test.passing_score_pct }}
+              />
             </li>
           </ul>
         </div>
@@ -134,30 +157,29 @@ const TestInstructionsPage: React.FC = () => {
         {test.is_locked && (
           <Alert
             variant="info"
-            title={test.status !== 'active' ? 'Not started by admin' : 'Assessment locked'}
+            title={test.status !== 'active' ? t('instructions.lockTitleNotStarted') : t('instructions.lockTitleLocked')}
             className="mb-9"
           >
-            {test.lock_reason || 'This assessment is not available yet. Please check back later.'}
+            {test.lock_reason || t('instructions.lockBodyDefault')}
           </Alert>
         )}
 
         {/* Warning */}
-        <Alert variant="warning" title="Attempt limits" className="mb-9">
-          You have completed {test.attempts_count} of your {test.max_attempts} allowed attempts for this assessment.
-          Make sure you have reviewed all Stage videos carefully.
+        <Alert variant="warning" title={t('instructions.attemptLimitsTitle')} className="mb-9">
+          {t('instructions.attemptLimitsBody', { used: test.attempts_count, max: test.max_attempts })}
         </Alert>
 
         {/* Actions */}
         <div className="flex justify-end gap-4">
           <Button variant="outline" size="lg" onClick={() => navigate('/tests')} disabled={starting}>
-            Cancel
+            {t('instructions.cancel')}
           </Button>
           <Button
             size="lg"
             onClick={handleStart}
             loading={starting}
             disabled={starting || test.is_locked}
-            title={test.is_locked ? test.lock_reason || 'Not available yet' : undefined}
+            title={test.is_locked ? test.lock_reason || t('instructions.notAvailableShort') : undefined}
           >
             {startLabel}
           </Button>

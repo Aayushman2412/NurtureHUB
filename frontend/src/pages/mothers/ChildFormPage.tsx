@@ -1,20 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useToast } from '../../context/ToastContext';
 import {
   Button, Card, Checkbox, DateInput, Field, Input, PageHeader, PageLoader, Radio, SelectField, Stepper,
 } from '../../components/ui';
 import { inputClasses } from '../../components/ui/Input';
 import {
-  BABIES_BORN, GENDERS, DELIVERY_METHODS, DELIVERY_PLACES, BIRTH_CONDITIONS, childAge,
+  childAge, babiesBornOptions, genderOptions, deliveryMethodOptions, deliveryPlaceOptions, birthConditionOptions,
 } from '../../lib/childFields';
 import { validateChild, validateChildStep, CR_STEP_FIELDS, type ChildFormValues } from '../../lib/childSchema';
 import type { FieldErrors } from '../../lib/validation';
 import { createChild, getChild, updateChild, type ChildPayload } from '../../api/children';
 import { getMother } from '../../api/mothers';
 
-const STEPS = ['Birth Details', 'Delivery & Feeding'];
-const opts = (list: string[]) => list.map(o => ({ value: o, label: o }));
+const STEP_KEYS = ['birth', 'delivery'] as const;
 const today = () => new Date().toISOString().slice(0, 10);
 
 const ReadOnly: React.FC<{ label: string; value: string; hint: string }> = ({ label, value, hint }) => (
@@ -30,13 +30,17 @@ const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                   text-primary dark:border-coral-950">{children}</div>
 );
 
-const YesNo: React.FC<{ name: string; value: string; onChange: (v: string) => void }> = ({ name, value, onChange }) => (
-  <div className="mt-1 flex gap-4">
-    {['Yes', 'No'].map(o => (
-      <Radio key={o} name={name} value={o} checked={value === o} onChange={e => onChange(e.target.value)} label={o} />
-    ))}
-  </div>
-);
+const YesNo: React.FC<{ name: string; value: string; onChange: (v: string) => void }> = ({ name, value, onChange }) => {
+  const { t } = useTranslation('mother');
+  const opts: [string, string][] = [['Yes', t('options.yes')], ['No', t('options.no')]];
+  return (
+    <div className="mt-1 flex gap-4">
+      {opts.map(([val, lbl]) => (
+        <Radio key={val} name={name} value={val} checked={value === val} onChange={e => onChange(e.target.value)} label={lbl} />
+      ))}
+    </div>
+  );
+};
 
 const ChildFormPage: React.FC = () => {
   const { motherId: motherIdParam, childId: childIdParam } = useParams();
@@ -44,7 +48,9 @@ const ChildFormPage: React.FC = () => {
   const childId = childIdParam ? Number(childIdParam) : null;
   const isEdit = childId != null;
   const navigate = useNavigate();
+  const { t } = useTranslation('mother');
   const { showToast, updateToast } = useToast();
+  const steps = STEP_KEYS.map(k => t(`child.steps.${k}`));
 
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -97,8 +103,9 @@ const ChildFormPage: React.FC = () => {
         setBirthConditions((c.birth_conditions ?? []).map(b => b.condition));
         setPreExistingOther(c.pre_existing_other ?? '');
       })
-      .catch(() => showToast('Failed to load child', 'error'))
+      .catch(() => showToast(t('child.loadFailed'), 'error'))
       .finally(() => setHydrating(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [motherId, childId]);
 
   const showDeliveryPlaceOther = deliveryPlace === 'Other';
@@ -133,7 +140,7 @@ const ChildFormPage: React.FC = () => {
   const next = () => {
     const stepErrs = validateChildStep(values, step);
     setErrors(stepErrs);
-    if (!Object.keys(stepErrs).length) setStep(s => Math.min(s + 1, STEPS.length - 1));
+    if (!Object.keys(stepErrs).length) setStep(s => Math.min(s + 1, STEP_KEYS.length - 1));
   };
   const back = () => { setErrors({}); setStep(s => Math.max(s - 1, 0)); };
 
@@ -155,7 +162,7 @@ const ChildFormPage: React.FC = () => {
     e.preventDefault();
     // A submit (e.g. Enter in a field) on a non-final step advances the wizard — never saves.
     // Without this, edit mode (form pre-filled & valid) would save on the first Enter press.
-    if (step !== STEPS.length - 1) {
+    if (step !== STEP_KEYS.length - 1) {
       next();
       return;
     }
@@ -167,74 +174,80 @@ const ChildFormPage: React.FC = () => {
       return;
     }
     setLoading(true);
-    const toastId = showToast(isEdit ? 'Saving child...' : 'Registering child...', 'loading');
+    const toastId = showToast(isEdit ? t('child.toastSaving') : t('child.toastRegistering'), 'loading');
     try {
       const saved = isEdit
         ? await updateChild(motherId, childId, buildPayload())
         : await createChild(motherId, buildPayload());
-      updateToast(toastId, `${isEdit ? 'Saved' : 'Registered'} ${saved.child_name} (${saved.child_uid}).`, 'success');
+      updateToast(
+        toastId,
+        isEdit
+          ? t('child.toastSuccessSaved', { name: saved.child_name, uid: saved.child_uid })
+          : t('child.toastSuccessRegistered', { name: saved.child_name, uid: saved.child_uid }),
+        'success',
+      );
       navigate(backTo);
     } catch {
-      updateToast(toastId, `Failed to ${isEdit ? 'save' : 'register'}. Please try again.`, 'error');
+      updateToast(toastId, isEdit ? t('child.toastFailSave') : t('child.toastFailRegister'), 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  if (hydrating) return <PageLoader label="Loading" className="min-h-60" />;
+  if (hydrating) return <PageLoader label={t('child.loading')} className="min-h-60" />;
 
-  const isLast = step === STEPS.length - 1;
+  const isLast = step === STEP_KEYS.length - 1;
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <PageHeader
-        title={isEdit ? 'Edit Child' : 'Register a Child'}
-        description={motherName ? `Linked to ${motherName}` : 'Linked to the selected mother.'}
+        title={isEdit ? t('child.titleEdit') : t('child.titleNew')}
+        description={motherName ? t('child.descLinked', { name: motherName }) : t('child.descLinkedFallback')}
         backTo={backTo}
       />
       <Card className="p-8">
         <form onSubmit={handleSubmit} className="flex flex-col gap-7" noValidate>
-          <Stepper steps={STEPS} current={step} />
+          <Stepper steps={steps} current={step} />
 
           {step === 0 && (
             <div>
-              <SectionTitle>Birth Details</SectionTitle>
+              <SectionTitle>{t('child.sectionBirth')}</SectionTitle>
               <div className="flex flex-col gap-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <SelectField label="Babies born in this delivery" value={babiesBorn}
+                  <SelectField label={t('child.babiesBorn')} value={babiesBorn}
                     onChange={v => { setBabiesBorn(v); clearError('babies_born'); }} error={errors.babies_born}
-                    placeholder="Select" options={opts(BABIES_BORN)} />
-                  <Field label="Baby's name" error={errors.child_name}>
+                    placeholder={t('child.placeholders.select')} options={babiesBornOptions(t)} />
+                  <Field label={t('child.childName')} error={errors.child_name}>
                     <Input value={childName} error={!!errors.child_name}
                       onChange={e => { setChildName(e.target.value); clearError('child_name'); }} />
                   </Field>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <Field label="Date of adoption" error={errors.adoption_date}>
+                  <Field label={t('child.adoptionDate')} error={errors.adoption_date}>
                     <DateInput value={adoptionDate} max={today()} error={!!errors.adoption_date}
                       onChange={v => { setAdoptionDate(v); clearError('adoption_date'); }} />
                   </Field>
-                  <Field label="Date of birth" error={errors.dob}>
+                  <Field label={t('child.dob')} error={errors.dob}>
                     <DateInput value={dob} max={today()} error={!!errors.dob}
                       onChange={v => { setDob(v); clearError('dob'); }} />
                   </Field>
-                  <ReadOnly label="Age (auto)" value={age ? `${age.days} days · ${age.months} months` : ''} hint="Set DOB to calculate" />
+                  <ReadOnly label={t('child.age')} value={age ? t('child.ageValue', { days: age.days, months: age.months }) : ''} hint={t('child.ageHint')} />
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <Field label="Birth weight (kg)" error={errors.birth_weight}>
-                    <Input type="number" step={0.001} min={1} max={5} placeholder="1.000–5.000" value={birthWeight}
+                  <Field label={t('child.birthWeight')} error={errors.birth_weight}>
+                    <Input type="number" step={0.001} min={1} max={5} placeholder={t('child.birthWeightPlaceholder')} value={birthWeight}
                       error={!!errors.birth_weight}
                       onChange={e => { setBirthWeight(e.target.value === '' ? '' : Number(e.target.value)); clearError('birth_weight'); }} />
                   </Field>
-                  <Field label="Birth length (cm)" error={errors.birth_length}>
-                    <Input type="number" step={0.1} min={30} max={65} placeholder="30.0–65.0" value={birthLength}
+                  <Field label={t('child.birthLength')} error={errors.birth_length}>
+                    <Input type="number" step={0.1} min={30} max={65} placeholder={t('child.birthLengthPlaceholder')} value={birthLength}
                       error={!!errors.birth_length}
                       onChange={e => { setBirthLength(e.target.value === '' ? '' : Number(e.target.value)); clearError('birth_length'); }} />
                   </Field>
-                  <SelectField label="Gender" value={gender} onChange={v => { setGender(v); clearError('gender'); }}
-                    error={errors.gender} placeholder="Select" options={opts(GENDERS)} />
+                  <SelectField label={t('child.gender')} value={gender} onChange={v => { setGender(v); clearError('gender'); }}
+                    error={errors.gender} placeholder={t('child.placeholders.select')} options={genderOptions(t)} />
                 </div>
-                <Field label="Previous living children (apart from this child)" error={errors.previous_living_children}>
+                <Field label={t('child.previousChildren')} error={errors.previous_living_children}>
                   <Input type="number" min={0} max={10} value={previousLivingChildren} error={!!errors.previous_living_children}
                     onChange={e => { setPreviousLivingChildren(e.target.value === '' ? '' : Number(e.target.value)); clearError('previous_living_children'); }} />
                 </Field>
@@ -244,43 +257,43 @@ const ChildFormPage: React.FC = () => {
 
           {step === 1 && (
             <div>
-              <SectionTitle>Delivery &amp; Feeding</SectionTitle>
+              <SectionTitle>{t('child.sectionDelivery')}</SectionTitle>
               <div className="flex flex-col gap-4">
-                <SelectField label="Delivery method" value={deliveryMethod}
+                <SelectField label={t('child.deliveryMethod')} value={deliveryMethod}
                   onChange={v => { setDeliveryMethod(v); clearError('delivery_method'); }} error={errors.delivery_method}
-                  placeholder="Select delivery method" options={opts(DELIVERY_METHODS)} />
-                <SelectField label="Place of delivery" value={deliveryPlace}
+                  placeholder={t('child.placeholders.selectDeliveryMethod')} options={deliveryMethodOptions(t)} />
+                <SelectField label={t('child.deliveryPlace')} value={deliveryPlace}
                   onChange={v => { setDeliveryPlace(v); clearError('delivery_place'); }} error={errors.delivery_place}
-                  placeholder="Select place of delivery" options={opts(DELIVERY_PLACES)} />
+                  placeholder={t('child.placeholders.selectPlace')} options={deliveryPlaceOptions(t)} />
                 {showDeliveryPlaceOther && (
-                  <Field label="Specify other place of delivery" error={errors.delivery_place_other}>
+                  <Field label={t('child.deliveryPlaceOther')} error={errors.delivery_place_other}>
                     <Input value={deliveryPlaceOther} error={!!errors.delivery_place_other}
                       onChange={e => { setDeliveryPlaceOther(e.target.value); clearError('delivery_place_other'); }} />
                   </Field>
                 )}
-                <Field label="Was breastfeeding initiated within one hour of birth?" error={errors.bf_within_one_hour}>
+                <Field label={t('child.bfWithinHour')} error={errors.bf_within_one_hour}>
                   <YesNo name="bf_within_one_hour" value={bfWithinOneHour}
                     onChange={v => { setBfWithinOneHour(v); clearError('bf_within_one_hour'); }} />
                 </Field>
-                <Field label="Was the baby exclusively breastfed during the facility stay after delivery?" error={errors.ebf_during_stay}>
+                <Field label={t('child.ebfDuringStay')} error={errors.ebf_during_stay}>
                   <YesNo name="ebf_during_stay" value={ebfDuringStay}
                     onChange={v => { setEbfDuringStay(v); clearError('ebf_during_stay'); }} />
                 </Field>
                 {showEbfReason && (
-                  <Field label="If not, mention the reason" error={errors.ebf_reason}>
+                  <Field label={t('child.ebfReason')} error={errors.ebf_reason}>
                     <textarea rows={3} value={ebfReason} className={inputClasses(false, !!errors.ebf_reason)}
                       onChange={e => { setEbfReason(e.target.value); clearError('ebf_reason'); }} />
                   </Field>
                 )}
-                <Field label="Pre-existing ill-health conditions at birth (select all that apply)">
+                <Field label={t('child.birthConditions')}>
                   <div className="mt-1 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                    {BIRTH_CONDITIONS.map(c => (
-                      <Checkbox key={c} label={c} checked={birthConditions.includes(c)} onChange={() => toggleCondition(c)} />
+                    {birthConditionOptions(t).map(c => (
+                      <Checkbox key={c.value} label={c.label} checked={birthConditions.includes(c.value)} onChange={() => toggleCondition(c.value)} />
                     ))}
                   </div>
                 </Field>
                 {showConditionOther && (
-                  <Field label="Specify the other health condition(s)" error={errors.pre_existing_other}>
+                  <Field label={t('child.conditionOther')} error={errors.pre_existing_other}>
                     <Input value={preExistingOther} error={!!errors.pre_existing_other}
                       onChange={e => { setPreExistingOther(e.target.value); clearError('pre_existing_other'); }} />
                   </Field>
@@ -290,13 +303,13 @@ const ChildFormPage: React.FC = () => {
           )}
 
           <div className="flex items-center gap-3 border-t border-border pt-5">
-            <Button type="button" variant="ghost" onClick={() => navigate(backTo)} disabled={loading}>Cancel</Button>
-            {step > 0 && <Button type="button" variant="secondary" onClick={back} disabled={loading}>Back</Button>}
+            <Button type="button" variant="ghost" onClick={() => navigate(backTo)} disabled={loading}>{t('child.cancel')}</Button>
+            {step > 0 && <Button type="button" variant="secondary" onClick={back} disabled={loading}>{t('child.back')}</Button>}
             {!isLast ? (
-              <Button type="button" onClick={next} className="ml-auto">Continue</Button>
+              <Button type="button" onClick={next} className="ml-auto">{t('child.continue')}</Button>
             ) : (
               <Button type="submit" size="lg" loading={loading} className="ml-auto">
-                {loading ? 'Saving...' : isEdit ? 'Save Child ✓' : 'Register Child ✓'}
+                {loading ? t('child.saving') : isEdit ? t('child.saveChild') : t('child.registerChild')}
               </Button>
             )}
           </div>

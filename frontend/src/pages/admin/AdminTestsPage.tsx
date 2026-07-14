@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation, Trans } from 'react-i18next';
 import client from '../../api/client';
 import * as XLSX from 'xlsx';
 import {
@@ -66,6 +67,7 @@ const toLocalInputValue = (iso: string | null): string => {
 
 const AdminTestsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation('adminTests');
   const [tests, setTests] = useState<Test[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedTest, setExpandedTest] = useState<number | null>(null);
@@ -129,17 +131,17 @@ const AdminTestsPage: React.FC = () => {
   };
 
   const deleteTest = (id: number) => {
-    if (!confirm('Delete this test and all its questions?')) return;
+    if (!confirm(t('confirm.delete'))) return;
     client.delete(`/api/admin/tests/${id}?district=${getDistrict()}`).then(fetchTests);
   };
 
   const startTest = (id: number) => {
-    if (!confirm('Start this test now? Eligible users will immediately be able to take it.')) return;
+    if (!confirm(t('confirm.start'))) return;
     client.post(`/api/admin/tests/${id}/start?district=${getDistrict()}`).then(fetchTests);
   };
 
   const endTest = (id: number) => {
-    if (!confirm('End this test now? Users will no longer be able to take it.')) return;
+    if (!confirm(t('confirm.end'))) return;
     client.post(`/api/admin/tests/${id}/end?district=${getDistrict()}`).then(fetchTests);
   };
 
@@ -176,12 +178,12 @@ const AdminTestsPage: React.FC = () => {
 
     const wb = XLSX.utils.book_new();
     const headers = [
-      'User Name',
-      ...resultData.questions.map((_, i) => `Q${i + 1}`),
-      'Total Correct',
-      'Total Wrong',
-      'Total Unattempted',
-      'Score %',
+      t('excel.userName'),
+      ...resultData.questions.map((_, i) => t('qColumn', { n: i + 1 })),
+      t('excel.totalCorrect'),
+      t('excel.totalWrong'),
+      t('excel.totalUnattempted'),
+      t('excel.scorePct'),
     ];
     const rows = resultData.results.map(r => {
       const qCols = resultData.questions.map(q => r.answers[`Q${q.id}`] || 'unattempted');
@@ -209,7 +211,7 @@ const AdminTestsPage: React.FC = () => {
       }
     }
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Results');
+    XLSX.utils.book_append_sheet(wb, ws, t('excel.sheet'));
     XLSX.writeFile(wb, `test_${testId}_results.xlsx`);
   };
 
@@ -256,17 +258,17 @@ const AdminTestsPage: React.FC = () => {
   const statusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge variant="success">🟢 Active</Badge>;
+        return <Badge variant="success">{t('status.active')}</Badge>;
       case 'ended':
-        return <Badge variant="error">🔴 Ended</Badge>;
+        return <Badge variant="error">{t('status.ended')}</Badge>;
       case 'scheduled':
-        return <Badge variant="warning">🗓 Scheduled</Badge>;
+        return <Badge variant="warning">{t('status.scheduled')}</Badge>;
       default:
-        return <Badge variant="neutral">📝 Draft</Badge>;
+        return <Badge variant="neutral">{t('status.draft')}</Badge>;
     }
   };
 
-  if (loading) return <PageLoader label="Loading tests…" />;
+  if (loading) return <PageLoader label={t('loading')} />;
 
   const iconBtn = 'flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-error-50 hover:text-error-500 cursor-pointer dark:hover:bg-error-500/10';
 
@@ -280,11 +282,11 @@ const AdminTestsPage: React.FC = () => {
   return (
     <div>
       <PageHeader
-        title="Test Manager"
-        description="Upload questions, control test sessions, and download color-coded result sheets."
+        title={t('header.title')}
+        description={t('header.description')}
         actions={
           <Button iconLeft={<ClipboardList className="size-4" />} onClick={() => setShowAddTest(true)}>
-            Create Test
+            {t('header.createTest')}
           </Button>
         }
       />
@@ -302,11 +304,11 @@ const AdminTestsPage: React.FC = () => {
               <div>
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <span className="text-xs font-bold uppercase tracking-wider text-coral-600 dark:text-coral-300">
-                    Stage {test.stage_id}
+                    {t('card.stage', { n: test.stage_id })}
                   </span>
                   {test.test_type && (
                     <Badge variant="info">
-                      {test.test_type === 'formative' ? 'Formative' : 'Screening'}
+                      {test.test_type === 'formative' ? t('testType.formative') : t('testType.screening')}
                     </Badge>
                   )}
                   {statusBadge(test.status)}
@@ -314,9 +316,13 @@ const AdminTestsPage: React.FC = () => {
                 <h3 className="font-display text-lg font-bold text-ink">{test.title}</h3>
                 <p className="text-sm text-ink-muted">{test.description}</p>
                 <span className="text-xs text-ink-faint">
-                  {test.questions.length} questions • {test.duration_minutes}min • Pass: {test.passing_score_pct}%
+                  {t('card.meta', {
+                    questions: test.questions.length,
+                    minutes: test.duration_minutes,
+                    pass: test.passing_score_pct,
+                  })}
                   {test.scheduled_at && test.status !== 'active' && test.status !== 'ended' && (
-                    <> • 🗓 Goes live: {new Date(test.scheduled_at).toLocaleString()}</>
+                    <> • {t('card.goesLive', { date: new Date(test.scheduled_at).toLocaleString() })}</>
                   )}
                 </span>
               </div>
@@ -333,7 +339,7 @@ const AdminTestsPage: React.FC = () => {
                           openSchedule(test);
                         }}
                       >
-                        Schedule
+                        {t('actions.schedule')}
                       </Button>
                       <Button
                         variant="secondary"
@@ -344,7 +350,7 @@ const AdminTestsPage: React.FC = () => {
                           startTest(test.id);
                         }}
                       >
-                        Start
+                        {t('actions.start')}
                       </Button>
                     </>
                   )}
@@ -358,7 +364,7 @@ const AdminTestsPage: React.FC = () => {
                         endTest(test.id);
                       }}
                     >
-                      End
+                      {t('actions.end')}
                     </Button>
                   )}
                   {(test.status === 'ended' || test.status === 'active') && (
@@ -371,7 +377,7 @@ const AdminTestsPage: React.FC = () => {
                         viewResults(test.id);
                       }}
                     >
-                      Results
+                      {t('actions.results')}
                     </Button>
                   )}
                   <Button
@@ -383,7 +389,7 @@ const AdminTestsPage: React.FC = () => {
                       navigate(`/admin/tests/${test.id}/monitor`);
                     }}
                   >
-                    Monitor Live
+                    {t('actions.monitorLive')}
                   </Button>
                   <button
                     className={iconBtn}
@@ -403,20 +409,20 @@ const AdminTestsPage: React.FC = () => {
               <div className="border-t border-border p-5">
                 {/* Settings */}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <div><FieldLabel size="sm">Title</FieldLabel><Input value={test.title} onChange={e => updateTest(test.id, { title: e.target.value })} /></div>
-                  <div><FieldLabel size="sm">Stage ID</FieldLabel><Input type="number" value={test.stage_id} onChange={e => updateTest(test.id, { stage_id: parseInt(e.target.value) || 1 })} /></div>
-                  <div><FieldLabel size="sm">Duration (min)</FieldLabel><Input type="number" value={test.duration_minutes} onChange={e => updateTest(test.id, { duration_minutes: parseInt(e.target.value) || 10 })} /></div>
-                  <div><FieldLabel size="sm">Pass %</FieldLabel><Input type="number" value={test.passing_score_pct} onChange={e => updateTest(test.id, { passing_score_pct: parseInt(e.target.value) || 70 })} /></div>
-                  <div><FieldLabel size="sm">Max Attempts</FieldLabel><Input type="number" value={test.max_attempts} onChange={e => updateTest(test.id, { max_attempts: parseInt(e.target.value) || 3 })} /></div>
+                  <div><FieldLabel size="sm">{t('fields.title')}</FieldLabel><Input value={test.title} onChange={e => updateTest(test.id, { title: e.target.value })} /></div>
+                  <div><FieldLabel size="sm">{t('fields.stageId')}</FieldLabel><Input type="number" value={test.stage_id} onChange={e => updateTest(test.id, { stage_id: parseInt(e.target.value) || 1 })} /></div>
+                  <div><FieldLabel size="sm">{t('fields.duration')}</FieldLabel><Input type="number" value={test.duration_minutes} onChange={e => updateTest(test.id, { duration_minutes: parseInt(e.target.value) || 10 })} /></div>
+                  <div><FieldLabel size="sm">{t('fields.passPct')}</FieldLabel><Input type="number" value={test.passing_score_pct} onChange={e => updateTest(test.id, { passing_score_pct: parseInt(e.target.value) || 70 })} /></div>
+                  <div><FieldLabel size="sm">{t('fields.maxAttempts')}</FieldLabel><Input type="number" value={test.max_attempts} onChange={e => updateTest(test.id, { max_attempts: parseInt(e.target.value) || 3 })} /></div>
                   <div>
-                    <FieldLabel size="sm">Test Type</FieldLabel>
+                    <FieldLabel size="sm">{t('fields.testType')}</FieldLabel>
                     <Select
                       value={test.test_type || ''}
                       onChange={e => updateTest(test.id, { test_type: (e.target.value || null) as Test['test_type'] })}
                     >
                       <option value="">—</option>
-                      <option value="formative">Formative</option>
-                      <option value="screening">Screening</option>
+                      <option value="formative">{t('testType.formative')}</option>
+                      <option value="screening">{t('testType.screening')}</option>
                     </Select>
                   </div>
                 </div>
@@ -431,12 +437,11 @@ const AdminTestsPage: React.FC = () => {
                       fileInputRef.current?.click();
                     }}
                   >
-                    Upload Questions (Excel/CSV)
+                    {t('upload.button')}
                   </Button>
                   <Alert variant="info" className="flex-1">
                     <span className="flex items-center gap-2">
-                      <AlertCircle className="size-3.5" /> Excel format: Question Text | Option A | Option B | Option C |
-                      Option D | Correct Answer
+                      <AlertCircle className="size-3.5" /> {t('upload.formatHint')}
                     </span>
                   </Alert>
                 </div>
@@ -447,13 +452,13 @@ const AdminTestsPage: React.FC = () => {
                     <THead>
                       <Tr>
                         <Th className="w-10">#</Th>
-                        <Th>Question</Th>
+                        <Th>{t('questionsTable.question')}</Th>
                         <Th>A</Th>
                         <Th>B</Th>
                         <Th>C</Th>
                         <Th>D</Th>
-                        <Th className="w-16">Answer</Th>
-                        <Th className="w-14">Marks</Th>
+                        <Th className="w-16">{t('questionsTable.answer')}</Th>
+                        <Th className="w-14">{t('questionsTable.marks')}</Th>
                       </Tr>
                     </THead>
                     <TBody>
@@ -476,8 +481,8 @@ const AdminTestsPage: React.FC = () => {
                 ) : (
                   <EmptyState
                     icon={<FileSpreadsheet />}
-                    title="No questions yet"
-                    description="Upload an Excel/CSV file to populate questions."
+                    title={t('questionsEmpty.title')}
+                    description={t('questionsEmpty.description')}
                   />
                 )}
               </div>
@@ -490,39 +495,39 @@ const AdminTestsPage: React.FC = () => {
       <Modal
         open={showAddTest}
         onClose={() => setShowAddTest(false)}
-        title="Create New Assessment"
+        title={t('createModal.title')}
         footer={
           <>
             <Button variant="outline" onClick={() => setShowAddTest(false)}>
-              Cancel
+              {t('actions.cancel')}
             </Button>
             <Button iconLeft={<Save className="size-4" />} onClick={createTest} disabled={!newTest.title.trim()}>
-              Create Test
+              {t('actions.createTest')}
             </Button>
           </>
         }
       >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div><FieldLabel size="sm">Title *</FieldLabel><Input placeholder="e.g. Mid-term Assessment" value={newTest.title} onChange={e => setNewTest({ ...newTest, title: e.target.value })} /></div>
-          <div><FieldLabel size="sm">Stage ID</FieldLabel><Input type="number" value={newTest.stage_id} onChange={e => setNewTest({ ...newTest, stage_id: parseInt(e.target.value) || 1 })} /></div>
-          <div><FieldLabel size="sm">Duration (min)</FieldLabel><Input type="number" value={newTest.duration_minutes} onChange={e => setNewTest({ ...newTest, duration_minutes: parseInt(e.target.value) || 10 })} /></div>
-          <div><FieldLabel size="sm">Passing %</FieldLabel><Input type="number" value={newTest.passing_score_pct} onChange={e => setNewTest({ ...newTest, passing_score_pct: parseInt(e.target.value) || 70 })} /></div>
-          <div><FieldLabel size="sm">Max Attempts</FieldLabel><Input type="number" value={newTest.max_attempts} onChange={e => setNewTest({ ...newTest, max_attempts: parseInt(e.target.value) || 3 })} /></div>
+          <div><FieldLabel size="sm">{t('fields.titleRequired')}</FieldLabel><Input placeholder={t('createModal.titlePlaceholder')} value={newTest.title} onChange={e => setNewTest({ ...newTest, title: e.target.value })} /></div>
+          <div><FieldLabel size="sm">{t('fields.stageId')}</FieldLabel><Input type="number" value={newTest.stage_id} onChange={e => setNewTest({ ...newTest, stage_id: parseInt(e.target.value) || 1 })} /></div>
+          <div><FieldLabel size="sm">{t('fields.duration')}</FieldLabel><Input type="number" value={newTest.duration_minutes} onChange={e => setNewTest({ ...newTest, duration_minutes: parseInt(e.target.value) || 10 })} /></div>
+          <div><FieldLabel size="sm">{t('fields.passingPct')}</FieldLabel><Input type="number" value={newTest.passing_score_pct} onChange={e => setNewTest({ ...newTest, passing_score_pct: parseInt(e.target.value) || 70 })} /></div>
+          <div><FieldLabel size="sm">{t('fields.maxAttempts')}</FieldLabel><Input type="number" value={newTest.max_attempts} onChange={e => setNewTest({ ...newTest, max_attempts: parseInt(e.target.value) || 3 })} /></div>
           <div>
-            <FieldLabel size="sm">Test Type</FieldLabel>
+            <FieldLabel size="sm">{t('fields.testType')}</FieldLabel>
             <Select value={newTest.test_type} onChange={e => setNewTest({ ...newTest, test_type: e.target.value })}>
               <option value="">—</option>
-              <option value="formative">Formative</option>
-              <option value="screening">Screening</option>
+              <option value="formative">{t('testType.formative')}</option>
+              <option value="screening">{t('testType.screening')}</option>
             </Select>
           </div>
         </div>
         <div className="mt-3">
-          <FieldLabel size="sm">Description</FieldLabel>
+          <FieldLabel size="sm">{t('fields.description')}</FieldLabel>
           <textarea
             className={cn(inputClasses(), 'resize-y')}
             rows={3}
-            placeholder="Brief description..."
+            placeholder={t('createModal.descPlaceholder')}
             value={newTest.description}
             onChange={e => setNewTest({ ...newTest, description: e.target.value })}
           />
@@ -533,32 +538,35 @@ const AdminTestsPage: React.FC = () => {
       <Modal
         open={scheduleTest !== null}
         onClose={() => setScheduleTest(null)}
-        title={scheduleTest ? `Schedule: ${scheduleTest.title}` : 'Schedule'}
+        title={scheduleTest ? t('scheduleModal.titleWith', { title: scheduleTest.title }) : t('scheduleModal.title')}
         footer={
           <>
             <Button variant="outline" onClick={() => setScheduleValue('')}>
-              Clear
+              {t('scheduleModal.clear')}
             </Button>
             <Button variant="outline" onClick={() => setScheduleTest(null)}>
-              Cancel
+              {t('actions.cancel')}
             </Button>
             <Button iconLeft={<Save className="size-4" />} onClick={saveSchedule}>
-              Save Schedule
+              {t('scheduleModal.save')}
             </Button>
           </>
         }
       >
         <p className="mt-0 text-sm text-ink-muted">
-          This tentative date &amp; time is shown on every user's dashboard. The test only becomes takeable when you
-          press <strong className="text-ink">Start</strong> — the schedule is informational.
+          <Trans
+            t={t}
+            i18nKey="scheduleModal.info"
+            components={{ strong: <strong className="text-ink" /> }}
+          />
         </p>
         <div className="mt-3">
-          <FieldLabel size="sm">Tentative go-live date &amp; time</FieldLabel>
+          <FieldLabel size="sm">{t('scheduleModal.goLiveLabel')}</FieldLabel>
           <Input type="datetime-local" value={scheduleValue} onChange={e => setScheduleValue(e.target.value)} />
         </div>
         {scheduleValue && (
           <p className="mt-2 mb-0 text-sm text-primary">
-            Users will see: “Tentative test date: {new Date(scheduleValue).toLocaleString()}”
+            {t('scheduleModal.preview', { date: new Date(scheduleValue).toLocaleString() })}
           </p>
         )}
       </Modal>
@@ -571,7 +579,7 @@ const AdminTestsPage: React.FC = () => {
           setResultData(null);
         }}
         size="lg"
-        title={`Test Results: ${resultData?.test_title || 'Loading...'}`}
+        title={t('resultsModal.title', { title: resultData?.test_title || t('resultsModal.loadingTitle') })}
       >
         {resultLoading ? (
           <div className="flex justify-center py-8">
@@ -584,20 +592,20 @@ const AdminTestsPage: React.FC = () => {
                 iconLeft={<Download className="size-4" />}
                 onClick={() => showResults !== null && downloadResults(showResults)}
               >
-                Download Excel (.xlsx)
+                {t('resultsModal.download')}
               </Button>
             </div>
             <Table density="compact">
               <THead>
                 <Tr>
-                  <Th>User</Th>
+                  <Th>{t('resultsModal.table.user')}</Th>
                   {resultData.questions.map((_, i) => (
-                    <Th key={i} className="text-center">Q{i + 1}</Th>
+                    <Th key={i} className="text-center">{t('qColumn', { n: i + 1 })}</Th>
                   ))}
-                  <Th className="text-center">Correct</Th>
-                  <Th className="text-center">Wrong</Th>
-                  <Th className="text-center">Unatt.</Th>
-                  <Th className="text-center">Score</Th>
+                  <Th className="text-center">{t('resultsModal.table.correct')}</Th>
+                  <Th className="text-center">{t('resultsModal.table.wrong')}</Th>
+                  <Th className="text-center">{t('resultsModal.table.unattempted')}</Th>
+                  <Th className="text-center">{t('resultsModal.table.score')}</Th>
                 </Tr>
               </THead>
               <TBody>
@@ -629,18 +637,18 @@ const AdminTestsPage: React.FC = () => {
             </Table>
             <div className="mt-4 flex flex-wrap gap-4 text-xs text-ink-muted">
               <span className="flex items-center gap-1.5">
-                <span className="size-3 rounded-full bg-success-500" /> Correct
+                <span className="size-3 rounded-full bg-success-500" /> {t('resultsModal.legend.correct')}
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="size-3 rounded-full bg-error-500" /> Wrong
+                <span className="size-3 rounded-full bg-error-500" /> {t('resultsModal.legend.wrong')}
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="size-3 rounded-full bg-surface-sunken ring-1 ring-border-strong" /> Unattempted
+                <span className="size-3 rounded-full bg-surface-sunken ring-1 ring-border-strong" /> {t('resultsModal.legend.unattempted')}
               </span>
             </div>
           </>
         ) : (
-          <EmptyState icon={<FileSpreadsheet />} title="No results available" />
+          <EmptyState icon={<FileSpreadsheet />} title={t('resultsModal.emptyTitle')} />
         )}
       </Modal>
     </div>

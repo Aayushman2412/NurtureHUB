@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
 import OTPInput from '../components/auth/OTPInput';
-import { Button, Input, PasswordInput } from '../components/ui';
+import { Button, FieldLabel, Input, PasswordInput } from '../components/ui';
 
 const ForgotPasswordPage: React.FC = () => {
+  const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -20,19 +22,19 @@ const ForgotPasswordPage: React.FC = () => {
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
-      showToast('Please enter your email address', 'warning');
+      showToast(t('forgot.toast.enterEmail'), 'warning');
       return;
     }
 
     setLoading(true);
-    const toastId = showToast('Sending reset code...', 'loading');
+    const toastId = showToast(t('forgot.toast.sendingCode'), 'loading');
 
     try {
       await forgotPassword(email);
-      updateToast(toastId, 'If registered, a 6-digit reset code has been sent to your email.', 'success');
+      updateToast(toastId, t('forgot.toast.codeSent'), 'success');
       setSubmitted(true);
     } catch (err: any) {
-      updateToast(toastId, err.response?.data?.detail || 'Failed to request reset link', 'error');
+      updateToast(toastId, err.response?.data?.detail || t('forgot.toast.requestFailed'), 'error');
     } finally {
       setLoading(false);
     }
@@ -41,24 +43,24 @@ const ForgotPasswordPage: React.FC = () => {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!code || !newPassword) {
-      showToast('Please enter the verification code and new password', 'warning');
+      showToast(t('forgot.toast.enterCodeAndPassword'), 'warning');
       return;
     }
 
     if (newPassword.length < 6) {
-      showToast('Password must be at least 6 characters long', 'warning');
+      showToast(t('forgot.toast.passwordMin'), 'warning');
       return;
     }
 
     setLoading(true);
-    const toastId = showToast('Resetting password...', 'loading');
+    const toastId = showToast(t('forgot.toast.resetting'), 'loading');
 
     try {
       await resetPassword(email, code, newPassword);
-      updateToast(toastId, 'Password reset successfully! You can now sign in with your new password.', 'success');
+      updateToast(toastId, t('forgot.toast.resetSuccess'), 'success');
       navigate('/login');
     } catch (err: any) {
-      updateToast(toastId, err.response?.data?.detail || 'Invalid or expired verification code', 'error');
+      updateToast(toastId, err.response?.data?.detail || t('forgot.toast.invalidCode'), 'error');
     } finally {
       setLoading(false);
     }
@@ -66,23 +68,17 @@ const ForgotPasswordPage: React.FC = () => {
 
   return (
     <AuthLayout
-      title="Reset Password"
-      subtitle={
-        !submitted
-          ? "Enter your email address and we'll send a 6-digit verification code."
-          : 'Enter the verification code and choose a new password.'
-      }
+      title={t('forgot.title')}
+      subtitle={submitted ? t('forgot.subtitleReset') : t('forgot.subtitleRequest')}
     >
       {!submitted ? (
         <form onSubmit={handleSendCode} className="flex flex-col gap-5">
           <div>
-            <label htmlFor="email-input" className="mb-2 block text-sm font-semibold text-ink">
-              Email Address
-            </label>
+            <FieldLabel htmlFor="email-input">{t('fields.email')}</FieldLabel>
             <Input
               id="email-input"
               type="email"
-              placeholder="e.g. name@department.gov"
+              placeholder={t('fields.emailPlaceholder')}
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
@@ -91,33 +87,30 @@ const ForgotPasswordPage: React.FC = () => {
           </div>
 
           <Button type="submit" size="lg" fullWidth loading={loading} className="mt-2">
-            {loading ? 'Sending Code...' : 'Send Verification Code'}
+            {loading ? t('forgot.sendingCode') : t('forgot.sendCode')}
           </Button>
 
           <p className="mt-2 text-center text-sm text-ink-muted">
-            Back to{' '}
             <Link to="/login" className="font-semibold text-primary hover:text-primary-hover">
-              Sign In
+              {t('forgot.backToSignIn')}
             </Link>
           </p>
         </form>
       ) : (
         <form onSubmit={handleResetPassword} className="flex flex-col gap-5">
           <div className="text-center">
-            <label className="mb-2 block text-sm font-semibold text-ink">6-Digit Verification Code</label>
+            <label className="mb-2 block text-sm font-semibold text-ink">{t('forgot.codeLabel')}</label>
             <OTPInput length={6} onComplete={otpCode => setCode(otpCode)} />
             <p className="-mt-2 text-xs text-ink-faint">
-              Didn't receive it? Check your email or backend terminal output.
+              {t('forgot.notReceived')}
             </p>
           </div>
 
           <div>
-            <label htmlFor="newpassword-input" className="mb-2 block text-sm font-semibold text-ink">
-              New Password
-            </label>
+            <FieldLabel htmlFor="newpassword-input">{t('fields.newPassword')}</FieldLabel>
             <PasswordInput
               id="newpassword-input"
-              placeholder="Min. 6 characters"
+              placeholder={t('fields.passwordMin')}
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
               required
@@ -126,11 +119,11 @@ const ForgotPasswordPage: React.FC = () => {
           </div>
 
           <Button type="submit" size="lg" fullWidth loading={loading} disabled={code.length < 6} className="mt-2">
-            {loading ? 'Resetting...' : 'Reset Password'}
+            {loading ? t('forgot.resetting') : t('forgot.reset')}
           </Button>
 
           <Button type="button" variant="outline" size="lg" fullWidth onClick={() => setSubmitted(false)}>
-            Back
+            {t('forgot.back')}
           </Button>
         </form>
       )}

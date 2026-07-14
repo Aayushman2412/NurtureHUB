@@ -1,0 +1,102 @@
+{
+  "loading": "Loading tests…",
+  "header": {
+    "title": "Test Manager",
+    "description": "Upload questions, control test sessions, and download color-coded result sheets.",
+    "createTest": "Create Test"
+  },
+  "status": {
+    "active": "🟢 Active",
+    "ended": "🔴 Ended",
+    "scheduled": "🗓 Scheduled",
+    "draft": "📝 Draft"
+  },
+  "testType": {
+    "formative": "Formative",
+    "screening": "Screening"
+  },
+  "card": {
+    "stage": "Stage {{n}}",
+    "meta": "{{questions}} questions • {{minutes}}min • Pass: {{pass}}%",
+    "goesLive": "🗓 Goes live: {{date}}"
+  },
+  "actions": {
+    "schedule": "Schedule",
+    "start": "Start",
+    "end": "End",
+    "results": "Results",
+    "monitorLive": "Monitor Live",
+    "createTest": "Create Test",
+    "cancel": "Cancel"
+  },
+  "fields": {
+    "title": "Title",
+    "titleRequired": "Title *",
+    "stageId": "Stage ID",
+    "duration": "Duration (min)",
+    "passPct": "Pass %",
+    "passingPct": "Passing %",
+    "maxAttempts": "Max Attempts",
+    "testType": "Test Type",
+    "description": "Description"
+  },
+  "upload": {
+    "button": "Upload Questions (Excel/CSV)",
+    "formatHint": "Excel format: Question Text | Option A | Option B | Option C | Option D | Correct Answer"
+  },
+  "questionsTable": {
+    "question": "Question",
+    "answer": "Answer",
+    "marks": "Marks"
+  },
+  "questionsEmpty": {
+    "title": "No questions yet",
+    "description": "Upload an Excel/CSV file to populate questions."
+  },
+  "createModal": {
+    "title": "Create New Assessment",
+    "titlePlaceholder": "e.g. Mid-term Assessment",
+    "descPlaceholder": "Brief description..."
+  },
+  "scheduleModal": {
+    "title": "Schedule",
+    "titleWith": "Schedule: {{title}}",
+    "clear": "Clear",
+    "save": "Save Schedule",
+    "info": "This tentative date & time is shown on every user's dashboard. The test only becomes takeable when you press <strong>Start</strong> — the schedule is informational.",
+    "goLiveLabel": "Tentative go-live date & time",
+    "preview": "Users will see: “Tentative test date: {{date}}”"
+  },
+  "resultsModal": {
+    "title": "Test Results: {{title}}",
+    "loadingTitle": "Loading...",
+    "download": "Download Excel (.xlsx)",
+    "table": {
+      "user": "User",
+      "correct": "Correct",
+      "wrong": "Wrong",
+      "unattempted": "Unatt.",
+      "score": "Score"
+    },
+    "legend": {
+      "correct": "Correct",
+      "wrong": "Wrong",
+      "unattempted": "Unattempted"
+    },
+    "emptyTitle": "No results available"
+  },
+  "confirm": {
+    "delete": "Delete this test and all its questions?",
+    "start": "Start this test now? Eligible users will immediately be able to take it.",
+    "end": "End this test now? Users will no longer be able to take it."
+  },
+  "excel": {
+    "sheet": "Results",
+    "userName": "User Name",
+    "totalCorrect": "Total Correct",
+    "totalWrong": "Total Wrong",
+    "totalUnattempted": "Total Unattempted",
+    "scorePct": "Score %"
+  },
+  "qColumn": "Q{{n}}"
+}

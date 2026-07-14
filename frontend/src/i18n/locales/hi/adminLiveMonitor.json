@@ -1,0 +1,198 @@
+{
+  "loading": {
+    "title": "लाइव फ़ीड से कनेक्ट हो रहा है…",
+    "subtitle": "परीक्षा मॉनिटरिंग के लिए रीयल-टाइम कनेक्शन स्थापित किया जा रहा है"
+  },
+  "connError": {
+    "title": "लाइव फ़ीड उपलब्ध नहीं है",
+    "back": "टेस्ट मैनेजर पर वापस जाएँ"
+  },
+  "header": {
+    "titleFallback": "परीक्षा मॉनिटर",
+    "live": "लाइव",
+    "description": "{{questions}} प्रश्न · {{minutes}} मिनट अवधि",
+    "descriptionFallback": "रीयल-टाइम परीक्षा मॉनिटरिंग",
+    "reportTitle": "पूर्ण प्रदर्शन + एंटी-चीट रिपोर्ट को Excel के रूप में डाउनलोड करें",
+    "report": "रिपोर्ट",
+    "connected": "जुड़ा हुआ",
+    "reconnecting": "पुनः कनेक्ट हो रहा है…",
+    "watching": "{{n}} देख रहे हैं"
+  },
+  "reconnectBanner": "लाइव कनेक्शन टूट गया — पुनः कनेक्ट करने का प्रयास किया जा रहा है…",
+  "stats": {
+    "totalCandidates": "कुल उम्मीदवार",
+    "activeNow": "अभी सक्रिय",
+    "highRisk": "उच्च जोखिम",
+    "flagged": "चिह्नित",
+    "avgProgress": "औसत प्रगति",
+    "avgAccuracy": "औसत सटीकता"
+  },
+  "controls": {
+    "searchPlaceholder": "नाम या ईमेल से खोजें…",
+    "sort": {
+      "riskScore": "जोखिम स्कोर",
+      "timeRemaining": "शेष समय",
+      "questionsDone": "पूर्ण प्रश्न",
+      "accuracy": "सटीकता",
+      "tabSwitches": "टैब स्विच"
+    },
+    "ascending": "आरोही",
+    "descending": "अवरोही",
+    "toggleSortOrder": "क्रम बदलें",
+    "gridView": "ग्रिड दृश्य",
+    "gridViewAria": "ग्रिड दृश्य",
+    "tableView": "तालिका दृश्य",
+    "tableViewAria": "तालिका दृश्य"
+  },
+  "filters": {
+    "all": "सभी"
+  },
+  "status": {
+    "active": "सक्रिय",
+    "idle": "निष्क्रिय",
+    "started": "शुरू हुआ",
+    "not_started": "शुरू नहीं हुआ",
+    "submitted": "जमा",
+    "auto_submitted": "स्वतः जमा",
+    "disconnected": "डिस्कनेक्ट"
+  },
+  "showingCount": "{{total}} में से {{shown}} उम्मीदवार दिखाए जा रहे हैं",
+  "empty": {
+    "title": "कोई उम्मीदवार नहीं मिला",
+    "waiting": "उम्मीदवारों के कनेक्ट होने की प्रतीक्षा है…",
+    "adjustFilters": "अपने फ़िल्टर समायोजित करके देखें"
+  },
+  "riskScoreTitle": "जोखिम स्कोर: {{score}}/100",
+  "qShort": "प्र{{n}}",
+  "card": {
+    "unknownUser": "अज्ञात उपयोगकर्ता",
+    "progress": "प्रगति",
+    "tabSwitchesTitle": "{{n}} टैब स्विच",
+    "flaggedTitle": "चिह्नित",
+    "flag": "चिह्नित करें",
+    "unflag": "चिह्न हटाएँ",
+    "removeFlag": "चिह्न हटाएँ",
+    "sendWarning": "चेतावनी भेजें",
+    "viewDetails": "विवरण देखें"
+  },
+  "table": {
+    "candidate": "उम्मीदवार",
+    "status": "स्थिति",
+    "progress": "प्रगति",
+    "accuracy": "सटीकता",
+    "timeLeft": "शेष समय",
+    "currentQ": "वर्तमान प्रश्न",
+    "risk": "जोखिम",
+    "tabSwitches": "टैब स्विच",
+    "actions": "क्रियाएँ",
+    "unknown": "अज्ञात",
+    "flag": "चिह्नित करें",
+    "unflag": "चिह्न हटाएँ",
+    "warn": "चेतावनी दें",
+    "sendWarningAria": "चेतावनी भेजें"
+  },
+  "detail": {
+    "loading": "उम्मीदवार विवरण लोड हो रहा है…",
+    "flagged": "चिह्नित",
+    "progress": "प्रगति",
+    "behavioralIndicators": "व्यवहार संकेतक",
+    "suspiciousFlags": "संदिग्ध गतिविधि चिह्न",
+    "activityTimeline": "गतिविधि समयरेखा (हाल की)",
+    "adminActions": "व्यवस्थापक क्रियाएँ",
+    "stats": {
+      "questionsAttempted": "प्रयास किए गए प्रश्न",
+      "correctAnswers": "सही उत्तर",
+      "wrongAnswers": "गलत उत्तर",
+      "accuracy": "सटीकता",
+      "timeRemaining": "शेष समय",
+      "currentQuestion": "वर्तमान प्रश्न",
+      "avgTimeQuestion": "औसत समय/प्रश्न",
+      "fastestQuestion": "सबसे तेज़ प्रश्न"
+    },
+    "behavioral": {
+      "tabSwitches": "{{n}} टैब स्विच",
+      "fullscreenExits": "{{n}} फ़ुलस्क्रीन निकास",
+      "copyPaste": "{{n}} कॉपी/पेस्ट"
+    },
+    "footer": {
+      "removeFlag": "चिह्न हटाएँ",
+      "flagUser": "उपयोगकर्ता चिह्नित करें",
+      "sendWarning": "चेतावनी भेजें",
+      "addNote": "नोट जोड़ें",
+      "forceSubmit": "बलपूर्वक जमा"
+    }
+  },
+  "actionModal": {
+    "titleForceSubmit": "परीक्षा बलपूर्वक जमा करें",
+    "titleSendWarning": "चेतावनी भेजें",
+    "titleAddNote": "उल्लंघन नोट जोड़ें",
+    "cancel": "रद्द करें",
+    "confirmForceSubmit": "बलपूर्वक जमा",
+    "confirmSendWarning": "चेतावनी भेजें",
+    "confirmSaveNote": "नोट सहेजें",
+    "targetLabel": "लक्ष्य:",
+    "forceSubmitWarning": "यह तुरंत उम्मीदवार की परीक्षा जमा कर देगा। यह क्रिया पूर्ववत नहीं की जा सकती।",
+    "placeholderWarning": "चेतावनी संदेश दर्ज करें…",
+    "placeholderNote": "उल्लंघन नोट दर्ज करें…",
+    "placeholderForceSubmit": "बलपूर्वक जमा करने का कारण…"
+  },
+  "actions": {
+    "flaggedByAdmin": "व्यवस्थापक द्वारा चिह्नित"
+  },
+  "eventTypes": {
+    "HEARTBEAT": "हार्टबीट",
+    "QUESTION_VIEWED": "प्रश्न देखा गया",
+    "ANSWER_SELECTED": "उत्तर चुना गया",
+    "ANSWER_CHANGED": "उत्तर बदला गया",
+    "ANSWER_CLEARED": "उत्तर हटाया गया",
+    "ANSWER_MARKED_REVIEW": "उत्तर समीक्षा हेतु चिह्नित",
+    "TEST_SUBMITTED": "परीक्षा जमा",
+    "TEST_AUTO_SUBMITTED": "परीक्षा स्वतः जमा",
+    "TAB_SWITCH": "टैब स्विच",
+    "FULLSCREEN_EXIT": "फ़ुलस्क्रीन निकास",
+    "WINDOW_BLUR": "विंडो ब्लर",
+    "WINDOW_FOCUS": "विंडो फ़ोकस",
+    "COPY_PASTE_DETECTED": "कॉपी पेस्ट पाया गया"
+  },
+  "actionTypes": {
+    "FLAG": "चिह्नित करें",
+    "UNFLAG": "चिह्न हटाएँ",
+    "FORCE_SUBMIT": "बलपूर्वक जमा",
+    "SEND_WARNING": "चेतावनी भेजें",
+    "ADD_NOTE": "नोट जोड़ें"
+  },
+  "export": {
+    "sheet": "परीक्षा रिपोर्ट",
+    "yes": "हाँ",
+    "no": "नहीं",
+    "headers": {
+      "candidateName": "उम्मीदवार का नाम",
+      "email": "ईमेल",
+      "status": "स्थिति",
+      "ipAddress": "IP पता",
+      "connectedAt": "कनेक्ट होने का समय",
+      "questionsAttempted": "प्रयास किए गए प्रश्न",
+      "totalQuestions": "कुल प्रश्न",
+      "correct": "सही",
+      "wrong": "गलत",
+      "accuracyPct": "सटीकता %",
+      "timeSpent": "व्यतीत समय (से)",
+      "avgTimeQuestion": "औसत समय/प्रश्न (मि.से.)",
+      "fastestQ": "सबसे तेज़ प्रश्न (मि.से.)",
+      "slowestQ": "सबसे धीमा प्रश्न (मि.से.)",
+      "tabSwitches": "टैब स्विच",
+      "fullscreenExits": "फ़ुलस्क्रीन निकास",
+      "windowBlurs": "विंडो ब्लर",
+      "copyPasteEvents": "कॉपी/पेस्ट घटनाएँ",
+      "questionSwitches": "प्रश्न स्विच",
+      "idlePeriods": "निष्क्रिय अवधि",
+      "riskScore": "जोखिम स्कोर",
+      "flagged": "चिह्नित",
+      "flagReason": "चिह्न कारण",
+      "suspiciousFlags": "संदिग्ध चिह्न",
+      "finalScorePct": "अंतिम स्कोर %",
+      "passed": "उत्तीर्ण",
+      "submittedAt": "जमा करने का समय"
+    }
+  }
+}

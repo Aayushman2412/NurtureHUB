@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -7,6 +8,7 @@ import OTPInput from '../components/auth/OTPInput';
 import { Button } from '../components/ui';
 
 const OTPPage: React.FC = () => {
+  const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
   const [resending, setResending] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -18,7 +20,7 @@ const OTPPage: React.FC = () => {
   useEffect(() => {
     const savedEmail = localStorage.getItem('nh_user_email') || '';
     if (!savedEmail) {
-      showToast('No active session found. Please register or sign in.', 'warning');
+      showToast(t('otp.toast.noSession'), 'warning');
       navigate('/login');
       return;
     }
@@ -27,11 +29,11 @@ const OTPPage: React.FC = () => {
 
   const handleVerify = async (otpCode: string) => {
     setLoading(true);
-    const toastId = showToast('Verifying code...', 'loading');
+    const toastId = showToast(t('otp.toast.verifying'), 'loading');
 
     try {
       const response = await verifyOtp(email, otpCode);
-      updateToast(toastId, 'Account verified successfully!', 'success');
+      updateToast(toastId, t('otp.toast.verified'), 'success');
 
       if (response.is_profile_complete) {
         navigate('/dashboard');
@@ -39,7 +41,7 @@ const OTPPage: React.FC = () => {
         navigate('/register');
       }
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || 'Invalid or expired verification code';
+      const errorMsg = err.response?.data?.detail || t('otp.toast.invalidCode');
       updateToast(toastId, errorMsg, 'error');
     } finally {
       setLoading(false);
@@ -48,12 +50,12 @@ const OTPPage: React.FC = () => {
 
   const handleResend = async () => {
     setResending(true);
-    const toastId = showToast('Requesting new code...', 'loading');
+    const toastId = showToast(t('otp.toast.requestingNew'), 'loading');
     try {
       await forgotPassword(email);
-      updateToast(toastId, 'New verification code sent to your email.', 'success');
+      updateToast(toastId, t('otp.toast.newCodeSent'), 'success');
     } catch {
-      updateToast(toastId, 'Failed to resend code. Please try again.', 'error');
+      updateToast(toastId, t('otp.toast.resendFailed'), 'error');
     } finally {
       setResending(false);
     }
@@ -61,34 +63,34 @@ const OTPPage: React.FC = () => {
 
   return (
     <AuthLayout
-      title="Verify Account"
-      subtitle={`We have sent a 6-digit verification code to ${email || 'your email address'}.`}
+      title={t('otp.title')}
+      subtitle={t('otp.subtitle', { email: email || t('otp.subtitleFallback') })}
     >
       <div className="flex flex-col gap-5">
         <div className="text-center">
-          <label className="mb-3 block text-sm font-semibold text-ink">Enter 6-digit Code</label>
+          <label className="mb-3 block text-sm font-semibold text-ink">{t('otp.enterCode')}</label>
           <OTPInput length={6} onComplete={handleVerify} />
         </div>
 
         <div className="mt-3 text-center">
           <p className="text-sm text-ink-muted">
-            Didn't receive the email?{' '}
+            {t('otp.notReceived')}{' '}
             <button
               onClick={handleResend}
               disabled={resending || loading}
               className="cursor-pointer p-1 text-sm font-semibold text-primary hover:text-primary-hover
                          disabled:opacity-50"
             >
-              {resending ? 'Resending...' : 'Resend OTP Code'}
+              {resending ? t('otp.resending') : t('otp.resend')}
             </button>
           </p>
           <p className="mt-1 text-xs text-ink-faint">
-            Note: You can check your email inbox or copy the code printed in the backend terminal logs.
+            {t('otp.hint')}
           </p>
         </div>
 
         <Button variant="outline" size="lg" fullWidth onClick={() => navigate('/login')} className="mt-4">
-          Back to Login
+          {t('otp.backToLogin')}
         </Button>
       </div>
     </AuthLayout>

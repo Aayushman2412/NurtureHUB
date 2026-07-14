@@ -1,0 +1,95 @@
+{
+  "loading": "Loading results…",
+  "searchPlaceholder": "Search by name or email…",
+  "header": {
+    "title": "Results",
+    "description": "Combined tutorial + test performance for {{district}}, including anti-cheat summaries. Upload the final selection list to notify users about face-to-face training.",
+    "thisDistrict": "this district",
+    "refresh": "Refresh",
+    "downloadExcel": "Download Excel"
+  },
+  "testType": {
+    "formative": "Formative",
+    "screening": "Screening"
+  },
+  "table": {
+    "colUser": "User",
+    "colTutorials": "Tutorials",
+    "colPerformance": "Performance",
+    "testSuffix": "{{label}} Test",
+    "colFlowStatus": "Flow Status",
+    "colFaceToFace": "Face-to-Face",
+    "notAttempted": "Not attempted",
+    "watchedLine": "{{pct}}% watched • quizzes {{done}}✓ {{skipped}}⨯",
+    "riskLine": "risk {{risk}} • tabs {{tabs}} • fs {{fs}} • cp {{cp}}",
+    "outOf100": "/100"
+  },
+  "status": {
+    "completed": "Completed",
+    "inProgress": "In progress",
+    "selected": "Selected"
+  },
+  "empty": {
+    "usersTitle": "No users yet",
+    "usersBody": "No users registered in this district yet.",
+    "selectionsTitle": "No selections yet",
+    "selectionsBody": "No users selected for face-to-face training yet. Upload an Excel sheet to select and notify them."
+  },
+  "f2f": {
+    "title": "Face-to-Face Training Selection",
+    "description": "Upload an Excel sheet containing the emails of selected users (any column). Every matched user immediately receives a notification that they are selected and should await further instructions.",
+    "uploading": "Uploading…",
+    "uploadButton": "Upload Selection Excel"
+  },
+  "upload": {
+    "selectedNotified": "Selected & notified:",
+    "alreadySelected": "Already selected:",
+    "noMatch": "No matching user:",
+    "unmatchedEmails": "Unmatched emails: {{emails}}"
+  },
+  "selectionTable": {
+    "colUser": "User",
+    "colEmail": "Email",
+    "colSelectedAt": "Selected At",
+    "colUploadedBy": "Uploaded By",
+    "colNotified": "Notified",
+    "colRemove": "Remove",
+    "yes": "Yes",
+    "no": "No",
+    "removeAria": "Remove from selection"
+  },
+  "excel": {
+    "sheet": "Combined Results",
+    "userName": "User Name",
+    "email": "Email",
+    "tutorialsCompleted": "Tutorials Completed",
+    "avgWatch": "Avg Watch %",
+    "quizzesAnswered": "Quizzes Answered",
+    "quizzesSkipped": "Quizzes Skipped",
+    "quizAccuracy": "Quiz Accuracy %",
+    "performanceScore": "Performance Score",
+    "bestScore": "{{label}} - Best Score %",
+    "attempts": "{{label}} - Attempts",
+    "passed": "{{label}} - Passed",
+    "riskScore": "{{label}} - Risk Score",
+    "tabSwitches": "{{label}} - Tab Switches",
+    "fullscreenExits": "{{label}} - Fullscreen Exits",
+    "copyPaste": "{{label}} - Copy/Paste",
+    "flagged": "{{label}} - Flagged",
+    "completedFullFlow": "Completed Full Flow",
+    "selectedForF2f": "Selected for Face-to-Face",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "toasts": {
+    "loadFailed": "Failed to load results.",
+    "noEmails": "No email addresses found in the uploaded sheet.",
+    "selectedNotified": "Selected & notified {{n}} user(s).",
+    "processFailed": "Failed to process the selection file.",
+    "removed": "Removed from selection.",
+    "removeFailed": "Failed to remove selection."
+  },
+  "confirm": {
+    "removeSelection": "Remove this user from the face-to-face selection list?"
+  }
+}

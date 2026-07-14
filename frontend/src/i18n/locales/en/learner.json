@@ -1,0 +1,133 @@
+{
+  "fields": {
+    "fullName": "Full Name",
+    "dob": "Date of Birth",
+    "ageYears": "Age (Years)",
+    "age": "Age",
+    "ageCalculated": "Calculated from date of birth",
+    "ageValue": "{{age}} years",
+    "gender": "Gender",
+    "mobileNumber": "Mobile Number",
+    "alternateNumber": "Alternate Number (Optional)",
+    "contactPhone": "Contact Phone",
+    "alternatePhone": "Alternate Phone (Optional)",
+    "phonePlaceholder": "10-digit mobile number",
+    "optional": "Optional",
+    "maritalStatus": "Marital Status",
+    "hasChildren": "Do you have any children?",
+    "numberChildren": "Number of children",
+    "numberChildrenPlaceholder": "e.g. 2",
+    "department": "Department",
+    "specifyDepartment": "Specify department",
+    "enterDepartment": "Enter department",
+    "designation": "Designation",
+    "facilityType": "Facility Type",
+    "state": "State",
+    "district": "District",
+    "block": "Taluk / Block",
+    "village": "Village",
+    "villageCity": "Workplace Village / City",
+    "villagePlaceholder": "Search or type your village",
+    "facilityName": "Facility Name",
+    "residenceDistance": "Distance from residence to workplace (km)",
+    "residenceDistancePlaceholder": "e.g. 5.5",
+    "qualification": "Highest Educational Qualification",
+    "specifyQualification": "Please specify qualification",
+    "enterDetails": "Enter details",
+    "yearsService": "Total years of service",
+    "yearsServicePlaceholder": "0–50",
+    "yearsDesignation": "Years in current designation",
+    "yearsFacility": "Years at current facility",
+    "yearsPlaceholder": "years",
+    "internet": "Is internet connectivity adequate in your work area?"
+  },
+  "placeholders": {
+    "selectMarital": "Select marital status",
+    "selectDepartment": "Select department",
+    "selectDesignation": "Select designation",
+    "selectFacilityType": "Select facility type",
+    "selectState": "Select state",
+    "selectDistrict": "Select district",
+    "selectTaluk": "Select taluk",
+    "selectFacility": "Select facility",
+    "selectQualification": "Select qualification",
+    "selectDeptFirst": "Select a department first",
+    "selectOne": "Select one"
+  },
+  "options": {
+    "gender": {
+      "female": "Female",
+      "male": "Male",
+      "other": "Other"
+    },
+    "marital": {
+      "neverMarried": "Never married",
+      "married": "Married",
+      "widowed": "Widowed",
+      "divorced": "Divorced",
+      "separated": "Separated"
+    },
+    "internet": {
+      "always": "Always",
+      "often": "Often",
+      "sometimes": "Sometimes",
+      "rarely": "Rarely",
+      "never": "Never"
+    },
+    "recency": {
+      "within3m": "Within the last 3 months",
+      "m4to6": "4–6 months ago",
+      "m7to12": "7–12 months ago",
+      "y1to2": "1–2 years ago",
+      "moreThan2y": "More than 2 years ago",
+      "neverAttended": "Never attended",
+      "dontKnow": "Don't know"
+    },
+    "yes": "Yes",
+    "no": "No"
+  },
+  "trainings": {
+    "nutrition_training": "When did you last attend any nutrition-related training?",
+    "pregnancy_nutrition_training": "When did you last attend a pregnancy nutrition-related training?",
+    "breastfeeding_training": "When did you last attend a breastfeeding-related training?",
+    "complementary_feeding_training": "When did you last attend a complementary feeding-related training?",
+    "growth_monitoring_training": "When did you last attend a growth monitoring & growth chart interpretation training?"
+  },
+  "registration": {
+    "title": "Complete Registration",
+    "subtitle": "Fill in your details below to customize your learning and assessment dashboard.",
+    "steps": {
+      "personal": "Personal",
+      "work": "Work & Location",
+      "education": "Education",
+      "training": "Training"
+    },
+    "sectionPersonal": "Personal Details",
+    "sectionWork": "Work & Location",
+    "sectionEducation": "Education & Experience",
+    "sectionTraining": "Training History",
+    "back": "Back",
+    "continue": "Continue",
+    "submitting": "Submitting...",
+    "complete": "Complete Registration ✓",
+    "toastSubmitting": "Submitting your registration...",
+    "toastSuccess": "Registration completed! Welcome to NurtureHUB.",
+    "toastFail": "Failed to save registration. Please try again."
+  },
+  "profile": {
+    "nameFallback": "Healthcare Professional",
+    "roleFallback": "ICDS Worker",
+    "centerFallback": "AWC Center",
+    "emailLabel": "Email:",
+    "joinedLabel": "Joined:",
+    "na": "N/A",
+    "tabPersonal": "Personal Details",
+    "tabProfessional": "Professional Info",
+    "saving": "Saving...",
+    "saveChanges": "Save Profile Changes",
+    "toastFixFields": "Please fix the highlighted fields.",
+    "toastSaving": "Saving profile updates...",
+    "toastSuccess": "Profile updated successfully!",
+    "toastFail": "Failed to update profile details"
+  }
+}

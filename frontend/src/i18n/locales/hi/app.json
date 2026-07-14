@@ -1,0 +1,34 @@
+{
+  "nav": {
+    "dashboard": "डैशबोर्ड",
+    "tutorials": "ट्यूटोरियल",
+    "assessments": "मूल्यांकन",
+    "mothers": "माताएँ",
+    "profile": "प्रोफ़ाइल"
+  },
+  "headerTitle": {
+    "dashboard": "डैशबोर्ड",
+    "tutorials": "प्रशिक्षण मॉड्यूल",
+    "tests": "मूल्यांकन और प्रश्नोत्तरी",
+    "results": "मूल्यांकन प्रदर्शन",
+    "profile": "प्रोफ़ाइल सेटिंग्स",
+    "default": "NurtureHUB"
+  },
+  "header": {
+    "toggleMenu": "मेनू टॉगल करें",
+    "notifications": "सूचनाएँ"
+  },
+  "user": {
+    "fallbackName": "उपयोगकर्ता",
+    "defaultRole": "आईसीडीएस कार्यकर्ता",
+    "signOut": "साइन आउट"
+  },
+  "notifications": {
+    "title": "सूचनाएँ",
+    "markAllRead": "सभी को पढ़ा हुआ चिह्नित करें",
+    "readAll": "सभी पढ़ें",
+    "close": "बंद करें",
+    "emptyTitle": "अभी तक कोई सूचना नहीं",
+    "emptyBody": "आपके प्रशिक्षण और मूल्यांकन के बारे में अपडेट यहाँ दिखाई देंगे।"
+  }
+}

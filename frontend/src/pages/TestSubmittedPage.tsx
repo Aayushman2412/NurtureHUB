@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation, Trans } from 'react-i18next';
 import { useToast } from '../context/ToastContext';
 import { CheckCircle2, Award, ArrowRight, BarChart2 } from 'lucide-react';
 import { Badge, Button, Card } from '../components/ui';
@@ -18,12 +19,13 @@ const TestSubmittedPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { t } = useTranslation('tests');
 
   const stateData = location.state as { resultData: ResultData; testTitle: string } | null;
 
   if (!stateData) {
     useEffect(() => {
-      showToast('No submitted assessment details found.', 'warning');
+      showToast(t('submitted.toastNoDetails'), 'warning');
       navigate('/tests');
     }, []);
     return null;
@@ -72,47 +74,50 @@ const TestSubmittedPage: React.FC = () => {
         </div>
 
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-primary">Assessment Completed</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-primary">{t('submitted.eyebrow')}</span>
           <h2 className="mt-1 mb-2 font-display text-3xl font-extrabold text-ink">
-            {is_passed ? 'Congratulations! You Passed' : 'Assessment Completed'}
+            {is_passed ? t('submitted.headingPass') : t('submitted.headingComplete')}
           </h2>
           <p className="text-[15px] text-ink-muted">
-            Your answers for <strong className="text-ink">{testTitle}</strong> have been submitted successfully.
+            <Trans
+              t={t}
+              i18nKey="submitted.subtitle"
+              components={{ strong: <strong className="text-ink" /> }}
+              values={{ title: testTitle }}
+            />
           </p>
         </div>
 
         {/* Metrics */}
         <div className="my-3 flex w-full justify-around border-y border-border py-6">
           <div className="flex flex-col gap-1">
-            <span className="text-xs text-ink-faint">Score Achieved</span>
+            <span className="text-xs text-ink-faint">{t('submitted.scoreAchieved')}</span>
             <span className={`font-display text-2xl font-extrabold ${is_passed ? 'text-success-600' : 'text-error-600'}`}>
               {score.toFixed(1)}%
             </span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs text-ink-faint">Correct Answers</span>
+            <span className="text-xs text-ink-faint">{t('submitted.correctAnswers')}</span>
             <span className="font-display text-2xl font-extrabold text-ink">
               {correct_answers_count} <span className="text-base font-medium text-ink-faint">/ {total_questions}</span>
             </span>
           </div>
           <div className="flex flex-col items-center gap-1">
-            <span className="text-xs text-ink-faint">Outcome</span>
+            <span className="text-xs text-ink-faint">{t('submitted.outcome')}</span>
             <Badge variant={is_passed ? 'success' : 'error'} size="md">
-              {is_passed ? 'PASSED' : 'FAILED'}
+              {is_passed ? t('common.passed') : t('common.failed')}
             </Badge>
           </div>
         </div>
 
         <p className="text-[13px] text-ink-faint">
-          {is_passed
-            ? 'Great job! The next training stage and assessment have been unlocked on your dashboard.'
-            : 'You did not meet the passing score of 70%. Review the video tutorials and try again. You have remaining attempts.'}
+          {is_passed ? t('submitted.messagePass') : t('submitted.messageFail')}
         </p>
 
         {/* Actions */}
         <div className="mt-3 flex w-full gap-4">
           <Button variant="outline" size="lg" fullWidth onClick={() => navigate('/tests')}>
-            Assessments List
+            {t('submitted.assessmentsList')}
           </Button>
           <Button
             size="lg"
@@ -122,7 +127,7 @@ const TestSubmittedPage: React.FC = () => {
             iconRight={<ArrowRight className="size-3.5" />}
             className="flex-[1.5]"
           >
-            View Performance Report
+            {t('submitted.viewReport')}
           </Button>
         </div>
       </Card>

@@ -61,6 +61,32 @@ export const MATRIX_SOURCES: { key: string; label: string }[] = [
   { key: 'youtube', label: 'YouTube/Social media' },
 ];
 
+// ── i18n option builders — English value + translated label ──
+// `t` must be bound to the 'mother' namespace (useTranslation('mother')). The
+// translated labels are keyed by the canonical English value under options.*;
+// the value itself stays English (it is what the API stores). None of the enum
+// values contain a '.', so they are safe as i18next nested-key segments.
+type TFn = (key: string) => string;
+const toOptions = (list: string[], t: TFn, group: string) =>
+  list.map(v => ({ value: v, label: t(`options.${group}.${v}`) }));
+
+export const occupationOptions = (t: TFn) => toOptions(OCCUPATIONS, t, 'occupation');
+export const rationCardOptions = (t: TFn) => toOptions(RATION_CARDS, t, 'rationCard');
+export const socialCategoryOptions = (t: TFn) => toOptions(SOCIAL_CATEGORIES, t, 'socialCategory');
+export const videoFrequencyOptions = (t: TFn) => toOptions(VIDEO_FREQUENCY, t, 'videoFrequency');
+
+/** The four Likert questions with translated question label + translated 5-point options. */
+export const likertQuestions = (t: TFn) =>
+  LIKERT.map(q => ({
+    key: q.key,
+    label: t(`options.likertQuestion.${q.key}`),
+    options: q.options.map(o => ({ value: o, label: t(`options.likert.${q.key}.${o}`) })),
+  }));
+
+/** Trust/willingness matrix rows with translated source labels (keys unchanged). */
+export const sourceRows = (t: TFn) =>
+  MATRIX_SOURCES.map(s => ({ key: s.key, label: t(`options.source.${s.key}`) }));
+
 // ── Date helpers ──
 
 /** Expected date of delivery = LMP + 280 days, as a yyyy-mm-dd string ('' if no LMP). */

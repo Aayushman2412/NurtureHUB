@@ -1,0 +1,89 @@
+{
+  "loading": "Loading tutorials…",
+  "header": {
+    "title": "Tutorial & Phase Manager",
+    "description": "Manage training phases, video tutorials (YouTube clips or MP4), and post-tutorial quiz popups.",
+    "addPhase": "Add Phase"
+  },
+  "preview": {
+    "title": "Video Preview (Clipped)",
+    "clip": "Clip: {{start}} → {{end}} ({{duration}} duration)"
+  },
+  "stage": {
+    "phaseLabel": "Phase {{n}}",
+    "testPhaseSuffix": " • Test Phase",
+    "testSummary": "Holds a scheduled test (manage it in Test Management)",
+    "summary": "{{n}} tutorials • Quizzes {{status}}",
+    "quizEnabled": "enabled",
+    "quizDisabled": "disabled",
+    "toggleQuizEnable": "Enable quiz popups for the whole phase",
+    "toggleQuizDisable": "Disable quiz popups for the whole phase",
+    "deletePhase": "Delete phase",
+    "confirmDelete": "Delete this stage and all its tutorials?",
+    "testPhaseNote": "This is a test phase — manage its test, schedule and questions in <strong>Test Management</strong>."
+  },
+  "tutorial": {
+    "meta": "{{module}} • {{minutes}}min",
+    "clipSuffix": " • Clip: {{start}}-{{end}}",
+    "mp4Suffix": " • MP4",
+    "quizLabel": "Quiz: ",
+    "quizCount": "{{n}} Qs",
+    "quizNone": "none",
+    "quizOff": " (off)",
+    "toggleQuizEnable": "Enable quiz popup for this tutorial",
+    "toggleQuizDisable": "Disable quiz popup for this tutorial",
+    "manageQuiz": "Manage quiz questions",
+    "preview": "Preview",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirmDelete": "Delete this tutorial?",
+    "addToPhase": "Add Tutorial to this Phase"
+  },
+  "fields": {
+    "title": "Title",
+    "titleRequired": "Title *",
+    "moduleNumber": "Module #",
+    "youtubeUrl": "YouTube URL",
+    "videoFileUrl": "Video File URL (MP4)",
+    "durationMin": "Duration (min)",
+    "startSeconds": "Start (seconds)",
+    "endSeconds": "End (seconds)",
+    "description": "Description"
+  },
+  "placeholders": {
+    "title": "Tutorial title",
+    "moduleNumber": "Module 1.4",
+    "youtubeUrl": "https://youtube.com/watch?v=...",
+    "videoFileUrl": "https://.../video.mp4 (if not YouTube)",
+    "description": "Brief description...",
+    "phaseTitle": "e.g. Phase 5: Refresher Videos",
+    "phaseDescription": "What learners will cover...",
+    "questionText": "Question text"
+  },
+  "addTutorial": {
+    "heading": "Add New Tutorial",
+    "previewClip": "Preview Clip",
+    "cancel": "Cancel",
+    "submit": "Add Tutorial"
+  },
+  "addPhaseModal": {
+    "title": "Add New Video Phase",
+    "cancel": "Cancel",
+    "create": "Create Phase",
+    "phaseTitleLabel": "Phase Title *",
+    "note": "This creates a video phase. Scheduled tests are managed in <strong>Test Management</strong>."
+  },
+  "quiz": {
+    "modalTitle": "Quiz Questions — {{title}}",
+    "cancel": "Cancel",
+    "saving": "Saving…",
+    "save": "Save Quiz",
+    "intro": "Users see these 3–5 questions in a popup after finishing the tutorial. Options C and D are optional.",
+    "questionLabel": "Question {{n}}",
+    "removeQuestion": "Remove question",
+    "optionLabel": "Option {{letter}}",
+    "correctAnswer": "Correct Answer",
+    "addQuestion": "Add Question",
+    "maxSuffix": "(max 5)"
+  }
+}

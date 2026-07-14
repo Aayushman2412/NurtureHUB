@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
 import GoogleButton from '../components/auth/GoogleButton';
-import { Button, Divider, Input, PasswordInput } from '../components/ui';
+import { Button, Divider, FieldLabel, Input, PasswordInput } from '../components/ui';
 
 const SignupPage: React.FC = () => {
+  const { t } = useTranslation('auth');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,24 +21,24 @@ const SignupPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName || !email || !password) {
-      showToast('Please fill in all fields', 'warning');
+      showToast(t('signup.toast.fillAll'), 'warning');
       return;
     }
 
     if (password.length < 6) {
-      showToast('Password must be at least 6 characters long', 'warning');
+      showToast(t('signup.toast.passwordMin'), 'warning');
       return;
     }
 
     setLoading(true);
-    const toastId = showToast('Creating account...', 'loading');
+    const toastId = showToast(t('signup.toast.creating'), 'loading');
 
     try {
       await register(email, password, fullName);
-      updateToast(toastId, 'Account created! A verification code has been sent to your email.', 'success');
+      updateToast(toastId, t('signup.toast.created'), 'success');
       navigate('/verify');
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || 'Registration failed. Email might already exist.';
+      const errorMsg = err.response?.data?.detail || t('signup.toast.failed');
       updateToast(toastId, errorMsg, 'error');
     } finally {
       setLoading(false);
@@ -44,19 +46,14 @@ const SignupPage: React.FC = () => {
   };
 
   return (
-    <AuthLayout
-      title="Create Account"
-      subtitle="Register now to start your standardized skills development path."
-    >
+    <AuthLayout title={t('signup.title')} subtitle={t('signup.subtitle')}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <div>
-          <label htmlFor="fullname-input" className="mb-2 block text-sm font-semibold text-ink">
-            Full Name
-          </label>
+          <FieldLabel htmlFor="fullname-input">{t('fields.fullName')}</FieldLabel>
           <Input
             id="fullname-input"
             type="text"
-            placeholder="e.g. Priya Mishra"
+            placeholder={t('fields.fullNamePlaceholder')}
             value={fullName}
             onChange={e => setFullName(e.target.value)}
             required
@@ -65,13 +62,11 @@ const SignupPage: React.FC = () => {
         </div>
 
         <div>
-          <label htmlFor="email-input" className="mb-2 block text-sm font-semibold text-ink">
-            Email Address
-          </label>
+          <FieldLabel htmlFor="email-input">{t('fields.email')}</FieldLabel>
           <Input
             id="email-input"
             type="email"
-            placeholder="e.g. priya.mishra@department.gov"
+            placeholder={t('signup.emailPlaceholder')}
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
@@ -80,12 +75,10 @@ const SignupPage: React.FC = () => {
         </div>
 
         <div>
-          <label htmlFor="password-input" className="mb-2 block text-sm font-semibold text-ink">
-            Password
-          </label>
+          <FieldLabel htmlFor="password-input">{t('fields.password')}</FieldLabel>
           <PasswordInput
             id="password-input"
-            placeholder="Min. 6 characters"
+            placeholder={t('fields.passwordMin')}
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
@@ -94,17 +87,17 @@ const SignupPage: React.FC = () => {
         </div>
 
         <Button type="submit" size="lg" fullWidth loading={loading} className="mt-2">
-          {loading ? 'Creating account...' : 'Create Account'}
+          {loading ? t('signup.creating') : t('signup.submit')}
         </Button>
 
-        <Divider label="Or sign up with" className="my-1" />
+        <Divider label={t('signup.orSignUpWith')} className="my-1" />
 
         <GoogleButton />
 
         <p className="mt-4 text-center text-sm text-ink-muted">
-          Already have an account?{' '}
+          {t('signup.haveAccount')}{' '}
           <Link to="/login" className="font-semibold text-primary hover:text-primary-hover">
-            Sign In
+            {t('signup.signIn')}
           </Link>
         </p>
       </form>

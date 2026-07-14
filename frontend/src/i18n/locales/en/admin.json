@@ -1,0 +1,116 @@
+{
+  "layout": {
+    "panel": "Admin Panel",
+    "toggleTheme": "Toggle theme mode",
+    "selectDistrict": "Select District",
+    "usersCount": "{{n}} users",
+    "adminFallback": "Administrator",
+    "superAdmin": "Super Admin",
+    "logout": "Logout",
+    "nav": {
+      "dashboard": "Dashboard",
+      "districts": "Districts",
+      "formBuilder": "Form Builder",
+      "tutorials": "Tutorials",
+      "tutorialTracking": "Tutorial Tracking",
+      "testManager": "Test Manager",
+      "liveMonitor": "Live Monitor",
+      "results": "Results"
+    }
+  },
+  "dashboard": {
+    "eyebrow": "Welcome back",
+    "title": "Admin Dashboard",
+    "subtitleDistrict": "Managing <strong>{{district}}</strong> district — configure forms, upload tutorials, and control assessments.",
+    "subtitleDefault": "Manage your platform from here — configure forms, upload tutorials, and control assessments.",
+    "quickActions": "Quick Actions",
+    "stats": {
+      "districtUsers": "District Users",
+      "trainingStages": "Training Stages",
+      "tutorials": "Tutorials",
+      "assessments": "Assessments",
+      "formFields": "Form Fields",
+      "activeTests": "Active Tests"
+    },
+    "actions": {
+      "districts": {
+        "label": "Manage Districts",
+        "desc": "Add, edit, or remove program districts"
+      },
+      "form": {
+        "label": "Configure Registration Form",
+        "desc": "Add, remove, or reorder registration fields"
+      },
+      "tutorials": {
+        "label": "Manage Tutorials & Stages",
+        "desc": "Upload YouTube videos, clip sections, manage stages"
+      },
+      "tests": {
+        "label": "Test Manager",
+        "desc": "Upload questions, start/stop tests, download results"
+      }
+    }
+  },
+  "districts": {
+    "loading": "Loading districts…",
+    "title": "District Management",
+    "description": "Add, edit, or remove program districts. Each district has its own registration form, tutorials, and assessments.",
+    "add": "Add District",
+    "emptyTitle": "No districts configured yet",
+    "emptyBody": "Create your first program district to get started.",
+    "addFirst": "Add Your First District",
+    "users": "users",
+    "active": "Active",
+    "inactive": "Inactive",
+    "rename": "Rename",
+    "save": "Save",
+    "delete": "Delete",
+    "addModalTitle": "Add New District",
+    "cancel": "Cancel",
+    "creating": "Creating...",
+    "create": "Create District",
+    "nameLabel": "District Name *",
+    "namePlaceholder": "e.g. Indore, Bhopal, Assam...",
+    "nameHelp": "A unique slug will be auto-generated from the name. The district will get its own registration form, tutorials, and tests.",
+    "confirmDelete": "Delete district \"{{name}}\"? All associated stages, tutorials, and tests will be removed. Users will be unassigned.",
+    "errCreate": "Failed to create district",
+    "errUpdate": "Failed to update district",
+    "errDelete": "Failed to delete district"
+  },
+  "tracking": {
+    "loading": "Loading tutorial tracking…",
+    "title": "Tutorial Tracking",
+    "description": "Watch time, watch % and post-tutorial quiz outcomes for every user in {{district}} — spot who is skipping the videos.",
+    "thisDistrict": "this district",
+    "refresh": "Refresh",
+    "downloadExcel": "Download Excel",
+    "searchPlaceholder": "Search by name or email…",
+    "emptyTitle": "No users yet",
+    "emptyBody": "No users are registered in this district yet.",
+    "colUser": "User",
+    "colAvgWatch": "Avg Watch %",
+    "colQuizzes": "Quizzes",
+    "colPerformance": "Performance",
+    "skipped": "Skipped",
+    "pending": "Pending",
+    "answered": "Answered",
+    "accuracy": "{{n}}% accuracy",
+    "outOf100": "/100",
+    "footnote": "Performance score = 60% average watch percentage + 20% quiz participation + 20% quiz accuracy. Tutorials marked \"?\" have a quiz enabled.",
+    "excel": {
+      "sheet": "Tutorial Tracking",
+      "userName": "User Name",
+      "email": "Email",
+      "watchPct": "{{module}} - Watch %",
+      "watchTime": "{{module}} - Watch Time",
+      "quiz": "{{module}} - Quiz",
+      "tutorialsCompleted": "Tutorials Completed",
+      "avgWatch": "Avg Watch %",
+      "totalWatchTime": "Total Watch Time",
+      "quizzesAnswered": "Quizzes Answered",
+      "quizzesSkipped": "Quizzes Skipped",
+      "quizAccuracy": "Quiz Accuracy %",
+      "performanceScore": "Performance Score"
+    }
+  }
+}

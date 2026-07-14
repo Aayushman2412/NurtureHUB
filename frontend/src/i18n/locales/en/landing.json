@@ -1,0 +1,44 @@
+{
+  "nav": {
+    "badge": "ICDS Professional Portal",
+    "goToApp": "Go to App",
+    "signIn": "Sign In",
+    "register": "Register"
+  },
+  "hero": {
+    "eyebrow": "Nurturing skills, elevating communities",
+    "title": "Grow the skills that help<hl> children thrive</hl>",
+    "subtitle": "NurtureHUB is the training & assessment home for ICDS professionals — standardized tutorials, fair assessments, and a clear record of your growth.",
+    "ctaContinue": "Continue your journey",
+    "ctaStart": "Start learning today",
+    "haveAccount": "I already have an account"
+  },
+  "features": {
+    "training": {
+      "title": "Structured Training",
+      "body": "Standardized video modules built for ICDS & Anganwadi workflows — learn at your own pace, stage by stage."
+    },
+    "assessments": {
+      "title": "Assessments & Badges",
+      "body": "Knowledge checks after every phase verify learning and earn official milestone badges for your profile."
+    },
+    "growth": {
+      "title": "Growth Tracking",
+      "body": "A personal dashboard monitors progress, unlocks new stages, and keeps your development on course."
+    }
+  },
+  "stats": {
+    "frontline": {
+      "value": "Frontline first",
+      "label": "Built for Anganwadi workers, helpers & supervisors"
+    },
+    "district": {
+      "value": "District-aware",
+      "label": "Content and cohorts organized by your district"
+    },
+    "official": {
+      "value": "Officially recognized",
+      "label": "Progress and badges your department can trust"
+    }
+  }
+}

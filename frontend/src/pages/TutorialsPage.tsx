@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { getStages } from '../api/tutorials';
 import { useToast } from '../context/ToastContext';
 import { Play, CheckCircle, Clock, Lock } from 'lucide-react';
@@ -31,9 +32,9 @@ interface Stage {
 }
 
 const filters = [
-  { key: 'all', label: 'All Tutorials' },
-  { key: 'completed', label: 'Completed' },
-  { key: 'uncompleted', label: 'In Progress' },
+  { key: 'all', labelKey: 'filters.all' },
+  { key: 'completed', labelKey: 'filters.completed' },
+  { key: 'uncompleted', labelKey: 'filters.uncompleted' },
 ] as const;
 
 type FilterKey = (typeof filters)[number]['key'];
@@ -43,6 +44,7 @@ const TutorialsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterKey>('all');
 
+  const { t } = useTranslation('tutorials');
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -51,7 +53,7 @@ const TutorialsPage: React.FC = () => {
       const data = await getStages();
       setStages(data);
     } catch {
-      showToast('Failed to load training stages', 'error');
+      showToast(t('toast.loadStagesFailed'), 'error');
     } finally {
       setLoading(false);
     }
@@ -63,13 +65,13 @@ const TutorialsPage: React.FC = () => {
 
   const handleTutorialClick = (stage: Stage, tut: Tutorial) => {
     if (stage.is_locked) {
-      showToast('This training phase is currently locked. Complete previous assessments first.', 'warning');
+      showToast(t('toast.phaseLocked'), 'warning');
       return;
     }
     navigate(`/tutorials/${tut.id}`);
   };
 
-  if (loading) return <PageLoader label="Loading training modules…" />;
+  if (loading) return <PageLoader label={t('loading')} />;
 
   const totalModules = stages.reduce((acc, s) => acc + s.tutorials.length, 0);
   const visibleStages = stages
@@ -90,18 +92,18 @@ const TutorialsPage: React.FC = () => {
         <div className="flex gap-2">
           {filters.map(f => (
             <Chip key={f.key} selected={filter === f.key} onClick={() => setFilter(f.key)}>
-              {f.label}
+              {t(f.labelKey)}
             </Chip>
           ))}
         </div>
-        <p className="text-[13px] text-ink-faint">{totalModules} modules in curriculum</p>
+        <p className="text-[13px] text-ink-faint">{t('curriculumCount', { total: totalModules })}</p>
       </div>
 
       {visibleStages.length === 0 ? (
         <EmptyState
           icon={<Play />}
-          title="Nothing here yet"
-          description="No modules match this filter."
+          title={t('empty.title')}
+          description={t('empty.description')}
         />
       ) : (
         <div className="flex flex-col gap-10">
@@ -114,7 +116,7 @@ const TutorialsPage: React.FC = () => {
                     <h3 className="font-display text-xl font-extrabold text-ink">{stage.title}</h3>
                     {stage.is_locked && (
                       <Badge variant="error">
-                        <Lock className="size-2.5" /> Locked
+                        <Lock className="size-2.5" /> {t('locked')}
                       </Badge>
                     )}
                   </div>
@@ -122,7 +124,10 @@ const TutorialsPage: React.FC = () => {
                 </div>
                 {!stage.is_locked && (
                   <span className="whitespace-nowrap text-[13px] font-semibold text-primary">
-                    {stage.tutorials_completed} / {stage.total_tutorials} Completed
+                    {t('stageProgress', {
+                      completed: stage.tutorials_completed,
+                      total: stage.total_tutorials,
+                    })}
                   </span>
                 )}
               </div>
@@ -130,7 +135,7 @@ const TutorialsPage: React.FC = () => {
               {/* Tutorials grid */}
               {filtered.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border-strong/60 p-8 text-center text-sm text-ink-faint">
-                  No modules match this filter.
+                  {t('empty.description')}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
@@ -152,7 +157,7 @@ const TutorialsPage: React.FC = () => {
                         </span>
                         {tut.is_completed && (
                           <span className="absolute right-3 top-3 flex items-center gap-1 rounded bg-success-500 px-2 py-1 text-[11px] font-bold">
-                            <CheckCircle className="size-3" /> Completed
+                            <CheckCircle className="size-3" /> {t('completedBadge')}
                           </span>
                         )}
                       </div>
@@ -167,7 +172,7 @@ const TutorialsPage: React.FC = () => {
                         </div>
                         <div className="mt-4 flex items-center gap-1.5 border-t border-border pt-3 text-xs text-ink-faint">
                           <Clock className="size-3.5" />
-                          <span>{tut.duration_minutes} Minutes duration</span>
+                          <span>{t('durationMinutes', { minutes: tut.duration_minutes })}</span>
                         </div>
                       </div>
                     </Card>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +9,7 @@ interface GoogleButtonProps {
 }
 
 const GoogleButton: React.FC<GoogleButtonProps> = ({ onSuccessRedirect = '/dashboard' }) => {
+  const { t } = useTranslation('auth');
   const { googleLogin } = useAuth();
   const { showToast, updateToast, dismissToast } = useToast();
   const navigate = useNavigate();
@@ -19,7 +21,7 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({ onSuccessRedirect = '/dashb
     if (clientId) {
       // In a real browser environment, we'd trigger the Google Identity Services flow.
       // Below is the integration hook.
-      const toastId = showToast('Initiating Google sign-in...', 'loading');
+      const toastId = showToast(t('google.toast.initiating'), 'loading');
       try {
         // @ts-ignore
         const google = window.google;
@@ -29,14 +31,14 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({ onSuccessRedirect = '/dashb
             callback: async (response: any) => {
               try {
                 const res = await googleLogin(response.credential);
-                updateToast(toastId, 'Signed in with Google successfully!', 'success');
+                updateToast(toastId, t('google.toast.success'), 'success');
                 if (res.is_profile_complete) {
                   navigate(onSuccessRedirect);
                 } else {
                   navigate('/register');
                 }
               } catch (e: any) {
-                updateToast(toastId, e.response?.data?.detail || 'Google sign-in failed', 'error');
+                updateToast(toastId, e.response?.data?.detail || t('google.toast.failed'), 'error');
               }
             }
           });
@@ -59,7 +61,7 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({ onSuccessRedirect = '/dashb
     }
 
     // Fallback Mock Google Login flow if VITE_GOOGLE_CLIENT_ID is not configured
-    const toastId = showToast('Simulating Google Sign-In for development...', 'loading');
+    const toastId = showToast(t('google.toast.simulating'), 'loading');
 
     const testEmail = "ayushman2412@gmail.com";
     const formattedEmail = "ayushman2412";
@@ -68,7 +70,7 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({ onSuccessRedirect = '/dashb
     setTimeout(async () => {
       try {
         const response = await googleLogin(mockToken);
-        updateToast(toastId, `Signed in as Google account: ${testEmail}`, 'success');
+        updateToast(toastId, t('google.toast.signedInAs', { email: testEmail }), 'success');
 
         if (response.is_profile_complete) {
           navigate(onSuccessRedirect);
@@ -76,7 +78,7 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({ onSuccessRedirect = '/dashb
           navigate('/register');
         }
       } catch (err: any) {
-        updateToast(toastId, err.response?.data?.detail || 'Google sign-in simulation failed', 'error');
+        updateToast(toastId, err.response?.data?.detail || t('google.toast.simFailed'), 'error');
       }
     }, 1000);
   };
@@ -109,7 +111,7 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({ onSuccessRedirect = '/dashb
           d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59C13.47.89 11.43 0 9 0 5.5 0 2.43 2.11.95 5.03l2.99 2.36c.71-2.14 2.71-3.73 5.06-3.73z"
         />
       </svg>
-      <span>Continue with Google</span>
+      <span>{t('google.continue')}</span>
     </button>
   );
 };

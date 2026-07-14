@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, FileText, Video, ClipboardList, LogOut, Shield, MapPin, ChevronDown, Building2, Sun, Moon,
   MonitorPlay, GraduationCap, Radio,
@@ -22,18 +23,19 @@ interface ProgramDistrict {
 }
 
 const navItems = [
-  { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
-  { to: '/admin/districts', icon: Building2, label: 'Districts', end: false },
-  { to: '/admin/form-builder', icon: FileText, label: 'Form Builder', end: false },
-  { to: '/admin/tutorials', icon: Video, label: 'Tutorials', end: false },
-  { to: '/admin/tutorial-tracking', icon: MonitorPlay, label: 'Tutorial Tracking', end: false },
-  { to: '/admin/tests', icon: ClipboardList, label: 'Test Manager', end: false },
-  { to: '/admin/tests', icon: Radio, label: 'Live Monitor', end: false },
-  { to: '/admin/results', icon: GraduationCap, label: 'Results', end: false },
-];
+  { to: '/admin', icon: LayoutDashboard, key: 'dashboard', end: true },
+  { to: '/admin/districts', icon: Building2, key: 'districts', end: false },
+  { to: '/admin/form-builder', icon: FileText, key: 'formBuilder', end: false },
+  { to: '/admin/tutorials', icon: Video, key: 'tutorials', end: false },
+  { to: '/admin/tutorial-tracking', icon: MonitorPlay, key: 'tutorialTracking', end: false },
+  { to: '/admin/tests', icon: ClipboardList, key: 'testManager', end: false },
+  { to: '/admin/tests', icon: Radio, key: 'liveMonitor', end: false },
+  { to: '/admin/results', icon: GraduationCap, key: 'results', end: false },
+] as const;
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation('admin');
   const { darkMode, toggleDarkMode } = useTheme();
 
   const [districts, setDistricts] = useState<ProgramDistrict[]>([]);
@@ -83,7 +85,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     navigate('/login');
   };
 
-  const adminName = localStorage.getItem('nh_admin_name') || 'Administrator';
+  const adminName = localStorage.getItem('nh_admin_name') || t('layout.adminFallback');
   const selectedDistrict = districts.find(d => d.slug === selectedSlug);
 
   return (
@@ -98,12 +100,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           <div className="flex-1">
             <h2 className="font-display text-base font-extrabold leading-tight">NurtureHUB</h2>
             <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
-              Admin Panel
+              {t('layout.panel')}
             </span>
           </div>
           <button
             onClick={toggleDarkMode}
-            title="Toggle theme mode"
+            title={t('layout.toggleTheme')}
             className="flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer"
           >
             {darkMode ? <Sun className="size-4.5" /> : <Moon className="size-4.5" />}
@@ -119,7 +121,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 className="flex w-full items-center gap-2.5 rounded-lg border border-border bg-surface-sunken px-3.5 py-2.5 text-[13px] font-semibold text-ink hover:border-border-strong cursor-pointer"
               >
                 <MapPin className="size-4 shrink-0 text-primary" />
-                <span className="flex-1 truncate text-left">{selectedDistrict?.name || 'Select District'}</span>
+                <span className="flex-1 truncate text-left">{selectedDistrict?.name || t('layout.selectDistrict')}</span>
                 <ChevronDown className={cn('size-3.5 shrink-0 opacity-60 transition-transform', open && 'rotate-180')} />
               </button>
             )}
@@ -133,7 +135,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                     <MapPin className="size-3.5" />
                     {d.name}
                   </span>
-                  <span className="text-[11px] opacity-60">{d.user_count} users</span>
+                  <span className="text-[11px] opacity-60">{t('layout.usersCount', { n: d.user_count })}</span>
                 </span>
               ),
             }))}
@@ -144,7 +146,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
           {navItems.map(item => (
             <NavLink
-              key={item.label}
+              key={item.key}
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
@@ -157,7 +159,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               }
             >
               <item.icon className="size-[18px]" />
-              <span>{item.label}</span>
+              <span>{t(`layout.nav.${item.key}`)}</span>
             </NavLink>
           ))}
         </nav>
@@ -167,11 +169,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           <Avatar name={adminName} size="md" />
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-semibold text-ink">{adminName}</div>
-            <div className="text-xs text-ink-muted">Super Admin</div>
+            <div className="text-xs text-ink-muted">{t('layout.superAdmin')}</div>
           </div>
           <button
             onClick={handleLogout}
-            title="Logout"
+            title={t('layout.logout')}
             className="flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer"
           >
             <LogOut className="size-4.5" />

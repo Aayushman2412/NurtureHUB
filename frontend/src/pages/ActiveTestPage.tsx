@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { submitAttempt } from '../api/tests';
 import { useToast } from '../context/ToastContext';
 import { useTestEventEmitter } from '../hooks/useTestEventEmitter';
@@ -55,12 +56,13 @@ const ActiveTestPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { t } = useTranslation('tests');
 
   const stateData = location.state as { attemptData: AttemptData; testTitle: string } | null;
 
   if (!stateData) {
     useEffect(() => {
-      showToast('No active quiz session found.', 'warning');
+      showToast(t('active.toastNoSession'), 'warning');
       navigate('/tests');
     }, []);
     return null;
@@ -128,7 +130,7 @@ const ActiveTestPage: React.FC = () => {
   // Handle admin force-submit
   useEffect(() => {
     if (forceSubmitTriggered) {
-      showToast('Your test has been submitted by the administrator.', 'warning');
+      showToast(t('active.toastForceSubmit'), 'warning');
       performSubmission();
     }
   }, [forceSubmitTriggered]);
@@ -188,7 +190,7 @@ const ActiveTestPage: React.FC = () => {
   }, []);
 
   const handleAutoSubmit = async () => {
-    showToast("Time's up! Submitting your answers automatically.", 'warning');
+    showToast(t('active.toastTimeUp'), 'warning');
     emitEvent('TEST_AUTO_SUBMITTED');
     await performSubmission();
   };
@@ -214,10 +216,10 @@ const ActiveTestPage: React.FC = () => {
         time_used_seconds: timeUsed,
       });
 
-      showToast('Assessment submitted successfully!', 'success');
+      showToast(t('active.toastSubmitted'), 'success');
       navigate(`/tests/${id}/submitted`, { state: { resultData: response, testTitle } });
     } catch (err: any) {
-      showToast('Error submitting quiz answers. Please try again.', 'error');
+      showToast(t('active.toastSubmitError'), 'error');
       setIsSubmitting(false);
       setShowConfirm(false);
     }
@@ -292,7 +294,7 @@ const ActiveTestPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-5 py-4">
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-primary">Active Assessment</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-primary">{t('active.eyebrow')}</span>
           <h3 className="font-display text-lg font-bold text-ink">{testTitle}</h3>
         </div>
 
@@ -305,10 +307,10 @@ const ActiveTestPage: React.FC = () => {
                 ? 'border-success-500/40 bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-500'
                 : 'border-amber-500/40 bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-500',
             )}
-            title={wsConnected ? 'Live monitoring connected' : 'Reconnecting to live monitoring'}
+            title={wsConnected ? t('active.monitorConnected') : t('active.monitorReconnecting')}
           >
             {wsConnected ? <Wifi className="size-3.5" /> : <WifiOff className="size-3.5" />}
-            <span>{wsConnected ? 'Live' : 'Reconnecting...'}</span>
+            <span>{wsConnected ? t('active.live') : t('active.reconnecting')}</span>
           </div>
 
           <div
@@ -327,14 +329,14 @@ const ActiveTestPage: React.FC = () => {
               setShowConfirm(true);
             }}
           >
-            Finish Test
+            {t('active.finishTest')}
           </Button>
         </div>
       </div>
 
       {/* Counter */}
       <div className="rounded-lg bg-surface-sunken px-4 py-2 text-center text-sm font-semibold text-ink-muted">
-        Question {currentIdx + 1} of {totalQuestions}
+        {t('active.questionCounter', { current: currentIdx + 1, total: totalQuestions })}
       </div>
 
       {/* Work area */}
@@ -343,9 +345,9 @@ const ActiveTestPage: React.FC = () => {
         <Card className="flex flex-col justify-between p-6">
           <div>
             <div className="mb-4 flex items-center justify-between">
-              <span className="font-display font-bold text-ink">Question {currentIdx + 1}</span>
+              <span className="font-display font-bold text-ink">{t('common.question', { n: currentIdx + 1 })}</span>
               <span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700 dark:bg-coral-500/15 dark:text-coral-300">
-                Marks: {currentQuestion.marks}
+                {t('active.marks', { marks: currentQuestion.marks })}
               </span>
             </div>
 
@@ -392,7 +394,7 @@ const ActiveTestPage: React.FC = () => {
                   className="size-4 accent-amber-500"
                 />
                 <span className="flex items-center gap-1">
-                  <Eye className="size-4" /> Mark for Review
+                  <Eye className="size-4" /> {t('active.markForReview')}
                 </span>
               </label>
 
@@ -401,7 +403,7 @@ const ActiveTestPage: React.FC = () => {
                   onClick={() => handleClearAnswer(currentQuestion.id)}
                   className="text-sm font-semibold text-ink-muted hover:text-error-500 cursor-pointer"
                 >
-                  Clear Selection
+                  {t('active.clearSelection')}
                 </button>
               )}
             </div>
@@ -414,7 +416,7 @@ const ActiveTestPage: React.FC = () => {
                 onClick={() => setCurrentIdx(prev => prev - 1)}
                 iconLeft={<ChevronLeft className="size-4" />}
               >
-                Back
+                {t('active.back')}
               </Button>
               <Button
                 variant="outline"
@@ -423,7 +425,7 @@ const ActiveTestPage: React.FC = () => {
                 onClick={() => setCurrentIdx(prev => prev + 1)}
                 iconRight={<ChevronRight className="size-4" />}
               >
-                Next
+                {t('active.next')}
               </Button>
             </div>
           </div>
@@ -431,7 +433,7 @@ const ActiveTestPage: React.FC = () => {
 
         {/* Question map */}
         <Card className="p-5">
-          <h4 className="mb-4 font-display font-bold text-ink">Questions Map</h4>
+          <h4 className="mb-4 font-display font-bold text-ink">{t('active.questionsMap')}</h4>
 
           <div className="grid grid-cols-6 gap-2 lg:grid-cols-5">
             {questions.map((q, idx) => {
@@ -464,16 +466,16 @@ const ActiveTestPage: React.FC = () => {
           {/* Legend */}
           <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-xs text-ink-muted">
             <span className="flex items-center gap-1.5">
-              <span className="size-3 rounded-full bg-sage-500" /> Answered
+              <span className="size-3 rounded-full bg-sage-500" /> {t('active.legendAnswered')}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="size-3 rounded-full bg-amber-500" /> Marked for Review
+              <span className="size-3 rounded-full bg-amber-500" /> {t('active.legendMarked')}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="size-3 rounded-full bg-surface-sunken ring-1 ring-border-strong" /> Unanswered
+              <span className="size-3 rounded-full bg-surface-sunken ring-1 ring-border-strong" /> {t('active.legendUnanswered')}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="size-3 rounded-full bg-primary" /> Current Question
+              <span className="size-3 rounded-full bg-primary" /> {t('active.legendCurrent')}
             </span>
           </div>
         </Card>
@@ -483,31 +485,31 @@ const ActiveTestPage: React.FC = () => {
       <Modal
         open={showConfirm}
         onClose={() => !isSubmitting && setShowConfirm(false)}
-        title="Submit Assessment?"
+        title={t('active.confirmTitle')}
         footer={
           <>
             <Button variant="outline" onClick={() => setShowConfirm(false)} disabled={isSubmitting}>
-              Go Back
+              {t('active.goBack')}
             </Button>
             <Button onClick={() => performSubmission()} loading={isSubmitting}>
-              {isSubmitting ? 'Submitting...' : 'Submit Assessment'}
+              {isSubmitting ? t('active.submitting') : t('active.submitAssessment')}
             </Button>
           </>
         }
       >
         <div className="mb-4 flex gap-3 text-primary">
           <AlertCircle className="size-6 shrink-0" />
-          <p className="text-sm text-ink-muted">Are you sure you want to finish and submit your answers?</p>
+          <p className="text-sm text-ink-muted">{t('active.confirmBody')}</p>
         </div>
 
         <dl className="grid grid-cols-2 gap-y-2 text-sm">
-          <dt className="text-ink-muted">Total Questions:</dt>
+          <dt className="text-ink-muted">{t('active.totalQuestions')}</dt>
           <dd className="text-right font-bold text-ink">{totalQuestions}</dd>
-          <dt className="text-ink-muted">Answered:</dt>
+          <dt className="text-ink-muted">{t('active.answered')}</dt>
           <dd className="text-right font-bold text-primary">{answeredCount}</dd>
-          <dt className="text-ink-muted">Flagged for Review:</dt>
+          <dt className="text-ink-muted">{t('active.flaggedReview')}</dt>
           <dd className="text-right font-bold text-amber-600">{reviewCount}</dd>
-          <dt className="text-ink-muted">Unanswered:</dt>
+          <dt className="text-ink-muted">{t('active.unanswered')}</dt>
           <dd className={cn('text-right font-bold', unansweredCount > 0 ? 'text-error-500' : 'text-ink-faint')}>
             {unansweredCount}
           </dd>
@@ -518,9 +520,9 @@ const ActiveTestPage: React.FC = () => {
       <Modal
         open={!!warningMessage}
         onClose={clearWarning}
-        title="Administrator Warning"
+        title={t('active.adminWarningTitle')}
         size="sm"
-        footer={<Button onClick={clearWarning}>I Understand</Button>}
+        footer={<Button onClick={clearWarning}>{t('active.iUnderstand')}</Button>}
       >
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="flex size-14 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-500/15">

@@ -1,7 +1,8 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { User, Phone } from 'lucide-react';
 import { DateInput, Field, Input, Radio, Select } from '../../components/ui';
-import { GENDERS, MARITAL, ageFromDob } from '../../lib/learnerFields';
+import { genderOptions, maritalOptions, ageFromDob } from '../../lib/learnerFields';
 import type { FieldErrors } from '../../lib/validation';
 
 export interface PersonalInfoValues {
@@ -32,10 +33,11 @@ const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
   errors,
   onChange,
 }) => {
+  const { t } = useTranslation('learner');
   const age = ageFromDob(dob);
   return (
   <div className="flex flex-col gap-5">
-    <Field label="Full Name" htmlFor="fullname-input">
+    <Field label={t('fields.fullName')} htmlFor="fullname-input">
       <Input
         id="fullname-input"
         type="text"
@@ -47,7 +49,7 @@ const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
     </Field>
 
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-      <Field label="Date of Birth" htmlFor="dob-input" error={errors.dob}>
+      <Field label={t('fields.dob')} htmlFor="dob-input" error={errors.dob}>
         <DateInput
           id="dob-input"
           value={dob}
@@ -55,30 +57,30 @@ const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
           onChange={v => onChange('dob', v)}
         />
       </Field>
-      <Field label="Age">
+      <Field label={t('fields.age')}>
         <div className="rounded-lg border border-border-strong/60 bg-surface-sunken px-3.5 py-2.5 text-sm">
-          {age === '' ? <span className="text-ink-faint">Calculated from date of birth</span> : `${age} years`}
+          {age === '' ? <span className="text-ink-faint">{t('fields.ageCalculated')}</span> : t('fields.ageValue', { age })}
         </div>
       </Field>
     </div>
 
-    <Field label="Gender" error={errors.gender}>
+    <Field label={t('fields.gender')} error={errors.gender}>
       <div className="mt-1 flex gap-4">
-        {GENDERS.map(option => (
+        {genderOptions(t).map(option => (
           <Radio
-            key={option}
+            key={option.value}
             name="gender"
-            value={option}
-            checked={gender === option}
+            value={option.value}
+            checked={gender === option.value}
             onChange={e => onChange('gender', e.target.value)}
-            label={option}
+            label={option.label}
           />
         ))}
       </div>
     </Field>
 
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-      <Field label="Contact Phone" htmlFor="phone-input" error={errors.phone}>
+      <Field label={t('fields.contactPhone')} htmlFor="phone-input" error={errors.phone}>
         <Input
           id="phone-input"
           type="tel"
@@ -89,7 +91,7 @@ const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
           onChange={e => onChange('phone', e.target.value)}
         />
       </Field>
-      <Field label="Alternate Phone (Optional)" htmlFor="alternate-phone-input" error={errors.alternatePhone}>
+      <Field label={t('fields.alternatePhone')} htmlFor="alternate-phone-input" error={errors.alternatePhone}>
         <Input
           id="alternate-phone-input"
           type="tel"
@@ -102,38 +104,38 @@ const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
       </Field>
     </div>
 
-    <Field label="Marital Status" htmlFor="marital-select" error={errors.maritalStatus}>
+    <Field label={t('fields.maritalStatus')} htmlFor="marital-select" error={errors.maritalStatus}>
       <Select id="marital-select" value={maritalStatus} error={!!errors.maritalStatus}
         onChange={e => onChange('maritalStatus', e.target.value)}>
-        <option value="">Select marital status</option>
-        {MARITAL.map(m => (
-          <option key={m} value={m}>{m}</option>
+        <option value="">{t('placeholders.selectMarital')}</option>
+        {maritalOptions(t).map(m => (
+          <option key={m.value} value={m.value}>{m.label}</option>
         ))}
       </Select>
     </Field>
 
-    <Field label="Do you have any children?" error={errors.hasChildren}>
+    <Field label={t('fields.hasChildren')} error={errors.hasChildren}>
       <div className="mt-1 flex gap-4">
-        {['Yes', 'No'].map(option => (
+        {[['Yes', t('options.yes')], ['No', t('options.no')]].map(([val, lbl]) => (
           <Radio
-            key={option}
+            key={val}
             name="has_children"
-            value={option}
-            checked={hasChildren === option}
+            value={val}
+            checked={hasChildren === val}
             onChange={e => onChange('hasChildren', e.target.value)}
-            label={option}
+            label={lbl}
           />
         ))}
       </div>
     </Field>
 
     {hasChildren === 'Yes' && (
-      <Field label="Number of children" htmlFor="number-children-input" error={errors.numberChildren}>
+      <Field label={t('fields.numberChildren')} htmlFor="number-children-input" error={errors.numberChildren}>
         <Input
           id="number-children-input"
           type="number"
           min={0}
-          placeholder="e.g. 2"
+          placeholder={t('fields.numberChildrenPlaceholder')}
           value={numberChildren}
           error={!!errors.numberChildren}
           onChange={e => onChange('numberChildren', e.target.value ? Number(e.target.value) : '')}
