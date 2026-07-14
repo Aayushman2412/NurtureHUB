@@ -1,0 +1,40 @@
+{
+  "filters": {
+    "all": "All Tutorials",
+    "completed": "Completed",
+    "uncompleted": "In Progress"
+  },
+  "curriculumCount": "{{total}} modules in curriculum",
+  "loading": "Loading training modules…",
+  "empty": {
+    "title": "Nothing here yet",
+    "description": "No modules match this filter."
+  },
+  "locked": "Locked",
+  "stageProgress": "{{completed}} / {{total}} Completed",
+  "completedBadge": "Completed",
+  "durationMinutes": "{{minutes}} Minutes duration",
+  "toast": {
+    "loadStagesFailed": "Failed to load training stages",
+    "phaseLocked": "This training phase is currently locked. Complete previous assessments first."
+  },
+  "player": {
+    "loading": "Loading player panel…",
+    "back": "Back to Modules",
+    "watched": "Watched",
+    "videoLesson": "Video Lesson",
+    "quizAfterVideo": "Quiz after video",
+    "completed": "Completed",
+    "durationMins": "{{minutes}} Mins Duration",
+    "watchNote": "Your watch time is tracked — watch the full video to mark it complete and stay eligible for tests!",
+    "playlist": "Course Playlist",
+    "watchStat": "{{minutes}}m • {{pct}}% watched",
+    "toast": {
+      "notFound": "Video module not found",
+      "loadFailed": "Failed to load player configurations",
+      "moduleCompleted": "Module completed: \"{{title}}\"",
+      "quizRecorded": "Quiz responses recorded. Great job!",
+      "quizSkipped": "Quiz skipped — you can revisit the video anytime."
+    }
+  }
+}

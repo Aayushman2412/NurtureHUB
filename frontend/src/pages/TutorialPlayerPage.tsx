@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { completeTutorial, getStages, updateTutorialProgress } from '../api/tutorials';
 import type { ProgressState } from '../api/tutorials';
 import { useToast } from '../context/ToastContext';
@@ -46,6 +47,7 @@ const TutorialPlayerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { t } = useTranslation('tutorials');
 
   const [stages, setStages] = useState<Stage[]>([]);
   const [currentTutorial, setCurrentTutorial] = useState<Tutorial | null>(null);
@@ -75,11 +77,11 @@ const TutorialPlayerPage: React.FC = () => {
         setCurrentTutorial(found);
         setWatchPct(found.watch_pct || 0);
       } else {
-        showToast('Video module not found', 'error');
+        showToast(t('player.toast.notFound'), 'error');
         navigate('/tutorials');
       }
     } catch {
-      showToast('Failed to load player configurations', 'error');
+      showToast(t('player.toast.loadFailed'), 'error');
     } finally {
       setLoading(false);
     }
@@ -110,7 +112,7 @@ const TutorialPlayerPage: React.FC = () => {
       setWatchPct(state.watch_pct);
       if (state.is_completed && !currentTutorial.is_completed) {
         setCurrentTutorial((prev) => (prev ? { ...prev, is_completed: true } : null));
-        showToast(`Module completed: "${currentTutorial.title}"`, 'success');
+        showToast(t('player.toast.moduleCompleted', { title: currentTutorial.title }), 'success');
         getStages().then(setStages).catch(() => {});
         maybeOpenQuiz(state);
       }
@@ -125,7 +127,7 @@ const TutorialPlayerPage: React.FC = () => {
     try {
       const res = await completeTutorial(currentTutorial.id);
       if (!currentTutorial.is_completed) {
-        showToast(`Module completed: "${currentTutorial.title}"`, 'success');
+        showToast(t('player.toast.moduleCompleted', { title: currentTutorial.title }), 'success');
       }
       setCurrentTutorial((prev) => (prev ? { ...prev, is_completed: true } : null));
       getStages().then(setStages).catch(() => {});
@@ -137,12 +139,12 @@ const TutorialPlayerPage: React.FC = () => {
 
   const handleQuizClose = (outcome: 'completed' | 'skipped' | 'dismissed') => {
     setQuizOpen(false);
-    if (outcome === 'completed') showToast('Quiz responses recorded. Great job!', 'success');
-    if (outcome === 'skipped') showToast('Quiz skipped — you can revisit the video anytime.', 'info');
+    if (outcome === 'completed') showToast(t('player.toast.quizRecorded'), 'success');
+    if (outcome === 'skipped') showToast(t('player.toast.quizSkipped'), 'info');
     getStages().then(setStages).catch(() => {});
   };
 
-  if (loading) return <PageLoader label="Loading player panel…" />;
+  if (loading) return <PageLoader label={t('player.loading')} />;
   if (!currentTutorial) return null;
 
   return (
@@ -154,7 +156,7 @@ const TutorialPlayerPage: React.FC = () => {
           onClick={() => navigate('/tutorials')}
           iconLeft={<ChevronLeft className="size-4" />}
         >
-          Back to Modules
+          {t('player.back')}
         </Button>
       </div>
 
@@ -176,7 +178,7 @@ const TutorialPlayerPage: React.FC = () => {
           {/* Watch progress */}
           <Card className="px-5 py-4">
             <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-ink-muted">
-              <span>Watched</span>
+              <span>{t('player.watched')}</span>
               <span>{Math.round(watchPct)}%</span>
             </div>
             <ProgressBar value={watchPct} tone={watchPct >= 90 ? 'sage' : 'coral'} />
@@ -185,17 +187,17 @@ const TutorialPlayerPage: React.FC = () => {
           <Card className="p-6">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <span className="text-xs font-bold uppercase tracking-wider text-primary">
-                {currentTutorial.module_number} • Video Lesson
+                {currentTutorial.module_number} • {t('player.videoLesson')}
               </span>
               <div className="flex items-center gap-2">
                 {currentTutorial.quiz_available && (
                   <Badge variant="coral">
-                    <HelpCircle className="size-3" /> Quiz after video
+                    <HelpCircle className="size-3" /> {t('player.quizAfterVideo')}
                   </Badge>
                 )}
                 {currentTutorial.is_completed && (
                   <Badge variant="success">
-                    <CheckCircle className="size-3" /> Completed
+                    <CheckCircle className="size-3" /> {t('player.completed')}
                   </Badge>
                 )}
               </div>
@@ -206,11 +208,11 @@ const TutorialPlayerPage: React.FC = () => {
 
             <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-t border-border pt-4 text-[13px] text-ink-faint">
               <span className="flex items-center gap-1.5">
-                <Clock className="size-3.5" /> {currentTutorial.duration_minutes} Mins Duration
+                <Clock className="size-3.5" /> {t('player.durationMins', { minutes: currentTutorial.duration_minutes })}
               </span>
               <span className="hidden sm:inline">•</span>
               <span className="font-semibold text-primary">
-                Your watch time is tracked — watch the full video to mark it complete and stay eligible for tests!
+                {t('player.watchNote')}
               </span>
             </div>
           </Card>
@@ -218,7 +220,7 @@ const TutorialPlayerPage: React.FC = () => {
 
         {/* Playlist */}
         <Card className="flex max-h-[72vh] flex-col p-5">
-          <h3 className="mb-4 border-b border-border pb-3 font-display text-lg font-bold text-ink">Course Playlist</h3>
+          <h3 className="mb-4 border-b border-border pb-3 font-display text-lg font-bold text-ink">{t('player.playlist')}</h3>
 
           <div className="flex flex-1 flex-col gap-4 overflow-y-auto">
             {stages
@@ -265,7 +267,10 @@ const TutorialPlayerPage: React.FC = () => {
                           <div className="min-w-0 flex-1">
                             <span className="block truncate text-[13px] font-semibold">{tut.title}</span>
                             <span className={cn('text-[11px]', isPlaying ? 'text-primary' : 'text-ink-faint')}>
-                              {tut.duration_minutes}m • {Math.round(tut.watch_pct || 0)}% watched
+                              {t('player.watchStat', {
+                                minutes: tut.duration_minutes,
+                                pct: Math.round(tut.watch_pct || 0),
+                              })}
                             </span>
                           </div>
                         </button>

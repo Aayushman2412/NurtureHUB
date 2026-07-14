@@ -5,9 +5,11 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 import enCommon from './locales/en/common.json';
 import enAuth from './locales/en/auth.json';
 import enApp from './locales/en/app.json';
+import enTutorials from './locales/en/tutorials.json';
 import hiCommon from './locales/hi/common.json';
 import hiAuth from './locales/hi/auth.json';
 import hiApp from './locales/hi/app.json';
+import hiTutorials from './locales/hi/tutorials.json';
 
 /**
  * Languages the UI actually ships translations for. The switcher only offers
@@ -20,11 +22,11 @@ export const SUPPORTED_LANGUAGES = [
 
 export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 
-export const NAMESPACES = ['common', 'auth', 'app'] as const;
+export const NAMESPACES = ['common', 'auth', 'app', 'tutorials'] as const;
 
 const resources = {
-  en: { common: enCommon, auth: enAuth, app: enApp },
-  hi: { common: hiCommon, auth: hiAuth, app: hiApp },
+  en: { common: enCommon, auth: enAuth, app: enApp, tutorials: enTutorials },
+  hi: { common: hiCommon, auth: hiAuth, app: hiApp, tutorials: hiTutorials },
 } as const;
 
 i18n
