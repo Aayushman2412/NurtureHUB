@@ -1,0 +1,290 @@
+{
+  "list": {
+    "title": "My Mothers",
+    "description": "Mothers you have registered into the program.",
+    "register": "Register mother",
+    "loading": "Loading mothers",
+    "loadFailed": "Failed to load mothers",
+    "emptyTitle": "No mothers registered yet",
+    "emptyBody": "Register the first mother you're tracking to start collecting her records.",
+    "table": {
+      "motherId": "Mother ID",
+      "name": "Name",
+      "village": "Village",
+      "gestationalAge": "Gestational age",
+      "edd": "EDD"
+    },
+    "weeks": "{{n}} weeks"
+  },
+  "detail": {
+    "loading": "Loading",
+    "loadFailed": "Failed to load mother",
+    "registered": "Registered",
+    "weeks": "{{n}} weeks",
+    "clinical": "Clinical",
+    "rowAge": "Age",
+    "rowWeightHeight": "Weight / Height",
+    "rowLmp": "LMP",
+    "rowEdd": "EDD (LMP / records)",
+    "rowGestational": "Gestational age",
+    "rowMobile": "Mobile",
+    "ageValue": "{{n}} years",
+    "weightHeightValue": "{{weight}} kg · {{height}} cm",
+    "gestationalValue": "{{weeks}} weeks · {{months}} months",
+    "children": "Children",
+    "addChild": "Add child",
+    "childrenEmptyTitle": "No children registered",
+    "childrenEmptyBody": "Add a child once the baby is born — it will be linked to this mother."
+  },
+  "form": {
+    "title": "Register a Mother",
+    "description": "Enrol a pregnant mother into the program.",
+    "steps": {
+      "identity": "Identity & Clinical",
+      "location": "Location & Background",
+      "knowledge": "Knowledge & Attitudes"
+    },
+    "sectionIdentity": "Identity & Clinical",
+    "sectionLocation": "Location & Background",
+    "sectionKnowledge": "Knowledge & Attitudes",
+    "motherName": "Mother's name",
+    "adoptionDate": "Date of adoption",
+    "dob": "Date of birth",
+    "age": "Age (auto from DOB)",
+    "ageHint": "Set DOB to calculate",
+    "ageValue": "{{n}} years",
+    "weight": "Weight at adoption (kg)",
+    "height": "Height at adoption (cm)",
+    "lmp": "Last menstrual period (LMP)",
+    "eddLmp": "EDD as per LMP (auto)",
+    "eddLmpHint": "Set LMP to calculate",
+    "gestationalAge": "Gestational age",
+    "gestationalHint": "Set LMP to calculate",
+    "gestationalValue": "{{weeks}} weeks · {{months}} months",
+    "eddRecords": "EDD as per latest records",
+    "mobile": "Mobile number",
+    "mobilePlaceholder": "10-digit",
+    "alternateMobile": "Alternate mobile (optional)",
+    "email": "Email (optional)",
+    "state": "State",
+    "district": "District",
+    "taluk": "Taluk",
+    "village": "Village",
+    "hwc": "Health & Wellness Centre (HWC)",
+    "phc": "Primary Health Centre (auto)",
+    "phcHint": "Auto-fills from the selected HWC",
+    "education": "Highest education",
+    "educationField": "Field of study",
+    "degree": "Degree / diploma",
+    "occupation": "Occupation",
+    "occupationOther": "Specify occupation",
+    "rationCard": "Ration card type",
+    "socialCategory": "Social category",
+    "nutritionCourse": "Completed any certificate course/training on nutrition, pregnancy or child care?",
+    "nutritionCourseName": "Specify the course",
+    "videoFrequency": "How often do you watch health-related videos on social media?",
+    "ratingsQuestion": "For each source, rate how much you trust it and how willing you are to follow its advice",
+    "placeholders": {
+      "selectState": "Select state",
+      "selectDistrict": "Select district",
+      "selectTaluk": "Select taluk",
+      "searchHwc": "Search HWC",
+      "selectEducation": "Select education level",
+      "selectField": "Select field",
+      "searchDegree": "Search degree",
+      "selectOccupation": "Select occupation",
+      "selectRationCard": "Select ration card",
+      "selectSocialCategory": "Select social category",
+      "selectFrequency": "Select frequency",
+      "selectOne": "Select one"
+    },
+    "ratingGrid": {
+      "rowHeader": "Source",
+      "trust": "Trust (1–5)",
+      "willingness": "Willingness (1–5)"
+    },
+    "cancel": "Cancel",
+    "back": "Back",
+    "continue": "Continue",
+    "registering": "Registering...",
+    "register": "Register Mother ✓",
+    "toastRegistering": "Registering mother...",
+    "toastSuccess": "Registered {{name}} ({{uid}}).",
+    "toastFail": "Failed to register. Please try again."
+  },
+  "child": {
+    "titleNew": "Register a Child",
+    "titleEdit": "Edit Child",
+    "descLinked": "Linked to {{name}}",
+    "descLinkedFallback": "Linked to the selected mother.",
+    "steps": {
+      "birth": "Birth Details",
+      "delivery": "Delivery & Feeding"
+    },
+    "sectionBirth": "Birth Details",
+    "sectionDelivery": "Delivery & Feeding",
+    "babiesBorn": "Babies born in this delivery",
+    "childName": "Baby's name",
+    "adoptionDate": "Date of adoption",
+    "dob": "Date of birth",
+    "age": "Age (auto)",
+    "ageHint": "Set DOB to calculate",
+    "ageValue": "{{days}} days · {{months}} months",
+    "birthWeight": "Birth weight (kg)",
+    "birthWeightPlaceholder": "1.000–5.000",
+    "birthLength": "Birth length (cm)",
+    "birthLengthPlaceholder": "30.0–65.0",
+    "gender": "Gender",
+    "previousChildren": "Previous living children (apart from this child)",
+    "deliveryMethod": "Delivery method",
+    "deliveryPlace": "Place of delivery",
+    "deliveryPlaceOther": "Specify other place of delivery",
+    "bfWithinHour": "Was breastfeeding initiated within one hour of birth?",
+    "ebfDuringStay": "Was the baby exclusively breastfed during the facility stay after delivery?",
+    "ebfReason": "If not, mention the reason",
+    "birthConditions": "Pre-existing ill-health conditions at birth (select all that apply)",
+    "conditionOther": "Specify the other health condition(s)",
+    "placeholders": {
+      "select": "Select",
+      "selectDeliveryMethod": "Select delivery method",
+      "selectPlace": "Select place of delivery"
+    },
+    "loading": "Loading",
+    "loadFailed": "Failed to load child",
+    "cancel": "Cancel",
+    "back": "Back",
+    "continue": "Continue",
+    "saving": "Saving...",
+    "saveChild": "Save Child ✓",
+    "registerChild": "Register Child ✓",
+    "toastSaving": "Saving child...",
+    "toastRegistering": "Registering child...",
+    "toastSuccessSaved": "Saved {{name}} ({{uid}}).",
+    "toastSuccessRegistered": "Registered {{name}} ({{uid}}).",
+    "toastFailSave": "Failed to save. Please try again.",
+    "toastFailRegister": "Failed to register. Please try again."
+  },
+  "options": {
+    "yes": "Yes",
+    "no": "No",
+    "occupation": {
+      "Homemaker": "Homemaker",
+      "Agriculture": "Agriculture",
+      "Skilled Manual Worker": "Skilled Manual Worker",
+      "Semi-skilled Worker": "Semi-skilled Worker",
+      "Unskilled Worker": "Unskilled Worker",
+      "Service Provider": "Service Provider",
+      "Semi-professional": "Semi-professional",
+      "Professional": "Professional",
+      "Entrepreneur/Small Business": "Entrepreneur/Small Business",
+      "Other": "Other"
+    },
+    "rationCard": {
+      "AAY": "AAY",
+      "Eligible for AAY but not applied": "Eligible for AAY but not applied",
+      "BPL": "BPL",
+      "Eligible for BPL but not applied": "Eligible for BPL but not applied",
+      "APL": "APL",
+      "No ration card": "No ration card",
+      "Others": "Others"
+    },
+    "socialCategory": {
+      "ST": "ST",
+      "SC": "SC",
+      "OBC": "OBC",
+      "General": "General",
+      "Do not know": "Do not know",
+      "Prefer not to say": "Prefer not to say"
+    },
+    "videoFrequency": {
+      "Daily": "Daily",
+      "Alternate day / 2–3 times per week": "Alternate day / 2–3 times per week",
+      "Once a week": "Once a week",
+      "2–3 times per month": "2–3 times per month",
+      "About once a month": "About once a month",
+      "Less than once a month": "Less than once a month",
+      "Never": "Never"
+    },
+    "likert": {
+      "implement_video": {
+        "Never": "Never",
+        "Rarely": "Rarely",
+        "Sometimes": "Sometimes",
+        "Often": "Often",
+        "Always": "Always"
+      },
+      "confidence_video": {
+        "Not at all confident": "Not at all confident",
+        "Slightly confident": "Slightly confident",
+        "Moderately confident": "Moderately confident",
+        "Very confident": "Very confident",
+        "Extremely confident": "Extremely confident"
+      },
+      "willingness_hcw": {
+        "Very unwilling": "Very unwilling",
+        "Unwilling": "Unwilling",
+        "Neutral": "Neutral",
+        "Willing": "Willing",
+        "Very willing": "Very willing"
+      },
+      "information_seeking": {
+        "Never": "Never",
+        "Rarely": "Rarely",
+        "Sometimes": "Sometimes",
+        "Often": "Often",
+        "Always": "Always"
+      }
+    },
+    "likertQuestion": {
+      "implement_video": "How often do you follow the advice you receive from health-related videos?",
+      "confidence_video": "How confident are you in trying a new health practice after watching a reliable educational video?",
+      "willingness_hcw": "If a healthcare worker teaches you a new health practice, how willing are you to try it?",
+      "information_seeking": "When you had a question about pregnancy, breastfeeding or feeding your baby, how often did you actively look for information?"
+    },
+    "source": {
+      "doctor": "Doctor",
+      "staff_nurse": "Staff Nurse",
+      "anm": "ANM",
+      "asha": "ASHA",
+      "anganwadi_worker": "Anganwadi Worker",
+      "nutritionist": "Nutritionist/Dietitian",
+      "family": "Family members",
+      "friends": "Friends/Neighbours",
+      "youtube": "YouTube/Social media"
+    },
+    "babiesBorn": {
+      "Single": "Single",
+      "Twins": "Twins"
+    },
+    "gender": {
+      "Female": "Female",
+      "Male": "Male"
+    },
+    "deliveryMethod": {
+      "Normal vaginal delivery": "Normal vaginal delivery",
+      "Caesarean section": "Caesarean section",
+      "Assisted vaginal delivery": "Assisted vaginal delivery"
+    },
+    "deliveryPlace": {
+      "District Hospital (DH)": "District Hospital (DH)",
+      "Rural Hospital (RH)": "Rural Hospital (RH)",
+      "Sub-District Hospital (SDH)": "Sub-District Hospital (SDH)",
+      "Community Health Centre (CHC)": "Community Health Centre (CHC)",
+      "Primary Health Centre (PHC)": "Primary Health Centre (PHC)",
+      "Sub-centre (SC)": "Sub-centre (SC)",
+      "Private Hospital/Nursing Home": "Private Hospital/Nursing Home",
+      "Home": "Home",
+      "Other": "Other"
+    },
+    "birthCondition": {
+      "None": "None",
+      "Congenital anomaly/Birth defect": "Congenital anomaly/Birth defect",
+      "Birth asphyxia (difficulty breathing at birth)": "Birth asphyxia (difficulty breathing at birth)",
+      "Neonatal jaundice": "Neonatal jaundice",
+      "Respiratory distress/Breathing difficulty": "Respiratory distress/Breathing difficulty",
+      "Neonatal infection/Sepsis": "Neonatal infection/Sepsis",
+      "Hypoglycaemia (low blood sugar)": "Hypoglycaemia (low blood sugar)",
+      "Others": "Others"
+    }
+  }
+}

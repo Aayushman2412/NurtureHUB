@@ -37,6 +37,21 @@ export const BIRTH_CONDITIONS = [
   'Others',
 ];
 
+// ── i18n option builders — English value + translated label ──
+// `t` must be bound to the 'mother' namespace (useTranslation('mother')). Labels
+// are keyed by the canonical English value under options.*; the stored value stays
+// English. None of the enum values contain a '.', so they are safe key segments.
+type TFn = (key: string) => string;
+const toOptions = (list: string[], t: TFn, group: string) =>
+  list.map(v => ({ value: v, label: t(`options.${group}.${v}`) }));
+
+export const babiesBornOptions = (t: TFn) => toOptions(BABIES_BORN, t, 'babiesBorn');
+export const genderOptions = (t: TFn) => toOptions(GENDERS, t, 'gender');
+export const deliveryMethodOptions = (t: TFn) => toOptions(DELIVERY_METHODS, t, 'deliveryMethod');
+export const deliveryPlaceOptions = (t: TFn) => toOptions(DELIVERY_PLACES, t, 'deliveryPlace');
+/** Birth-condition checklist as {value,label}[] — value is the stored English condition. */
+export const birthConditionOptions = (t: TFn) => toOptions(BIRTH_CONDITIONS, t, 'birthCondition');
+
 /** Child age from DOB as { days, months }, or null if no/invalid DOB. */
 export function childAge(dob: string): { days: number; months: number } | null {
   if (!dob) return null;

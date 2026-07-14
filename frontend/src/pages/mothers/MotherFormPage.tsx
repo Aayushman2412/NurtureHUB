@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useToast } from '../../context/ToastContext';
 import {
   Button, Card, DateInput, Field, Input, PageHeader, Radio, RatingGrid, SearchableSelect, SelectField, Stepper,
@@ -7,15 +8,14 @@ import {
 import { useMotherMetadata } from '../../hooks/useMotherMetadata';
 import { ageFromDob } from '../../lib/learnerFields';
 import {
-  OCCUPATIONS, RATION_CARDS, SOCIAL_CATEGORIES, VIDEO_FREQUENCY, LIKERT, MATRIX_SOURCES,
-  eddFromLmp, gestationalAge,
+  MATRIX_SOURCES, eddFromLmp, gestationalAge,
+  occupationOptions, rationCardOptions, socialCategoryOptions, videoFrequencyOptions, likertQuestions, sourceRows,
 } from '../../lib/motherFields';
 import { validateMother, validateMotherStep, MR_STEP_FIELDS, type MotherFormValues } from '../../lib/motherSchema';
 import type { FieldErrors } from '../../lib/validation';
 import { createMother, type MotherPayload } from '../../api/mothers';
 
-const STEPS = ['Identity & Clinical', 'Location & Background', 'Knowledge & Attitudes'];
-const opts = (list: string[]) => list.map(o => ({ value: o, label: o }));
+const STEP_KEYS = ['identity', 'location', 'knowledge'] as const;
 
 const ReadOnly: React.FC<{ label: string; value: string; hint: string }> = ({ label, value, hint }) => (
   <Field label={label}>
@@ -32,7 +32,9 @@ const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
 const MotherFormPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation('mother');
   const { showToast, updateToast } = useToast();
+  const steps = STEP_KEYS.map(k => t(`form.steps.${k}`));
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -115,7 +117,7 @@ const MotherFormPage: React.FC = () => {
   const next = () => {
     const stepErrs = validateMotherStep(values, step);
     setErrors(stepErrs);
-    if (!Object.keys(stepErrs).length) setStep(s => Math.min(s + 1, STEPS.length - 1));
+    if (!Object.keys(stepErrs).length) setStep(s => Math.min(s + 1, STEP_KEYS.length - 1));
   };
   const back = () => { setErrors({}); setStep(s => Math.max(s - 1, 0)); };
 
@@ -152,80 +154,80 @@ const MotherFormPage: React.FC = () => {
       return;
     }
     setLoading(true);
-    const toastId = showToast('Registering mother...', 'loading');
+    const toastId = showToast(t('form.toastRegistering'), 'loading');
     try {
       const created = await createMother(buildPayload());
-      updateToast(toastId, `Registered ${created.mother_name} (${created.mother_uid}).`, 'success');
+      updateToast(toastId, t('form.toastSuccess', { name: created.mother_name, uid: created.mother_uid }), 'success');
       navigate('/mothers');
     } catch {
-      updateToast(toastId, 'Failed to register. Please try again.', 'error');
+      updateToast(toastId, t('form.toastFail'), 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const isLast = step === STEPS.length - 1;
+  const isLast = step === STEP_KEYS.length - 1;
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <PageHeader title="Register a Mother" description="Enrol a pregnant mother into the program." />
+      <PageHeader title={t('form.title')} description={t('form.description')} />
       <Card className="p-8">
         <form onSubmit={handleSubmit} className="flex flex-col gap-7" noValidate>
-          <Stepper steps={STEPS} current={step} />
+          <Stepper steps={steps} current={step} />
 
           {step === 0 && (
             <div>
-              <SectionTitle>Identity &amp; Clinical</SectionTitle>
+              <SectionTitle>{t('form.sectionIdentity')}</SectionTitle>
               <div className="flex flex-col gap-4">
-                <Field label="Mother's name" error={errors.mother_name}>
+                <Field label={t('form.motherName')} error={errors.mother_name}>
                   <Input value={motherName} error={!!errors.mother_name}
                     onChange={e => { setMotherName(e.target.value); clearError('mother_name'); }} />
                 </Field>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <Field label="Date of adoption" error={errors.adoption_date}>
+                  <Field label={t('form.adoptionDate')} error={errors.adoption_date}>
                     <DateInput value={adoptionDate} max={new Date().toISOString().slice(0, 10)}
                       error={!!errors.adoption_date} onChange={v => { setAdoptionDate(v); clearError('adoption_date'); }} />
                   </Field>
-                  <Field label="Date of birth" error={errors.mother_dob}>
+                  <Field label={t('form.dob')} error={errors.mother_dob}>
                     <DateInput value={motherDob} max={new Date().toISOString().slice(0, 10)}
                       error={!!errors.mother_dob} onChange={v => { setMotherDob(v); clearError('mother_dob'); }} />
                   </Field>
-                  <ReadOnly label="Age (auto from DOB)" value={motherAge === '' ? '' : `${motherAge} years`} hint="Set DOB to calculate" />
+                  <ReadOnly label={t('form.age')} value={motherAge === '' ? '' : t('form.ageValue', { n: motherAge })} hint={t('form.ageHint')} />
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label="Weight at adoption (kg)" error={errors.weight}>
+                  <Field label={t('form.weight')} error={errors.weight}>
                     <Input type="number" step={0.1} min={35} max={200} value={weight} error={!!errors.weight}
                       onChange={e => { setWeight(e.target.value ? Number(e.target.value) : ''); clearError('weight'); }} />
                   </Field>
-                  <Field label="Height at adoption (cm)" error={errors.height}>
+                  <Field label={t('form.height')} error={errors.height}>
                     <Input type="number" step={0.1} min={100} max={230} value={height} error={!!errors.height}
                       onChange={e => { setHeight(e.target.value ? Number(e.target.value) : ''); clearError('height'); }} />
                   </Field>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label="Last menstrual period (LMP)" error={errors.lmp}>
+                  <Field label={t('form.lmp')} error={errors.lmp}>
                     <DateInput value={lmp} max={new Date().toISOString().slice(0, 10)} error={!!errors.lmp}
                       onChange={v => { setLmp(v); clearError('lmp'); }} />
                   </Field>
-                  <ReadOnly label="EDD as per LMP (auto)" value={eddLmp} hint="Set LMP to calculate" />
+                  <ReadOnly label={t('form.eddLmp')} value={eddLmp} hint={t('form.eddLmpHint')} />
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <ReadOnly label="Gestational age" value={gest ? `${gest.weeks} weeks · ${gest.months} months` : ''} hint="Set LMP to calculate" />
-                  <Field label="EDD as per latest records" error={errors.edd_records}>
+                  <ReadOnly label={t('form.gestationalAge')} value={gest ? t('form.gestationalValue', { weeks: gest.weeks, months: gest.months }) : ''} hint={t('form.gestationalHint')} />
+                  <Field label={t('form.eddRecords')} error={errors.edd_records}>
                     <DateInput value={eddRecords} error={!!errors.edd_records}
                       onChange={v => { setEddRecords(v); clearError('edd_records'); }} />
                   </Field>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <Field label="Mobile number" error={errors.mobile}>
-                    <Input type="tel" inputMode="numeric" placeholder="10-digit" value={mobile} error={!!errors.mobile}
+                  <Field label={t('form.mobile')} error={errors.mobile}>
+                    <Input type="tel" inputMode="numeric" placeholder={t('form.mobilePlaceholder')} value={mobile} error={!!errors.mobile}
                       onChange={e => { setMobile(e.target.value); clearError('mobile'); }} />
                   </Field>
-                  <Field label="Alternate mobile (optional)" error={errors.alternate_mobile}>
+                  <Field label={t('form.alternateMobile')} error={errors.alternate_mobile}>
                     <Input type="tel" inputMode="numeric" value={alternateMobile} error={!!errors.alternate_mobile}
                       onChange={e => { setAlternateMobile(e.target.value); clearError('alternate_mobile'); }} />
                   </Field>
-                  <Field label="Email (optional)" error={errors.email}>
+                  <Field label={t('form.email')} error={errors.email}>
                     <Input type="email" value={email} error={!!errors.email}
                       onChange={e => { setEmail(e.target.value); clearError('email'); }} />
                   </Field>
@@ -236,81 +238,81 @@ const MotherFormPage: React.FC = () => {
 
           {step === 1 && (
             <div>
-              <SectionTitle>Location &amp; Background</SectionTitle>
+              <SectionTitle>{t('form.sectionLocation')}</SectionTitle>
               <div className="flex flex-col gap-4">
-                <SelectField label="State" value={stateId} onChange={onState} error={errors.state_id}
-                  placeholder="Select state" options={meta.states.map(s => ({ value: s.id, label: s.name }))} />
-                <SelectField label="District" value={districtId} onChange={onDistrict} error={errors.district_id}
-                  placeholder="Select district" disabled={!stateId}
+                <SelectField label={t('form.state')} value={stateId} onChange={onState} error={errors.state_id}
+                  placeholder={t('form.placeholders.selectState')} options={meta.states.map(s => ({ value: s.id, label: s.name }))} />
+                <SelectField label={t('form.district')} value={districtId} onChange={onDistrict} error={errors.district_id}
+                  placeholder={t('form.placeholders.selectDistrict')} disabled={!stateId}
                   options={meta.districts.map(d => ({ value: d.id, label: d.name }))} />
-                <SelectField label="Taluk" value={talukId} onChange={onTaluk} error={errors.taluk_id}
-                  placeholder="Select taluk" disabled={!districtId}
-                  options={meta.taluks.map(t => ({ value: t.id, label: t.name }))} />
-                <Field label="Village" error={errors.village}>
+                <SelectField label={t('form.taluk')} value={talukId} onChange={onTaluk} error={errors.taluk_id}
+                  placeholder={t('form.placeholders.selectTaluk')} disabled={!districtId}
+                  options={meta.taluks.map(tk => ({ value: tk.id, label: tk.name }))} />
+                <Field label={t('form.village')} error={errors.village}>
                   <Input value={village} error={!!errors.village}
                     onChange={e => { setVillage(e.target.value); clearError('village'); }} />
                 </Field>
-                <SearchableSelect label="Health & Wellness Centre (HWC)" value={hwcId} onChange={onHwc}
-                  error={errors.hwc_id} placeholder="Search HWC" disabled={!talukId}
+                <SearchableSelect label={t('form.hwc')} value={hwcId} onChange={onHwc}
+                  error={errors.hwc_id} placeholder={t('form.placeholders.searchHwc')} disabled={!talukId}
                   options={meta.hwcs.map(h => ({ value: h.id, label: h.name }))} />
-                <ReadOnly label="Primary Health Centre (auto)" value={meta.phc?.name ?? ''} hint="Auto-fills from the selected HWC" />
-                <SelectField label="Highest education" value={educationId} onChange={onEducation} error={errors.education_id}
-                  placeholder="Select education level" options={meta.educationLevels.map(l => ({ value: l.id, label: l.name }))} />
+                <ReadOnly label={t('form.phc')} value={meta.phc?.name ?? ''} hint={t('form.phcHint')} />
+                <SelectField label={t('form.education')} value={educationId} onChange={onEducation} error={errors.education_id}
+                  placeholder={t('form.placeholders.selectEducation')} options={meta.educationLevels.map(l => ({ value: l.id, label: l.name }))} />
                 {showEducationField && (
                   <>
-                    <SelectField label="Field of study" value={educationFieldId} onChange={onEducationField}
-                      error={errors.education_field_id} placeholder="Select field"
+                    <SelectField label={t('form.educationField')} value={educationFieldId} onChange={onEducationField}
+                      error={errors.education_field_id} placeholder={t('form.placeholders.selectField')}
                       options={meta.educationFields.map(f => ({ value: f.id, label: f.name }))} />
-                    <SearchableSelect label="Degree / diploma" value={educationDegreeId}
+                    <SearchableSelect label={t('form.degree')} value={educationDegreeId}
                       onChange={v => { setEducationDegreeId(v ? Number(v) : ''); clearError('education_degree_id'); }}
-                      error={errors.education_degree_id} placeholder="Search degree" disabled={!educationFieldId}
+                      error={errors.education_degree_id} placeholder={t('form.placeholders.searchDegree')} disabled={!educationFieldId}
                       options={meta.educationDegrees.map(d => ({ value: d.id, label: d.name }))} />
                   </>
                 )}
-                <SelectField label="Occupation" value={occupation}
+                <SelectField label={t('form.occupation')} value={occupation}
                   onChange={v => { setOccupation(v); clearError('occupation'); }} error={errors.occupation}
-                  placeholder="Select occupation" options={opts(OCCUPATIONS)} />
+                  placeholder={t('form.placeholders.selectOccupation')} options={occupationOptions(t)} />
                 {showOccupationOther && (
-                  <Field label="Specify occupation" error={errors.occupation_other}>
+                  <Field label={t('form.occupationOther')} error={errors.occupation_other}>
                     <Input value={occupationOther} error={!!errors.occupation_other}
                       onChange={e => { setOccupationOther(e.target.value); clearError('occupation_other'); }} />
                   </Field>
                 )}
-                <SelectField label="Ration card type" value={rationCard}
+                <SelectField label={t('form.rationCard')} value={rationCard}
                   onChange={v => { setRationCard(v); clearError('ration_card'); }} error={errors.ration_card}
-                  placeholder="Select ration card" options={opts(RATION_CARDS)} />
-                <SelectField label="Social category" value={socialCategory}
+                  placeholder={t('form.placeholders.selectRationCard')} options={rationCardOptions(t)} />
+                <SelectField label={t('form.socialCategory')} value={socialCategory}
                   onChange={v => { setSocialCategory(v); clearError('social_category'); }} error={errors.social_category}
-                  placeholder="Select social category" options={opts(SOCIAL_CATEGORIES)} />
+                  placeholder={t('form.placeholders.selectSocialCategory')} options={socialCategoryOptions(t)} />
               </div>
             </div>
           )}
 
           {step === 2 && (
             <div>
-              <SectionTitle>Knowledge &amp; Attitudes</SectionTitle>
+              <SectionTitle>{t('form.sectionKnowledge')}</SectionTitle>
               <div className="flex flex-col gap-4">
-                <Field label="Completed any certificate course/training on nutrition, pregnancy or child care?" error={errors.nutrition_course}>
+                <Field label={t('form.nutritionCourse')} error={errors.nutrition_course}>
                   <div className="mt-1 flex gap-4">
-                    {['Yes', 'No'].map(o => (
-                      <Radio key={o} name="nutrition_course" value={o} checked={nutritionCourse === o}
-                        onChange={e => { setNutritionCourse(e.target.value); clearError('nutrition_course'); }} label={o} />
+                    {[['Yes', t('options.yes')], ['No', t('options.no')]].map(([val, lbl]) => (
+                      <Radio key={val} name="nutrition_course" value={val} checked={nutritionCourse === val}
+                        onChange={e => { setNutritionCourse(e.target.value); clearError('nutrition_course'); }} label={lbl} />
                     ))}
                   </div>
                 </Field>
                 {showNutritionCourseName && (
-                  <Field label="Specify the course" error={errors.nutrition_course_name}>
+                  <Field label={t('form.nutritionCourseName')} error={errors.nutrition_course_name}>
                     <Input value={nutritionCourseName} error={!!errors.nutrition_course_name}
                       onChange={e => { setNutritionCourseName(e.target.value); clearError('nutrition_course_name'); }} />
                   </Field>
                 )}
-                <SelectField label="How often do you watch health-related videos on social media?" value={videoFrequency}
+                <SelectField label={t('form.videoFrequency')} value={videoFrequency}
                   onChange={v => { setVideoFrequency(v); clearError('video_frequency'); }} error={errors.video_frequency}
-                  placeholder="Select frequency" options={opts(VIDEO_FREQUENCY)} />
+                  placeholder={t('form.placeholders.selectFrequency')} options={videoFrequencyOptions(t)} />
 
-                <Field label="For each source, rate how much you trust it and how willing you are to follow its advice" error={errors.source_ratings}>
-                  <RatingGrid rowHeader="Source" rows={MATRIX_SOURCES}
-                    columns={[{ key: 'trust', label: 'Trust (1–5)' }, { key: 'willingness', label: 'Willingness (1–5)' }]}
+                <Field label={t('form.ratingsQuestion')} error={errors.source_ratings}>
+                  <RatingGrid rowHeader={t('form.ratingGrid.rowHeader')} rows={sourceRows(t)}
+                    columns={[{ key: 'trust', label: t('form.ratingGrid.trust') }, { key: 'willingness', label: t('form.ratingGrid.willingness') }]}
                     value={ratings}
                     onChange={(row, col, n) => {
                       setRatings(prev => ({ ...prev, [row]: { ...prev[row], [col]: n } }));
@@ -318,23 +320,23 @@ const MotherFormPage: React.FC = () => {
                     }} />
                 </Field>
 
-                {LIKERT.map(q => (
+                {likertQuestions(t).map(q => (
                   <SelectField key={q.key} label={q.label} value={likert[q.key] ?? ''}
                     onChange={v => { setLikert(prev => ({ ...prev, [q.key]: v })); clearError(q.key); }}
-                    error={errors[q.key]} placeholder="Select one" options={opts(q.options)} />
+                    error={errors[q.key]} placeholder={t('form.placeholders.selectOne')} options={q.options} />
                 ))}
               </div>
             </div>
           )}
 
           <div className="flex items-center gap-3 border-t border-border pt-5">
-            <Button type="button" variant="ghost" onClick={() => navigate('/mothers')} disabled={loading}>Cancel</Button>
-            {step > 0 && <Button type="button" variant="secondary" onClick={back} disabled={loading}>Back</Button>}
+            <Button type="button" variant="ghost" onClick={() => navigate('/mothers')} disabled={loading}>{t('form.cancel')}</Button>
+            {step > 0 && <Button type="button" variant="secondary" onClick={back} disabled={loading}>{t('form.back')}</Button>}
             {!isLast ? (
-              <Button type="button" onClick={next} className="ml-auto">Continue</Button>
+              <Button type="button" onClick={next} className="ml-auto">{t('form.continue')}</Button>
             ) : (
               <Button type="submit" size="lg" loading={loading} className="ml-auto">
-                {loading ? 'Registering...' : 'Register Mother ✓'}
+                {loading ? t('form.registering') : t('form.register')}
               </Button>
             )}
           </div>
