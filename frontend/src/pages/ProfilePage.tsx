@@ -74,7 +74,7 @@ const ProfilePage: React.FC = () => {
       yearsFacility: user.years_facility ?? '',
       internetWorkplace: user.internet_workplace || '',
       trainings: Object.fromEntries(
-        TRAININGS.map(t => [t.key, (user as Record<string, unknown>)[t.key] as string || '']),
+        TRAININGS.map(t => [t.key, (user as unknown as Record<string, unknown>)[t.key] as string || '']),
       ),
     });
   }, [user]);
@@ -235,7 +235,7 @@ const ProfilePage: React.FC = () => {
             <span>
               Joined:{' '}
               <strong className="text-ink-muted">
-                {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
+                {user?.created_at ? new Date(user.created_at).toLocaleDateString('en-GB') : 'N/A'}
               </strong>
             </span>
           </div>

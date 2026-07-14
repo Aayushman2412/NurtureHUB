@@ -390,7 +390,7 @@ const DashboardPage: React.FC = () => {
                       <h4 className="text-sm font-semibold text-ink">{act.title}</h4>
                       <div className="mt-0.5 flex justify-between text-ink-faint">
                         <span>Status: {act.status}</span>
-                        <span>{new Date(act.timestamp).toLocaleDateString()}</span>
+                        <span>{new Date(act.timestamp).toLocaleDateString('en-GB')}</span>
                       </div>
                     </div>
                   </div>

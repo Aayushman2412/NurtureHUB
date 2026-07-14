@@ -10,6 +10,8 @@ export { default as SearchableSelect } from './SearchableSelect';
 export type { SearchableSelectOption, SearchableSelectProps } from './SearchableSelect';
 export { default as ComboBox } from './ComboBox';
 export type { ComboBoxOption, ComboBoxProps } from './ComboBox';
+export { default as DateInput } from './DateInput';
+export type { DateInputProps } from './DateInput';
 export { default as RatingGrid } from './RatingGrid';
 export type { RatingGridProps, RatingGridRow, RatingGridColumn, RatingGridValue } from './RatingGrid';
 export { Checkbox, Radio } from './Checkbox';

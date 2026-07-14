@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../context/ToastContext';
 import {
-  Button, Card, Field, Input, PageHeader, Radio, RatingGrid, SearchableSelect, SelectField, Stepper,
+  Button, Card, DateInput, Field, Input, PageHeader, Radio, RatingGrid, SearchableSelect, SelectField, Stepper,
 } from '../../components/ui';
 import { useMotherMetadata } from '../../hooks/useMotherMetadata';
 import { ageFromDob } from '../../lib/learnerFields';
@@ -183,12 +183,12 @@ const MotherFormPage: React.FC = () => {
                 </Field>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <Field label="Date of adoption" error={errors.adoption_date}>
-                    <Input type="date" value={adoptionDate} max={new Date().toISOString().slice(0, 10)}
-                      error={!!errors.adoption_date} onChange={e => { setAdoptionDate(e.target.value); clearError('adoption_date'); }} />
+                    <DateInput value={adoptionDate} max={new Date().toISOString().slice(0, 10)}
+                      error={!!errors.adoption_date} onChange={v => { setAdoptionDate(v); clearError('adoption_date'); }} />
                   </Field>
                   <Field label="Date of birth" error={errors.mother_dob}>
-                    <Input type="date" value={motherDob} max={new Date().toISOString().slice(0, 10)}
-                      error={!!errors.mother_dob} onChange={e => { setMotherDob(e.target.value); clearError('mother_dob'); }} />
+                    <DateInput value={motherDob} max={new Date().toISOString().slice(0, 10)}
+                      error={!!errors.mother_dob} onChange={v => { setMotherDob(v); clearError('mother_dob'); }} />
                   </Field>
                   <ReadOnly label="Age (auto from DOB)" value={motherAge === '' ? '' : `${motherAge} years`} hint="Set DOB to calculate" />
                 </div>
@@ -204,16 +204,16 @@ const MotherFormPage: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Last menstrual period (LMP)" error={errors.lmp}>
-                    <Input type="date" value={lmp} max={new Date().toISOString().slice(0, 10)} error={!!errors.lmp}
-                      onChange={e => { setLmp(e.target.value); clearError('lmp'); }} />
+                    <DateInput value={lmp} max={new Date().toISOString().slice(0, 10)} error={!!errors.lmp}
+                      onChange={v => { setLmp(v); clearError('lmp'); }} />
                   </Field>
                   <ReadOnly label="EDD as per LMP (auto)" value={eddLmp} hint="Set LMP to calculate" />
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <ReadOnly label="Gestational age" value={gest ? `${gest.weeks} weeks · ${gest.months} months` : ''} hint="Set LMP to calculate" />
                   <Field label="EDD as per latest records" error={errors.edd_records}>
-                    <Input type="date" value={eddRecords} error={!!errors.edd_records}
-                      onChange={e => { setEddRecords(e.target.value); clearError('edd_records'); }} />
+                    <DateInput value={eddRecords} error={!!errors.edd_records}
+                      onChange={v => { setEddRecords(v); clearError('edd_records'); }} />
                   </Field>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

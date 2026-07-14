@@ -231,7 +231,7 @@ const TestsPage: React.FC = () => {
                 <Tr key={att.id} clickable onClick={() => navigate(`/results/${att.id}`)}>
                   <Td className="font-semibold">{getTestTitle(att.test_id)}</Td>
                   <Td className="text-ink-muted">Attempt #{att.attempt_number}</Td>
-                  <Td className="text-ink-muted">{new Date(att.submitted_at).toLocaleDateString()}</Td>
+                  <Td className="text-ink-muted">{new Date(att.submitted_at).toLocaleDateString('en-GB')}</Td>
                   <Td className="text-ink-muted">
                     {Math.floor(att.time_used_seconds / 60)}m {att.time_used_seconds % 60}s
                   </Td>
