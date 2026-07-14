@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
-import { Button, ComboBox, Field, Input, Radio, SelectField, Stepper } from '../components/ui';
+import { Button, ComboBox, DateInput, Field, Input, Radio, SelectField, Stepper } from '../components/ui';
 import { useLearnerMetadata } from '../hooks/useLearnerMetadata';
 import { GENDERS, MARITAL, INTERNET, TRAINING_RECENCY, TRAININGS, ageFromDob } from '../lib/learnerFields';
 import { validateLearner, validateLearnerStep, LR_STEP_FIELDS, type LearnerFormValues } from '../lib/learnerSchema';
@@ -197,8 +197,8 @@ const RegistrationPage: React.FC = () => {
             <div className="flex flex-col gap-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Date of Birth" htmlFor="dob-input" error={errors.dob}>
-                  <Input id="dob-input" type="date" value={dob} max={new Date().toISOString().slice(0, 10)}
-                    error={!!errors.dob} onChange={e => { setDob(e.target.value); clearError('dob'); }} />
+                  <DateInput id="dob-input" value={dob} max={new Date().toISOString().slice(0, 10)}
+                    error={!!errors.dob} onChange={v => { setDob(v); clearError('dob'); }} />
                 </Field>
                 <Field label="Age (Years)">
                   <div className="rounded-lg border border-border-strong/60 bg-surface-sunken px-3.5 py-2.5 text-sm">

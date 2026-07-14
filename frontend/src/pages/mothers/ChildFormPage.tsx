@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useToast } from '../../context/ToastContext';
 import {
-  Button, Card, Checkbox, Field, Input, PageHeader, PageLoader, Radio, SelectField, Stepper,
+  Button, Card, Checkbox, DateInput, Field, Input, PageHeader, PageLoader, Radio, SelectField, Stepper,
 } from '../../components/ui';
 import { inputClasses } from '../../components/ui/Input';
 import {
@@ -211,12 +211,12 @@ const ChildFormPage: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <Field label="Date of adoption" error={errors.adoption_date}>
-                    <Input type="date" value={adoptionDate} max={today()} error={!!errors.adoption_date}
-                      onChange={e => { setAdoptionDate(e.target.value); clearError('adoption_date'); }} />
+                    <DateInput value={adoptionDate} max={today()} error={!!errors.adoption_date}
+                      onChange={v => { setAdoptionDate(v); clearError('adoption_date'); }} />
                   </Field>
                   <Field label="Date of birth" error={errors.dob}>
-                    <Input type="date" value={dob} max={today()} error={!!errors.dob}
-                      onChange={e => { setDob(e.target.value); clearError('dob'); }} />
+                    <DateInput value={dob} max={today()} error={!!errors.dob}
+                      onChange={v => { setDob(v); clearError('dob'); }} />
                   </Field>
                   <ReadOnly label="Age (auto)" value={age ? `${age.days} days · ${age.months} months` : ''} hint="Set DOB to calculate" />
                 </div>

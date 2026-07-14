@@ -159,7 +159,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
                   <p className="mt-1 text-sm text-ink-muted">{n.message}</p>
                   <span className="mt-2 block text-xs text-ink-faint">
                     {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} •{' '}
-                    {new Date(n.created_at).toLocaleDateString()}
+                    {new Date(n.created_at).toLocaleDateString('en-GB')}
                   </span>
                 </button>
               ))}

@@ -106,7 +106,7 @@ const ResultsPage: React.FC = () => {
             </span>
             <h2 className="mt-1 mb-2 font-display text-3xl font-extrabold text-ink">{test_title}</h2>
             <p className="text-sm text-ink-muted">
-              Submitted on {new Date(attempt.submitted_at).toLocaleDateString()} at{' '}
+              Submitted on {new Date(attempt.submitted_at).toLocaleDateString('en-GB')} at{' '}
               {new Date(attempt.submitted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </p>
           </div>

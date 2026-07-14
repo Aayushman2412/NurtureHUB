@@ -1,6 +1,6 @@
 import React from 'react';
-import { User, Phone, Calendar } from 'lucide-react';
-import { Field, Input, Radio, Select } from '../../components/ui';
+import { User, Phone } from 'lucide-react';
+import { DateInput, Field, Input, Radio, Select } from '../../components/ui';
 import { GENDERS, MARITAL, ageFromDob } from '../../lib/learnerFields';
 import type { FieldErrors } from '../../lib/validation';
 
@@ -48,13 +48,11 @@ const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
 
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
       <Field label="Date of Birth" htmlFor="dob-input" error={errors.dob}>
-        <Input
+        <DateInput
           id="dob-input"
-          type="date"
-          leftIcon={<Calendar />}
           value={dob}
           error={!!errors.dob}
-          onChange={e => onChange('dob', e.target.value)}
+          onChange={v => onChange('dob', v)}
         />
       </Field>
       <Field label="Age">
