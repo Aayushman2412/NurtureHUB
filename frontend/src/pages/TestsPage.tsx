@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { getTests } from '../api/tests';
 import { getResultsList } from '../api/results';
 import { useToast } from '../context/ToastContext';
@@ -36,8 +38,8 @@ interface Attempt {
   time_used_seconds: number;
 }
 
-const formatScheduled = (iso: string | null): string => {
-  if (!iso) return 'To be announced';
+const formatScheduled = (iso: string | null, t: TFunction): string => {
+  if (!iso) return t('list.toBeAnnounced');
   return new Date(iso).toLocaleString(undefined, {
     day: 'numeric',
     month: 'short',
@@ -59,6 +61,7 @@ const TestsPage: React.FC = () => {
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const { t } = useTranslation('tests');
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -68,7 +71,7 @@ const TestsPage: React.FC = () => {
       setTests(testsData);
       setAttempts(attemptsData);
     } catch {
-      showToast('Failed to load assessment statistics', 'error');
+      showToast(t('list.toastLoadFailed'), 'error');
     } finally {
       setLoading(false);
     }
@@ -80,37 +83,38 @@ const TestsPage: React.FC = () => {
 
   const handleTestClick = (test: Test) => {
     if (test.is_locked) {
-      showToast(test.lock_reason || 'This assessment is not available yet.', 'warning');
+      showToast(test.lock_reason || t('list.notAvailableYet'), 'warning');
       return;
     }
     navigate(`/tests/${test.id}/instructions`);
   };
 
-  const getTestTitle = (testId: number) => tests.find(t => t.id === testId)?.title || 'Assessment';
+  const getTestTitle = (testId: number) =>
+    tests.find(item => item.id === testId)?.title || t('common.assessmentFallback');
 
-  if (loading) return <PageLoader label="Loading assessment sheets…" />;
+  if (loading) return <PageLoader label={t('list.loading')} />;
 
   return (
     <div className="flex flex-col gap-10">
       {/* Assessment cards */}
       <div className="flex flex-col gap-5">
-        <h3 className="font-display text-xl font-bold text-ink">Available Assessments</h3>
+        <h3 className="font-display text-xl font-bold text-ink">{t('list.available')}</h3>
 
         {tests.length === 0 ? (
           <EmptyState
             icon={<Award />}
-            title="No assessments yet"
-            description="Complete a training phase to unlock its assessment."
+            title={t('list.emptyTitle')}
+            description={t('list.emptyBody')}
           />
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {tests.map(test => {
               const typeLabel =
                 test.test_type === 'formative'
-                  ? 'Formative Test'
+                  ? t('list.formativeTest')
                   : test.test_type === 'screening'
-                    ? 'Screening Test'
-                    : `Stage ${test.stage_id} Assessment`;
+                    ? t('list.screeningTest')
+                    : t('list.stageAssessment', { stage: test.stage_id });
 
               return (
                 <Card
@@ -122,17 +126,18 @@ const TestsPage: React.FC = () => {
                     <div className="mb-3 flex items-start justify-between gap-2">
                       <span className="text-xs font-bold uppercase tracking-wider text-primary">{typeLabel}</span>
                       {test.is_passed ? (
-                        <Badge variant="success">Passed ✓</Badge>
+                        <Badge variant="success">{t('list.badge.passed')}</Badge>
                       ) : test.status === 'active' && !test.is_locked ? (
-                        <Badge variant="success">● Live Now</Badge>
+                        <Badge variant="success">● {t('list.badge.live')}</Badge>
                       ) : test.status === 'ended' ? (
-                        <Badge variant="error">Ended</Badge>
+                        <Badge variant="error">{t('list.badge.ended')}</Badge>
                       ) : test.is_locked ? (
                         <Badge variant="error">
-                          <Lock className="size-2.5" /> {test.status === 'active' ? 'Locked' : 'Not Started'}
+                          <Lock className="size-2.5" />{' '}
+                          {test.status === 'active' ? t('list.badge.locked') : t('list.badge.notStarted')}
                         </Badge>
                       ) : (
-                        <Badge variant="neutral">Awaiting Start</Badge>
+                        <Badge variant="neutral">{t('list.badge.awaitingStart')}</Badge>
                       )}
                     </div>
 
@@ -140,11 +145,17 @@ const TestsPage: React.FC = () => {
                     <p className="mb-5 text-[13px] leading-snug text-ink-muted">{test.description}</p>
 
                     <div className="mb-5 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-border pt-4 text-[13px]">
-                      <InfoItem icon={<HelpCircle className="size-4" />}>{test.total_questions} Questions</InfoItem>
-                      <InfoItem icon={<Clock className="size-4" />}>{test.duration_minutes} Minutes limit</InfoItem>
-                      <InfoItem icon={<Award className="size-4" />}>{test.passing_score_pct}% Pass mark</InfoItem>
+                      <InfoItem icon={<HelpCircle className="size-4" />}>
+                        {t('list.questionsCount', { total: test.total_questions })}
+                      </InfoItem>
+                      <InfoItem icon={<Clock className="size-4" />}>
+                        {t('list.minutesLimit', { minutes: test.duration_minutes })}
+                      </InfoItem>
                       <InfoItem icon={<Award className="size-4" />}>
-                        Attempts: {test.attempts_count} / {test.max_attempts}
+                        {t('list.passMark', { pct: test.passing_score_pct })}
+                      </InfoItem>
+                      <InfoItem icon={<Award className="size-4" />}>
+                        {t('list.attempts', { used: test.attempts_count, max: test.max_attempts })}
                       </InfoItem>
                     </div>
 
@@ -154,11 +165,11 @@ const TestsPage: React.FC = () => {
                         <CalendarClock className="size-4 shrink-0 text-primary" />
                         <span>
                           {test.status === 'ended' ? (
-                            'This test has ended.'
+                            t('list.testEnded')
                           ) : (
                             <>
-                              Tentative date:{' '}
-                              <strong className="text-ink">{formatScheduled(test.scheduled_at)}</strong>
+                              {t('list.tentativeDate')}{' '}
+                              <strong className="text-ink">{formatScheduled(test.scheduled_at, t)}</strong>
                             </>
                           )}
                         </span>
@@ -170,7 +181,7 @@ const TestsPage: React.FC = () => {
                     <div>
                       {test.best_score !== null && (
                         <span className="text-[13px] text-ink-muted">
-                          Best Score:{' '}
+                          {t('list.bestScore')}{' '}
                           <strong className={test.is_passed ? 'text-success-600' : 'text-error-600'}>
                             {test.best_score.toFixed(1)}%
                           </strong>
@@ -180,10 +191,10 @@ const TestsPage: React.FC = () => {
 
                     {test.is_locked ? (
                       <span className="flex items-center gap-1 text-right text-xs text-ink-faint">
-                        <Lock className="size-3 shrink-0" /> {test.lock_reason || 'Not available yet'}
+                        <Lock className="size-3 shrink-0" /> {test.lock_reason || t('list.notAvailableShort')}
                       </span>
                     ) : test.attempts_count >= test.max_attempts && !test.is_passed ? (
-                      <span className="text-xs font-semibold text-error-600">Max attempts reached</span>
+                      <span className="text-xs font-semibold text-error-600">{t('list.maxAttempts')}</span>
                     ) : (
                       <Button
                         size="sm"
@@ -192,7 +203,7 @@ const TestsPage: React.FC = () => {
                         iconLeft={test.is_passed ? undefined : <Play className="size-3 fill-current stroke-none" />}
                         iconRight={test.is_passed ? <ArrowRight className="size-3.5" /> : undefined}
                       >
-                        {test.is_passed ? 'Retake Quiz' : 'Start Assessment'}
+                        {test.is_passed ? t('list.retake') : t('common.startAssessment')}
                       </Button>
                     )}
                   </div>
@@ -205,41 +216,46 @@ const TestsPage: React.FC = () => {
 
       {/* History */}
       <div className="flex flex-col gap-5">
-        <h3 className="font-display text-xl font-bold text-ink">Assessment History</h3>
+        <h3 className="font-display text-xl font-bold text-ink">{t('list.history')}</h3>
 
         {attempts.length === 0 ? (
           <EmptyState
             icon={<Eye />}
-            title="No attempts yet"
-            description="Finish a course phase and take a quiz to see reports here."
+            title={t('list.historyEmptyTitle')}
+            description={t('list.historyEmptyBody')}
           />
         ) : (
           <Table>
             <THead>
               <Tr>
-                <Th>Assessment Title</Th>
-                <Th>Attempt #</Th>
-                <Th>Date Submitted</Th>
-                <Th>Duration Used</Th>
-                <Th>Score</Th>
-                <Th>Status</Th>
-                <Th className="text-right">Actions</Th>
+                <Th>{t('list.table.title')}</Th>
+                <Th>{t('list.table.attempt')}</Th>
+                <Th>{t('list.table.dateSubmitted')}</Th>
+                <Th>{t('list.table.durationUsed')}</Th>
+                <Th>{t('list.table.score')}</Th>
+                <Th>{t('list.table.status')}</Th>
+                <Th className="text-right">{t('list.table.actions')}</Th>
               </Tr>
             </THead>
             <TBody>
               {attempts.map(att => (
                 <Tr key={att.id} clickable onClick={() => navigate(`/results/${att.id}`)}>
                   <Td className="font-semibold">{getTestTitle(att.test_id)}</Td>
-                  <Td className="text-ink-muted">Attempt #{att.attempt_number}</Td>
+                  <Td className="text-ink-muted">{t('list.attemptNumber', { n: att.attempt_number })}</Td>
                   <Td className="text-ink-muted">{new Date(att.submitted_at).toLocaleDateString('en-GB')}</Td>
                   <Td className="text-ink-muted">
-                    {Math.floor(att.time_used_seconds / 60)}m {att.time_used_seconds % 60}s
+                    {t('time.minsSecs', {
+                      mins: Math.floor(att.time_used_seconds / 60),
+                      secs: att.time_used_seconds % 60,
+                    })}
                   </Td>
                   <Td className={`font-bold ${att.is_passed ? 'text-success-600' : 'text-error-600'}`}>
                     {att.score.toFixed(1)}%
                   </Td>
                   <Td>
-                    <Badge variant={att.is_passed ? 'success' : 'error'}>{att.is_passed ? 'Pass' : 'Fail'}</Badge>
+                    <Badge variant={att.is_passed ? 'success' : 'error'}>
+                      {att.is_passed ? t('list.pass') : t('list.fail')}
+                    </Badge>
                   </Td>
                   <Td className="text-right">
                     <Button
@@ -251,7 +267,7 @@ const TestsPage: React.FC = () => {
                         navigate(`/results/${att.id}`);
                       }}
                     >
-                      Review
+                      {t('list.review')}
                     </Button>
                   </Td>
                 </Tr>

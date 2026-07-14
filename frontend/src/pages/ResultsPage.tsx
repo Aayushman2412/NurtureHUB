@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { getDetailedResult } from '../api/results';
 import { useToast } from '../context/ToastContext';
 import { CheckCircle, XCircle, Clock, Award, ChevronLeft, HelpCircle } from 'lucide-react';
@@ -59,6 +60,7 @@ const StatItem: React.FC<{ icon: React.ReactNode; label: string; value: React.Re
 const ResultsPage: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation('tests');
   const { showToast } = useToast();
 
   const [result, setResult] = useState<DetailedResult | null>(null);
@@ -70,7 +72,7 @@ const ResultsPage: React.FC = () => {
         const data = await getDetailedResult(Number(attemptId));
         setResult(data);
       } catch {
-        showToast('Failed to load performance report details', 'error');
+        showToast(t('results.toastLoadFailed'), 'error');
         navigate('/tests');
       } finally {
         setLoading(false);
@@ -79,7 +81,7 @@ const ResultsPage: React.FC = () => {
     fetchResult();
   }, [attemptId]);
 
-  if (loading) return <PageLoader label="Loading performance scorecard…" />;
+  if (loading) return <PageLoader label={t('results.loading')} />;
   if (!result) return null;
 
   const { attempt, test_title, passing_score_pct, correct_count, total_questions, answers } = result;
@@ -93,7 +95,7 @@ const ResultsPage: React.FC = () => {
           onClick={() => navigate('/tests')}
           iconLeft={<ChevronLeft className="size-4" />}
         >
-          Back to Assessments
+          {t('common.backToAssessments')}
         </Button>
       </div>
 
@@ -102,18 +104,20 @@ const ResultsPage: React.FC = () => {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-primary">
-              Performance Report • Attempt #{attempt.attempt_number}
+              {t('results.reportEyebrow', { n: attempt.attempt_number })}
             </span>
             <h2 className="mt-1 mb-2 font-display text-3xl font-extrabold text-ink">{test_title}</h2>
             <p className="text-sm text-ink-muted">
-              Submitted on {new Date(attempt.submitted_at).toLocaleDateString('en-GB')} at{' '}
-              {new Date(attempt.submitted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {t('results.submittedOn', {
+                date: new Date(attempt.submitted_at).toLocaleDateString('en-GB'),
+                time: new Date(attempt.submitted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              })}
             </p>
           </div>
 
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <span className="block text-xs text-ink-faint">Score</span>
+              <span className="block text-xs text-ink-faint">{t('results.score')}</span>
               <span
                 className={cn(
                   'font-display text-4xl font-extrabold leading-none',
@@ -124,7 +128,7 @@ const ResultsPage: React.FC = () => {
               </span>
             </div>
             <Badge variant={attempt.is_passed ? 'success' : 'error'} size="md">
-              {attempt.is_passed ? 'PASSED' : 'FAILED'}
+              {attempt.is_passed ? t('common.passed') : t('common.failed')}
             </Badge>
           </div>
         </div>
@@ -133,25 +137,28 @@ const ResultsPage: React.FC = () => {
         <div className="mt-7 grid grid-cols-1 gap-5 rounded-xl border border-border bg-surface-sunken p-5 sm:grid-cols-3">
           <StatItem
             icon={<Award className="size-5" />}
-            label="Result Breakdown"
-            value={`${correct_count} / ${total_questions} Correct`}
+            label={t('results.breakdownLabel')}
+            value={t('results.breakdownValue', { correct: correct_count, total: total_questions })}
           />
           <StatItem
             icon={<Clock className="size-5" />}
-            label="Time Elapsed"
-            value={`${Math.floor(attempt.time_used_seconds / 60)}m ${attempt.time_used_seconds % 60}s`}
+            label={t('results.timeLabel')}
+            value={t('time.minsSecs', {
+              mins: Math.floor(attempt.time_used_seconds / 60),
+              secs: attempt.time_used_seconds % 60,
+            })}
           />
           <StatItem
             icon={<HelpCircle className="size-5" />}
-            label="Required Score"
-            value={`${passing_score_pct}% Pass Mark`}
+            label={t('results.requiredLabel')}
+            value={t('results.requiredValue', { pct: passing_score_pct })}
           />
         </div>
       </Card>
 
       {/* Answer review */}
       <div className="flex flex-col gap-6">
-        <h3 className="font-display text-xl font-bold text-ink">Answer Key &amp; Explanations Review</h3>
+        <h3 className="font-display text-xl font-bold text-ink">{t('results.answerReview')}</h3>
 
         {answers.map((ans, idx) => (
           <Card
@@ -166,17 +173,19 @@ const ResultsPage: React.FC = () => {
             )}
           >
             <div className="mb-4 flex items-center justify-between">
-              <span className="font-display text-base font-extrabold text-primary">Question {idx + 1}</span>
+              <span className="font-display text-base font-extrabold text-primary">
+                {t('common.question', { n: idx + 1 })}
+              </span>
 
               {ans.selected_option_id === null ? (
-                <Badge variant="neutral">Not Attempted</Badge>
+                <Badge variant="neutral">{t('results.notAttempted')}</Badge>
               ) : ans.is_correct ? (
                 <Badge variant="success">
-                  <CheckCircle className="size-3" /> Correct
+                  <CheckCircle className="size-3" /> {t('results.correct')}
                 </Badge>
               ) : (
                 <Badge variant="error">
-                  <XCircle className="size-3" /> Incorrect
+                  <XCircle className="size-3" /> {t('results.incorrect')}
                 </Badge>
               )}
             </div>
@@ -187,7 +196,11 @@ const ResultsPage: React.FC = () => {
               {ans.options.map(opt => {
                 const isSelected = ans.selected_option_id === opt.id;
                 const isCorrect = ans.correct_option_id === opt.id;
-                const indicator = isCorrect ? ' (Correct Option)' : isSelected ? ' (Your Answer)' : '';
+                const indicator = isCorrect
+                  ? ` ${t('results.correctOption')}`
+                  : isSelected
+                    ? ` ${t('results.yourAnswer')}`
+                    : '';
 
                 return (
                   <div
