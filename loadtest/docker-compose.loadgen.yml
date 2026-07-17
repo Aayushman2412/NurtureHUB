@@ -1,0 +1,66 @@
+# Distributed load generators for a 7k-scale exam test.
+#
+#   # build once
+#   docker compose -f docker-compose.loadgen.yml build
+#   # run a master + 8 worker processes, all pointed at your staging backend
+#   NH_HOST=https://staging.example.org \
+#     docker compose -f docker-compose.loadgen.yml up --scale worker=8
+#
+# Then open the master UI at http://localhost:8089 and start the run (or use the
+# staged shape headless — see DISTRIBUTED.md). Each worker simulates a slice of
+# the users; account partitioning is automatic via Locust's worker_index.
+#
+# Budget ~1 vCPU per ~500-800 virtual users on the generator side, so 7k users
+# ≈ 10-14 worker vCPUs. Run workers across several boxes if one isn't enough by
+# pointing each box's workers at the master with MASTER_HOST.
+
+name: nh-loadgen
+
+x-common-env: &common-env
+  # The system under test (your staging backend). Override at run time.
+  NH_HOST: ${NH_HOST:-http://host.docker.internal:8010}
+  # Real accounts must exist on the target: loadtest_1..N@nhload.org
+  NH_ACCOUNT_COUNT: ${NH_ACCOUNT_COUNT:-8000}
+  NH_ACCOUNTS_PER_WORKER: ${NH_ACCOUNTS_PER_WORKER:-1000}
+  # Pre-mint tokens so the run measures exam capacity, not the login funnel.
+  # Needs the target's JWT secret; unset it to exercise real logins instead.
+  NH_PREMINT_TOKENS: ${NH_PREMINT_TOKENS:-true}
+  NH_JWT_SECRET: ${NH_JWT_SECRET:-supersecretkeyfornurturehubdevelopment12345}
+  NH_TIME_SCALE: ${NH_TIME_SCALE:-1.0}
+  NH_WS: ${NH_WS:-true}
+
+services:
+  master:
+    build:
+      context: .
+      dockerfile: Dockerfile.loadgen
+    environment:
+      <<: *common-env
+      # Enable the staged 1k->3k->5k->7k shape for a headless climb.
+      NH_SHAPE: ${NH_SHAPE:-}
+      NH_SHAPE_STAGES: ${NH_SHAPE_STAGES:-}
+    command: >
+      --master
+      --host ${NH_HOST:-http://host.docker.internal:8010}
+      ${LOCUST_CLASS:-JourneyUser}
+      ${MASTER_EXTRA_ARGS:-}
+    ports:
+      - "${LOCUST_WEB_PORT:-8089}:8089"   # web UI
+      - "5557:5557"                        # worker RPC
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.loadgen
+    environment:
+      <<: *common-env
+    command: >
+      --worker
+      --master-host ${MASTER_HOST:-master}
+      ${LOCUST_CLASS:-JourneyUser}
+    depends_on:
+      - master
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

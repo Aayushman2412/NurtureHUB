@@ -24,7 +24,7 @@ import time
 
 import gevent
 import jwt as pyjwt
-from locust import FastHttpUser, events, task
+from locust import FastHttpUser, LoadTestShape, events, task
 
 import config
 from ws_client import CandidateSocket
@@ -426,3 +426,32 @@ def _(environment, **kw):
     """Non-zero exit code if the run saw failures — used by run.py."""
     if environment.stats.total.fail_ratio > 0.5:
         environment.process_exit_code = 2
+
+
+# ---------------------------------------------------------------------------
+# staged ramp (NH_SHAPE=1) — one run climbs toward the target to find the wall
+# ---------------------------------------------------------------------------
+# Only defined when enabled: a LoadTestShape, once present, overrides -u/-r, so
+# gating keeps the plain `-u N -r R` runs working. In distributed mode the shape
+# runs on the master and drives total users across all workers.
+if config.SHAPE_ENABLED:
+    def _parse_stages(spec: str):
+        stages = []
+        for part in spec.split(","):
+            users, rate, hold = (x.strip() for x in part.strip().split(":"))
+            stages.append((int(users), float(rate), float(hold)))
+        return stages
+
+    class ExamScaleShape(LoadTestShape):
+        """Walk configured (users, spawn_rate, hold_seconds) stages in order,
+        then stop. e.g. 1000 for 3m -> 3000 for 3m -> 5000 -> 7000 for 5m."""
+        stages = _parse_stages(config.SHAPE_STAGES)
+
+        def tick(self):
+            run_time = self.get_run_time()
+            elapsed = 0.0
+            for users, rate, hold in self.stages:
+                elapsed += hold
+                if run_time < elapsed:
+                    return (users, rate)
+            return None  # stages exhausted -> end the run

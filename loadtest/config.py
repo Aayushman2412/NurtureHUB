@@ -72,3 +72,13 @@ HERD_LEAD = _env_f("NH_HERD_LEAD", 2.0)          # absolute-time release lead
 # --- admin monitor client ---------------------------------------------------
 ADMIN_EMAIL = _env("NH_ADMIN_EMAIL", "admin@nurturehub.org")
 ADMIN_PASSWORD = _env("NH_ADMIN_PASSWORD", "admin123")
+
+# --- staged load shape (NH_SHAPE=1) -----------------------------------------
+# Comma-separated "users:spawn_rate:hold_seconds" stages. The shape walks each
+# stage in order so one distributed run climbs toward the target and reveals the
+# wall (which failures start, at what user count). Default: 1k -> 3k -> 5k -> 7k.
+SHAPE_ENABLED = _env_b("NH_SHAPE", False)
+SHAPE_STAGES = _env(
+    "NH_SHAPE_STAGES",
+    "1000:200:180, 3000:300:180, 5000:400:180, 7000:500:300",
+)

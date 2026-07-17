@@ -1,0 +1,18 @@
+# Load generator image — runs the NurtureHUB Locust harness as a master or a
+# worker. One box can host many workers (docker compose --scale); scale across
+# boxes to reach 7k+ virtual users that a single machine can't generate.
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+
+WORKDIR /loadtest
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# Harness code (locustfile, ws_client, config, etc.)
+COPY *.py ./
+
+# Locust master UI + worker RPC ports.
+EXPOSE 8089 5557
+
+ENTRYPOINT ["locust", "-f", "locustfile.py"]
