@@ -401,7 +401,10 @@ class JourneyUser(NurtureHubUser):
 # scenario 2: thundering-herd exam submit
 # ---------------------------------------------------------------------------
 class ExamHerdUser(NurtureHubUser):
-    weight = 0  # only runs when explicitly selected
+    # run.py always selects exactly one class by name, so weight only matters
+    # if both classes are run together (don't — the herd barrier expects a
+    # homogeneous cohort).
+    weight = 1
 
     @task
     def herd_exam(self):
