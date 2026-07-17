@@ -24,7 +24,7 @@ from app.models import (
     TutorialQuizResponse, UserTutorialProgress, Notification, FaceToFaceSelection,
 )
 from app.auth import verify_password, create_access_token
-from app.dependencies import get_current_admin, get_admin_email
+from app.dependencies import get_current_admin, get_admin_email, invalidate_user_cache
 from app.rate_limit import limiter
 from app.timeutils import iso_utc, utcnow
 
@@ -282,6 +282,9 @@ def assign_user_district(user_id: int, data: UserDistrictAssign, db: Session = D
 
     user.program_district_id = data.program_district_id
     db.commit()
+    # District gates which content the learner sees; drop any cached snapshot so
+    # the reassignment takes effect immediately, not after the cache TTL.
+    invalidate_user_cache(user.email)
     return {"message": "User district updated", "user_id": user.id, "program_district_id": data.program_district_id}
 
 

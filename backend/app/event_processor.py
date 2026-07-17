@@ -91,14 +91,18 @@ def process_event(
         return _build_candidate_state(live_session)
 
     # ── Persist the event ──
-    activity_event = ActivityEvent(
-        session_id=live_session.id,
-        event_type=event_type,
-        sequence_number=sequence,
-        question_id=question_id,
-        payload=payload,
-    )
-    db.add(activity_event)
+    # Heartbeats are pure liveness signals — the highest-volume event and of no
+    # audit value — so they get no ActivityEvent row. This alone stops
+    # activity_events from growing by ~1 row per socket per 30s and removes the
+    # bulk of the live-monitoring write volume at scale.
+    if event_type != "HEARTBEAT":
+        db.add(ActivityEvent(
+            session_id=live_session.id,
+            event_type=event_type,
+            sequence_number=sequence,
+            question_id=question_id,
+            payload=payload,
+        ))
 
     # ── Update sequence ──
     live_session.last_sequence = sequence

@@ -127,8 +127,46 @@ Optionally flip `APP_ENV=production` for strict mode; with real SMTP + a non-def
 JWT key + the Postgres DB URL, the boot-time guardrail will pass. In strict mode the
 OTP is emailed only (no longer printed to the logs).
 
+## Scaling out (pgbouncer + multiple workers + read replica)
+
+The base compose is a single backend instance — fine for internal testing. For
+high concurrency (the load-test report sizes ~50k concurrent users), use the
+scale overlay, which adds **pgbouncer** in front of Postgres and runs the backend
+with **multiple uvicorn workers**:
+
+```bash
+# one-time: create the pgbouncer auth file from the example and fill in the
+# real SCRAM verifier (SELECT rolname, rolpassword FROM pg_authid;)
+cp deploy/pgbouncer/userlist.txt.example deploy/pgbouncer/userlist.txt
+
+docker compose -f docker-compose.yml -f docker-compose.scale.yml up -d --build
+```
+
+What it changes (all overridable in `.env`):
+
+- **pgbouncer** (`pool_mode=transaction`) multiplexes many app connections down to
+  a few real Postgres connections. The backend's `DATABASE_URL` points at it;
+  `ALEMBIC_DATABASE_URL` still points at the real primary (DDL + the boot advisory
+  lock must not run on a pooled connection).
+- **`UVICORN_WORKERS`** (default 4) — one process per core; the boot advisory lock
+  serializes their migrate/seed so they don't race.
+- **`DB_POOL_SIZE` / `DB_MAX_OVERFLOW`** kept small per worker so
+  `workers × pool` stays under pgbouncer's `default_pool_size`.
+- **`POSTGRES_MAX_CONNECTIONS`** (default 300) raises Postgres's ceiling for the
+  pgbouncer server pool.
+- **`READ_DATABASE_URL`** — point at a read replica to route reference-data
+  (`/api/metadata/*`) reads off the primary. Unset ⇒ everything hits the primary.
+- **`RATE_LIMIT_STORAGE_URI`** — set to `redis://…` so the rate limiter is shared
+  across workers (in-memory storage is per-process). `TRUST_PROXY_HEADERS=true` is
+  set so each real client gets its own bucket behind the proxy.
+
+Still per-process (needs Redis pub/sub to go truly multi-worker for live
+monitoring): the WebSocket connection manager. Candidate sockets work fine on any
+worker, but an admin monitor only sees candidates on its own worker until that's
+added. See `loadtest/REPORT.md` for the full 50k topology.
+
 ## Notes / follow-ups
 
 - **Backups**: schedule `pg_dump` against the `db` service (or back up the `db_data` volume). Not included here.
-- **Real client IPs**: rate limiting sees the proxy IP by default. If you need per-client limits, configure the backend to trust `X-Forwarded-For` (currently forwarded by both nginx layers).
-- **Secrets**: keep the filled `.env` off git (it's already gitignored) and readable only by the deploy user.
+- **Real client IPs**: rate limiting sees the proxy IP by default. Set `TRUST_PROXY_HEADERS=true` so the backend keys limits on the `X-Forwarded-For` client (forwarded by both nginx layers).
+- **Secrets**: keep the filled `.env` off git (it's already gitignored) and readable only by the deploy user. The pgbouncer `userlist.txt` is gitignored too.

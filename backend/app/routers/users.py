@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
 from app.schemas import UserOut, UserProfileUpdate
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, invalidate_user_cache
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -29,4 +29,7 @@ def update_profile(
         
     db.commit()
     db.refresh(current_user)
+    # Profile edits (role, program_district_id, …) gate content visibility, so
+    # drop the cached snapshot to make the change take effect on the next request.
+    invalidate_user_cache(current_user.email)
     return current_user

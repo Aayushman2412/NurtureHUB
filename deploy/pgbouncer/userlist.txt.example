@@ -1,0 +1,12 @@
+;; pgbouncer auth file. Copy to userlist.txt (gitignored) and fill in real values.
+;;
+;; Format:  "username" "password-or-scram-hash"
+;;
+;; For scram-sha-256 (recommended), put the SCRAM verifier Postgres stores, which
+;; you can read from the server after creating the role:
+;;   SELECT rolname, rolpassword FROM pg_authid WHERE rolname = 'nurturehub';
+;; then paste the "SCRAM-SHA-256$..." value as the second field.
+;;
+;; Plain text also works if pgbouncer.ini uses auth_type = plain (less safe).
+
+"nurturehub" "SCRAM-SHA-256$4096:REPLACE_WITH_REAL_VERIFIER"

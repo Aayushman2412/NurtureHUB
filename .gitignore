@@ -38,3 +38,6 @@ backend/venv-win/
 backend/nurturehub.db
 .claude/
 frontend/.env.local
+
+# pgbouncer auth file holds the DB credential/verifier — never commit it
+deploy/pgbouncer/userlist.txt

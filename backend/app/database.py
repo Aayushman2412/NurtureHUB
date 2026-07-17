@@ -43,12 +43,44 @@ else:
 # Create session maker
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+# Optional read replica. When READ_DATABASE_URL is set, read-only endpoints that
+# never read-after-write (reference/metadata data) can target a replica to spare
+# the primary. Falls back to the primary engine when unset, so get_read_db() is
+# always safe to depend on. Do NOT use it for read-after-write paths — a replica
+# lags the primary and would serve stale rows.
+if settings.READ_DATABASE_URL and not settings.READ_DATABASE_URL.startswith("sqlite"):
+    read_engine = create_engine(
+        settings.READ_DATABASE_URL,
+        pool_size=settings.DB_POOL_SIZE,
+        max_overflow=settings.DB_MAX_OVERFLOW,
+        pool_timeout=settings.DB_POOL_TIMEOUT,
+        pool_recycle=1800,
+        pool_pre_ping=True,
+    )
+    ReadSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=read_engine)
+else:
+    read_engine = engine
+    ReadSessionLocal = SessionLocal
+
 # Declarative Base
 Base = declarative_base()
 
 # Dependency to get DB session
 def get_db():
     db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def get_read_db():
+    """Read-only session, routed to the replica when configured (else primary).
+
+    Only for endpoints that never write and never depend on their own just-written
+    data — e.g. reference/metadata reads.
+    """
+    db = ReadSessionLocal()
     try:
         yield db
     finally:

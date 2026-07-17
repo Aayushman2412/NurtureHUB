@@ -1,0 +1,57 @@
+# Scale-out overlay: pgbouncer in front of Postgres + a multi-worker backend.
+#
+# Use ON TOP of the base compose (which stays a simple single-instance setup):
+#   docker compose -f docker-compose.yml -f docker-compose.scale.yml up -d --build
+#
+# This is the shape the load-test report recommends for approaching 50k users:
+# many app workers sharing a small, pgbouncer-multiplexed set of real Postgres
+# connections. Set POSTGRES_MAX_CONNECTIONS high on the db (e.g. 300) and, if you
+# add a read replica, set READ_DATABASE_URL so metadata reads skip the primary.
+#
+# Before first use: copy deploy/pgbouncer/userlist.txt.example ->
+# deploy/pgbouncer/userlist.txt and fill in the real SCRAM verifier.
+
+services:
+  db:
+    # Give Postgres headroom for pgbouncer's server pool + admin/replication.
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=${POSTGRES_MAX_CONNECTIONS:-300}"
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./deploy/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./deploy/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+    restart: unless-stopped
+
+  backend:
+    depends_on:
+      pgbouncer:
+        condition: service_started
+      db:
+        condition: service_healthy
+    environment:
+      # App talks to pgbouncer, not Postgres directly.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nurturehub}:${POSTGRES_PASSWORD:-nurturehub}@pgbouncer:6432/${POSTGRES_DB:-nurturehub}
+      # Migrations/seed must reach the real primary (DDL + advisory lock don't
+      # belong on a transaction-pooled connection). The lifespan advisory lock
+      # keeps concurrent workers from racing.
+      ALEMBIC_DATABASE_URL: postgresql://${POSTGRES_USER:-nurturehub}:${POSTGRES_PASSWORD:-nurturehub}@db:5432/${POSTGRES_DB:-nurturehub}
+      # Optional read replica for reference-data reads (get_read_db). Leave unset
+      # to route those to the primary too.
+      READ_DATABASE_URL: ${READ_DATABASE_URL:-}
+      # Keep per-worker pools small so (workers x pool) stays under pgbouncer's
+      # default_pool_size headroom.
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+      DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-10}
+      # Shared rate-limit storage + proxy-aware client IPs for multi-worker.
+      RATE_LIMIT_STORAGE_URI: ${RATE_LIMIT_STORAGE_URI:-}
+      TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-true}
+    # Multiple workers per container to use all cores (GIL is per-process).
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000",
+              "--workers", "${UVICORN_WORKERS:-4}"]

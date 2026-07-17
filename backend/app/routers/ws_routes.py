@@ -7,11 +7,13 @@ Two endpoints:
 """
 
 import json
+import time
 from datetime import datetime, timezone
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query
 from starlette.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session, joinedload
 
+from app.config import settings
 from app.database import session_scope
 from app.auth import decode_access_token
 from app.models import User, Test, TestAttempt, Question
@@ -22,6 +24,12 @@ from app.event_processor import (
 )
 
 router = APIRouter(tags=["websocket"])
+
+# Monotonic timestamp of the last DB-persisted heartbeat per live session, so
+# heartbeats persist at most once per WS_HEARTBEAT_PERSIST_SECONDS instead of on
+# every 30s beat. Liveness itself is tracked in-memory by the manager (used by
+# the stale sweeper), so throttling the DB write is invisible to detection.
+_hb_persisted: dict[int, float] = {}
 
 
 def authenticate_ws_token(token: str) -> dict | None:
@@ -189,7 +197,15 @@ async def candidate_ws(websocket: WebSocket, attempt_id: int, token: str = Query
     question_map = ctx["question_map"]
 
     # ── Accept connection ──
-    await manager.connect_candidate(websocket, attempt_id)
+    if not await manager.connect_candidate(websocket, attempt_id):
+        # Client disconnected before we accepted; mark the just-created live
+        # session disconnected and bail without noise.
+        _hb_persisted.pop(session_id, None)
+        try:
+            await run_in_threadpool(_candidate_mark_disconnected, session_id)
+        except Exception:
+            pass
+        return
 
     # ── Notify admins about new connection ──
     try:
@@ -214,6 +230,18 @@ async def candidate_ws(websocket: WebSocket, attempt_id: int, token: str = Query
             if not validate_event(event_data):
                 continue
 
+            # Heartbeats: always refresh in-memory liveness (cheap, keeps the
+            # stale sweeper honest), but only touch the DB / broadcast to admins
+            # at the throttled interval — a socket sitting idle no longer spends
+            # a DB transaction every 30s.
+            if event_data.get("type") == "HEARTBEAT":
+                manager.update_heartbeat(attempt_id)
+                now = time.monotonic()
+                interval = settings.WS_HEARTBEAT_PERSIST_SECONDS
+                if now - _hb_persisted.get(session_id, 0.0) < interval:
+                    continue
+                _hb_persisted[session_id] = now
+
             try:
                 found, updated_state = await run_in_threadpool(
                     _candidate_process_event, session_id, event_data, question_map
@@ -235,6 +263,7 @@ async def candidate_ws(websocket: WebSocket, attempt_id: int, token: str = Query
     finally:
         # ── Handle disconnection ──
         await manager.disconnect_candidate(attempt_id)
+        _hb_persisted.pop(session_id, None)
         try:
             state = await run_in_threadpool(_candidate_mark_disconnected, session_id)
             if state is not None:

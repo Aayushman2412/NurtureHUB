@@ -22,10 +22,25 @@ class Settings(BaseSettings):
 
     # Connection-pool sizing (Postgres only). pool_size + max_overflow is the
     # hard ceiling on concurrent DB connections per process; keep
-    # (pool_size + max_overflow) * uvicorn_workers <= Postgres max_connections.
+    # (pool_size + max_overflow) * uvicorn_workers <= Postgres/pgbouncer limit.
     DB_POOL_SIZE: int = Field(default=20, validation_alias="DB_POOL_SIZE")
     DB_MAX_OVERFLOW: int = Field(default=40, validation_alias="DB_MAX_OVERFLOW")
     DB_POOL_TIMEOUT: int = Field(default=30, validation_alias="DB_POOL_TIMEOUT")
+
+    # Optional read replica. When set, pure-read reference-data endpoints use a
+    # separate read-only engine so the primary is spared. Leave empty to route
+    # everything to the primary. Do NOT point read-after-write paths at this.
+    READ_DATABASE_URL: str = Field(default="", validation_alias="READ_DATABASE_URL")
+
+    # Per-process cache of the authenticated user for the verified-read path, so
+    # not every request re-runs SELECT users by email. Short TTL bounds staleness;
+    # writes to the user row invalidate the entry. 0 disables the cache.
+    USER_CACHE_TTL_SECONDS: int = Field(default=30, validation_alias="USER_CACHE_TTL_SECONDS")
+
+    # How often a candidate's heartbeat is persisted to the DB. Heartbeats arrive
+    # every 30s from every socket; liveness is tracked in-memory, so the DB write
+    # (last_heartbeat) only needs to be throttled — not done on every beat.
+    WS_HEARTBEAT_PERSIST_SECONDS: int = Field(default=60, validation_alias="WS_HEARTBEAT_PERSIST_SECONDS")
 
     # Security & JWT
     JWT_SECRET_KEY: str = Field(default=DEV_JWT_SECRET, validation_alias="JWT_SECRET_KEY")

@@ -47,9 +47,17 @@ class ConnectionManager:
     # Candidate Connection Management
     # ─────────────────────────────────────────
 
-    async def connect_candidate(self, websocket: WebSocket, attempt_id: int):
-        """Accept and register a candidate WebSocket connection."""
-        await websocket.accept()
+    async def connect_candidate(self, websocket: WebSocket, attempt_id: int) -> bool:
+        """Accept and register a candidate WebSocket connection.
+
+        Returns False if the client vanished before we could accept (a benign
+        race, common under reconnect churn) so the caller can clean up quietly
+        instead of letting an unhandled ASGI error surface.
+        """
+        try:
+            await websocket.accept()
+        except Exception:
+            return False
         async with self._lock:
             # Close existing connection for same attempt (reconnect scenario)
             if attempt_id in self.candidate_connections:
@@ -60,6 +68,7 @@ class ConnectionManager:
                     pass
             self.candidate_connections[attempt_id] = websocket
             self.heartbeat_tracker[attempt_id] = time.time()
+        return True
 
     async def disconnect_candidate(self, attempt_id: int):
         """Remove a candidate connection."""
