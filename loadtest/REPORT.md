@@ -126,18 +126,36 @@ of media). Real NurtureHUB proctoring is **WebSocket JSON text events** (a few h
 bytes each), so proctoring bandwidth is single-digit MB/s at 50k — a much smaller concern
 than assumed.
 
-## Recommended next steps (beyond this branch)
+## Follow-up optimizations — now implemented
 
-1. **Batch/sample WebSocket heartbeat writes** — the single largest remaining write-volume
-   lever. Writing a full transaction per 30 s heartbeat for 50k sockets is ~1,700 txns/s of
-   pure liveness bookkeeping; sample it or use a write-behind buffer for `activity_events`.
-2. **Cache `get_current_user`** (or embed user id/district in the JWT) — it currently does
-   one `users` SELECT on every authenticated request.
-3. **Lighten the notification poll** — WebSocket push or `ETag`/304 instead of a full
-   unpaginated list every 15 s; it is the single biggest traffic source.
-4. **pgbouncer + read replica** as above before any real 50k run.
-5. Longer term, move the WebSocket path to an async DB driver (asyncpg) to drop the
-   threadpool hop entirely.
+All four originally-recommended next steps landed on this branch and were verified
+under a 100-VU WebSocket load run (0 failures, ~320 req/s on a single worker — up
+from ~99 req/s before these changes):
+
+1. **WebSocket heartbeats no longer cost a DB transaction each.** Heartbeats write no
+   `activity_events` row at all, and `last_heartbeat` persistence is throttled to
+   `WS_HEARTBEAT_PERSIST_SECONDS` (default 60 s); liveness stays in-memory for the stale
+   sweeper. Verified: 0 HEARTBEAT rows in `activity_events`, `last_heartbeat` still set on
+   every session.
+2. **`get_verified_user` is cached** (short-TTL, per-process) so the hot read endpoints skip
+   `SELECT users WHERE email=` on every request. Only verified users are cached; user-row
+   writes invalidate the entry. Verified: correct data + a district change takes effect
+   immediately (no stale read).
+3. **`GET /api/notifications` supports ETag / 304.** The 15 s poll now returns `304 Not
+   Modified` with no body when nothing changed; the frontend sends `If-None-Match` and keeps
+   its cached list.
+4. **Read replica + pgbouncer.** `READ_DATABASE_URL` + `get_read_db` route the
+   `/api/metadata/*` reference reads off the primary; a pgbouncer transaction-pooling config
+   and a `docker-compose.scale.yml` overlay (pgbouncer + multi-worker backend) are documented
+   in `DEPLOY.md`.
+
+### Still open (longer term)
+
+- Redis pub/sub so the WebSocket admin monitor works across workers (candidate sockets
+  already do); Redis-backed rate-limit storage for multi-worker.
+- Move the WebSocket path to an async DB driver (asyncpg) to drop the threadpool hop.
+- WebSocket push (or `ETag`/304 on more polled endpoints) to shrink the notification poll
+  further.
 
 ## Artifacts in this branch
 
