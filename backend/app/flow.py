@@ -66,6 +66,29 @@ def test_eligibility(db: Session, user: User, test: Test) -> Tuple[bool, int]:
     return missing == 0, missing
 
 
+def test_lock_state_precomputed(
+    test: Test,
+    required_tutorial_ids: Set[int],
+    completed_tutorial_ids: Set[int],
+) -> Tuple[bool, Optional[str]]:
+    """(is_locked, lock_reason) from in-memory sets — no DB queries.
+
+    Same rules as test_lock_state(), but the caller supplies the required- and
+    completed-tutorial sets so a page rendering many tests (dashboard, tests
+    list) computes eligibility once instead of issuing ~4 queries per test.
+    """
+    missing = len(required_tutorial_ids - completed_tutorial_ids)
+    if missing:
+        return True, f"Complete all required videos first ({missing} remaining)."
+    if test.status != "active":
+        if test.status == "ended":
+            return True, "This test has ended."
+        if test.scheduled_at:
+            return True, "The test has not been started by the admin yet. Check the scheduled date."
+        return True, "The test has not been started by the admin yet."
+    return False, None
+
+
 def test_lock_state(db: Session, user: User, test: Test) -> Tuple[bool, Optional[str]]:
     """(is_locked, lock_reason) combining eligibility and the admin lifecycle gate."""
     eligible, missing = test_eligibility(db, user, test)

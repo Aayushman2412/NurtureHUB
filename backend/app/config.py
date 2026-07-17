@@ -20,6 +20,13 @@ class Settings(BaseSettings):
         validation_alias="DATABASE_URL"
     )
 
+    # Connection-pool sizing (Postgres only). pool_size + max_overflow is the
+    # hard ceiling on concurrent DB connections per process; keep
+    # (pool_size + max_overflow) * uvicorn_workers <= Postgres max_connections.
+    DB_POOL_SIZE: int = Field(default=20, validation_alias="DB_POOL_SIZE")
+    DB_MAX_OVERFLOW: int = Field(default=40, validation_alias="DB_MAX_OVERFLOW")
+    DB_POOL_TIMEOUT: int = Field(default=30, validation_alias="DB_POOL_TIMEOUT")
+
     # Security & JWT
     JWT_SECRET_KEY: str = Field(default=DEV_JWT_SECRET, validation_alias="JWT_SECRET_KEY")
     JWT_ALGORITHM: str = "HS256"
@@ -49,6 +56,17 @@ class Settings(BaseSettings):
 
     # Rate limiting — "memory://" for single-process; set a redis:// URI for multi-worker deploys
     RATE_LIMIT_STORAGE_URI: str = Field(default="memory://", validation_alias="RATE_LIMIT_STORAGE_URI")
+    # Per-endpoint limits are env-tunable so a load test / trusted internal caller
+    # can raise them without code changes. Values are slowapi limit strings.
+    RATE_LIMIT_LOGIN: str = Field(default="10/minute", validation_alias="RATE_LIMIT_LOGIN")
+    RATE_LIMIT_REGISTER: str = Field(default="5/hour", validation_alias="RATE_LIMIT_REGISTER")
+    RATE_LIMIT_OTP: str = Field(default="10/minute", validation_alias="RATE_LIMIT_OTP")
+    RATE_LIMIT_ENABLED: bool = Field(default=True, validation_alias="RATE_LIMIT_ENABLED")
+    # When true, the rate limiter keys on the left-most X-Forwarded-For hop
+    # instead of the direct peer, so users behind a trusted reverse proxy each
+    # get their own bucket rather than all sharing the proxy's IP. Only enable
+    # when a trusted proxy sets the header (else clients can spoof it).
+    TRUST_PROXY_HEADERS: bool = Field(default=False, validation_alias="TRUST_PROXY_HEADERS")
 
     # CORS — comma-separated list of allowed frontend origins
     CORS_ORIGINS: str = Field(

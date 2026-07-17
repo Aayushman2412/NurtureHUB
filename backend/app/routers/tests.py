@@ -1,27 +1,25 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from typing import List
-from datetime import datetime
+from sqlalchemy import update
+from sqlalchemy.orm import Session, selectinload
+from typing import List, Optional, Set
+from datetime import datetime, timezone
 from app.database import get_db
 from app.models import Stage, Test, Question, QuestionOption, TestAttempt, TestAnswer, Tutorial, UserTutorialProgress, Notification
 from app.schemas import TestOut, StartAttemptResponse, TestSubmitRequest, TestSubmitResponse, QuestionOut, QuestionOptionOut
 from app.dependencies import get_verified_user
-from app.flow import ensure_awaiting_results_notification, test_lock_state
+from app.flow import (
+    ensure_awaiting_results_notification, test_lock_state, test_lock_state_precomputed,
+)
 from app.models import User
 from app.timeutils import to_utc
 
 router = APIRouter(prefix="/api/tests", tags=["tests"])
 
 
-def _test_out(db: Session, current_user: User, test: Test) -> TestOut:
-    is_locked, lock_reason = test_lock_state(db, current_user, test)
-
-    attempts = db.query(TestAttempt).filter(
-        TestAttempt.user_id == current_user.id,
-        TestAttempt.test_id == test.id,
-        TestAttempt.submitted_at.isnot(None)
-    ).all()
-
+def _test_out_from_parts(
+    test: Test, attempts: List[TestAttempt],
+    is_locked: bool, lock_reason: Optional[str],
+) -> TestOut:
     return TestOut(
         id=test.id,
         stage_id=test.stage_id,
@@ -42,22 +40,76 @@ def _test_out(db: Session, current_user: User, test: Test) -> TestOut:
     )
 
 
+def _test_out(db: Session, current_user: User, test: Test) -> TestOut:
+    is_locked, lock_reason = test_lock_state(db, current_user, test)
+    attempts = db.query(TestAttempt).filter(
+        TestAttempt.user_id == current_user.id,
+        TestAttempt.test_id == test.id,
+        TestAttempt.submitted_at.isnot(None)
+    ).all()
+    return _test_out_from_parts(test, attempts, is_locked, lock_reason)
+
+
 @router.get("", response_model=List[TestOut])
 def get_tests(current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
     # Filter tests by user's program district
     if not current_user.program_district_id:
         return []
 
-    # Get stage IDs belonging to user's district
-    district_stage_ids = {s.id for s in db.query(Stage).filter(
+    # Batched: compute eligibility once for the whole district instead of the
+    # old ~4-queries-per-test path (this endpoint loads on every tests-page view).
+    stages = db.query(Stage).filter(
         Stage.program_district_id == current_user.program_district_id
-    ).all()}
+    ).order_by(Stage.order_index).all()
+    if not stages:
+        return []
+    stage_ids = [s.id for s in stages]
 
-    tests = db.query(Test).join(Stage, Test.stage_id == Stage.id).filter(
-        Test.stage_id.in_(district_stage_ids)
-    ).order_by(Stage.order_index).all() if district_stage_ids else []
+    tutorials = db.query(Tutorial.id, Tutorial.stage_id).filter(
+        Tutorial.stage_id.in_(stage_ids)
+    ).all()
+    tutorials_by_stage: dict[int, list[int]] = {}
+    for tid, sid in tutorials:
+        tutorials_by_stage.setdefault(sid, []).append(tid)
 
-    return [_test_out(db, current_user, test) for test in tests]
+    completed_ids: Set[int] = {
+        r[0] for r in db.query(UserTutorialProgress.tutorial_id).filter(
+            UserTutorialProgress.user_id == current_user.id,
+            UserTutorialProgress.is_completed == True,  # noqa: E712
+        ).all()
+    }
+
+    tests = db.query(Test).filter(
+        Test.stage_id.in_(stage_ids)
+    ).order_by(Test.stage_id).all()
+    attempts_by_test: dict[int, list[TestAttempt]] = {}
+    test_ids = [t.id for t in tests]
+    if test_ids:
+        for a in db.query(TestAttempt).filter(
+            TestAttempt.user_id == current_user.id,
+            TestAttempt.test_id.in_(test_ids),
+            TestAttempt.submitted_at.isnot(None),
+        ).all():
+            attempts_by_test.setdefault(a.test_id, []).append(a)
+
+    stage_order = {s.id: s.order_index for s in stages}
+
+    def required_before(order_index: int) -> Set[int]:
+        req: Set[int] = set()
+        for s in stages:
+            if s.order_index <= order_index:
+                req.update(tutorials_by_stage.get(s.id, []))
+        return req
+
+    # preserve original ordering (by stage order_index)
+    tests_sorted = sorted(tests, key=lambda t: stage_order.get(t.stage_id, 0))
+    out = []
+    for test in tests_sorted:
+        required = required_before(stage_order.get(test.stage_id, 0))
+        is_locked, lock_reason = test_lock_state_precomputed(test, required, completed_ids)
+        out.append(_test_out_from_parts(
+            test, attempts_by_test.get(test.id, []), is_locked, lock_reason))
+    return out
 
 @router.get("/{id}", response_model=TestOut)
 def get_test_details(id: int, current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
@@ -103,9 +155,12 @@ def start_test_attempt(id: int, current_user: User = Depends(get_verified_user),
     db.commit()
     db.refresh(new_attempt)
     
-    # Fetch questions and options
-    questions = db.query(Question).filter(Question.test_id == id).order_by(Question.order_index).all()
-    
+    # Fetch questions and options (eager-load options: one query for all option
+    # rows instead of one lazy SELECT per question).
+    questions = db.query(Question).options(
+        selectinload(Question.options)
+    ).filter(Question.test_id == id).order_by(Question.order_index).all()
+
     questions_out = []
     for q in questions:
         options_out = [
@@ -140,15 +195,32 @@ def submit_test_attempt(
         TestAttempt.id == attempt_id,
         TestAttempt.user_id == current_user.id
     ).first()
-    
+
     if not attempt:
         raise HTTPException(status_code=404, detail="Test attempt not found")
-        
+
     if attempt.submitted_at:
         raise HTTPException(status_code=400, detail="This test attempt has already been submitted")
-        
+
+    # Atomically claim the submit: stamp submitted_at only if it is still NULL.
+    # This closes the double-submit race (two concurrent POSTs, or FORCE_SUBMIT +
+    # user submit) that previously both passed the read-only check above and each
+    # wrote a full set of answer rows + duplicate notifications. The loser here
+    # updates 0 rows and is rejected.
+    now = datetime.utcnow()
+    claimed = db.execute(
+        update(TestAttempt)
+        .where(TestAttempt.id == attempt_id, TestAttempt.submitted_at.is_(None))
+        .values(submitted_at=now)
+    ).rowcount
+    if not claimed:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="This test attempt has already been submitted")
+
     test = db.query(Test).filter(Test.id == attempt.test_id).first()
-    questions = db.query(Question).filter(Question.test_id == test.id).all()
+    questions = db.query(Question).options(
+        selectinload(Question.options)
+    ).filter(Question.test_id == test.id).all()
     question_map = {q.id: q for q in questions}
     
     total_marks = sum(q.marks for q in questions)
@@ -185,8 +257,8 @@ def submit_test_attempt(
     pct_score = (score_earned / total_marks * 100) if total_marks > 0 else 0.0
     is_passed = pct_score >= test.passing_score_pct
     
-    # Update attempt
-    attempt.submitted_at = datetime.utcnow()
+    # Update attempt (submitted_at already claimed atomically above)
+    attempt.submitted_at = now
     attempt.score = pct_score
     attempt.total_marks = total_marks
     attempt.is_passed = is_passed

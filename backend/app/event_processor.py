@@ -73,7 +73,9 @@ def process_event(
         db: SQLAlchemy session
         live_session: The candidate's LiveSession record
         event_data: Parsed event from the WebSocket
-        question_map: Optional dict of {question_id: Question} for answer validation
+        question_map: Optional dict of {question_id: correct_option_id} for answer
+            validation. Plain scalars (not ORM objects) so it stays valid across
+            the short-lived per-event sessions the WS handler uses.
 
     Returns:
         dict: Updated candidate state for admin broadcast
@@ -201,17 +203,14 @@ def _handle_answer_selected(
     answer_state = live_session.answer_state or {}
     q_key = str(question_id)
 
-    # Check correctness if we have the question map
+    # Check correctness if we have the question map. question_map is
+    # {question_id: correct_option_id} — plain scalars, so it stays valid
+    # across the short-lived per-event DB sessions the WS handler opens.
     is_correct = None
     if question_map and question_id in question_map:
-        question = question_map[question_id]
-        correct_option = None
-        for opt in question.options:
-            if opt.is_correct:
-                correct_option = opt
-                break
-        if correct_option:
-            is_correct = (selected_option_id == correct_option.id)
+        correct_option_id = question_map[question_id]
+        if correct_option_id is not None:
+            is_correct = (selected_option_id == correct_option_id)
 
     answer_state[q_key] = {
         "viewed": True,

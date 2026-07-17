@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -24,9 +26,18 @@ if settings.DATABASE_URL.startswith("sqlite"):
 else:
     engine = create_engine(
         settings.DATABASE_URL,
-        pool_size=10,
-        max_overflow=20,
-        pool_recycle=3600,
+        # Pool sizing is env-tunable so a single-instance deploy can raise its
+        # ceiling and a multi-worker deploy can keep pool_size * workers under
+        # Postgres max_connections. Defaults (20 + 40 = 60/process) replace the
+        # old hard-coded 30, which was the empirically-observed capacity wall.
+        pool_size=settings.DB_POOL_SIZE,
+        max_overflow=settings.DB_MAX_OVERFLOW,
+        pool_timeout=settings.DB_POOL_TIMEOUT,
+        pool_recycle=1800,
+        # Validate a pooled connection before handing it out so a DB blip or an
+        # idle-timed-out connection surfaces as a transparent reconnect instead
+        # of a burst of errors mid-run.
+        pool_pre_ping=True,
     )
 
 # Create session maker
@@ -40,5 +51,25 @@ def get_db():
     db = SessionLocal()
     try:
         yield db
+    finally:
+        db.close()
+
+
+@contextmanager
+def session_scope():
+    """Short-lived transactional session for non-request-scoped callers.
+
+    Commits on success, rolls back on error, and always closes — which returns
+    the pooled connection immediately. WebSocket handlers use this per event so
+    a socket sitting idle between heartbeats holds ZERO pool connections,
+    instead of pinning one for the socket's whole lifetime.
+    """
+    db = SessionLocal()
+    try:
+        yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()

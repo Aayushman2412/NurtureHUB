@@ -8,8 +8,10 @@ import os
 from alembic import command
 from alembic.config import Config
 
+from sqlalchemy import text
+
 from app.config import settings
-from app.database import SessionLocal
+from app.database import SessionLocal, engine
 from app.seed import seed_database
 from app.rate_limit import limiter
 from slowapi import _rate_limit_exceeded_handler
@@ -80,16 +82,15 @@ def run_migrations() -> None:
     command.upgrade(alembic_cfg, "head")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # 0. Refuse to boot on insecure config when APP_ENV=production
-    settings.validate_production()
+# Arbitrary constant identifying the migrate+seed critical section for
+# pg_advisory_lock. Any integer works; it just has to be the same across workers.
+_INIT_LOCK_KEY = 0x4E555254  # "NURT"
 
-    # 1. Bring the schema up to date via Alembic (fail fast on error)
+
+def _run_migrate_and_seed():
+    """Apply migrations then seed. Safe to call once the init lock is held."""
     print("Applying database migrations (alembic upgrade head)...")
     run_migrations()
-
-    # 2. Seed database
     db = SessionLocal()
     try:
         seed_database(db)
@@ -97,6 +98,34 @@ async def lifespan(app: FastAPI):
         print(f"Error seeding database on startup: {e}")
     finally:
         db.close()
+
+
+def migrate_and_seed_guarded():
+    """Run migrate+seed under a Postgres advisory lock so multiple workers /
+    replicas booting together serialize instead of racing Alembic's version
+    table and the seed's read-then-insert count guards. On SQLite (dev) there
+    are no advisory locks and no multi-worker boot, so just run directly.
+    """
+    if settings.DATABASE_URL.startswith("sqlite"):
+        _run_migrate_and_seed()
+        return
+    # A dedicated connection holds the session-level lock across the whole
+    # critical section; other workers block here until it is released.
+    with engine.connect() as conn:
+        conn.execute(text("SELECT pg_advisory_lock(:k)"), {"k": _INIT_LOCK_KEY})
+        try:
+            _run_migrate_and_seed()
+        finally:
+            conn.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": _INIT_LOCK_KEY})
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 0. Refuse to boot on insecure config when APP_ENV=production
+    settings.validate_production()
+
+    # 1-2. Migrate + seed, serialized across workers via an advisory lock.
+    migrate_and_seed_guarded()
 
     # 3. Start the live-monitoring stale-candidate sweeper
     sweeper_task = asyncio.create_task(_stale_candidate_sweeper())

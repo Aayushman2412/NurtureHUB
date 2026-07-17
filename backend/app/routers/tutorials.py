@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -15,7 +16,7 @@ from app.schemas import (
     TutorialQuizSubmitRequest, TutorialQuizSubmitResponse,
 )
 from app.dependencies import get_verified_user
-from app.flow import test_eligibility, test_lock_state
+from app.flow import test_eligibility, test_lock_state, test_lock_state_precomputed
 from app.timeutils import to_utc
 
 router = APIRouter(prefix="/api", tags=["tutorials"])
@@ -111,24 +112,74 @@ def get_stages(current_user: User = Depends(get_verified_user), db: Session = De
     if not current_user.program_district_id:
         return []
 
+    # ── Batched reads: this endpoint is the post-login landing call and the
+    # tutorial player refetches it on every event, so it must not N+1. All rows
+    # for the district are pulled in a fixed handful of queries, then assembled
+    # in memory (previously ~30-40 queries per call for the seeded 4-stage flow).
     stages = db.query(Stage).filter(
         Stage.program_district_id == current_user.program_district_id
     ).order_by(Stage.order_index).all()
+    if not stages:
+        return []
+    stage_ids = [s.id for s in stages]
 
-    progress_rows = db.query(UserTutorialProgress).filter(
-        UserTutorialProgress.user_id == current_user.id
-    ).all()
-    progress_by_tutorial = {p.tutorial_id: p for p in progress_rows}
+    tutorials = db.query(Tutorial).filter(
+        Tutorial.stage_id.in_(stage_ids)
+    ).order_by(Tutorial.order_index).all()
+    tutorials_by_stage: dict[int, list[Tutorial]] = {sid: [] for sid in stage_ids}
+    for t in tutorials:
+        tutorials_by_stage.setdefault(t.stage_id, []).append(t)
+
+    progress_by_tutorial = {
+        p.tutorial_id: p for p in db.query(UserTutorialProgress).filter(
+            UserTutorialProgress.user_id == current_user.id
+        ).all()
+    }
+
+    # quiz availability in one grouped COUNT instead of one COUNT per tutorial
+    tutorial_ids = [t.id for t in tutorials]
+    quiz_counts: dict[int, int] = {}
+    if tutorial_ids:
+        for tid, cnt in db.query(
+            TutorialQuestion.tutorial_id, func.count(TutorialQuestion.id)
+        ).filter(TutorialQuestion.tutorial_id.in_(tutorial_ids)).group_by(
+            TutorialQuestion.tutorial_id
+        ).all():
+            quiz_counts[tid] = cnt
+
+    def quiz_available(t: Tutorial, stage: Stage) -> bool:
+        return bool(stage.quiz_enabled and t.quiz_enabled and quiz_counts.get(t.id, 0) > 0)
+
+    # tests for these stages + the user's submitted attempts, both in one query
+    tests = db.query(Test).filter(Test.stage_id.in_(stage_ids)).all()
+    tests_by_stage: dict[int, Test] = {t.stage_id: t for t in tests}
+    attempts_by_test: dict[int, list[TestAttempt]] = {}
+    test_ids = [t.id for t in tests]
+    if test_ids:
+        for a in db.query(TestAttempt).filter(
+            TestAttempt.user_id == current_user.id,
+            TestAttempt.test_id.in_(test_ids),
+            TestAttempt.submitted_at.isnot(None),
+        ).all():
+            attempts_by_test.setdefault(a.test_id, []).append(a)
+
+    # eligibility computed once from in-memory data: for a test in the stage at
+    # order_index N, required = all tutorials in stages with order_index <= N.
+    completed_ids = {tid for tid, p in progress_by_tutorial.items() if p.is_completed}
+
+    def required_before(order_index: int) -> set[int]:
+        req: set[int] = set()
+        for s in stages:
+            if s.order_index <= order_index:
+                req.update(t.id for t in tutorials_by_stage.get(s.id, []))
+        return req
 
     response_stages = []
     for stage in stages:
-        tutorials = db.query(Tutorial).filter(
-            Tutorial.stage_id == stage.id
-        ).order_by(Tutorial.order_index).all()
-
+        stage_tutorials = tutorials_by_stage.get(stage.id, [])
         stage_tutorials_out = []
         tutorials_completed_count = 0
-        for t in tutorials:
+        for t in stage_tutorials:
             p = progress_by_tutorial.get(t.id)
             is_completed = bool(p and p.is_completed)
             if is_completed:
@@ -143,7 +194,7 @@ def get_stages(current_user: User = Depends(get_verified_user), db: Session = De
                 watch_pct=p.watch_pct if p else 0,
                 watch_time_seconds=p.watch_time_seconds if p else 0,
                 last_position_seconds=p.last_position_seconds if p else 0,
-                quiz_available=_quiz_available(db, t, stage),
+                quiz_available=quiz_available(t, stage),
                 quiz_status=p.quiz_status if p else "pending",
                 quiz_score=p.quiz_score if p else None,
                 quiz_total=p.quiz_total if p else None,
@@ -153,17 +204,14 @@ def get_stages(current_user: User = Depends(get_verified_user), db: Session = De
         # may pre-watch add-on videos); test phases lock on eligibility.
         test_info = None
         is_locked = False
-        test = db.query(Test).filter(Test.stage_id == stage.id).first()
+        test = tests_by_stage.get(stage.id)
         if test:
-            attempts = db.query(TestAttempt).filter(
-                TestAttempt.user_id == current_user.id,
-                TestAttempt.test_id == test.id,
-                TestAttempt.submitted_at.isnot(None),
-            ).all()
-            locked, _reason = test_lock_state(db, current_user, test)
+            attempts = attempts_by_test.get(test.id, [])
+            required = required_before(stage.order_index)
+            missing = len(required - completed_ids)
+            eligible = missing == 0
+            locked, _reason = test_lock_state_precomputed(test, required, completed_ids)
             is_locked = locked
-            # Distinguish "must finish videos" from "admin hasn't started it yet".
-            eligible, _missing = test_eligibility(db, current_user, test)
             test_info = StageTestInfo(
                 id=test.id, title=test.title, status=test.status,
                 test_type=test.test_type, scheduled_at=to_utc(test.scheduled_at),
@@ -181,7 +229,7 @@ def get_stages(current_user: User = Depends(get_verified_user), db: Session = De
             order_index=stage.order_index, stage_type=stage.stage_type,
             quiz_enabled=stage.quiz_enabled, is_locked=is_locked,
             tutorials_completed=tutorials_completed_count,
-            total_tutorials=len(tutorials), tutorials=stage_tutorials_out,
+            total_tutorials=len(stage_tutorials), tutorials=stage_tutorials_out,
             test=test_info,
         ))
 

@@ -1,5 +1,5 @@
 from datetime import date
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Float, Text, Table, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Float, Text, Table, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -100,7 +100,7 @@ class Stage(Base):
     __tablename__ = "stages"
 
     id = Column(Integer, primary_key=True, index=True)
-    program_district_id = Column(Integer, ForeignKey("program_districts.id", ondelete="CASCADE"), nullable=True)
+    program_district_id = Column(Integer, ForeignKey("program_districts.id", ondelete="CASCADE"), nullable=True, index=True)
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     order_index = Column(Integer, nullable=False, default=0)
@@ -120,7 +120,7 @@ class Tutorial(Base):
     __tablename__ = "tutorials"
 
     id = Column(Integer, primary_key=True, index=True)
-    stage_id = Column(Integer, ForeignKey("stages.id", ondelete="CASCADE"), nullable=False)
+    stage_id = Column(Integer, ForeignKey("stages.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     module_number = Column(String, nullable=True) # e.g. "Module 1"
@@ -175,7 +175,7 @@ class TutorialQuestion(Base):
     __tablename__ = "tutorial_questions"
 
     id = Column(Integer, primary_key=True, index=True)
-    tutorial_id = Column(Integer, ForeignKey("tutorials.id", ondelete="CASCADE"), nullable=False)
+    tutorial_id = Column(Integer, ForeignKey("tutorials.id", ondelete="CASCADE"), nullable=False, index=True)
     text = Column(Text, nullable=False)
     order_index = Column(Integer, default=0)
 
@@ -202,6 +202,11 @@ class TutorialQuestionOption(Base):
 class TutorialQuizResponse(Base):
     """One row per question answered in a post-tutorial quiz."""
     __tablename__ = "tutorial_quiz_responses"
+    # Hot filter: submit deletes-then-inserts by (user_id, tutorial_id); this
+    # table grows to millions of rows at scale, so index the filter columns.
+    __table_args__ = (
+        Index("ix_tutorial_quiz_responses_user_tutorial", "user_id", "tutorial_id"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
@@ -220,7 +225,7 @@ class Test(Base):
     __tablename__ = "tests"
 
     id = Column(Integer, primary_key=True, index=True)
-    stage_id = Column(Integer, ForeignKey("stages.id", ondelete="CASCADE"), nullable=False)
+    stage_id = Column(Integer, ForeignKey("stages.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     total_questions = Column(Integer, default=0)
@@ -245,7 +250,7 @@ class Question(Base):
     __tablename__ = "questions"
 
     id = Column(Integer, primary_key=True, index=True)
-    test_id = Column(Integer, ForeignKey("tests.id", ondelete="CASCADE"), nullable=False)
+    test_id = Column(Integer, ForeignKey("tests.id", ondelete="CASCADE"), nullable=False, index=True)
     text = Column(Text, nullable=False)
     marks = Column(Integer, default=1)
     order_index = Column(Integer, default=0)
@@ -260,7 +265,7 @@ class QuestionOption(Base):
     __tablename__ = "question_options"
 
     id = Column(Integer, primary_key=True, index=True)
-    question_id = Column(Integer, ForeignKey("questions.id", ondelete="CASCADE"), nullable=False)
+    question_id = Column(Integer, ForeignKey("questions.id", ondelete="CASCADE"), nullable=False, index=True)
     label = Column(String, nullable=False) # e.g., "A", "B", "C", "D"
     text = Column(Text, nullable=False)
     is_correct = Column(Boolean, default=False, nullable=False)
@@ -271,6 +276,11 @@ class QuestionOption(Base):
 
 class TestAttempt(Base):
     __tablename__ = "test_attempts"
+    # (user_id, test_id) is filtered on every /api/tests, /start and /submit;
+    # this composite covers those lookups (Postgres does not auto-index FKs).
+    __table_args__ = (
+        Index("ix_test_attempts_user_test", "user_id", "test_id"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
@@ -291,9 +301,16 @@ class TestAttempt(Base):
 
 class TestAnswer(Base):
     __tablename__ = "test_answers"
+    # One answer row per (attempt, question). The unique constraint makes the
+    # double-submit race impossible to corrupt data even if two submits slip
+    # past the atomic submitted_at guard; the index also serves result-detail
+    # lookups by attempt_id.
+    __table_args__ = (
+        UniqueConstraint("attempt_id", "question_id", name="uq_answer_attempt_question"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
-    attempt_id = Column(Integer, ForeignKey("test_attempts.id", ondelete="CASCADE"), nullable=False)
+    attempt_id = Column(Integer, ForeignKey("test_attempts.id", ondelete="CASCADE"), nullable=False, index=True)
     question_id = Column(Integer, ForeignKey("questions.id", ondelete="CASCADE"), nullable=False)
     selected_option_id = Column(Integer, ForeignKey("question_options.id", ondelete="CASCADE"), nullable=True)
     is_correct = Column(Boolean, default=False)
@@ -309,7 +326,7 @@ class Notification(Base):
     __tablename__ = "notifications"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String, nullable=False)
     message = Column(Text, nullable=False)
     is_read = Column(Boolean, default=False, nullable=False)

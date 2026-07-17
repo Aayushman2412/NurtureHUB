@@ -62,7 +62,7 @@ def _consume_otp(user: User, code: str, db: Session) -> None:
 
 
 @router.post("/register", response_model=Token)
-@limiter.limit("5/hour")
+@limiter.limit(lambda: settings.RATE_LIMIT_REGISTER)
 def register(request: Request, user_data: UserRegister, db: Session = Depends(get_db)):
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
@@ -114,7 +114,7 @@ def register(request: Request, user_data: UserRegister, db: Session = Depends(ge
 
 
 @router.post("/login", response_model=Token)
-@limiter.limit("10/minute")
+@limiter.limit(lambda: settings.RATE_LIMIT_LOGIN)
 def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == credentials.email).first()
     if not user or not user.password_hash or not verify_password(credentials.password, user.password_hash):
@@ -138,7 +138,7 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
 
 
 @router.post("/verify-otp", response_model=Token)
-@limiter.limit("10/minute")
+@limiter.limit(lambda: settings.RATE_LIMIT_OTP)
 def verify_otp(request: Request, data: OTPVerify, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == data.email).first()
     if not user:
@@ -163,7 +163,7 @@ def verify_otp(request: Request, data: OTPVerify, db: Session = Depends(get_db))
 
 
 @router.post("/forgot-password")
-@limiter.limit("5/hour")
+@limiter.limit(lambda: settings.RATE_LIMIT_REGISTER)
 def forgot_password(request: Request, data: ForgotPasswordRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == data.email).first()
     generic_response = {"message": "If the email is registered, a password reset code has been sent."}
@@ -196,7 +196,7 @@ def forgot_password(request: Request, data: ForgotPasswordRequest, db: Session =
 
 
 @router.post("/reset-password")
-@limiter.limit("10/minute")
+@limiter.limit(lambda: settings.RATE_LIMIT_OTP)
 def reset_password(request: Request, data: OTPVerify, new_password: str, db: Session = Depends(get_db)):
     if len(new_password) < 6:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
@@ -218,7 +218,7 @@ def reset_password(request: Request, data: OTPVerify, new_password: str, db: Ses
 
 
 @router.post("/google", response_model=Token)
-@limiter.limit("10/minute")
+@limiter.limit(lambda: settings.RATE_LIMIT_OTP)
 def google_auth(request: Request, google_request: GoogleLoginRequest, db: Session = Depends(get_db)):
     """
     Authenticate user via Google ID Token.
