@@ -1,106 +1,211 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import client from '../../api/client';
-import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown, Edit3, Save, Eye } from 'lucide-react';
-import { Button, Card, Checkbox, FieldLabel, Input, Modal, PageHeader, PageLoader, Select } from '../../components/ui';
-import { inputClasses } from '../../components/ui/Input';
-import { cn } from '../../utils/cn';
+import {
+  ChevronDown,
+  ChevronUp,
+  Edit3,
+  Eye,
+  GripVertical,
+  Plus,
+  Save,
+  Trash2,
+} from 'lucide-react';
+import { adminGetForm, adminSaveForm } from '../../../api/forms';
+import { FORM_KEYS } from '../../../lib/flowTypes';
+import type {
+  FlatField,
+  FlatFieldOption,
+  FlatSchema,
+  FormDefinition,
+  FormKey,
+} from '../../../lib/flowTypes';
+import { useToast } from '../../../context/ToastContext';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Checkbox,
+  FieldLabel,
+  Input,
+  Modal,
+  PageHeader,
+  PageLoader,
+  Select,
+} from '../../../components/ui';
+import { inputClasses } from '../../../components/ui/Input';
+import { cn } from '../../../utils/cn';
+import { useDirtyGuard } from '../../../components/flowbuilder/useDirtyGuard';
 
-interface FieldOption {
-  label: string;
-  value: string;
-}
+const FIELD_TYPE_VALUES: FlatField['type'][] = ['text', 'number', 'date', 'dropdown', 'radio', 'textarea'];
 
-interface FormField {
-  id: string;
-  label: string;
-  type: string;
+const TYPE_ICONS: Record<FlatField['type'], string> = {
+  text: '📝',
+  number: '🔢',
+  date: '📅',
+  dropdown: '📋',
+  radio: '🔘',
+  textarea: '📄',
+};
+
+const emptyNewField = (): FlatField => ({
+  id: '',
+  label: '',
+  type: 'text',
+  placeholder: '',
+  required: true,
+  options: null,
+});
+
+/** Options editor used by both the inline field editor and the add-field modal. */
+const OptionsEditor: React.FC<{
+  title: string;
+  addLabel: string;
   placeholder: string;
-  required: boolean;
-  options: FieldOption[] | null;
-}
+  options: FlatFieldOption[];
+  onRemove: (i: number) => void;
+  optionLabel: string;
+  setOptionLabel: (v: string) => void;
+  onAdd: () => void;
+}> = ({ title, addLabel, placeholder, options, onRemove, optionLabel, setOptionLabel, onAdd }) => (
+  <div className="mt-4">
+    <FieldLabel size="sm">{title}</FieldLabel>
+    <div className="flex flex-wrap gap-2">
+      {options.map((opt, oi) => (
+        <span
+          key={oi}
+          className="inline-flex items-center gap-2 rounded-lg bg-surface-sunken px-3 py-1.5 text-sm text-ink"
+        >
+          {opt.label}
+          <button
+            type="button"
+            onClick={() => onRemove(oi)}
+            className="text-ink-faint hover:text-error-500 cursor-pointer"
+          >
+            <Trash2 className="size-3" />
+          </button>
+        </span>
+      ))}
+    </div>
+    <div className="mt-2 flex gap-2">
+      <Input
+        placeholder={placeholder}
+        value={optionLabel}
+        onChange={e => setOptionLabel(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && onAdd()}
+      />
+      <Button size="sm" onClick={onAdd}>
+        {addLabel}
+      </Button>
+    </div>
+  </div>
+);
 
-const FIELD_TYPE_VALUES = ['text', 'number', 'date', 'dropdown', 'radio', 'textarea'] as const;
-
-const AdminFormBuilderPage: React.FC = () => {
+/**
+ * Field-list editor for flat forms (registration/growth/antenatal). Keeps the
+ * classic form-builder UX but loads/saves a versioned form definition.
+ */
+const FlatFormEditorPage: React.FC = () => {
+  const { formKey } = useParams<{ formKey: string }>();
+  const navigate = useNavigate();
   const { t } = useTranslation('adminFormBuilder');
+  const { showToast } = useToast();
   const fieldTypes = FIELD_TYPE_VALUES.map(value => ({ value, label: t(`fieldTypes.${value}`) }));
-  const [fields, setFields] = useState<FormField[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const [def, setDef] = useState<FormDefinition | null>(null);
+  const [fields, setFields] = useState<FlatField[]>([]);
+  const [loadState, setLoadState] = useState<'loading' | 'error' | 'ready'>('loading');
+  const [reloadTick, setReloadTick] = useState(0);
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [newField, setNewField] = useState<FormField>({
-    id: '',
-    label: '',
-    type: 'text',
-    placeholder: '',
-    required: true,
-    options: null,
-  });
+  const [showPreview, setShowPreview] = useState(true);
+  const [newField, setNewField] = useState<FlatField>(emptyNewField());
   const [newOptionLabel, setNewOptionLabel] = useState('');
   const [editOptionLabel, setEditOptionLabel] = useState('');
 
-  const getDistrict = () => localStorage.getItem('nh_admin_district') || 'jalna';
-
-  const loadFields = () => {
-    setLoading(true);
-    client
-      .get(`/api/admin/form-config?district=${getDistrict()}`)
-      .then(res => {
-        setFields(res.data.fields);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  };
+  const validKey = !!formKey && (FORM_KEYS as readonly string[]).includes(formKey);
+  useDirtyGuard(dirty);
 
   useEffect(() => {
-    loadFields();
-    const handleDistrictChange = () => loadFields();
-    window.addEventListener('district-changed', handleDistrictChange);
-    return () => window.removeEventListener('district-changed', handleDistrictChange);
-  }, []);
+    if (!formKey || !(FORM_KEYS as readonly string[]).includes(formKey)) return;
+    let cancelled = false;
+    setLoadState('loading');
+    adminGetForm(formKey as FormKey)
+      .then(d => {
+        if (cancelled) return;
+        if (d.builder_type !== 'flat') {
+          navigate(`/admin/form-builder/flow/${formKey}`, { replace: true });
+          return;
+        }
+        const schema = d.schema_json as FlatSchema;
+        setDef(d);
+        setFields(schema && Array.isArray(schema.fields) ? schema.fields : []);
+        setDirty(false);
+        setLoadState('ready');
+      })
+      .catch(() => {
+        if (!cancelled) setLoadState('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [formKey, navigate, reloadTick]);
 
-  const saveConfig = (updatedFields: FormField[]) => {
-    setFields(updatedFields);
-    client.put(`/api/admin/form-config?district=${getDistrict()}`, { fields: updatedFields }).catch(() => {});
+  const applyFields = (updated: FlatField[]) => {
+    setFields(updated);
+    setDirty(true);
+  };
+
+  const save = async () => {
+    if (!formKey) return;
+    setSaving(true);
+    try {
+      const updated = await adminSaveForm(formKey as FormKey, { schema_json: { fields } });
+      setDef(updated);
+      setDirty(false);
+      showToast(`Saved — version ${updated.version} is live for learners`, 'success');
+    } catch {
+      showToast('Could not save the form. Please try again.', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const moveField = (index: number, direction: 'up' | 'down') => {
-    const newFields = [...fields];
+    const next = [...fields];
     const targetIdx = direction === 'up' ? index - 1 : index + 1;
-    if (targetIdx < 0 || targetIdx >= newFields.length) return;
-    [newFields[index], newFields[targetIdx]] = [newFields[targetIdx], newFields[index]];
-    saveConfig(newFields);
+    if (targetIdx < 0 || targetIdx >= next.length) return;
+    [next[index], next[targetIdx]] = [next[targetIdx], next[index]];
+    applyFields(next);
   };
 
   const removeField = (id: string) => {
-    if (!confirm(t('confirmRemove'))) return;
-    saveConfig(fields.filter(f => f.id !== id));
+    if (!window.confirm(t('confirmRemove'))) return;
+    applyFields(fields.filter(f => f.id !== id));
   };
 
   const addField = () => {
     if (!newField.label.trim()) return;
-    const id = newField.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') + '_' + Date.now();
-    const field: FormField = { ...newField, id };
-    if (['dropdown', 'radio'].includes(field.type) && !field.options) {
-      field.options = [];
-    }
-    saveConfig([...fields, field]);
-    setNewField({ id: '', label: '', type: 'text', placeholder: '', required: true, options: null });
+    const id =
+      newField.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') + '_' + Date.now();
+    const field: FlatField = { ...newField, id };
+    if (['dropdown', 'radio'].includes(field.type) && !field.options) field.options = [];
+    applyFields([...fields, field]);
+    setNewField(emptyNewField());
     setShowAddModal(false);
   };
 
-  const updateField = (id: string, updates: Partial<FormField>) => {
-    const newFields = fields.map(f => (f.id === id ? { ...f, ...updates } : f));
-    saveConfig(newFields);
-  };
+  const updateField = (id: string, updates: Partial<FlatField>) =>
+    applyFields(fields.map(f => (f.id === id ? { ...f, ...updates } : f)));
 
   const addOptionToField = (fieldId: string) => {
     if (!editOptionLabel.trim()) return;
     const field = fields.find(f => f.id === fieldId);
     if (!field) return;
-    const newOpt: FieldOption = {
+    const newOpt: FlatFieldOption = {
       label: editOptionLabel.trim(),
       value: editOptionLabel.trim().toLowerCase().replace(/\s+/g, '_'),
     };
@@ -111,13 +216,12 @@ const AdminFormBuilderPage: React.FC = () => {
   const removeOptionFromField = (fieldId: string, optIndex: number) => {
     const field = fields.find(f => f.id === fieldId);
     if (!field || !field.options) return;
-    const newOpts = field.options.filter((_, i) => i !== optIndex);
-    updateField(fieldId, { options: newOpts });
+    updateField(fieldId, { options: field.options.filter((_, i) => i !== optIndex) });
   };
 
   const addOptionToNewField = () => {
     if (!newOptionLabel.trim()) return;
-    const newOpt: FieldOption = {
+    const newOpt: FlatFieldOption = {
       label: newOptionLabel.trim(),
       value: newOptionLabel.trim().toLowerCase().replace(/\s+/g, '_'),
     };
@@ -125,73 +229,73 @@ const AdminFormBuilderPage: React.FC = () => {
     setNewOptionLabel('');
   };
 
-  const getTypeIcon = (type: string) => {
-    const map: Record<string, string> = {
-      text: '📝',
-      number: '🔢',
-      date: '📅',
-      dropdown: '📋',
-      radio: '🔘',
-      textarea: '📄',
-    };
-    return map[type] || '📝';
-  };
+  if (!validKey) {
+    return (
+      <Alert variant="error" title="Unknown form">
+        This form key does not exist. Head back to the{' '}
+        <a href="/admin/form-builder" className="font-bold underline">
+          Form Builder
+        </a>
+        .
+      </Alert>
+    );
+  }
 
-  if (loading) return <PageLoader label={t('loading')} />;
+  if (loadState === 'loading') return <PageLoader label={t('loading')} />;
+
+  if (loadState === 'error') {
+    return (
+      <div className="space-y-4">
+        <Alert variant="error" title="Could not load this form">
+          Check your connection and try again.
+        </Alert>
+        <Button variant="outline" onClick={() => setReloadTick(tick => tick + 1)}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   const iconBtn =
     'flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer disabled:opacity-40 disabled:pointer-events-none';
   const dangerIconBtn =
     'flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-error-50 hover:text-error-500 cursor-pointer dark:hover:bg-error-500/10';
 
-  const OptionsEditor: React.FC<{
-    options: FieldOption[];
-    onRemove: (i: number) => void;
-    optionLabel: string;
-    setOptionLabel: (v: string) => void;
-    onAdd: () => void;
-  }> = ({ options, onRemove, optionLabel, setOptionLabel, onAdd }) => (
-    <div className="mt-4">
-      <FieldLabel size="sm">{t('options.title')}</FieldLabel>
-      <div className="flex flex-wrap gap-2">
-        {options.map((opt, oi) => (
-          <span
-            key={oi}
-            className="inline-flex items-center gap-2 rounded-lg bg-surface-sunken px-3 py-1.5 text-sm text-ink"
-          >
-            {opt.label}
-            <button onClick={() => onRemove(oi)} className="text-ink-faint hover:text-error-500 cursor-pointer">
-              <Trash2 className="size-3" />
-            </button>
-          </span>
-        ))}
-      </div>
-      <div className="mt-2 flex gap-2">
-        <Input
-          placeholder={t('options.newPlaceholder')}
-          value={optionLabel}
-          onChange={e => setOptionLabel(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && onAdd()}
-        />
-        <Button size="sm" onClick={onAdd}>
-          {t('actions.add')}
-        </Button>
-      </div>
-    </div>
-  );
-
   return (
     <div>
       <PageHeader
-        title={t('header.title')}
-        description={t('header.description')}
+        backTo="/admin/form-builder"
+        title={
+          <span className="inline-flex flex-wrap items-center gap-2.5">
+            {def?.title ?? t('header.title')}
+            <Badge variant="neutral">Field list</Badge>
+            {def && <Badge variant="coral">v{def.version}</Badge>}
+          </span>
+        }
+        description="Add, remove and reorder fields. Click Save to publish your changes to learners."
         actions={
           <>
-            <Button variant="outline" iconLeft={<Eye className="size-4" />} onClick={() => setShowPreview(!showPreview)}>
+            {dirty && (
+              <span
+                className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-500"
+                title="You have unsaved changes"
+              >
+                <span className="size-2 animate-pulse rounded-full bg-amber-500" />
+                Unsaved
+              </span>
+            )}
+            <Button
+              variant="outline"
+              iconLeft={<Eye className="size-4" />}
+              onClick={() => setShowPreview(!showPreview)}
+            >
               {showPreview ? t('header.hidePreview') : t('header.previewForm')}
             </Button>
-            <Button iconLeft={<Plus className="size-4" />} onClick={() => setShowAddModal(true)}>
+            <Button variant="outline" iconLeft={<Plus className="size-4" />} onClick={() => setShowAddModal(true)}>
               {t('header.addField')}
+            </Button>
+            <Button iconLeft={<Save className="size-4" />} loading={saving} disabled={!dirty} onClick={save}>
+              Save
             </Button>
           </>
         }
@@ -200,11 +304,16 @@ const AdminFormBuilderPage: React.FC = () => {
       <div className={cn('grid gap-6', showPreview ? 'lg:grid-cols-2' : 'grid-cols-1')}>
         {/* Fields */}
         <div className="flex flex-col gap-3">
+          {fields.length === 0 && (
+            <Card className="p-8 text-center text-sm text-ink-muted">
+              No fields yet — add the first one with “{t('header.addField')}”.
+            </Card>
+          )}
           {fields.map((field, idx) => (
             <Card key={field.id} className="p-4">
               <div className="flex items-center gap-3">
                 <GripVertical className="size-4 shrink-0 text-ink-faint" />
-                <span className="text-xl">{getTypeIcon(field.type)}</span>
+                <span className="text-xl">{TYPE_ICONS[field.type]}</span>
                 <div className="min-w-0 flex-1">
                   <span className="block truncate font-semibold text-ink">{field.label}</span>
                   <span className="text-xs text-ink-faint">
@@ -214,7 +323,12 @@ const AdminFormBuilderPage: React.FC = () => {
                   </span>
                 </div>
                 <div className="flex gap-1">
-                  <button onClick={() => moveField(idx, 'up')} disabled={idx === 0} className={iconBtn} title={t('actions.moveUp')}>
+                  <button
+                    onClick={() => moveField(idx, 'up')}
+                    disabled={idx === 0}
+                    className={iconBtn}
+                    title={t('actions.moveUp')}
+                  >
                     <ChevronUp className="size-4" />
                   </button>
                   <button
@@ -251,13 +365,15 @@ const AdminFormBuilderPage: React.FC = () => {
                         value={field.type}
                         onChange={e =>
                           updateField(field.id, {
-                            type: e.target.value,
+                            type: e.target.value as FlatField['type'],
                             options: ['dropdown', 'radio'].includes(e.target.value) ? field.options || [] : null,
                           })
                         }
                       >
                         {fieldTypes.map(ft => (
-                          <option key={ft.value} value={ft.value}>{ft.label}</option>
+                          <option key={ft.value} value={ft.value}>
+                            {ft.label}
+                          </option>
                         ))}
                       </Select>
                     </div>
@@ -279,6 +395,9 @@ const AdminFormBuilderPage: React.FC = () => {
 
                   {field.options !== null && (
                     <OptionsEditor
+                      title={t('options.title')}
+                      addLabel={t('actions.add')}
+                      placeholder={t('options.newPlaceholder')}
                       options={field.options}
                       onRemove={oi => removeOptionFromField(field.id, oi)}
                       optionLabel={editOptionLabel}
@@ -294,7 +413,7 @@ const AdminFormBuilderPage: React.FC = () => {
 
         {/* Preview */}
         {showPreview && (
-          <Card className="p-6">
+          <Card className="h-fit p-6">
             <h3 className="mb-4 font-display font-bold text-ink">{t('preview.title')}</h3>
             <div className="flex flex-col gap-4">
               {fields.map(field => (
@@ -306,11 +425,16 @@ const AdminFormBuilderPage: React.FC = () => {
                   {field.type === 'number' && <Input type="number" placeholder={field.placeholder} readOnly />}
                   {field.type === 'date' && <Input type="date" readOnly />}
                   {field.type === 'textarea' && (
-                    <textarea className={cn(inputClasses(), 'resize-y')} placeholder={field.placeholder} rows={3} readOnly />
+                    <textarea
+                      className={cn(inputClasses(), 'resize-y')}
+                      placeholder={field.placeholder}
+                      rows={3}
+                      readOnly
+                    />
                   )}
                   {field.type === 'dropdown' && (
-                    <Select>
-                      <option>{field.placeholder || t('preview.selectPlaceholder')}</option>
+                    <Select defaultValue="">
+                      <option value="">{field.placeholder || t('preview.selectPlaceholder')}</option>
                       {field.options?.map((o, i) => (
                         <option key={i}>{o.label}</option>
                       ))}
@@ -342,7 +466,7 @@ const AdminFormBuilderPage: React.FC = () => {
             <Button variant="outline" onClick={() => setShowAddModal(false)}>
               {t('actions.cancel')}
             </Button>
-            <Button iconLeft={<Save className="size-4" />} onClick={addField} disabled={!newField.label.trim()}>
+            <Button iconLeft={<Plus className="size-4" />} onClick={addField} disabled={!newField.label.trim()}>
               {t('header.addField')}
             </Button>
           </>
@@ -364,13 +488,15 @@ const AdminFormBuilderPage: React.FC = () => {
               onChange={e =>
                 setNewField({
                   ...newField,
-                  type: e.target.value,
+                  type: e.target.value as FlatField['type'],
                   options: ['dropdown', 'radio'].includes(e.target.value) ? [] : null,
                 })
               }
             >
               {fieldTypes.map(ft => (
-                <option key={ft.value} value={ft.value}>{ft.label}</option>
+                <option key={ft.value} value={ft.value}>
+                  {ft.label}
+                </option>
               ))}
             </Select>
           </div>
@@ -393,6 +519,9 @@ const AdminFormBuilderPage: React.FC = () => {
 
         {newField.options !== null && (
           <OptionsEditor
+            title={t('options.title')}
+            addLabel={t('actions.add')}
+            placeholder={t('options.newPlaceholder')}
             options={newField.options}
             onRemove={oi => setNewField({ ...newField, options: newField.options!.filter((_, i) => i !== oi) })}
             optionLabel={newOptionLabel}
@@ -405,4 +534,4 @@ const AdminFormBuilderPage: React.FC = () => {
   );
 };
 
-export default AdminFormBuilderPage;
+export default FlatFormEditorPage;

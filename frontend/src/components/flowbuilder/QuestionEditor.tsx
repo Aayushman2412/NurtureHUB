@@ -1,0 +1,181 @@
+import React, { useState } from 'react';
+import { Plus } from 'lucide-react';
+import type { FlowQuestionNode, FlowSectionChild, QuestionType } from '../../lib/flowTypes';
+import { Checkbox, FieldLabel, Input, Select } from '../ui';
+import { inputClasses } from '../ui/Input';
+import { cn } from '../../utils/cn';
+import MediaPicker from './MediaPicker';
+import OptionEditor from './OptionEditor';
+import { makeOption } from './factories';
+import { QUESTION_TYPE_LABELS } from './constants';
+import type { QuestionPatch, TargetOption } from './constants';
+
+export interface QuestionEditorProps {
+  question: FlowQuestionNode | FlowSectionChild;
+  /** False for common-section children (no branching there). */
+  allowBranching: boolean;
+  branchTargets?: TargetOption[];
+  /** Option id whose branch connect mode is armed (null = the node default). */
+  connectingOptionId?: string | null;
+  onPatch: (patch: QuestionPatch) => void;
+  onStartConnect?: (optionId: string) => void;
+  /** Rendered between the answer-type select and the options list (default-next picker). */
+  defaultNextSlot?: React.ReactNode;
+}
+
+const QUESTION_TYPES = Object.entries(QUESTION_TYPE_LABELS) as [QuestionType, string][];
+
+/** Shared editor for a question — used by top-level nodes and section children. */
+const QuestionEditor: React.FC<QuestionEditorProps> = ({
+  question,
+  allowBranching,
+  branchTargets = [],
+  connectingOptionId,
+  onPatch,
+  onStartConnect,
+  defaultNextSlot,
+}) => {
+  const [expandedOptionId, setExpandedOptionId] = useState<string | null>(null);
+  const hasOptions = question.questionType === 'single' || question.questionType === 'multi';
+  const branchable = allowBranching && question.questionType === 'single';
+
+  const changeType = (value: string) => {
+    const questionType = value as QuestionType;
+    if (questionType === question.questionType) return;
+    if (questionType === 'text' || questionType === 'date') {
+      if (
+        question.options.length > 0 &&
+        !window.confirm('Text and date questions have no answer options — the existing options will be removed. Continue?')
+      ) {
+        return;
+      }
+      onPatch({ questionType, options: [] });
+      return;
+    }
+    if (questionType === 'multi') {
+      // Multi-select never branches per option — clear stale branch targets.
+      onPatch({ questionType, options: question.options.map(o => ({ ...o, next: null })) });
+      return;
+    }
+    onPatch({
+      questionType,
+      options: question.options.length > 0 ? question.options : [makeOption(), makeOption()],
+    });
+  };
+
+  const updateOption = (i: number, option: (typeof question.options)[number]) =>
+    onPatch({ options: question.options.map((o, oi) => (oi === i ? option : o)) });
+
+  const removeOption = (i: number) =>
+    onPatch({ options: question.options.filter((_, oi) => oi !== i) });
+
+  const moveOption = (i: number, dir: -1 | 1) => {
+    const target = i + dir;
+    if (target < 0 || target >= question.options.length) return;
+    const options = [...question.options];
+    [options[i], options[target]] = [options[target], options[i]];
+    onPatch({ options });
+  };
+
+  const addOption = () => {
+    const option = makeOption();
+    onPatch({ options: [...question.options, option] });
+    setExpandedOptionId(option.id);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <FieldLabel size="sm">Question</FieldLabel>
+        <textarea
+          rows={2}
+          className={cn(inputClasses(), 'resize-y')}
+          value={question.title}
+          onChange={e => onPatch({ title: e.target.value })}
+          placeholder="e.g. How is the mother positioning the baby?"
+        />
+      </div>
+
+      <div>
+        <FieldLabel size="sm">Help text (optional)</FieldLabel>
+        <Input
+          value={question.helpText}
+          onChange={e => onPatch({ helpText: e.target.value })}
+          placeholder="Extra guidance shown under the question"
+        />
+      </div>
+
+      {/* Informative media for the question itself — shown above the answers in the runner. */}
+      <MediaPicker
+        label="Question images / GIFs (optional)"
+        media={question.media ?? []}
+        onChange={media => onPatch({ media })}
+      />
+
+      <div className="flex items-end gap-3">
+        <div className="flex-1">
+          <FieldLabel size="sm">Answer type</FieldLabel>
+          <Select value={question.questionType} onChange={e => changeType(e.target.value)}>
+            {QUESTION_TYPES.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <Checkbox
+          className="pb-2.5"
+          label="Required"
+          checked={question.required}
+          onChange={e => onPatch({ required: e.target.checked })}
+        />
+      </div>
+
+      {defaultNextSlot}
+
+      {hasOptions && (
+        <div>
+          <div className="mb-1.5 flex items-baseline justify-between">
+            <FieldLabel size="sm" className="mb-0">
+              Answer options
+            </FieldLabel>
+            <span className="text-[11px] text-ink-faint">{question.options.length}</span>
+          </div>
+          <div className="space-y-2">
+            {question.options.map((option, i) => (
+              <OptionEditor
+                key={option.id}
+                option={option}
+                index={i}
+                count={question.options.length}
+                allowBranch={branchable}
+                branchTargets={branchTargets}
+                connecting={connectingOptionId === option.id}
+                expanded={expandedOptionId === option.id}
+                onToggle={() => setExpandedOptionId(cur => (cur === option.id ? null : option.id))}
+                onChange={o => updateOption(i, o)}
+                onRemove={() => removeOption(i)}
+                onMove={dir => moveOption(i, dir)}
+                onStartConnect={onStartConnect ? () => onStartConnect(option.id) : undefined}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={addOption}
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border-strong/70 py-2 text-sm font-semibold text-ink-muted transition-colors hover:border-primary hover:text-primary cursor-pointer"
+          >
+            <Plus className="size-4" /> Add option
+          </button>
+          {branchable && question.options.length > 0 && (
+            <p className="mt-2 text-[11px] leading-snug text-ink-faint">
+              Answers with their own branch override the default next step.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default QuestionEditor;

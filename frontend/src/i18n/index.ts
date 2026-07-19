@@ -10,6 +10,7 @@ import enDashboard from './locales/en/dashboard.json';
 import enTests from './locales/en/tests.json';
 import enLearner from './locales/en/learner.json';
 import enMother from './locales/en/mother.json';
+import enAssessments from './locales/en/assessments.json';
 import enLanding from './locales/en/landing.json';
 import enAdmin from './locales/en/admin.json';
 import enAdminResults from './locales/en/adminResults.json';
@@ -26,6 +27,7 @@ import hiDashboard from './locales/hi/dashboard.json';
 import hiTests from './locales/hi/tests.json';
 import hiLearner from './locales/hi/learner.json';
 import hiMother from './locales/hi/mother.json';
+import hiAssessments from './locales/hi/assessments.json';
 import hiLanding from './locales/hi/landing.json';
 import hiAdmin from './locales/hi/admin.json';
 import hiAdminResults from './locales/hi/adminResults.json';
@@ -47,20 +49,20 @@ export const SUPPORTED_LANGUAGES = [
 export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 
 export const NAMESPACES = [
-  'common', 'auth', 'app', 'tutorials', 'dashboard', 'tests', 'learner', 'mother', 'landing',
+  'common', 'auth', 'app', 'tutorials', 'dashboard', 'tests', 'learner', 'mother', 'assessments', 'landing',
   'admin', 'adminResults', 'adminTests', 'adminTutorials', 'adminFormBuilder', 'adminLiveMonitor', 'validation',
 ] as const;
 
 const resources = {
   en: {
     common: enCommon, auth: enAuth, app: enApp, tutorials: enTutorials, dashboard: enDashboard, tests: enTests,
-    learner: enLearner, mother: enMother, landing: enLanding, admin: enAdmin, adminResults: enAdminResults,
+    learner: enLearner, mother: enMother, assessments: enAssessments, landing: enLanding, admin: enAdmin, adminResults: enAdminResults,
     adminTests: enAdminTests, adminTutorials: enAdminTutorials, adminFormBuilder: enAdminFormBuilder,
     adminLiveMonitor: enAdminLiveMonitor, validation: enValidation,
   },
   hi: {
     common: hiCommon, auth: hiAuth, app: hiApp, tutorials: hiTutorials, dashboard: hiDashboard, tests: hiTests,
-    learner: hiLearner, mother: hiMother, landing: hiLanding, admin: hiAdmin, adminResults: hiAdminResults,
+    learner: hiLearner, mother: hiMother, assessments: hiAssessments, landing: hiLanding, admin: hiAdmin, adminResults: hiAdminResults,
     adminTests: hiAdminTests, adminTutorials: hiAdminTutorials, adminFormBuilder: hiAdminFormBuilder,
     adminLiveMonitor: hiAdminLiveMonitor, validation: hiValidation,
   },

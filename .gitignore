@@ -41,3 +41,6 @@ frontend/.env.local
 
 # pgbouncer auth file holds the DB credential/verifier — never commit it
 deploy/pgbouncer/userlist.txt
+
+# Admin form-builder media uploads (user content, served at /uploads)
+backend/uploads/

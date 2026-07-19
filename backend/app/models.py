@@ -1,5 +1,5 @@
 from datetime import date
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Float, Text, Table, UniqueConstraint, Index
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Float, Text, Table, UniqueConstraint, Index, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -718,3 +718,50 @@ class ChildBirthCondition(Base):
     child = relationship("Child", back_populates="birth_conditions")
 
     __table_args__ = (UniqueConstraint("child_id", "condition", name="uq_child_condition"),)
+
+
+class FormDefinition(Base):
+    """An admin-authored form. Two builder types:
+      - 'flat': ordered field list (learner/mother/child/growth/antenatal registration forms)
+      - 'flow': canvas decision-tree of question nodes with branching, media options,
+        green/red LAP verdicts and per-option actions (breastfeeding, complementary feeding)
+    schema_json is the whole document; saving bumps `version` and is live immediately.
+    """
+    __tablename__ = "form_definitions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    form_key = Column(String, unique=True, index=True, nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    builder_type = Column(String, nullable=False)      # 'flow' | 'flat'
+    schema_json = Column(JSON, nullable=False, default=dict)
+    version = Column(Integer, nullable=False, default=1)
+    updated_by = Column(String, nullable=True)         # admin email (audit)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class FormResponse(Base):
+    """One BF/CF assessment for a child. Answers are denormalized snapshots
+    (question text, option labels, verdicts, actions) taken at submit time so
+    history stays readable even after the admin edits the form definition.
+    """
+    __tablename__ = "form_responses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    form_key = Column(String, index=True, nullable=False)
+    definition_version = Column(Integer, nullable=False, default=1)
+    child_id = Column(Integer, ForeignKey("children.id", ondelete="CASCADE"), nullable=False)
+    submitted_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    assessment_date = Column(Date, nullable=False)
+    status = Column(String, nullable=False, default="draft")   # 'draft' | 'submitted'
+    answers_json = Column(JSON, nullable=False, default=list)
+    summary_json = Column(JSON, nullable=False, default=dict)  # {green, red, neutral, answered, total}
+    actions_json = Column(JSON, nullable=False, default=list)  # triggered coaching actions
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    child = relationship("Child")
+    submitted_by = relationship("User")
+
+    __table_args__ = (Index("ix_form_responses_child_form", "child_id", "form_key"),)

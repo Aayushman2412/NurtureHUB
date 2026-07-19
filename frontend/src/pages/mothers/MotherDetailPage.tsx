@@ -1,11 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Baby, ChevronRight } from 'lucide-react';
+import { Plus, Baby, ChevronRight, Heart, Utensils } from 'lucide-react';
 import { Badge, Button, Card, EmptyState, PageHeader, PageLoader } from '../../components/ui';
 import { useToast } from '../../context/ToastContext';
 import { getMother, type Mother } from '../../api/mothers';
 import { listChildren, type ChildListItem } from '../../api/children';
+import { CF_MIN_AGE_DAYS } from '../../lib/flowTypes';
+
+/** Whole days since an ISO date of birth; null when unknown/invalid. */
+const ageInDays = (dob: string | null): number | null => {
+  if (!dob) return null;
+  const d = new Date(`${dob.slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  return Math.floor((Date.now() - d.getTime()) / 86_400_000);
+};
 
 const Row: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <div className="flex justify-between gap-4 border-b border-border py-2 text-sm last:border-b-0">
@@ -72,28 +81,71 @@ const MotherDetailPage: React.FC = () => {
           />
         ) : (
           <div className="flex flex-col gap-2">
-            {children.map(c => (
-              <button
-                key={c.id}
-                onClick={() => navigate(`/mothers/${motherId}/children/${c.id}`)}
-                className="flex items-center gap-3 rounded-lg border border-border p-3 text-left
-                           transition-colors hover:bg-surface-sunken"
-              >
-                <span className="flex size-9 items-center justify-center rounded-lg bg-coral-50 text-primary dark:bg-coral-500/10">
-                  <Baby className="size-4.5" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold text-ink">{c.child_name}</div>
-                  <div className="truncate text-xs text-ink-muted">
-                    {c.child_uid}
-                    {c.gender ? ` · ${t(`options.gender.${c.gender}`)}` : ''}
-                    {c.age_months != null ? ` · ${c.age_months} mo` : ''}
-                    {c.birth_weight != null ? ` · ${c.birth_weight} kg` : ''}
+            {children.map(c => {
+              const days = ageInDays(c.dob);
+              const cfLocked = days == null || days < CF_MIN_AGE_DAYS;
+              const cfTooltip = !cfLocked
+                ? t('detail.assessCfTitle')
+                : days == null
+                  ? t('detail.cfNoDob')
+                  : t('detail.cfLocked', { min: CF_MIN_AGE_DAYS, days: Math.max(1, CF_MIN_AGE_DAYS - days) });
+              const openChild = () => navigate(`/mothers/${motherId}/children/${c.id}`);
+              return (
+                <div
+                  key={c.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={openChild}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && e.target === e.currentTarget) openChild();
+                  }}
+                  className="flex cursor-pointer flex-wrap items-center gap-3 rounded-lg border border-border p-3 text-left
+                             transition-colors hover:bg-surface-sunken focus-visible:outline-none
+                             focus-visible:ring-2 focus-visible:ring-primary/40"
+                >
+                  <span className="flex size-9 items-center justify-center rounded-lg bg-coral-50 text-primary dark:bg-coral-500/10">
+                    <Baby className="size-4.5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold text-ink">{c.child_name}</div>
+                    <div className="truncate text-xs text-ink-muted">
+                      {c.child_uid}
+                      {c.gender ? ` · ${t(`options.gender.${c.gender}`)}` : ''}
+                      {c.age_months != null ? ` · ${c.age_months} mo` : ''}
+                      {c.birth_weight != null ? ` · ${c.birth_weight} kg` : ''}
+                    </div>
                   </div>
+                  <div className="flex shrink-0 items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      title={t('detail.assessBfTitle')}
+                      onClick={e => {
+                        e.stopPropagation();
+                        navigate(`/mothers/${motherId}/children/${c.id}/assessments/breastfeeding`);
+                      }}
+                    >
+                      <Heart className="size-3.5" /> {t('detail.assessBf')}
+                    </Button>
+                    {/* wrapper span carries the tooltip — a disabled Button swallows pointer events */}
+                    <span title={cfTooltip}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={cfLocked}
+                        onClick={e => {
+                          e.stopPropagation();
+                          navigate(`/mothers/${motherId}/children/${c.id}/assessments/complementary_feeding`);
+                        }}
+                      >
+                        <Utensils className="size-3.5" /> {t('detail.assessCf')}
+                      </Button>
+                    </span>
+                  </div>
+                  <ChevronRight className="hidden size-4 text-ink-faint sm:block" />
                 </div>
-                <ChevronRight className="size-4 text-ink-faint" />
-              </button>
-            ))}
+              );
+            })}
           </div>
         )}
       </Card>

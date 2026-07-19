@@ -2,6 +2,7 @@ import asyncio
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import os
 
@@ -17,7 +18,7 @@ from app.rate_limit import limiter
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.routers import auth, users, tutorials, tests, results, notifications, dashboard, metadata, admin
-from app.routers import ws_routes, mothers
+from app.routers import ws_routes, mothers, admin_forms, forms
 import app.models_live  # noqa: F401 — registers live monitoring tables with Base
 from app.models_live import LiveSession
 from app.ws_manager import manager
@@ -171,8 +172,16 @@ app.include_router(dashboard.router)
 app.include_router(metadata.router)
 app.include_router(admin.auth_router)  # public: /api/admin/login
 app.include_router(admin.router)       # guarded: all other /api/admin/*
+app.include_router(admin_forms.router) # guarded: /api/admin/forms* (form builder)
 app.include_router(ws_routes.router)
 app.include_router(mothers.router)
+app.include_router(forms.router)       # learner: /api/forms/* (BF/CF assessments)
+
+# Uploaded form-builder assets (option images/GIFs, action videos) are served
+# statically; files live outside the repo's tracked tree in backend/uploads/.
+_uploads_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
+os.makedirs(_uploads_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=_uploads_dir), name="uploads")
 
 
 @app.get("/")

@@ -34,7 +34,13 @@
     "children": "Children",
     "addChild": "Add child",
     "childrenEmptyTitle": "No children registered",
-    "childrenEmptyBody": "Add a child once the baby is born — it will be linked to this mother."
+    "childrenEmptyBody": "Add a child once the baby is born — it will be linked to this mother.",
+    "assessBf": "Breastfeeding",
+    "assessCf": "Feeding",
+    "assessBfTitle": "Breastfeeding assessment",
+    "assessCfTitle": "Complementary feeding assessment",
+    "cfNoDob": "Add the child's date of birth to unlock the complementary feeding assessment",
+    "cfLocked": "Unlocks at {{min}} days of age — {{days}} days to go"
   },
   "form": {
     "title": "Register a Mother",

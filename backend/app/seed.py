@@ -31,6 +31,7 @@ from app.models import (
     ProgramDistrict, User, Department, Designation, FacilityType,
     MotherEducationLevel, EducationField, EducationDegree, HWC, PHC,
 )
+from app.seed_forms import ensure_form_definitions
 
 
 def seed_database(db: Session):
@@ -38,6 +39,7 @@ def seed_database(db: Session):
     _seed_achievements(db)
     _seed_professional_axis(db)   # LR reference data — essential, always seeded
     _seed_mother_reference(db)    # MR education cascade — essential, always seeded
+    ensure_form_definitions(db)   # form-builder definitions (BF/CF trees) — essential
 
     if not settings.SEED_DEMO_DATA:
         print("SEED_DEMO_DATA is false — skipping demo districts, users and content.")

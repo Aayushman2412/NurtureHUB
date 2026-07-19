@@ -25,6 +25,9 @@ import MothersListPage from './pages/mothers/MothersListPage';
 import MotherFormPage from './pages/mothers/MotherFormPage';
 import MotherDetailPage from './pages/mothers/MotherDetailPage';
 import ChildFormPage from './pages/mothers/ChildFormPage';
+import AssessmentHistoryPage from './pages/assessments/AssessmentHistoryPage';
+import AssessmentRunnerPage from './pages/assessments/AssessmentRunnerPage';
+import AssessmentPlanPage from './pages/assessments/AssessmentPlanPage';
 
 // Layout
 import { PageLoader } from './components/ui';
@@ -35,7 +38,9 @@ import AdminLayout from './components/layout/AdminLayout';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 // Dev-only styleguide (tree-shaken out of prod builds)
 import StyleguidePage from './pages/dev/StyleguidePage';
-import AdminFormBuilderPage from './pages/admin/AdminFormBuilderPage';
+import FormBuilderHubPage from './pages/admin/formbuilder/FormBuilderHubPage';
+import FlatFormEditorPage from './pages/admin/formbuilder/FlatFormEditorPage';
+import FlowBuilderPage from './pages/admin/formbuilder/FlowBuilderPage';
 import AdminTutorialsPage from './pages/admin/AdminTutorialsPage';
 import AdminTutorialTrackingPage from './pages/admin/AdminTutorialTrackingPage';
 import AdminResultsPage from './pages/admin/AdminResultsPage';
@@ -140,10 +145,17 @@ const AppRoutes: React.FC = () => {
       <Route path="/mothers/:motherId/children/new" element={<CompleteRoute><ChildFormPage /></CompleteRoute>} />
       <Route path="/mothers/:motherId/children/:childId" element={<CompleteRoute><ChildFormPage /></CompleteRoute>} />
 
+      {/* BF/CF assessments (per child) */}
+      <Route path="/mothers/:motherId/children/:childId/assessments/:formKey" element={<CompleteRoute><AssessmentHistoryPage /></CompleteRoute>} />
+      <Route path="/mothers/:motherId/children/:childId/assessments/:formKey/run" element={<CompleteRoute><AssessmentRunnerPage /></CompleteRoute>} />
+      <Route path="/assessments/:responseId/plan" element={<CompleteRoute><AssessmentPlanPage /></CompleteRoute>} />
+
       {/* Admin Panel Routes */}
       <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
       <Route path="/admin/districts" element={<AdminRoute><AdminDistrictsPage /></AdminRoute>} />
-      <Route path="/admin/form-builder" element={<AdminRoute><AdminFormBuilderPage /></AdminRoute>} />
+      <Route path="/admin/form-builder" element={<AdminRoute><FormBuilderHubPage /></AdminRoute>} />
+      <Route path="/admin/form-builder/flat/:formKey" element={<AdminRoute><FlatFormEditorPage /></AdminRoute>} />
+      <Route path="/admin/form-builder/flow/:formKey" element={<AdminRoute><FlowBuilderPage /></AdminRoute>} />
       <Route path="/admin/tutorials" element={<AdminRoute><AdminTutorialsPage /></AdminRoute>} />
       <Route path="/admin/tutorial-tracking" element={<AdminRoute><AdminTutorialTrackingPage /></AdminRoute>} />
       <Route path="/admin/results" element={<AdminRoute><AdminResultsPage /></AdminRoute>} />
