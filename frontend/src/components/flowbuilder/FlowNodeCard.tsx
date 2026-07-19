@@ -40,7 +40,8 @@ export interface FlowNodeCardProps {
   /** The node the pending connection originates from (cannot target itself). */
   connectSourceId: string | null;
   zoom: number;
-  onSelect: (id: string) => void;
+  /** additive = Ctrl/Cmd/Shift held — toggles membership instead of replacing the selection. */
+  onSelect: (id: string, additive: boolean) => void;
   onMove: (id: string, pos: { x: number; y: number }) => void;
   onMeasure: (id: string, height: number) => void;
   onDuplicate: (id: string) => void;
@@ -66,7 +67,14 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
   onConnectTarget,
 }) => {
   const rootRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number; moved: boolean } | null>(null);
+  const dragRef = useRef<{
+    startX: number;
+    startY: number;
+    origX: number;
+    origY: number;
+    moved: boolean;
+    additive: boolean;
+  } | null>(null);
 
   useEffect(() => {
     const el = rootRef.current;
@@ -89,6 +97,7 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
       origX: node.position.x,
       origY: node.position.y,
       moved: false,
+      additive: e.ctrlKey || e.metaKey || e.shiftKey,
     };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
@@ -101,7 +110,9 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
     if (!d.moved && Math.abs(dx) < 3 && Math.abs(dy) < 3) return;
     if (!d.moved) {
       d.moved = true;
-      onSelect(node.id);
+      // Dragging a card that is already part of the selection keeps the whole
+      // selection (group move); dragging an unselected card selects just it.
+      if (!selected) onSelect(node.id, false);
     }
     onMove(node.id, {
       x: Math.round((d.origX + dx) / GRID) * GRID,
@@ -112,7 +123,7 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
   const handlePointerUp = () => {
     const d = dragRef.current;
     dragRef.current = null;
-    if (d && !d.moved) onSelect(node.id);
+    if (d && !d.moved) onSelect(node.id, d.additive);
   };
 
   const handleClick = (e: React.MouseEvent) => {

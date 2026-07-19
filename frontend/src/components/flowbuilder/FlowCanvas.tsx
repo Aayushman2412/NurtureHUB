@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Maximize, Minus, MousePointerClick, Plus, Workflow } from 'lucide-react';
+import { Hand, Maximize, Minus, MousePointer2, MousePointerClick, Plus, Workflow } from 'lucide-react';
 import type { FlowSchema } from '../../lib/flowTypes';
 import { Button, EmptyState } from '../ui';
 import { cn } from '../../utils/cn';
@@ -10,9 +10,13 @@ import type { ConnectRequest } from './constants';
 
 export interface FlowCanvasProps {
   schema: FlowSchema;
-  selectedId: string | null;
+  selectedIds: string[];
   connect: ConnectRequest | null;
-  onSelect: (id: string | null) => void;
+  /** Card tap: additive = Ctrl/Cmd/Shift held (toggle membership). */
+  onSelect: (id: string, additive: boolean) => void;
+  onClearSelection: () => void;
+  /** Marquee result. additive = Shift held while dragging the box. */
+  onMarqueeSelect: (ids: string[], additive: boolean) => void;
   onMoveNode: (id: string, pos: { x: number; y: number }) => void;
   onConnectTarget: (id: string) => void;
   onCancelConnect: () => void;
@@ -28,20 +32,38 @@ interface View {
   zoom: number;
 }
 
+interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+const normalizeRect = (x1: number, y1: number, x2: number, y2: number): Rect => ({
+  x: Math.min(x1, x2),
+  y: Math.min(y1, y2),
+  w: Math.abs(x2 - x1),
+  h: Math.abs(y2 - y1),
+});
+
 const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
 
 const zoomBtn =
   'flex size-7 items-center justify-center rounded-md text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer';
 
 /**
- * The pannable/zoomable node canvas. Built on raw pointer events: drag empty
- * space to pan, wheel to zoom (cursor-anchored), drag cards to move them.
+ * The pannable/zoomable node canvas. Built on raw pointer events:
+ *  - left-drag on empty space draws a marquee that multi-selects cards,
+ *  - Space+drag or middle-mouse drag pans, wheel zooms (cursor-anchored),
+ *  - dragging a card moves it (and the rest of the selection with it).
  */
 const FlowCanvas: React.FC<FlowCanvasProps> = ({
   schema,
-  selectedId,
+  selectedIds,
   connect,
   onSelect,
+  onClearSelection,
+  onMarqueeSelect,
   onMoveNode,
   onConnectTarget,
   onCancelConnect,
@@ -54,8 +76,39 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({
   const [view, setView] = useState<View>({ x: 80, y: 48, zoom: 1 });
   const [heights, setHeights] = useState<Record<string, number>>({});
   const [panning, setPanning] = useState(false);
+  const [spaceHeld, setSpaceHeld] = useState(false);
+  /** What a plain left-drag on empty canvas does. Space/middle always pans. */
+  const [tool, setTool] = useState<'select' | 'pan'>('select');
+  const [marquee, setMarquee] = useState<Rect | null>(null);
   const panRef = useRef<{ sx: number; sy: number; ox: number; oy: number; moved: boolean } | null>(null);
+  const marqueeRef = useRef<{ sx: number; sy: number; additive: boolean; moved: boolean } | null>(null);
   const nodeCount = Object.keys(schema.nodes).length;
+
+  // Space toggles pan mode (ignored while typing in the editor panel).
+  useEffect(() => {
+    const isTyping = () => {
+      const el = document.activeElement as HTMLElement | null;
+      return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+    };
+    const down = (e: KeyboardEvent) => {
+      if (isTyping()) return;
+      if (e.code === 'Space') setSpaceHeld(true);
+      // Tool shortcuts, design-tool style: V = select, H = hand/pan.
+      else if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (e.key.toLowerCase() === 'v') setTool('select');
+        else if (e.key.toLowerCase() === 'h') setTool('pan');
+      }
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.code === 'Space') setSpaceHeld(false);
+    };
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    return () => {
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keyup', up);
+    };
+  }, []);
 
   const onMeasure = useCallback((id: string, h: number) => {
     setHeights(prev => (prev[id] === h ? prev : { ...prev, [id]: h }));
@@ -127,35 +180,89 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({
     }
   }, [nodeCount, fit]);
 
+  /** Viewport-relative pointer position. */
+  const localPoint = (e: React.PointerEvent): { x: number; y: number } => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    return { x: e.clientX - (rect?.left ?? 0), y: e.clientY - (rect?.top ?? 0) };
+  };
+
   const handlePointerDown = (e: React.PointerEvent) => {
-    if (e.button !== 0) return;
     // Buttons/inputs inside the viewport (empty state, zoom controls) keep
     // their native click behaviour — pointer capture would swallow it.
     if ((e.target as HTMLElement).closest('button, a, input, textarea, select')) return;
-    panRef.current = { sx: e.clientX, sy: e.clientY, ox: view.x, oy: view.y, moved: false };
+
+    const wantsPan = e.button === 1 || (e.button === 0 && (spaceHeld || tool === 'pan' || !!connect));
+    if (wantsPan) {
+      e.preventDefault(); // middle-click autoscroll
+      panRef.current = { sx: e.clientX, sy: e.clientY, ox: view.x, oy: view.y, moved: false };
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      setPanning(true);
+      return;
+    }
+    if (e.button !== 0) return;
+
+    // Left-drag on empty canvas: marquee selection.
+    const p = localPoint(e);
+    marqueeRef.current = { sx: p.x, sy: p.y, additive: e.shiftKey, moved: false };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    setPanning(true);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     const p = panRef.current;
-    if (!p) return;
-    const dx = e.clientX - p.sx;
-    const dy = e.clientY - p.sy;
-    if (!p.moved && Math.abs(dx) + Math.abs(dy) < 3) return;
-    p.moved = true;
-    setView(v => ({ ...v, x: p.ox + dx, y: p.oy + dy }));
+    if (p) {
+      const dx = e.clientX - p.sx;
+      const dy = e.clientY - p.sy;
+      if (!p.moved && Math.abs(dx) + Math.abs(dy) < 3) return;
+      p.moved = true;
+      setView(v => ({ ...v, x: p.ox + dx, y: p.oy + dy }));
+      return;
+    }
+    const m = marqueeRef.current;
+    if (m) {
+      const pt = localPoint(e);
+      if (!m.moved && Math.abs(pt.x - m.sx) + Math.abs(pt.y - m.sy) < 3) return;
+      m.moved = true;
+      setMarquee(normalizeRect(m.sx, m.sy, pt.x, pt.y));
+    }
   };
 
   const handlePointerUp = () => {
     const p = panRef.current;
-    panRef.current = null;
-    setPanning(false);
-    if (p && !p.moved) {
-      // A plain click on empty canvas: cancel connect mode or clear selection.
-      if (connect) onCancelConnect();
-      else onSelect(null);
+    if (p) {
+      panRef.current = null;
+      setPanning(false);
+      if (!p.moved) {
+        // A plain click (in pan mode) on empty canvas: cancel connect mode.
+        if (connect) onCancelConnect();
+        else onClearSelection();
+      }
+      return;
     }
+    const m = marqueeRef.current;
+    marqueeRef.current = null;
+    if (!m) return;
+    if (!m.moved) {
+      setMarquee(null);
+      onClearSelection();
+      return;
+    }
+    // Convert the screen-space box to world space and pick intersecting cards.
+    const box = marquee;
+    setMarquee(null);
+    if (!box) return;
+    const wx1 = (box.x - view.x) / view.zoom;
+    const wy1 = (box.y - view.y) / view.zoom;
+    const wx2 = (box.x + box.w - view.x) / view.zoom;
+    const wy2 = (box.y + box.h - view.y) / view.zoom;
+    const hit: string[] = [];
+    for (const node of Object.values(schema.nodes)) {
+      const nx1 = node.position.x;
+      const ny1 = node.position.y;
+      const nx2 = nx1 + NODE_W;
+      const ny2 = ny1 + (heights[node.id] ?? DEFAULT_NODE_H);
+      if (nx1 < wx2 && nx2 > wx1 && ny1 < wy2 && ny2 > wy1) hit.push(node.id);
+    }
+    onMarqueeSelect(hit, m.additive);
   };
 
   return (
@@ -163,7 +270,13 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({
       ref={viewportRef}
       className={cn(
         'relative h-full min-w-0 flex-1 touch-none overflow-hidden bg-background',
-        connect ? 'cursor-crosshair' : panning ? 'cursor-grabbing' : 'cursor-grab',
+        connect
+          ? 'cursor-crosshair'
+          : panning
+            ? 'cursor-grabbing'
+            : spaceHeld || tool === 'pan'
+              ? 'cursor-grab'
+              : 'cursor-default',
       )}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -180,13 +293,17 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({
         className="absolute left-0 top-0"
         style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.zoom})`, transformOrigin: '0 0' }}
       >
-        <FlowEdges schema={schema} heights={heights} selectedId={selectedId} />
+        <FlowEdges
+          schema={schema}
+          heights={heights}
+          selectedId={selectedIds.length === 1 ? selectedIds[0] : null}
+        />
         {Object.values(schema.nodes).map(node => (
           <FlowNodeCard
             key={node.id}
             node={node}
             isStart={schema.startNodeId === node.id}
-            selected={selectedId === node.id}
+            selected={selectedIds.includes(node.id)}
             connectMode={!!connect}
             connectSourceId={connect?.nodeId ?? null}
             zoom={view.zoom}
@@ -217,6 +334,53 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({
           />
         </div>
       )}
+
+      {/* Marquee selection box */}
+      {marquee && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute z-10 rounded-sm border border-primary bg-primary/10"
+          style={{ left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h }}
+        />
+      )}
+
+      {/* Interaction hints */}
+      {nodeCount > 0 && !connect && (
+        <div className="pointer-events-none absolute bottom-4 left-4 z-20 hidden rounded-lg border border-border bg-surface/90 px-3 py-1.5 text-[11px] text-ink-faint shadow-sm backdrop-blur-sm lg:block">
+          {tool === 'select' ? 'Drag: select' : 'Drag: pan'} · V/H: switch tool · Space / middle-drag: pan ·
+          Ctrl+C/V: copy &amp; paste · Del: delete · Ctrl+Z: undo
+        </div>
+      )}
+
+      {/* Tool switcher: what a plain left-drag does */}
+      <div className="absolute bottom-4 right-40 z-20 flex items-center gap-0.5 rounded-lg border border-border bg-surface p-1 shadow-(--shadow-card)">
+        <button
+          type="button"
+          title="Select tool — drag a box to multi-select (V)"
+          onClick={() => setTool('select')}
+          className={cn(
+            'flex size-7 items-center justify-center rounded-md cursor-pointer',
+            tool === 'select'
+              ? 'bg-primary text-primary-fg'
+              : 'text-ink-muted hover:bg-surface-sunken hover:text-ink',
+          )}
+        >
+          <MousePointer2 className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          title="Pan tool — drag to move around the canvas (H)"
+          onClick={() => setTool('pan')}
+          className={cn(
+            'flex size-7 items-center justify-center rounded-md cursor-pointer',
+            tool === 'pan'
+              ? 'bg-primary text-primary-fg'
+              : 'text-ink-muted hover:bg-surface-sunken hover:text-ink',
+          )}
+        >
+          <Hand className="size-3.5" />
+        </button>
+      </div>
 
       {/* Connect-mode hint */}
       {connect && (

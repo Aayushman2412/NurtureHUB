@@ -92,3 +92,40 @@ export function duplicateNode(node: FlowNode): FlowNode {
     options: node.options.map(cloneOption),
   };
 }
+
+/**
+ * Deep-copies a GROUP of nodes for clipboard paste. All ids are refreshed;
+ * `next` / option-branch targets that point INSIDE the group are remapped to
+ * the corresponding clones (the copied sub-flow stays wired together), while
+ * targets pointing at nodes outside the group are kept as-is.
+ */
+export function cloneNodesForPaste(
+  nodes: FlowNode[],
+  offset: { x: number; y: number },
+): FlowNode[] {
+  const idMap = new Map(nodes.map(n => [n.id, makeId(n.kind === 'section' ? 's' : 'n')]));
+  const remap = (target: string | null): string | null =>
+    target && idMap.has(target) ? idMap.get(target)! : target;
+
+  return nodes.map(n => {
+    const id = idMap.get(n.id)!;
+    const position = { x: n.position.x + offset.x, y: n.position.y + offset.y };
+    if (n.kind === 'section') {
+      return { ...n, id, position, next: remap(n.next), children: n.children.map(cloneChild) };
+    }
+    return {
+      ...n,
+      id,
+      position,
+      next: remap(n.next),
+      media: cloneMedia(n.media ?? []),
+      options: n.options.map(o => ({
+        ...o,
+        id: makeId('o'),
+        media: cloneMedia(o.media),
+        action: { ...o.action },
+        next: remap(o.next),
+      })),
+    };
+  });
+}
