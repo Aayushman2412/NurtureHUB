@@ -21,7 +21,7 @@
     "colFaceToFace": "आमने-सामने",
     "notAttempted": "प्रयास नहीं किया",
     "watchedLine": "{{pct}}% देखा • क्विज़ {{done}}✓ {{skipped}}⨯",
-    "riskLine": "जोखिम {{risk}} • टैब {{tabs}} • fs {{fs}} • cp {{cp}}",
+    "riskLine": "खतरा {{risk}} • टैब {{tabs}} • fs {{fs}} • cp {{cp}}",
     "outOf100": "/100"
   },
   "status": {
@@ -31,7 +31,7 @@
   },
   "empty": {
     "usersTitle": "अभी कोई उपयोगकर्ता नहीं",
-    "usersBody": "इस ज़िले में अभी कोई उपयोगकर्ता पंजीकृत नहीं है।",
+    "usersBody": "इस ज़िले में अभी कोई उपयोगकर्ता दर्ज नहीं है।",
     "selectionsTitle": "अभी कोई चयन नहीं",
     "selectionsBody": "आमने-सामने प्रशिक्षण के लिए अभी तक किसी उपयोगकर्ता का चयन नहीं हुआ है। उन्हें चुनने और सूचित करने के लिए एक एक्सेल शीट अपलोड करें।"
   },
@@ -71,7 +71,7 @@
     "bestScore": "{{label}} - सर्वोत्तम स्कोर %",
     "attempts": "{{label}} - प्रयास",
     "passed": "{{label}} - उत्तीर्ण",
-    "riskScore": "{{label}} - जोखिम स्कोर",
+    "riskScore": "{{label}} - खतरे का स्कोर",
     "tabSwitches": "{{label}} - टैब स्विच",
     "fullscreenExits": "{{label}} - फ़ुलस्क्रीन निकास",
     "copyPaste": "{{label}} - कॉपी/पेस्ट",
@@ -82,12 +82,12 @@
     "no": "नहीं"
   },
   "toasts": {
-    "loadFailed": "परिणाम लोड करने में विफल।",
+    "loadFailed": "परिणाम लोड करने में असफल।",
     "noEmails": "अपलोड की गई शीट में कोई ईमेल पता नहीं मिला।",
     "selectedNotified": "{{n}} उपयोगकर्ता को चयनित और सूचित किया गया।",
-    "processFailed": "चयन फ़ाइल संसाधित करने में विफल।",
+    "processFailed": "चयन फ़ाइल संसाधित करने में असफल।",
     "removed": "चयन से हटाया गया।",
-    "removeFailed": "चयन हटाने में विफल।"
+    "removeFailed": "चयन हटाने में असफल।"
   },
   "confirm": {
     "removeSelection": "इस उपयोगकर्ता को आमने-सामने चयन सूची से हटाएँ?"

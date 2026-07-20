@@ -1,12 +1,12 @@
 {
   "list": {
     "title": "मेरी माताएँ",
-    "description": "वे माताएँ जिन्हें आपने कार्यक्रम में पंजीकृत किया है।",
-    "register": "माता पंजीकृत करें",
+    "description": "वे माताएँ जिन्हें आपने कार्यक्रम में दर्ज किया है।",
+    "register": "माता दर्ज करें",
     "loading": "माताएँ लोड हो रही हैं",
-    "loadFailed": "माताओं को लोड करने में विफल",
-    "emptyTitle": "अभी तक कोई माता पंजीकृत नहीं",
-    "emptyBody": "उसके रिकॉर्ड एकत्र करना शुरू करने के लिए पहली माता को पंजीकृत करें जिसे आप ट्रैक कर रही हैं।",
+    "loadFailed": "माताओं को लोड करने में असफल",
+    "emptyTitle": "अभी तक कोई माता दर्ज नहीं",
+    "emptyBody": "जिस पहली माता को आप ट्रैक कर रही हैं उसे दर्ज करें ताकि उसके रिकॉर्ड इकट्ठा करना शुरू हो सके।",
     "table": {
       "motherId": "माता आईडी",
       "name": "नाम",
@@ -18,8 +18,8 @@
   },
   "detail": {
     "loading": "लोड हो रहा है",
-    "loadFailed": "माता को लोड करने में विफल",
-    "registered": "पंजीकृत",
+    "loadFailed": "माता को लोड करने में असफल",
+    "registered": "दर्ज",
     "weeks": "{{n}} सप्ताह",
     "clinical": "क्लिनिकल",
     "rowAge": "आयु",
@@ -33,17 +33,19 @@
     "gestationalValue": "{{weeks}} सप्ताह · {{months}} महीने",
     "children": "बच्चे",
     "addChild": "बच्चा जोड़ें",
-    "childrenEmptyTitle": "कोई बच्चा पंजीकृत नहीं",
+    "childrenEmptyTitle": "कोई बच्चा दर्ज नहीं",
     "childrenEmptyBody": "बच्चे के जन्म के बाद एक बच्चा जोड़ें — यह इस माता से जुड़ जाएगा।",
     "assessBf": "स्तनपान",
     "assessCf": "आहार",
-    "assessBfTitle": "स्तनपान मूल्यांकन",
-    "assessCfTitle": "पूरक आहार मूल्यांकन",
-    "cfNoDob": "पूरक आहार मूल्यांकन खोलने के लिए बच्चे की जन्म तिथि जोड़ें",
-    "cfLocked": "{{min}} दिन की आयु पर खुलता है — {{days}} दिन बाकी"
+    "assessBfTitle": "स्तनपान जाँच",
+    "assessCfTitle": "पूरक आहार जाँच",
+    "cfNoDob": "पूरक आहार जाँच खोलने के लिए बच्चे की जन्म तिथि जोड़ें",
+    "cfLocked": "{{min}} दिन की आयु पर खुलता है — {{days}} दिन बाकी",
+    "assessCg": "वृद्धि",
+    "assessCgTitle": "वृद्धि जाँच दर्ज करें (वज़न और लंबाई)"
   },
   "form": {
-    "title": "एक माता पंजीकृत करें",
+    "title": "एक माता दर्ज करें",
     "description": "एक गर्भवती माता को कार्यक्रम में नामांकित करें।",
     "steps": {
       "identity": "पहचान और क्लिनिकल",
@@ -85,7 +87,7 @@
     "occupation": "व्यवसाय",
     "occupationOther": "व्यवसाय निर्दिष्ट करें",
     "rationCard": "राशन कार्ड प्रकार",
-    "socialCategory": "सामाजिक श्रेणी",
+    "socialCategory": "सामाजिक वर्ग",
     "nutritionCourse": "क्या आपने पोषण, गर्भावस्था या शिशु देखभाल पर कोई प्रमाणपत्र पाठ्यक्रम/प्रशिक्षण पूरा किया है?",
     "nutritionCourseName": "पाठ्यक्रम निर्दिष्ट करें",
     "videoFrequency": "आप सोशल मीडिया पर स्वास्थ्य संबंधी वीडियो कितनी बार देखती हैं?",
@@ -100,8 +102,8 @@
       "searchDegree": "डिग्री खोजें",
       "selectOccupation": "व्यवसाय चुनें",
       "selectRationCard": "राशन कार्ड चुनें",
-      "selectSocialCategory": "सामाजिक श्रेणी चुनें",
-      "selectFrequency": "आवृत्ति चुनें",
+      "selectSocialCategory": "सामाजिक वर्ग चुनें",
+      "selectFrequency": "चुनें कि कितनी बार",
       "selectOne": "एक चुनें"
     },
     "ratingGrid": {
@@ -112,14 +114,14 @@
     "cancel": "रद्द करें",
     "back": "पीछे",
     "continue": "जारी रखें",
-    "registering": "पंजीकृत किया जा रहा है...",
-    "register": "माता पंजीकृत करें ✓",
-    "toastRegistering": "माता पंजीकृत की जा रही है...",
-    "toastSuccess": "{{name}} ({{uid}}) पंजीकृत किया गया।",
-    "toastFail": "पंजीकरण विफल। कृपया पुनः प्रयास करें।"
+    "registering": "दर्ज किया जा रहा है...",
+    "register": "माता दर्ज करें ✓",
+    "toastRegistering": "माता दर्ज की जा रही है...",
+    "toastSuccess": "{{name}} ({{uid}}) दर्ज की गई।",
+    "toastFail": "रजिस्ट्रेशन असफल। कृपया पुनः प्रयास करें।"
   },
   "child": {
-    "titleNew": "एक बच्चा पंजीकृत करें",
+    "titleNew": "एक बच्चा दर्ज करें",
     "titleEdit": "बच्चा संपादित करें",
     "descLinked": "{{name}} से जुड़ा",
     "descLinkedFallback": "चयनित माता से जुड़ा।",
@@ -156,19 +158,19 @@
       "selectPlace": "प्रसव स्थान चुनें"
     },
     "loading": "लोड हो रहा है",
-    "loadFailed": "बच्चे को लोड करने में विफल",
+    "loadFailed": "बच्चे को लोड करने में असफल",
     "cancel": "रद्द करें",
     "back": "पीछे",
     "continue": "जारी रखें",
     "saving": "सहेजा जा रहा है...",
     "saveChild": "बच्चा सहेजें ✓",
-    "registerChild": "बच्चा पंजीकृत करें ✓",
+    "registerChild": "बच्चा दर्ज करें ✓",
     "toastSaving": "बच्चा सहेजा जा रहा है...",
-    "toastRegistering": "बच्चा पंजीकृत किया जा रहा है...",
+    "toastRegistering": "बच्चा दर्ज किया जा रहा है...",
     "toastSuccessSaved": "{{name}} ({{uid}}) सहेजा गया।",
-    "toastSuccessRegistered": "{{name}} ({{uid}}) पंजीकृत किया गया।",
-    "toastFailSave": "सहेजने में विफल। कृपया पुनः प्रयास करें।",
-    "toastFailRegister": "पंजीकरण विफल। कृपया पुनः प्रयास करें।"
+    "toastSuccessRegistered": "{{name}} ({{uid}}) दर्ज किया गया।",
+    "toastFailSave": "सहेजने में असफल। कृपया पुनः प्रयास करें।",
+    "toastFailRegister": "रजिस्ट्रेशन असफल। कृपया पुनः प्रयास करें।"
   },
   "options": {
     "yes": "हाँ",
@@ -179,17 +181,17 @@
       "Skilled Manual Worker": "कुशल शारीरिक श्रमिक",
       "Semi-skilled Worker": "अर्ध-कुशल श्रमिक",
       "Unskilled Worker": "अकुशल श्रमिक",
-      "Service Provider": "सेवा प्रदाता",
-      "Semi-professional": "अर्ध-पेशेवर",
+      "Service Provider": "सेवा देने वाला",
+      "Semi-professional": "अर्ध-प्रशिक्षित",
       "Professional": "पेशेवर",
       "Entrepreneur/Small Business": "उद्यमी/लघु व्यवसाय",
       "Other": "अन्य"
     },
     "rationCard": {
       "AAY": "एएवाई (AAY)",
-      "Eligible for AAY but not applied": "एएवाई के लिए पात्र पर आवेदन नहीं किया",
+      "Eligible for AAY but not applied": "एएवाई के लिए योग्य पर आवेदन नहीं किया",
       "BPL": "बीपीएल (BPL)",
-      "Eligible for BPL but not applied": "बीपीएल के लिए पात्र पर आवेदन नहीं किया",
+      "Eligible for BPL but not applied": "बीपीएल के लिए योग्य पर आवेदन नहीं किया",
       "APL": "एपीएल (APL)",
       "No ration card": "कोई राशन कार्ड नहीं",
       "Others": "अन्य"
@@ -227,8 +229,8 @@
         "Extremely confident": "अत्यधिक आत्मविश्वास"
       },
       "willingness_hcw": {
-        "Very unwilling": "बहुत अनिच्छुक",
-        "Unwilling": "अनिच्छुक",
+        "Very unwilling": "बिल्कुल रुचि नहीं",
+        "Unwilling": "रुचि नहीं",
         "Neutral": "तटस्थ",
         "Willing": "इच्छुक",
         "Very willing": "बहुत इच्छुक"
@@ -245,7 +247,7 @@
       "implement_video": "आप स्वास्थ्य संबंधी वीडियो से मिली सलाह का कितनी बार पालन करती हैं?",
       "confidence_video": "एक विश्वसनीय शैक्षिक वीडियो देखने के बाद कोई नई स्वास्थ्य पद्धति आज़माने में आप कितनी आत्मविश्वासी हैं?",
       "willingness_hcw": "यदि कोई स्वास्थ्यकर्मी आपको कोई नई स्वास्थ्य पद्धति सिखाता है, तो आप उसे आज़माने के लिए कितनी इच्छुक हैं?",
-      "information_seeking": "जब आपके मन में गर्भावस्था, स्तनपान या शिशु को आहार देने के बारे में कोई प्रश्न होता था, तो आप कितनी बार सक्रिय रूप से जानकारी खोजती थीं?"
+      "information_seeking": "जब आपके मन में गर्भावस्था, स्तनपान या शिशु को आहार देने के बारे में कोई प्रश्न होता था, तो आप कितनी बार खुद जानकारी ढूँढ़ती थीं?"
     },
     "source": {
       "doctor": "डॉक्टर",
@@ -277,7 +279,7 @@
       "Sub-District Hospital (SDH)": "उप-ज़िला अस्पताल (SDH)",
       "Community Health Centre (CHC)": "सामुदायिक स्वास्थ्य केंद्र (CHC)",
       "Primary Health Centre (PHC)": "प्राथमिक स्वास्थ्य केंद्र (PHC)",
-      "Sub-centre (SC)": "उप-केंद्र (SC)",
+      "Sub-centre (SC)": "उपकेंद्र (SC)",
       "Private Hospital/Nursing Home": "निजी अस्पताल/नर्सिंग होम",
       "Home": "घर",
       "Other": "अन्य"

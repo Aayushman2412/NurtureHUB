@@ -6,7 +6,7 @@
     "addPhase": "चरण जोड़ें"
   },
   "preview": {
-    "title": "वीडियो पूर्वावलोकन (क्लिप किया हुआ)",
+    "title": "वीडियो की झलक (क्लिप की हुई)",
     "clip": "सेक्शन: {{start}} → {{end}} ({{duration}} अवधि)"
   },
   "stage": {
@@ -42,7 +42,7 @@
   "fields": {
     "title": "शीर्षक",
     "titleRequired": "शीर्षक *",
-    "moduleNumber": "मॉड्यूल #",
+    "moduleNumber": "पाठ #",
     "youtubeUrl": "यूट्यूब URL",
     "videoFileUrl": "वीडियो फ़ाइल URL (MP4)",
     "durationMin": "अवधि (मिनट)",
@@ -52,7 +52,7 @@
   },
   "placeholders": {
     "title": "ट्यूटोरियल शीर्षक",
-    "moduleNumber": "मॉड्यूल 1.4",
+    "moduleNumber": "पाठ 1.4",
     "youtubeUrl": "https://youtube.com/watch?v=...",
     "videoFileUrl": "https://.../video.mp4 (यदि यूट्यूब नहीं है)",
     "description": "संक्षिप्त विवरण...",

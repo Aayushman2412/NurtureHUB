@@ -22,7 +22,7 @@
   "stats": {
     "totalCandidates": "कुल उम्मीदवार",
     "activeNow": "अभी सक्रिय",
-    "highRisk": "उच्च जोखिम",
+    "highRisk": "ज़्यादा खतरा",
     "flagged": "चिह्नित",
     "avgProgress": "औसत प्रगति",
     "avgAccuracy": "औसत सटीकता"
@@ -30,7 +30,7 @@
   "controls": {
     "searchPlaceholder": "नाम या ईमेल से खोजें…",
     "sort": {
-      "riskScore": "जोखिम स्कोर",
+      "riskScore": "खतरे का स्कोर",
       "timeRemaining": "शेष समय",
       "questionsDone": "पूर्ण प्रश्न",
       "accuracy": "सटीकता",
@@ -62,7 +62,7 @@
     "waiting": "उम्मीदवारों के कनेक्ट होने की प्रतीक्षा है…",
     "adjustFilters": "अपने फ़िल्टर समायोजित करके देखें"
   },
-  "riskScoreTitle": "जोखिम स्कोर: {{score}}/100",
+  "riskScoreTitle": "खतरे का स्कोर: {{score}}/100",
   "qShort": "प्र{{n}}",
   "card": {
     "unknownUser": "अज्ञात उपयोगकर्ता",
@@ -82,7 +82,7 @@
     "accuracy": "सटीकता",
     "timeLeft": "शेष समय",
     "currentQ": "वर्तमान प्रश्न",
-    "risk": "जोखिम",
+    "risk": "खतरा",
     "tabSwitches": "टैब स्विच",
     "actions": "क्रियाएँ",
     "unknown": "अज्ञात",
@@ -98,7 +98,7 @@
     "behavioralIndicators": "व्यवहार संकेतक",
     "suspiciousFlags": "संदिग्ध गतिविधि चिह्न",
     "activityTimeline": "गतिविधि समयरेखा (हाल की)",
-    "adminActions": "व्यवस्थापक क्रियाएँ",
+    "adminActions": "एडमिन क्रियाएँ",
     "stats": {
       "questionsAttempted": "प्रयास किए गए प्रश्न",
       "correctAnswers": "सही उत्तर",
@@ -131,13 +131,13 @@
     "confirmSendWarning": "चेतावनी भेजें",
     "confirmSaveNote": "नोट सहेजें",
     "targetLabel": "लक्ष्य:",
-    "forceSubmitWarning": "यह तुरंत उम्मीदवार की परीक्षा जमा कर देगा। यह क्रिया पूर्ववत नहीं की जा सकती।",
+    "forceSubmitWarning": "यह तुरंत उम्मीदवार की परीक्षा जमा कर देगा। यह काम वापस नहीं लिया जा सकता।",
     "placeholderWarning": "चेतावनी संदेश दर्ज करें…",
     "placeholderNote": "उल्लंघन नोट दर्ज करें…",
     "placeholderForceSubmit": "बलपूर्वक जमा करने का कारण…"
   },
   "actions": {
-    "flaggedByAdmin": "व्यवस्थापक द्वारा चिह्नित"
+    "flaggedByAdmin": "एडमिन द्वारा चिह्नित"
   },
   "eventTypes": {
     "HEARTBEAT": "हार्टबीट",
@@ -145,7 +145,7 @@
     "ANSWER_SELECTED": "उत्तर चुना गया",
     "ANSWER_CHANGED": "उत्तर बदला गया",
     "ANSWER_CLEARED": "उत्तर हटाया गया",
-    "ANSWER_MARKED_REVIEW": "उत्तर समीक्षा हेतु चिह्नित",
+    "ANSWER_MARKED_REVIEW": "उत्तर दोबारा देखने के लिए चिह्नित",
     "TEST_SUBMITTED": "परीक्षा जमा",
     "TEST_AUTO_SUBMITTED": "परीक्षा स्वतः जमा",
     "TAB_SWITCH": "टैब स्विच",
@@ -186,7 +186,7 @@
       "copyPasteEvents": "कॉपी/पेस्ट घटनाएँ",
       "questionSwitches": "प्रश्न स्विच",
       "idlePeriods": "निष्क्रिय अवधि",
-      "riskScore": "जोखिम स्कोर",
+      "riskScore": "खतरे का स्कोर",
       "flagged": "चिह्नित",
       "flagReason": "चिह्न कारण",
       "suspiciousFlags": "संदिग्ध चिह्न",
