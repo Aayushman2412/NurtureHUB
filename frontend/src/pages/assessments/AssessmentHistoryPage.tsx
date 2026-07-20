@@ -24,7 +24,7 @@ import { useToast } from '../../context/ToastContext';
 import { getChild, type Child } from '../../api/children';
 import { deleteResponse, getFormDefinition, listChildResponses } from '../../api/forms';
 import type { FormDefinition, FormKey, FormResponseListItem } from '../../lib/flowTypes';
-import { CF_MIN_AGE_DAYS, isFlowFormKey } from '../../lib/flowTypes';
+import { CF_MIN_AGE_DAYS, isFlowFormKey, isResponseFormKey } from '../../lib/flowTypes';
 import ChildChip from '../../components/assessments/ChildChip';
 import TrendStrip from '../../components/assessments/TrendStrip';
 import { formatDisplayDate } from '../../components/assessments/flowRunner';
@@ -37,8 +37,10 @@ const AssessmentHistoryPage: React.FC = () => {
   const { t, i18n } = useTranslation('assessments');
   const { showToast } = useToast();
 
-  const validKey = isFlowFormKey(keyParam ?? '');
+  const validKey = isResponseFormKey(keyParam ?? '');
   const formKey = (keyParam ?? 'breastfeeding') as FormKey;
+  /** Flat forms (Check Growth) have no green/red verdicts — hide those bits. */
+  const scored = isFlowFormKey(keyParam ?? '');
 
   const [child, setChild] = useState<Child | null>(null);
   const [definition, setDefinition] = useState<FormDefinition | null>(null);
@@ -173,7 +175,7 @@ const AssessmentHistoryPage: React.FC = () => {
         </Card>
       ) : (
         <>
-          <TrendStrip items={submittedAsc} />
+          {scored && <TrendStrip items={submittedAsc} />}
 
           {sorted.length === 0 ? (
             <EmptyState
@@ -211,16 +213,22 @@ const AssessmentHistoryPage: React.FC = () => {
                         </div>
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
                           {submitted ? (
-                            <>
-                              <span className="inline-flex items-center rounded-full bg-success-50 px-2.5 py-0.5 text-[11px] font-semibold text-success-600 dark:bg-success-500/15 dark:text-success-500">
-                                {t('history.chipGreen', { n: summary?.green ?? 0 })}
-                              </span>
-                              {(summary?.red ?? 0) > 0 && (
-                                <span className="inline-flex items-center rounded-full bg-error-50 px-2.5 py-0.5 text-[11px] font-semibold text-error-600 dark:bg-error-500/15 dark:text-error-500">
-                                  {t('history.chipRed', { n: summary?.red ?? 0 })}
+                            scored ? (
+                              <>
+                                <span className="inline-flex items-center rounded-full bg-success-50 px-2.5 py-0.5 text-[11px] font-semibold text-success-600 dark:bg-success-500/15 dark:text-success-500">
+                                  {t('history.chipGreen', { n: summary?.green ?? 0 })}
                                 </span>
-                              )}
-                            </>
+                                {(summary?.red ?? 0) > 0 && (
+                                  <span className="inline-flex items-center rounded-full bg-error-50 px-2.5 py-0.5 text-[11px] font-semibold text-error-600 dark:bg-error-500/15 dark:text-error-500">
+                                    {t('history.chipRed', { n: summary?.red ?? 0 })}
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span className="inline-flex items-center rounded-full bg-surface-sunken px-2.5 py-0.5 text-[11px] font-semibold text-ink-muted">
+                                {t('growth.chipRecorded', { n: summary?.answered ?? 0 })}
+                              </span>
+                            )
                           ) : (
                             <span className="inline-flex items-center rounded-full bg-surface-sunken px-2.5 py-0.5 text-[11px] font-semibold text-ink-muted">
                               {t('history.chipDraftProgress', {

@@ -40,7 +40,9 @@
     "assessBfTitle": "Breastfeeding assessment",
     "assessCfTitle": "Complementary feeding assessment",
     "cfNoDob": "Add the child's date of birth to unlock the complementary feeding assessment",
-    "cfLocked": "Unlocks at {{min}} days of age — {{days}} days to go"
+    "cfLocked": "Unlocks at {{min}} days of age — {{days}} days to go",
+    "assessCg": "Growth",
+    "assessCgTitle": "Record a growth check (weight & length)"
   },
   "form": {
     "title": "Register a Mother",

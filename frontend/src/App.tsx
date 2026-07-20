@@ -26,7 +26,7 @@ import MotherFormPage from './pages/mothers/MotherFormPage';
 import MotherDetailPage from './pages/mothers/MotherDetailPage';
 import ChildFormPage from './pages/mothers/ChildFormPage';
 import AssessmentHistoryPage from './pages/assessments/AssessmentHistoryPage';
-import AssessmentRunnerPage from './pages/assessments/AssessmentRunnerPage';
+import AssessmentRunnerRoute from './pages/assessments/AssessmentRunnerRoute';
 import AssessmentPlanPage from './pages/assessments/AssessmentPlanPage';
 
 // Layout
@@ -145,9 +145,9 @@ const AppRoutes: React.FC = () => {
       <Route path="/mothers/:motherId/children/new" element={<CompleteRoute><ChildFormPage /></CompleteRoute>} />
       <Route path="/mothers/:motherId/children/:childId" element={<CompleteRoute><ChildFormPage /></CompleteRoute>} />
 
-      {/* BF/CF assessments (per child) */}
+      {/* Per-child assessments: BF/CF (flow) + Check Growth (flat) */}
       <Route path="/mothers/:motherId/children/:childId/assessments/:formKey" element={<CompleteRoute><AssessmentHistoryPage /></CompleteRoute>} />
-      <Route path="/mothers/:motherId/children/:childId/assessments/:formKey/run" element={<CompleteRoute><AssessmentRunnerPage /></CompleteRoute>} />
+      <Route path="/mothers/:motherId/children/:childId/assessments/:formKey/run" element={<CompleteRoute><AssessmentRunnerRoute /></CompleteRoute>} />
       <Route path="/assessments/:responseId/plan" element={<CompleteRoute><AssessmentPlanPage /></CompleteRoute>} />
 
       {/* Admin Panel Routes */}
