@@ -42,6 +42,15 @@ export const adminUploadFormAsset = (file: File): Promise<{ url: string }> => {
 export const getFormDefinition = (formKey: FormKey): Promise<FormDefinition> =>
   client.get(`/api/forms/${formKey}`).then(r => r.data);
 
+/** Upload a photo answer (flat `image` fields); returns a backend-relative `/uploads/...` URL. */
+export const uploadLearnerMedia = (file: File): Promise<{ url: string }> => {
+  const data = new FormData();
+  data.append('file', file);
+  return client
+    .post('/api/forms/uploads', data, { headers: { 'Content-Type': 'multipart/form-data' } })
+    .then(r => r.data);
+};
+
 export const listChildResponses = (
   formKey: FormKey,
   childId: number,

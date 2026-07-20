@@ -84,5 +84,34 @@
     "newAssessment": "New assessment",
     "draftNotice": "This assessment is still a draft — finish it to get the full plan.",
     "continueDraft": "Continue filling"
+  },
+  "growth": {
+    "optional": "(optional)",
+    "selectPlaceholder": "Select an option",
+    "saveDraft": "Save draft",
+    "submit": "Submit",
+    "draftSaved": "Draft saved.",
+    "submitted": "Growth check recorded.",
+    "saveFailed": "Could not save. Please try again.",
+    "fixErrors": "Please correct the highlighted fields.",
+    "chipRecorded": "{{n}} answers recorded",
+    "choosePhoto": "Choose photo",
+    "uploading": "Uploading…",
+    "uploadFailed": "Photo upload failed. Please try again.",
+    "removePhoto": "Remove photo",
+    "noDobTitle": "Date of birth missing",
+    "noDobBody": "This child has no date of birth on record, so age-dependent questions (exclusive breastfeeding, complementary feeding) cannot be shown. Add the date of birth to the child's record to see them.",
+    "emptyFormTitle": "This form has no fields yet",
+    "emptyFormBody": "An administrator needs to add fields in the form builder before it can be filled in.",
+    "validation": {
+      "required": "{{label}} is required",
+      "selectAtLeastOne": "Select at least one option",
+      "number": "Enter a valid number",
+      "range": "Enter a value between {{min}} and {{max}}",
+      "decimals": "Use at most {{n}} decimal place(s)",
+      "date": "Enter a valid date",
+      "dateFuture": "The date cannot be in the future",
+      "dateBeforeDob": "The date cannot be before the child's date of birth"
+    }
   }
 }

@@ -30,6 +30,20 @@ export const FLOW_FORM_KEYS: FormKey[] = ['breastfeeding', 'complementary_feedin
 export const isFlowFormKey = (key: string): key is 'breastfeeding' | 'complementary_feeding' =>
   key === 'breastfeeding' || key === 'complementary_feeding';
 
+/**
+ * Flat forms that accept learner responses (rendered by the flat runner).
+ * Mirrors FLAT_RESPONSE_FORM_KEYS on the backend — the registration forms are
+ * `flat` too, but they are coded pages and do not accept form responses.
+ */
+export const FLAT_RESPONSE_FORM_KEYS: FormKey[] = ['growth_monitoring'];
+
+export const isFlatResponseFormKey = (key: string): key is 'growth_monitoring' =>
+  key === 'growth_monitoring';
+
+/** Any form key the learner can actually fill in (flow or flat). */
+export const isResponseFormKey = (key: string): key is FormKey =>
+  isFlowFormKey(key) || isFlatResponseFormKey(key);
+
 /** CF assessments unlock at this child age (days). */
 export const CF_MIN_AGE_DAYS = 150;
 
