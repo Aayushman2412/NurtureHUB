@@ -16,7 +16,7 @@
     "textarea": "टेक्स्ट क्षेत्र"
   },
   "field": {
-    "required": "आवश्यक",
+    "required": "ज़रूरी",
     "optional": "वैकल्पिक",
     "optionsCount": "{{n}} विकल्प"
   },
