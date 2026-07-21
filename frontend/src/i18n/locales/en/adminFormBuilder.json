@@ -13,7 +13,9 @@
     "date": "Date Picker",
     "dropdown": "Dropdown Select",
     "radio": "Radio Group",
-    "textarea": "Text Area"
+    "textarea": "Text Area",
+    "checkbox": "Checkbox Group (multi-select)",
+    "image": "Photo Upload"
   },
   "field": {
     "required": "Required",
