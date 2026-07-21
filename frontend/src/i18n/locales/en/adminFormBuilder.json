@@ -5,7 +5,8 @@
     "description": "Add, remove, and reorder fields in the user registration form. Changes are saved automatically.",
     "previewForm": "Preview Form",
     "hidePreview": "Hide Preview",
-    "addField": "Add Field"
+    "addField": "Add Field",
+    "importCsv": "Upload CSV"
   },
   "fieldTypes": {
     "text": "Text Input",
@@ -47,5 +48,14 @@
     "fieldLabel": "Field Label *",
     "labelPlaceholder": "e.g. Aadhar Number",
     "placeholderPlaceholder": "e.g. Enter your ID..."
+  },
+  "import": {
+    "confirmTitle": "Replace all fields from CSV?",
+    "confirmBody": "This uploads a new field list and publishes it to learners immediately, replacing every field currently in this form. This can't be undone from here — note down your current fields first if you want to keep them.",
+    "confirmBodyDirty": "You also have unsaved changes in the editor — importing will discard them.",
+    "confirmCta": "Choose CSV file",
+    "loading": "Importing CSV…",
+    "success": "Imported — version {{version}} is live for learners",
+    "genericError": "Could not import the CSV. Please check the file and try again."
   }
 }

@@ -1,7 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, BoxSelect, ClipboardPaste, Copy, Layers, Plus, Redo2, Save, Trash2, Undo2, X } from 'lucide-react';
-import { adminGetForm, adminSaveForm } from '../../../api/forms';
+import {
+  ArrowLeft,
+  BoxSelect,
+  ClipboardPaste,
+  Copy,
+  Layers,
+  Plus,
+  Redo2,
+  Save,
+  Trash2,
+  Undo2,
+  Upload,
+  X,
+} from 'lucide-react';
+import { adminGetForm, adminImportFormCsv, adminSaveForm } from '../../../api/forms';
 import { validateFlow } from '../../../lib/flowGraph';
 import { emptyFlowSchema, isFlowFormKey } from '../../../lib/flowTypes';
 import type { FlowNode, FlowSchema, FormDefinition } from '../../../lib/flowTypes';
@@ -34,7 +47,7 @@ const spawnPosition = (schema: FlowSchema): { x: number; y: number } => {
 const FlowBuilderPage: React.FC = () => {
   const { formKey } = useParams<{ formKey: string }>();
   const navigate = useNavigate();
-  const { showToast } = useToast();
+  const { showToast, updateToast } = useToast();
 
   const [def, setDef] = useState<FormDefinition | null>(null);
   const [loadState, setLoadState] = useState<'loading' | 'error' | 'ready'>('loading');
@@ -46,6 +59,8 @@ const FlowBuilderPage: React.FC = () => {
   const [connect, setConnect] = useState<ConnectRequest | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   // The editor panel edits a single node — only when exactly one is selected.
   const selectedId = selectedIds.length === 1 ? selectedIds[0] : null;
@@ -370,6 +385,58 @@ const FlowBuilderPage: React.FC = () => {
     navigate('/admin/form-builder');
   };
 
+  // ── CSV import ────────────────────────────────────────────────────────────
+  const confirmImportCsv = () => {
+    const dirtyWarning = dirty ? ' You also have unsaved changes on the canvas that will be discarded.' : '';
+    if (
+      !window.confirm(
+        `Replace this entire flow from a CSV? This publishes immediately and replaces every step ` +
+          `currently in this form.${dirtyWarning} This can't be undone from here.`,
+      )
+    ) {
+      return;
+    }
+    csvInputRef.current?.click();
+  };
+
+  const handleCsvSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file after a fix
+    if (!file || !formKey || !isFlowFormKey(formKey)) return;
+
+    setImporting(true);
+    const toastId = showToast('Importing CSV…', 'loading');
+    try {
+      const updated = await adminImportFormCsv(formKey, file);
+      const s = updated.schema_json as FlowSchema;
+      setDef(updated);
+      setSchema(
+        s && typeof s === 'object' && s.nodes
+          ? { startNodeId: s.startNodeId ?? null, nodes: s.nodes }
+          : emptyFlowSchema(),
+      );
+      setSelectedIds([]);
+      setConnect(null);
+      setDirty(false);
+      // The imported graph is a brand-new baseline (already live on the server,
+      // same as a fresh load) — old undo entries describe a tree that no longer
+      // exists, so keeping them around would let Undo silently diverge from it.
+      historyRef.current = [];
+      futureRef.current = [];
+      lastHistoryRef.current = { key: null, time: 0 };
+      setHistoryTick(t => t + 1);
+      updateToast(toastId, `Imported — version ${updated.version} is live for learners`, 'success');
+    } catch (err: any) {
+      updateToast(
+        toastId,
+        err.response?.data?.detail || 'Could not import the CSV. Please check the file and try again.',
+        'error',
+      );
+    } finally {
+      setImporting(false);
+    }
+  };
+
   // ── Selection ─────────────────────────────────────────────────────────────
   const selectIssue = useCallback((nodeId: string | null) => setSelectedIds(nodeId ? [nodeId] : []), []);
   const selectNode = useCallback((id: string | null) => setSelectedIds(id ? [id] : []), []);
@@ -523,10 +590,20 @@ const FlowBuilderPage: React.FC = () => {
               <Redo2 className="size-4" />
             </button>
           </div>
-          <Button size="sm" variant="outline" iconLeft={<Plus className="size-4" />} onClick={addQuestion}>
+          <Button
+            size="sm"
+            variant="outline"
+            iconLeft={<Upload className="size-4" />}
+            loading={importing}
+            disabled={saving}
+            onClick={confirmImportCsv}
+          >
+            Upload CSV
+          </Button>
+          <Button size="sm" variant="outline" iconLeft={<Plus className="size-4" />} disabled={importing} onClick={addQuestion}>
             Question
           </Button>
-          <Button size="sm" variant="outline" iconLeft={<Layers className="size-4" />} onClick={addSection}>
+          <Button size="sm" variant="outline" iconLeft={<Layers className="size-4" />} disabled={importing} onClick={addSection}>
             Common section
           </Button>
           <ValidationChip issues={issues} onSelectIssue={selectIssue} />
@@ -539,11 +616,25 @@ const FlowBuilderPage: React.FC = () => {
               Unsaved
             </span>
           )}
-          <Button size="sm" iconLeft={<Save className="size-4" />} loading={saving} disabled={!dirty} onClick={save}>
+          <Button
+            size="sm"
+            iconLeft={<Save className="size-4" />}
+            loading={saving}
+            disabled={!dirty || importing}
+            onClick={save}
+          >
             Save
           </Button>
         </div>
       </header>
+
+      <input
+        ref={csvInputRef}
+        type="file"
+        accept=".csv,text/csv"
+        className="hidden"
+        onChange={handleCsvSelected}
+      />
 
       {/* Editor panel + canvas */}
       <div className="flex min-h-0 flex-1">

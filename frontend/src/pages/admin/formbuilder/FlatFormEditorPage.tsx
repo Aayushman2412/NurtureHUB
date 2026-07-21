@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -10,8 +10,9 @@ import {
   Plus,
   Save,
   Trash2,
+  Upload,
 } from 'lucide-react';
-import { adminGetForm, adminSaveForm } from '../../../api/forms';
+import { adminGetForm, adminImportFormCsv, adminSaveForm } from '../../../api/forms';
 import { FORM_KEYS } from '../../../lib/flowTypes';
 import type {
   FlatField,
@@ -110,7 +111,7 @@ const FlatFormEditorPage: React.FC = () => {
   const { formKey } = useParams<{ formKey: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation('adminFormBuilder');
-  const { showToast } = useToast();
+  const { showToast, updateToast } = useToast();
   const fieldTypes = FIELD_TYPE_VALUES.map(value => ({ value, label: t(`fieldTypes.${value}`) }));
 
   const [def, setDef] = useState<FormDefinition | null>(null);
@@ -125,6 +126,9 @@ const FlatFormEditorPage: React.FC = () => {
   const [newField, setNewField] = useState<FlatField>(emptyNewField());
   const [newOptionLabel, setNewOptionLabel] = useState('');
   const [editOptionLabel, setEditOptionLabel] = useState('');
+  const [showImportConfirm, setShowImportConfirm] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   const validKey = !!formKey && (FORM_KEYS as readonly string[]).includes(formKey);
   useDirtyGuard(dirty);
@@ -171,6 +175,32 @@ const FlatFormEditorPage: React.FC = () => {
       showToast('Could not save the form. Please try again.', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const confirmImport = () => {
+    setShowImportConfirm(false);
+    csvInputRef.current?.click();
+  };
+
+  const handleCsvSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file after a fix
+    if (!file || !formKey) return;
+
+    setImporting(true);
+    const toastId = showToast(t('import.loading'), 'loading');
+    try {
+      const updated = await adminImportFormCsv(formKey as FormKey, file);
+      const schema = updated.schema_json as FlatSchema;
+      setDef(updated);
+      setFields(schema && Array.isArray(schema.fields) ? schema.fields : []);
+      setDirty(false);
+      updateToast(toastId, t('import.success', { version: updated.version }), 'success');
+    } catch (err: any) {
+      updateToast(toastId, err.response?.data?.detail || t('import.genericError'), 'error');
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -291,14 +321,36 @@ const FlatFormEditorPage: React.FC = () => {
             >
               {showPreview ? t('header.hidePreview') : t('header.previewForm')}
             </Button>
-            <Button variant="outline" iconLeft={<Plus className="size-4" />} onClick={() => setShowAddModal(true)}>
+            <Button
+              variant="outline"
+              iconLeft={<Upload className="size-4" />}
+              loading={importing}
+              disabled={saving}
+              onClick={() => setShowImportConfirm(true)}
+            >
+              {t('header.importCsv')}
+            </Button>
+            <Button
+              variant="outline"
+              iconLeft={<Plus className="size-4" />}
+              disabled={importing}
+              onClick={() => setShowAddModal(true)}
+            >
               {t('header.addField')}
             </Button>
-            <Button iconLeft={<Save className="size-4" />} loading={saving} disabled={!dirty} onClick={save}>
+            <Button iconLeft={<Save className="size-4" />} loading={saving} disabled={!dirty || importing} onClick={save}>
               Save
             </Button>
           </>
         }
+      />
+
+      <input
+        ref={csvInputRef}
+        type="file"
+        accept=".csv,text/csv"
+        className="hidden"
+        onChange={handleCsvSelected}
       />
 
       <div className={cn('grid gap-6', showPreview ? 'lg:grid-cols-2' : 'grid-cols-1')}>
@@ -455,6 +507,30 @@ const FlatFormEditorPage: React.FC = () => {
           </Card>
         )}
       </div>
+
+      {/* Import CSV confirmation */}
+      <Modal
+        open={showImportConfirm}
+        onClose={() => setShowImportConfirm(false)}
+        title={t('import.confirmTitle')}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setShowImportConfirm(false)}>
+              {t('actions.cancel')}
+            </Button>
+            <Button iconLeft={<Upload className="size-4" />} onClick={confirmImport}>
+              {t('import.confirmCta')}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-ink-muted">{t('import.confirmBody')}</p>
+        {dirty && (
+          <p className="mt-2 text-sm font-semibold text-amber-700 dark:text-amber-500">
+            {t('import.confirmBodyDirty')}
+          </p>
+        )}
+      </Modal>
 
       {/* Add field modal */}
       <Modal

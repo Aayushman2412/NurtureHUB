@@ -20,6 +20,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 from sqlalchemy.orm import Session
 
+from app.csv_import import CsvImportError, parse_flat_csv, parse_flow_csv
 from app.database import get_db
 from app.dependencies import get_admin_email, get_current_admin
 from app.models import FormDefinition
@@ -258,6 +259,42 @@ def update_form(
         definition.title = data.title.strip()
     if data.description is not None:
         definition.description = data.description
+    definition.version = (definition.version or 0) + 1
+    definition.updated_by = admin_email
+    db.commit()
+    db.refresh(definition)
+    return _serialize(definition)
+
+
+@router.post("/forms/{form_key}/import-csv")
+async def import_form_csv(
+    form_key: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Replace a form's fields/nodes from an uploaded CSV — flat forms get a field
+    list, flow forms (breastfeeding, complementary_feeding) get a branching node
+    tree. See app.csv_import for the two column formats."""
+    definition = _get_definition(db, form_key)
+
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext != ".csv":
+        raise HTTPException(status_code=400, detail=f"Please upload a .csv file, got '{ext or 'unknown'}'")
+
+    raw = await file.read()
+    if len(raw) > _MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=400, detail="File is larger than the 25 MB limit")
+
+    try:
+        if definition.builder_type == "flow":
+            schema_json = parse_flow_csv(raw)
+        else:
+            schema_json = parse_flat_csv(raw)
+    except CsvImportError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    definition.schema_json = _validate_schema(definition.builder_type, schema_json)
     definition.version = (definition.version or 0) + 1
     definition.updated_by = admin_email
     db.commit()

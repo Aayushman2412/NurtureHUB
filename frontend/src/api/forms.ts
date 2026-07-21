@@ -28,6 +28,15 @@ export const adminSaveForm = (
 ): Promise<FormDefinition> =>
   client.put(`/api/admin/forms/${formKey}`, payload).then(r => r.data);
 
+/** Replace a flat form's fields from an uploaded CSV; publishes immediately, like adminSaveForm. */
+export const adminImportFormCsv = (formKey: FormKey, file: File): Promise<FormDefinition> => {
+  const data = new FormData();
+  data.append('file', file);
+  return client
+    .post(`/api/admin/forms/${formKey}/import-csv`, data, { headers: { 'Content-Type': 'multipart/form-data' } })
+    .then(r => r.data);
+};
+
 /** Upload an image/GIF/video asset; returns a backend-relative `/uploads/...` URL. */
 export const adminUploadFormAsset = (file: File): Promise<{ url: string }> => {
   const data = new FormData();
