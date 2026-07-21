@@ -17,7 +17,13 @@ import { useToast } from '../../context/ToastContext';
 import { getChild, type Child } from '../../api/children';
 import { createResponse, getFormDefinition, getResponse, updateResponse } from '../../api/forms';
 import type { FlowSchema, FormDefinition, FormKey } from '../../lib/flowTypes';
-import { CF_MIN_AGE_DAYS, isFlowFormKey } from '../../lib/flowTypes';
+import {
+  CF_MIN_AGE_DAYS,
+  findVerdict,
+  isFlowFormKey,
+  resolveDisplay,
+  resolveVerdicts,
+} from '../../lib/flowTypes';
 import { flattenAnswerable, resolveAssetUrl } from '../../lib/flowGraph';
 import OptionCard from '../../components/assessments/OptionCard';
 import {
@@ -150,6 +156,9 @@ const AssessmentRunnerPage: React.FC = () => {
     () => (definition?.builder_type === 'flow' ? (definition.schema_json as FlowSchema) : null),
     [definition],
   );
+  /** Admin-set learner-visibility switches (absent ⇒ defaults). */
+  const display = useMemo(() => resolveDisplay(schema?.display), [schema]);
+  const verdictDefs = useMemo(() => resolveVerdicts(schema?.verdicts), [schema]);
   const derived = useMemo(
     () => (schema ? derivePath(schema, answers) : { steps: [] as PathStep[], complete: false }),
     [schema, answers],
@@ -384,13 +393,13 @@ const AssessmentRunnerPage: React.FC = () => {
             <h2 className="text-balance text-center font-display text-xl font-bold text-ink sm:text-2xl">
               {q.title}
             </h2>
-            {q.helpText && (
+            {display.helpText && q.helpText && (
               <p className="mt-2 text-center text-sm text-ink-muted">{q.helpText}</p>
             )}
             {!q.required && (
               <p className="mt-2 text-center text-xs text-ink-faint">{t('runner.optionalHint')}</p>
             )}
-            {(q.media?.length ?? 0) > 0 && (
+            {display.questionMedia && (q.media?.length ?? 0) > 0 && (
               <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
                 {q.media!.map((m, i) => (
                   <img
@@ -442,6 +451,12 @@ const AssessmentRunnerPage: React.FC = () => {
                         option={o}
                         selected={selectedIds.includes(o.id)}
                         onToggle={() => toggleOption(current, o.id)}
+                        showMedia={display.optionMedia}
+                        verdictDef={
+                          display.verdictTiming === 'during'
+                            ? findVerdict(verdictDefs, o.verdict)
+                            : null
+                        }
                       />
                     ))}
                   </div>

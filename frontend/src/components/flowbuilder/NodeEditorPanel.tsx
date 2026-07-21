@@ -14,6 +14,7 @@ import {
 import { flattenAnswerable } from '../../lib/flowGraph';
 import type { FlowIssue } from '../../lib/flowGraph';
 import type { FlowQuestionNode, FlowSchema, FlowSectionNode } from '../../lib/flowTypes';
+import { resolveVerdicts } from '../../lib/flowTypes';
 import { Badge, FieldLabel, Input } from '../ui';
 import { inputClasses } from '../ui/Input';
 import { cn } from '../../utils/cn';
@@ -333,6 +334,7 @@ const SectionPanel: React.FC<{
                   {expanded && (
                     <div className="border-t border-border p-3">
                       <QuestionEditor
+                        verdictDefs={resolveVerdicts(schema.verdicts)}
                         question={child}
                         allowBranching={false}
                         onPatch={patch => patchChild(child.id, patch)}
@@ -377,6 +379,7 @@ const QuestionPanel: React.FC<{
           <Badge variant="coral">{QUESTION_TYPE_LABELS[node.questionType]}</Badge>
         </div>
         <QuestionEditor
+          verdictDefs={resolveVerdicts(schema.verdicts)}
           question={node}
           allowBranching
           branchTargets={targets}

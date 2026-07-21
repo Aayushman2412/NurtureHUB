@@ -36,6 +36,13 @@ RESPONSE_FORM_KEYS = FLOW_FORM_KEYS | FLAT_RESPONSE_FORM_KEYS
 CF_MIN_AGE_DAYS = 150
 MAX_ACTION_NOTIFICATIONS = 15
 
+# Scoring polarity for the two built-in verdicts, used when a definition
+# predates custom verdicts (no `verdicts` list on the schema).
+DEFAULT_VERDICT_SCORING = [
+    {"id": "green", "scoring": "positive"},
+    {"id": "red", "scoring": "negative"},
+]
+
 _LEARNER_UPLOAD_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 _LEARNER_UPLOAD_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
 
@@ -176,6 +183,15 @@ def _snapshot_answers(schema: Dict[str, Any], answers: List[AnswerIn]) -> tuple:
     triggered_actions: List[Dict[str, Any]] = []
     green = red = neutral = 0
 
+    # verdict id → scoring polarity. Falls back to the built-ins so definitions
+    # saved before custom verdicts existed score exactly as they always did.
+    verdict_defs = schema.get("verdicts") or DEFAULT_VERDICT_SCORING
+    scoring_by_verdict: Dict[str, str] = {
+        d.get("id"): d.get("scoring", "neutral")
+        for d in verdict_defs
+        if isinstance(d, dict) and d.get("id")
+    }
+
     # Each question is scored at most once regardless of client input — a
     # duplicate nodeId would otherwise double-count verdicts and duplicate
     # coaching notifications. Last entry wins, first position kept.
@@ -197,9 +213,14 @@ def _snapshot_answers(schema: Dict[str, Any], answers: List[AnswerIn]) -> tuple:
             if not option:
                 continue
             verdict = option.get("verdict")
-            if verdict == "green":
+            # Score by the verdict's declared polarity, not its id: a form may
+            # define its own verdicts, and only `scoring` says which side of the
+            # ledger they land on. This keeps summary_json a stable
+            # {green, red, neutral} shape, so history/trend/plan need no change.
+            scoring = scoring_by_verdict.get(verdict) if verdict else None
+            if scoring == "positive":
                 green += 1
-            elif verdict == "red":
+            elif scoring == "negative":
                 red += 1
             else:
                 neutral += 1
@@ -354,7 +375,16 @@ def _notify_on_submit(
     summary: Dict[str, Any],
     actions: List[Dict[str, Any]],
 ) -> None:
-    """One summary notification + one per coaching action (capped)."""
+    """One summary notification + one per coaching action (capped).
+
+    The per-action notifications are suppressed when the admin has switched
+    coaching actions off for this form (`schema_json.display.actions == false`),
+    so a learner is not notified about actions the app never shows them. The
+    summary notification is always sent, and `actions_json` is still stored.
+    """
+    display = (definition.schema_json or {}).get("display") or {}
+    show_actions = display.get("actions", True)
+
     db.add(models.Notification(
         user_id=user.id,
         title=f"{definition.title} — {child.child_name}",
@@ -363,7 +393,7 @@ def _notify_on_submit(
             "Open the assessment plan to see the recommended actions."
         ),
     ))
-    for item in actions[:MAX_ACTION_NOTIFICATIONS]:
+    for item in (actions[:MAX_ACTION_NOTIFICATIONS] if show_actions else []):
         action = item.get("action") or {}
         action_type = action.get("type")
         if action_type in ("notify", "info"):

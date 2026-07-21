@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
-import type { FlowQuestionNode, FlowSectionChild, QuestionType } from '../../lib/flowTypes';
+import type {
+  FlowQuestionNode,
+  FlowSectionChild,
+  QuestionType,
+  VerdictDef,
+} from '../../lib/flowTypes';
 import { Checkbox, FieldLabel, Input, Select } from '../ui';
 import { inputClasses } from '../ui/Input';
 import { cn } from '../../utils/cn';
@@ -12,6 +17,8 @@ import type { QuestionPatch, TargetOption } from './constants';
 
 export interface QuestionEditorProps {
   question: FlowQuestionNode | FlowSectionChild;
+  /** The form's verdict vocabulary, for the per-option verdict picker. */
+  verdictDefs: VerdictDef[];
   /** False for common-section children (no branching there). */
   allowBranching: boolean;
   branchTargets?: TargetOption[];
@@ -28,6 +35,7 @@ const QUESTION_TYPES = Object.entries(QUESTION_TYPE_LABELS) as [QuestionType, st
 /** Shared editor for a question — used by top-level nodes and section children. */
 const QuestionEditor: React.FC<QuestionEditorProps> = ({
   question,
+  verdictDefs,
   allowBranching,
   branchTargets = [],
   connectingOptionId,
@@ -148,6 +156,7 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
                 option={option}
                 index={i}
                 count={question.options.length}
+                verdictDefs={verdictDefs}
                 allowBranch={branchable}
                 branchTargets={branchTargets}
                 connecting={connectingOptionId === option.id}

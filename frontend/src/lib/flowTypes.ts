@@ -50,7 +50,52 @@ export const CF_MIN_AGE_DAYS = 150;
 // ── Flow schema (canvas decision tree) ───────────────────────────────────────
 
 export type QuestionType = 'single' | 'multi' | 'text' | 'date';
-export type Verdict = 'green' | 'red' | null;
+
+/**
+ * An option's verdict, stored as a VerdictDef **id** (`null` = no verdict).
+ *
+ * Historically this was the closed union `'green' | 'red' | null`; those two
+ * ids are still the built-in defaults, so old definitions and every stored
+ * response keep working unchanged.
+ */
+export type Verdict = string | null;
+
+/**
+ * How a verdict counts toward the score. Custom verdicts must declare this —
+ * otherwise the pass/fail summary would be meaningless. Scoring is what keeps
+ * `summary_json` a stable `{green, red, neutral}` shape no matter how many
+ * verdicts a form defines, so history/trend/plan rendering never changes.
+ */
+export type VerdictScoring = 'positive' | 'negative' | 'neutral';
+
+export interface VerdictDef {
+  id: string;
+  label: string;
+  /** Any CSS color; used for the chip, the node card and the canvas edge. */
+  color: string;
+  scoring: VerdictScoring;
+}
+
+/** Built-ins. Their labels come from i18n, so they stay translated. */
+export const BUILTIN_VERDICT_IDS = ['green', 'red'] as const;
+
+export const DEFAULT_VERDICTS: VerdictDef[] = [
+  { id: 'green', label: 'As per LAP', color: '#10b981', scoring: 'positive' },
+  { id: 'red', label: 'Needs tutorial', color: '#f43f5e', scoring: 'negative' },
+];
+
+export const isBuiltinVerdict = (id: string): boolean =>
+  (BUILTIN_VERDICT_IDS as readonly string[]).includes(id);
+
+/** A form's verdict list, falling back to the built-ins when absent. */
+export const resolveVerdicts = (defs: VerdictDef[] | undefined): VerdictDef[] =>
+  defs && defs.length > 0 ? defs : DEFAULT_VERDICTS;
+
+export const findVerdict = (defs: VerdictDef[], id: Verdict): VerdictDef | null =>
+  id ? (defs.find(d => d.id === id) ?? null) : null;
+
+/** When the learner may see verdicts. */
+export type VerdictTiming = 'during' | 'after' | 'never';
 export type ActionType = 'none' | 'notify' | 'youtube' | 'video' | 'info';
 export type MediaType = 'image' | 'gif';
 
@@ -122,9 +167,68 @@ export interface FlowSectionNode {
 
 export type FlowNode = FlowQuestionNode | FlowSectionNode;
 
+/**
+ * Admin-controlled switches for what the LEARNER sees while running the form.
+ * Nothing here changes what is collected or stored — only what is displayed.
+ *
+ * All default to `true`: a definition saved before these existed (or with the
+ * key absent) shows everything, exactly as before.
+ */
+export interface FlowDisplaySettings {
+  /** Guidance text under each question. */
+  helpText: boolean;
+  /** Informative images/GIFs attached to the question. */
+  questionMedia: boolean;
+  /** Images on answer options (they fall back to a letter tile). */
+  optionMedia: boolean;
+  /**
+   * When the verdict chip is revealed.
+   *  - 'during' — as soon as an answer is picked (training: instant feedback,
+   *    but the worker can then change the answer, so it biases the data)
+   *  - 'after'  — only on the assessment plan, once the form is submitted
+   *  - 'never'  — not shown to the learner at all
+   */
+  verdictTiming: VerdictTiming;
+  /** Coaching actions: the plan's action cards + the per-action notifications. */
+  actions: boolean;
+}
+
+export const DEFAULT_DISPLAY: FlowDisplaySettings = {
+  helpText: true,
+  questionMedia: true,
+  optionMedia: true,
+  // Default to feedback-after-submit: showing it during lets a worker change
+  // their answer once they see the verdict, which silently corrupts the data.
+  verdictTiming: 'after',
+  actions: true,
+};
+
+/** Fill in any missing/legacy keys so callers can read the settings directly. */
+export const resolveDisplay = (
+  d: (Partial<FlowDisplaySettings> & { verdicts?: boolean }) | undefined,
+): FlowDisplaySettings => {
+  const raw = d ?? {};
+  // Legacy: `verdicts` was a boolean meaning "show the chip while answering".
+  const legacyTiming: VerdictTiming | undefined =
+    raw.verdictTiming === undefined && typeof raw.verdicts === 'boolean'
+      ? raw.verdicts
+        ? 'during'
+        : 'after'
+      : undefined;
+  return {
+    ...DEFAULT_DISPLAY,
+    ...raw,
+    verdictTiming: raw.verdictTiming ?? legacyTiming ?? DEFAULT_DISPLAY.verdictTiming,
+  };
+};
+
 export interface FlowSchema {
   startNodeId: string | null;
   nodes: Record<string, FlowNode>;
+  /** Learner-visibility switches; absent = defaults. */
+  display?: Partial<FlowDisplaySettings>;
+  /** This form's verdict vocabulary; absent/empty = the built-in green + red. */
+  verdicts?: VerdictDef[];
 }
 
 export const isSectionNode = (n: FlowNode): n is FlowSectionNode => n.kind === 'section';

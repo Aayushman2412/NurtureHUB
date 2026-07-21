@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronDown, ChevronRight, ChevronUp, CornerDownRight, Image as ImageIcon, Trash2, Zap } from 'lucide-react';
-import type { FlowOption, Verdict } from '../../lib/flowTypes';
+import type { FlowOption, Verdict, VerdictDef } from '../../lib/flowTypes';
+import { findVerdict } from '../../lib/flowTypes';
 import { FieldLabel, Input } from '../ui';
 import { cn } from '../../utils/cn';
 import ActionEditor from './ActionEditor';
@@ -16,19 +17,17 @@ const ACTION_SUMMARY: Record<string, string> = {
   info: 'Info',
 };
 
-const VERDICTS: { value: Verdict; label: string; active: string }[] = [
-  { value: 'green', label: 'As per LAP', active: 'bg-emerald-500 text-white' },
-  { value: null, label: 'Neutral', active: 'bg-cream-600 text-white dark:bg-cream-400 dark:text-cream-950' },
-  { value: 'red', label: 'Needs tutorial', active: 'bg-rose-500 text-white' },
-];
-
-export const VerdictDot: React.FC<{ verdict: Verdict; className?: string }> = ({ verdict, className }) =>
+export const VerdictDot: React.FC<{
+  verdict: Verdict;
+  verdictDefs?: VerdictDef[];
+  className?: string;
+}> = ({ verdict, verdictDefs, className }) =>
   verdict === null ? (
     <span className={cn('inline-block size-2.5 shrink-0 rounded-full border-[1.5px] border-ink-faint', className)} />
   ) : (
     <span
       className={cn('inline-block size-2.5 shrink-0 rounded-full', className)}
-      style={{ backgroundColor: verdictEdgeColor(verdict) }}
+      style={{ backgroundColor: verdictEdgeColor(verdict, verdictDefs) }}
     />
   );
 
@@ -36,6 +35,8 @@ export interface OptionEditorProps {
   option: FlowOption;
   index: number;
   count: number;
+  /** The form's verdict vocabulary (custom verdicts included). */
+  verdictDefs: VerdictDef[];
   /** True on single-select top-level questions — enables the branch picker. */
   allowBranch: boolean;
   branchTargets: TargetOption[];
@@ -57,6 +58,7 @@ const OptionEditor: React.FC<OptionEditorProps> = ({
   option,
   index,
   count,
+  verdictDefs,
   allowBranch,
   branchTargets,
   connecting,
@@ -105,7 +107,7 @@ const OptionEditor: React.FC<OptionEditorProps> = ({
       )}
     >
       <div className="flex items-center gap-2 py-2 pl-2.5 pr-1.5">
-        <VerdictDot verdict={option.verdict} />
+        <VerdictDot verdict={option.verdict} verdictDefs={verdictDefs} />
         <Input
           value={option.label}
           onChange={e => patch({ label: e.target.value })}
@@ -149,22 +151,30 @@ const OptionEditor: React.FC<OptionEditorProps> = ({
         <div className="space-y-3 border-t border-border px-3 py-3">
           <div>
             <FieldLabel size="sm">Verdict</FieldLabel>
-            <div className="grid grid-cols-3 overflow-hidden rounded-lg border border-border-strong/60">
-              {VERDICTS.map(v => (
-                <button
-                  key={String(v.value)}
-                  type="button"
-                  onClick={() => patch({ verdict: v.value })}
-                  className={cn(
-                    'px-1 py-1.5 text-[11px] font-semibold transition-colors cursor-pointer',
-                    option.verdict === v.value
-                      ? v.active
-                      : 'bg-surface text-ink-muted hover:bg-surface-sunken',
-                  )}
-                >
-                  {v.label}
-                </button>
-              ))}
+            {/* Built from the form's verdict list, so custom verdicts appear here.
+                "Neutral" is the absence of a verdict (null) and is always offered. */}
+            <div className="flex flex-wrap gap-1.5">
+              {[null, ...verdictDefs.map(d => d.id)].map(id => {
+                const def = findVerdict(verdictDefs, id);
+                const active = option.verdict === id;
+                return (
+                  <button
+                    key={String(id)}
+                    type="button"
+                    onClick={() => patch({ verdict: id })}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition-colors cursor-pointer',
+                      active
+                        ? 'border-transparent text-white'
+                        : 'border-border bg-surface text-ink-muted hover:bg-surface-sunken',
+                    )}
+                    style={active ? { backgroundColor: def?.color ?? 'var(--color-cream-600)' } : undefined}
+                  >
+                    <VerdictDot verdict={id} verdictDefs={verdictDefs} />
+                    {def ? def.label : 'Neutral'}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

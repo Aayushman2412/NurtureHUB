@@ -11,7 +11,9 @@ import type {
   FlowSectionChild,
   QuestionType,
   Verdict,
+  VerdictDef,
 } from '../../lib/flowTypes';
+import { findVerdict, resolveVerdicts } from '../../lib/flowTypes';
 
 /** Canvas node card width (px, world units). */
 export const NODE_W = 260;
@@ -44,8 +46,16 @@ export const EDGE_COLORS = {
   neutral: 'var(--color-coral-400)',
 } as const;
 
-export const verdictEdgeColor = (v: Verdict): string =>
-  v === 'green' ? EDGE_COLORS.green : v === 'red' ? EDGE_COLORS.red : EDGE_COLORS.neutral;
+/**
+ * Colour for a verdict. `defs` come from the form (custom verdicts carry their
+ * own colour); omitting them falls back to the built-in green/red so callers
+ * that have no schema handy still render sensibly.
+ */
+export const verdictEdgeColor = (v: Verdict, defs?: VerdictDef[]): string => {
+  const def = findVerdict(resolveVerdicts(defs), v);
+  if (def) return def.color;
+  return EDGE_COLORS.neutral;
+};
 
 export const nodeTitle = (node: FlowNode | FlowSectionChild | undefined): string =>
   node && node.title.trim() ? node.title.trim() : 'Untitled';
