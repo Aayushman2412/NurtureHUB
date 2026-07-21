@@ -28,6 +28,7 @@ import ChildFormPage from './pages/mothers/ChildFormPage';
 import AssessmentHistoryPage from './pages/assessments/AssessmentHistoryPage';
 import AssessmentRunnerRoute from './pages/assessments/AssessmentRunnerRoute';
 import AssessmentPlanPage from './pages/assessments/AssessmentPlanPage';
+import GrowthChartsPage from './pages/growth/GrowthChartsPage';
 
 // Layout
 import { PageLoader } from './components/ui';
@@ -47,6 +48,7 @@ import AdminResultsPage from './pages/admin/AdminResultsPage';
 import AdminTestsPage from './pages/admin/AdminTestsPage';
 import AdminDistrictsPage from './pages/admin/AdminDistrictsPage';
 import AdminLiveMonitorPage from './pages/admin/AdminLiveMonitorPage';
+import AdminGrowthMonitorPage from './pages/admin/AdminGrowthMonitorPage';
 
 // --- Route Guards ---
 
@@ -150,6 +152,9 @@ const AppRoutes: React.FC = () => {
       <Route path="/mothers/:motherId/children/:childId/assessments/:formKey/run" element={<CompleteRoute><AssessmentRunnerRoute /></CompleteRoute>} />
       <Route path="/assessments/:responseId/plan" element={<CompleteRoute><AssessmentPlanPage /></CompleteRoute>} />
 
+      {/* Growth charts (LAP monitoring) — case-wise WHO percentile charts */}
+      <Route path="/growth" element={<CompleteRoute><GrowthChartsPage /></CompleteRoute>} />
+
       {/* Admin Panel Routes */}
       <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
       <Route path="/admin/districts" element={<AdminRoute><AdminDistrictsPage /></AdminRoute>} />
@@ -161,6 +166,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/admin/results" element={<AdminRoute><AdminResultsPage /></AdminRoute>} />
       <Route path="/admin/tests" element={<AdminRoute><AdminTestsPage /></AdminRoute>} />
       <Route path="/admin/tests/:testId/monitor" element={<AdminRoute><AdminLiveMonitorPage /></AdminRoute>} />
+      <Route path="/admin/growth" element={<AdminRoute><AdminGrowthMonitorPage /></AdminRoute>} />
 
       {/* Dev-only styleguide */}
       {import.meta.env.DEV && <Route path="/dev/styleguide" element={<StyleguidePage />} />}

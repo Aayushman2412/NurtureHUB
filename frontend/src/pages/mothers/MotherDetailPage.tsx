@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Baby, ChevronRight, Heart, Ruler, Utensils } from 'lucide-react';
+import { Plus, Baby, ChevronRight, Heart, Ruler, Utensils, Activity } from 'lucide-react';
 import { Badge, Button, Card, EmptyState, PageHeader, PageLoader } from '../../components/ui';
 import { useToast } from '../../context/ToastContext';
 import { getMother, type Mother } from '../../api/mothers';
@@ -151,6 +151,17 @@ const MotherDetailPage: React.FC = () => {
                       }}
                     >
                       <Ruler className="size-3.5" /> {t('detail.assessCg')}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      title={t('detail.growthChartTitle')}
+                      onClick={e => {
+                        e.stopPropagation();
+                        navigate(`/growth?child=${c.id}`);
+                      }}
+                    >
+                      <Activity className="size-3.5" /> {t('detail.growthChart')}
                     </Button>
                   </div>
                   <ChevronRight className="hidden size-4 text-ink-faint sm:block" />

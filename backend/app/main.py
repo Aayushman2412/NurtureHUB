@@ -18,7 +18,7 @@ from app.rate_limit import limiter
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.routers import auth, users, tutorials, tests, results, notifications, dashboard, metadata, admin
-from app.routers import ws_routes, mothers, admin_forms, forms
+from app.routers import ws_routes, mothers, admin_forms, forms, growth
 import app.models_live  # noqa: F401 — registers live monitoring tables with Base
 from app.models_live import LiveSession
 from app.ws_manager import manager
@@ -176,6 +176,8 @@ app.include_router(admin_forms.router) # guarded: /api/admin/forms* (form builde
 app.include_router(ws_routes.router)
 app.include_router(mothers.router)
 app.include_router(forms.router)       # learner: /api/forms/* (BF/CF assessments)
+app.include_router(growth.router)       # growth charts: /api/growth/* (LAP monitoring)
+app.include_router(growth.admin_router) # admin growth monitor: /api/admin/growth/*
 
 # Uploaded form-builder assets (option images/GIFs, action videos) are served
 # statically; files live outside the repo's tracked tree in backend/uploads/.

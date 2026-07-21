@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, FileText, Video, ClipboardList, LogOut, Shield, MapPin, ChevronDown, Building2, Sun, Moon,
-  MonitorPlay, GraduationCap, Radio,
+  MonitorPlay, GraduationCap, Radio, Activity,
 } from 'lucide-react';
 import client from '../../api/client';
 import { useTheme } from '../../context/ThemeContext';
@@ -31,6 +31,7 @@ const navItems = [
   { to: '/admin/tests', icon: ClipboardList, key: 'testManager', end: false },
   { to: '/admin/tests', icon: Radio, key: 'liveMonitor', end: false },
   { to: '/admin/results', icon: GraduationCap, key: 'results', end: false },
+  { to: '/admin/growth', icon: Activity, key: 'growthMonitor', end: false },
 ] as const;
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {

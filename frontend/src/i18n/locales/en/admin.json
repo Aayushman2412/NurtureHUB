@@ -15,7 +15,8 @@
       "tutorialTracking": "Tutorial Tracking",
       "testManager": "Test Manager",
       "liveMonitor": "Live Monitor",
-      "results": "Results"
+      "results": "Results",
+      "growthMonitor": "Growth Monitor"
     }
   },
   "dashboard": {

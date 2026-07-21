@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Video, Award, User, LogOut, Sprout, Users } from 'lucide-react';
+import { LayoutDashboard, Video, Award, User, LogOut, Sprout, Users, Activity } from 'lucide-react';
 import { Avatar } from '../ui';
 import { cn } from '../../utils/cn';
 
@@ -16,6 +16,7 @@ const navItems = [
   { to: '/tutorials', labelKey: 'nav.tutorials', icon: Video },
   { to: '/tests', labelKey: 'nav.assessments', icon: Award },
   { to: '/mothers', labelKey: 'nav.mothers', icon: Users },
+  { to: '/growth', labelKey: 'nav.growth', icon: Activity },
   { to: '/profile', labelKey: 'nav.profile', icon: User },
 ];
 

@@ -1,0 +1,95 @@
+{
+  "percentiles": {
+    "p3": "3rd",
+    "p15": "15th",
+    "p50": "50th",
+    "p85": "85th",
+    "p97": "97th"
+  },
+  "sources": {
+    "birth": "Birth record",
+    "growth": "Check Growth only",
+    "growth_bf": "Growth + Breastfeeding",
+    "growth_cf": "Growth + Complementary feeding",
+    "growth_bf_cf": "Growth + BF + CF"
+  },
+  "indicators": {
+    "wfa": "Weight for age",
+    "lfa": "Length for age",
+    "wfl": "Weight for length"
+  },
+  "cohorts": {
+    "young": "Birth to 5 months (under 150 days)",
+    "old": "5 to 24 months (150 days and older)"
+  },
+  "sexTabs": {
+    "boys": "Boys",
+    "girls": "Girls"
+  },
+  "axis": {
+    "ageWeeks": "Age (completed weeks)",
+    "ageMonths": "Age (completed months)",
+    "lengthCm": "Length (cm)",
+    "weightKg": "Weight (kg)"
+  },
+  "legend": {
+    "percentiles": "WHO percentiles",
+    "sources": "Visit data source"
+  },
+  "chart": {
+    "noData": "No visits plotted yet"
+  },
+  "tooltip": {
+    "age": "Age",
+    "weight": "Weight",
+    "length": "Length",
+    "source": "Source",
+    "clickForDetails": "Click for full visit details"
+  },
+  "visitModal": {
+    "title": "Visit details",
+    "mother": "Mother",
+    "learner": "Learner",
+    "orphanLearner": "(account removed)",
+    "asPerLap": "as per LAP",
+    "needAttention": "need attention",
+    "loadError": "Could not load the visit details."
+  },
+  "errors": {
+    "loadFailedTitle": "Couldn't load growth data",
+    "loadFailedBody": "Something went wrong fetching the charts. Check your connection and try again.",
+    "retry": "Retry"
+  },
+  "forms": {
+    "growth_monitoring": "Check Growth",
+    "breastfeeding": "Breastfeeding Assessment",
+    "complementary_feeding": "Complementary Feeding Assessment"
+  },
+  "admin": {
+    "title": "Growth Monitor",
+    "description": "WHO growth charts for every learner–mother pair's baby, plotted from LAP visit records.",
+    "loading": "Loading growth data…",
+    "district": "District",
+    "allDistricts": "All districts",
+    "pairs": "Learner–mother pairs on the charts",
+    "selectAll": "Select all",
+    "clearAll": "Clear all",
+    "orphanLearner": "(account removed)",
+    "noCasesTitle": "Nothing to plot",
+    "noCases": "No cases match the current filters."
+  },
+  "learner": {
+    "title": "Growth Charts",
+    "description": "Your babies' growth plotted against the WHO standards, visit by visit.",
+    "loading": "Loading your growth charts…",
+    "allCases": "All my cases",
+    "caseLabel": "{{child}} ({{mother}})",
+    "noCases": "No registered children yet",
+    "noCasesHint": "Register a mother and her child, then record Check Growth visits to see the charts.",
+    "registerCta": "Go to My Mothers",
+    "noGender": "Add this child's gender in the child record to plot the WHO charts.",
+    "noVisits": "No growth visits recorded for this child yet.",
+    "noCasesForSex": "No cases here",
+    "noCasesForSexHint": "None of your registered children match this tab."
+  }
+}

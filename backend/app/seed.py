@@ -48,6 +48,11 @@ def seed_database(db: Session):
     _seed_program_districts_and_users(db)
     _seed_demo_hwc_phc(db)   # demo HWC/PHC so MR is testable; prod uploads real rows
 
+    # Demo growth-monitoring cases (learners/mothers/children + LAP visits).
+    # Own count guard; remove with `python -m app.seed_growth_demo --remove`.
+    from app.seed_growth_demo import seed_growth_demo
+    seed_growth_demo(db)
+
     if db.query(Stage).count() > 0:
         print("Database already contains stage data, skipping content seeding.")
         return

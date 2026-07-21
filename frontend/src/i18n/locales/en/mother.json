@@ -42,7 +42,9 @@
     "cfNoDob": "Add the child's date of birth to unlock the complementary feeding assessment",
     "cfLocked": "Unlocks at {{min}} days of age — {{days}} days to go",
     "assessCg": "Growth",
-    "assessCgTitle": "Record a growth check (weight & length)"
+    "assessCgTitle": "Record a growth check (weight & length)",
+    "growthChart": "Chart",
+    "growthChartTitle": "See this child's WHO growth charts"
   },
   "form": {
     "title": "Register a Mother",
