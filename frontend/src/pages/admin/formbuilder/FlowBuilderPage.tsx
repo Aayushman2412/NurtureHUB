@@ -717,7 +717,8 @@ const FlowBuilderPage: React.FC = () => {
       >
         <p className="text-sm text-ink-muted">
           Hide parts of this form from the health worker filling it in. Every answer is still
-          collected and stored — this only changes what is shown on screen. Changes apply when you
+          collected and stored — this only changes what is shown on screen. These are the form-wide
+          defaults; each question can override them in its own editor panel. Changes apply when you
           save the form.
         </p>
         <div className="mt-4 flex flex-col gap-3">

@@ -127,6 +127,34 @@ export interface FlowOption {
 }
 
 /** A question inside a common-section block: same shape, but no position/branching. */
+/**
+ * Per-QUESTION overrides of the form's learner-view defaults. Every key is
+ * optional — an absent/null key inherits the form-level setting, so a question
+ * with no override behaves exactly as the form default dictates.
+ */
+export interface QuestionDisplayOverride {
+  helpText?: boolean | null;
+  questionMedia?: boolean | null;
+  optionMedia?: boolean | null;
+  verdictTiming?: VerdictTiming | null;
+  actions?: boolean | null;
+}
+
+/** Form defaults + a question's overrides → the effective settings for it. */
+export function resolveQuestionDisplay(
+  form: FlowDisplaySettings,
+  override: QuestionDisplayOverride | null | undefined,
+): FlowDisplaySettings {
+  if (!override) return form;
+  return {
+    helpText: override.helpText ?? form.helpText,
+    questionMedia: override.questionMedia ?? form.questionMedia,
+    optionMedia: override.optionMedia ?? form.optionMedia,
+    verdictTiming: override.verdictTiming ?? form.verdictTiming,
+    actions: override.actions ?? form.actions,
+  };
+}
+
 export interface FlowSectionChild {
   id: string;
   kind: 'question';
@@ -138,6 +166,8 @@ export interface FlowSectionChild {
    *  Optional: definitions saved before this field existed omit it. */
   media?: FlowMedia[];
   options: FlowOption[];
+  /** Per-question learner-view overrides; absent = inherit the form defaults. */
+  display?: QuestionDisplayOverride | null;
 }
 
 export interface FlowQuestionNode {
@@ -154,6 +184,8 @@ export interface FlowQuestionNode {
   options: FlowOption[];
   /** Default next node id; null = end of form. */
   next: string | null;
+  /** Per-question learner-view overrides; absent = inherit the form defaults. */
+  display?: QuestionDisplayOverride | null;
 }
 
 export interface FlowSectionNode {

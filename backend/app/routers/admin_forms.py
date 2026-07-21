@@ -74,6 +74,16 @@ class FlowOptionModel(BaseModel):
     next: Optional[str] = None
 
 
+class QuestionDisplayModel(BaseModel):
+    """Per-QUESTION overrides of FlowDisplayModel. Every field is optional —
+    None inherits the form-level default, so an absent override is a no-op."""
+    helpText: Optional[bool] = None
+    questionMedia: Optional[bool] = None
+    optionMedia: Optional[bool] = None
+    verdictTiming: Optional[Literal["during", "after", "never"]] = None
+    actions: Optional[bool] = None
+
+
 class FlowSectionChildModel(BaseModel):
     id: str
     kind: Literal["question"] = "question"
@@ -83,6 +93,7 @@ class FlowSectionChildModel(BaseModel):
     required: bool = True
     media: List[FlowMediaModel] = Field(default_factory=list)  # question-level illustrations
     options: List[FlowOptionModel] = Field(default_factory=list)
+    display: Optional[QuestionDisplayModel] = None
 
 
 class FlowPositionModel(BaseModel):
@@ -102,6 +113,7 @@ class FlowNodeModel(BaseModel):
     options: List[FlowOptionModel] = Field(default_factory=list)
     children: List[FlowSectionChildModel] = Field(default_factory=list)
     next: Optional[str] = None
+    display: Optional[QuestionDisplayModel] = None
 
 
 class FlowDisplayModel(BaseModel):

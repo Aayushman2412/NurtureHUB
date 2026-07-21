@@ -95,7 +95,10 @@ export interface ConnectRequest {
 
 /** Patch of the fields shared by top-level questions and section children. */
 export type QuestionPatch = Partial<
-  Pick<FlowQuestionNode, 'title' | 'helpText' | 'required' | 'questionType' | 'options' | 'media'>
+  Pick<
+    FlowQuestionNode,
+    'title' | 'helpText' | 'required' | 'questionType' | 'options' | 'media' | 'display'
+  >
 >;
 
 /** Patch of any editable node field (question or section). */
