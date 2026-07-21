@@ -1,12 +1,27 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, BoxSelect, ClipboardPaste, Copy, Layers, Plus, Redo2, Save, Trash2, Undo2, X } from 'lucide-react';
+import { ArrowLeft, BoxSelect, ClipboardPaste, Copy, Eye, Layers, Plus, Redo2, Save, Trash2, Undo2, X } from 'lucide-react';
 import { adminGetForm, adminSaveForm } from '../../../api/forms';
 import { validateFlow } from '../../../lib/flowGraph';
-import { emptyFlowSchema, isFlowFormKey } from '../../../lib/flowTypes';
-import type { FlowNode, FlowSchema, FormDefinition } from '../../../lib/flowTypes';
+import {
+  emptyFlowSchema,
+  isBuiltinVerdict,
+  isFlowFormKey,
+  resolveDisplay,
+  resolveVerdicts,
+} from '../../../lib/flowTypes';
+import type {
+  FlowDisplaySettings,
+  FlowNode,
+  FlowOption,
+  FlowSchema,
+  FormDefinition,
+  VerdictDef,
+  VerdictScoring,
+  VerdictTiming,
+} from '../../../lib/flowTypes';
 import { useToast } from '../../../context/ToastContext';
-import { Alert, Badge, Button, PageLoader } from '../../../components/ui';
+import { Alert, Badge, Button, Checkbox, Input, Modal, PageLoader, Radio, Select } from '../../../components/ui';
 import FlowCanvas from '../../../components/flowbuilder/FlowCanvas';
 import NodeEditorPanel from '../../../components/flowbuilder/NodeEditorPanel';
 import ValidationChip from '../../../components/flowbuilder/ValidationChip';
@@ -30,6 +45,40 @@ const spawnPosition = (schema: FlowSchema): { x: number; y: number } => {
   return { x: minX, y: maxY + 200 };
 };
 
+/**
+ * What the admin can hide from the learner. Order = display order in the panel.
+ * These affect DISPLAY ONLY — every answer is still collected and stored.
+ * Verdict timing is a three-way choice, so it lives in TIMING_OPTIONS below.
+ */
+type BooleanDisplayKey = Exclude<keyof FlowDisplaySettings, 'verdictTiming'>;
+
+const DISPLAY_TOGGLES: { key: BooleanDisplayKey; label: string; hint: string }[] = [
+  { key: 'helpText', label: 'Help text', hint: 'The guidance line under each question.' },
+  { key: 'questionMedia', label: 'Question images / GIFs', hint: 'Illustrations attached to a question. Turn off to save mobile data.' },
+  { key: 'optionMedia', label: 'Answer option images', hint: 'Pictures on the answer cards; they fall back to a letter tile.' },
+  { key: 'actions', label: 'Coaching actions', hint: 'Action cards on the assessment plan and their notifications. Negative answers still appear under “needs attention”.' },
+];
+
+const TIMING_OPTIONS: { value: VerdictTiming; label: string; hint: string }[] = [
+  {
+    value: 'after',
+    label: 'After submitting',
+    hint: 'Recommended. Feedback appears on the assessment plan, so seeing a verdict cannot change the answer given.',
+  },
+  {
+    value: 'during',
+    label: 'While answering',
+    hint: 'Training mode: instant feedback teaches, but the worker can change their answer after seeing it — which quietly biases the data.',
+  },
+  { value: 'never', label: 'Never', hint: 'Pure data collection — the worker never sees verdicts.' },
+];
+
+const SCORING_OPTIONS: { value: VerdictScoring; label: string }[] = [
+  { value: 'positive', label: 'Counts as good' },
+  { value: 'negative', label: 'Needs attention' },
+  { value: 'neutral', label: 'Not scored' },
+];
+
 /** The canvas decision-tree designer for flow forms (breastfeeding / CF). */
 const FlowBuilderPage: React.FC = () => {
   const { formKey } = useParams<{ formKey: string }>();
@@ -46,6 +95,7 @@ const FlowBuilderPage: React.FC = () => {
   const [connect, setConnect] = useState<ConnectRequest | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [displayOpen, setDisplayOpen] = useState(false);
 
   // The editor panel edits a single node — only when exactly one is selected.
   const selectedId = selectedIds.length === 1 ? selectedIds[0] : null;
@@ -74,6 +124,12 @@ const FlowBuilderPage: React.FC = () => {
 
   const issues = useMemo(() => validateFlow(schema), [schema]);
 
+  const display = useMemo(() => resolveDisplay(schema.display), [schema.display]);
+  const verdictDefs = useMemo(() => resolveVerdicts(schema.verdicts), [schema.verdicts]);
+  const hiddenCount =
+    DISPLAY_TOGGLES.filter(t => !display[t.key]).length +
+    (display.verdictTiming === 'never' ? 1 : 0);
+
   // ── Load ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!formKey || !isFlowFormKey(formKey)) return;
@@ -92,7 +148,12 @@ const FlowBuilderPage: React.FC = () => {
         setDescription(d.description ?? '');
         setSchema(
           s && typeof s === 'object' && s.nodes
-            ? { startNodeId: s.startNodeId ?? null, nodes: s.nodes }
+            ? {
+                startNodeId: s.startNodeId ?? null,
+                nodes: s.nodes,
+                display: resolveDisplay(s.display),
+                verdicts: resolveVerdicts(s.verdicts),
+              }
             : emptyFlowSchema(),
         );
         setSelectedIds([]);
@@ -137,6 +198,92 @@ const FlowBuilderPage: React.FC = () => {
     setSchema(next);
     setDirty(true);
   }, []);
+
+  /** Flip one learner-visibility switch (undoable + marks the form dirty). */
+  const toggleDisplay = useCallback(
+    (key: BooleanDisplayKey) =>
+      patchSchema(s => {
+        const current = resolveDisplay(s.display);
+        return { ...s, display: { ...current, [key]: !current[key] } };
+      }),
+    [patchSchema],
+  );
+
+  const setVerdictTiming = useCallback(
+    (timing: VerdictTiming) =>
+      patchSchema(s => ({ ...s, display: { ...resolveDisplay(s.display), verdictTiming: timing } })),
+    [patchSchema],
+  );
+
+  // ── Verdict vocabulary ────────────────────────────────────────────────────
+
+  const patchVerdicts = useCallback(
+    (fn: (defs: VerdictDef[]) => VerdictDef[]) =>
+      patchSchema(s => ({ ...s, verdicts: fn(resolveVerdicts(s.verdicts)) })),
+    [patchSchema],
+  );
+
+  const addVerdict = useCallback(
+    () =>
+      patchVerdicts(defs => {
+        // ids must be stable and unique — options store the id, not the label.
+        let n = defs.length + 1;
+        while (defs.some(d => d.id === `verdict_${n}`)) n += 1;
+        return [
+          ...defs,
+          { id: `verdict_${n}`, label: `Verdict ${n}`, color: '#6366f1', scoring: 'neutral' },
+        ];
+      }),
+    [patchVerdicts],
+  );
+
+  const editVerdict = useCallback(
+    (id: string, patch: Partial<Omit<VerdictDef, 'id'>>) =>
+      patchVerdicts(defs => defs.map(d => (d.id === id ? { ...d, ...patch } : d))),
+    [patchVerdicts],
+  );
+
+  /** How many options currently reference a verdict — shown before removing. */
+  const verdictUsage = useCallback(
+    (id: string) =>
+      Object.values(schema.nodes).reduce((total, node) => {
+        const questions: { options: FlowOption[] }[] =
+          node.kind === 'section' ? node.children : [node];
+        return (
+          total +
+          questions.reduce((n, q) => n + q.options.filter(o => o.verdict === id).length, 0)
+        );
+      }, 0),
+    [schema.nodes],
+  );
+
+  /**
+   * Remove a verdict and clear it from every option that used it (those become
+   * neutral). Done in one patch so a single undo restores both.
+   */
+  const removeVerdict = useCallback(
+    (id: string) =>
+      patchSchema(s => ({
+        ...s,
+        verdicts: resolveVerdicts(s.verdicts).filter(d => d.id !== id),
+        nodes: Object.fromEntries(
+          Object.entries(s.nodes).map(([nodeId, node]) => {
+            // Questions carry the options; a section carries child questions.
+            const clear = <T extends { options: FlowOption[] }>(q: T): T =>
+              q.options.some(o => o.verdict === id)
+                ? { ...q, options: q.options.map(o => (o.verdict === id ? { ...o, verdict: null } : o)) }
+                : q;
+            return [
+              nodeId,
+              node.kind === 'section'
+                ? { ...node, children: node.children.map(clear) }
+                : clear(node),
+            ];
+          }),
+        ) as Record<string, FlowNode>,
+      })),
+    [patchSchema],
+  );
 
   const undo = useCallback(() => {
     const prev = historyRef.current.pop();
@@ -529,6 +676,20 @@ const FlowBuilderPage: React.FC = () => {
           <Button size="sm" variant="outline" iconLeft={<Layers className="size-4" />} onClick={addSection}>
             Common section
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            iconLeft={<Eye className="size-4" />}
+            onClick={() => setDisplayOpen(true)}
+            title="Choose what learners see while filling this form"
+          >
+            Learner view
+            {hiddenCount > 0 && (
+              <Badge variant="warning" className="ml-1.5">
+                {hiddenCount} hidden
+              </Badge>
+            )}
+          </Button>
           <ValidationChip issues={issues} onSelectIssue={selectIssue} />
           {dirty && (
             <span
@@ -544,6 +705,146 @@ const FlowBuilderPage: React.FC = () => {
           </Button>
         </div>
       </header>
+
+      <Modal
+        open={displayOpen}
+        onClose={() => setDisplayOpen(false)}
+        title="What learners see"
+        size="md"
+        footer={
+          <Button onClick={() => setDisplayOpen(false)}>Done</Button>
+        }
+      >
+        <p className="text-sm text-ink-muted">
+          Hide parts of this form from the health worker filling it in. Every answer is still
+          collected and stored — this only changes what is shown on screen. Changes apply when you
+          save the form.
+        </p>
+        <div className="mt-4 flex flex-col gap-3">
+          {/* Checkbox renders its own <label>, so the row content goes in its
+              `label` slot — nesting it inside another <label> would be invalid. */}
+          {DISPLAY_TOGGLES.map(({ key, label, hint }) => (
+            <Checkbox
+              key={key}
+              checked={display[key]}
+              onChange={() => toggleDisplay(key)}
+              className="flex items-start gap-3 rounded-xl border border-border p-3.5 transition-colors hover:bg-surface-sunken"
+              label={
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-ink">{label}</span>
+                  <span className="mt-0.5 block text-xs text-ink-muted">{hint}</span>
+                </span>
+              }
+            />
+          ))}
+        </div>
+
+        {/* ── When verdicts are revealed ─────────────────────────────────── */}
+        <h4 className="mt-6 font-display text-sm font-bold text-ink">Show verdicts</h4>
+        <p className="mt-1 text-xs text-ink-muted">
+          A verdict tells the worker whether an answer was right. Reveal it too early and they can
+          simply change the answer — so the assessment records what they learned scores well, not
+          what actually happened.
+        </p>
+        <div className="mt-3 flex flex-col gap-2">
+          {TIMING_OPTIONS.map(({ value, label, hint }) => (
+            <Radio
+              key={value}
+              name="verdict-timing"
+              checked={display.verdictTiming === value}
+              onChange={() => setVerdictTiming(value)}
+              className="flex items-start gap-3 rounded-xl border border-border p-3.5 transition-colors hover:bg-surface-sunken"
+              label={
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-ink">{label}</span>
+                  <span className="mt-0.5 block text-xs text-ink-muted">{hint}</span>
+                </span>
+              }
+            />
+          ))}
+        </div>
+
+        {/* ── Verdict vocabulary ─────────────────────────────────────────── */}
+        <div className="mt-6 flex items-center justify-between gap-3">
+          <h4 className="font-display text-sm font-bold text-ink">Verdicts</h4>
+          <Button size="sm" variant="outline" iconLeft={<Plus className="size-3.5" />} onClick={addVerdict}>
+            Add verdict
+          </Button>
+        </div>
+        <p className="mt-1 text-xs text-ink-muted">
+          “Counts as good” and “Needs attention” drive the score and the assessment plan. “Not
+          scored” verdicts are labels only.
+        </p>
+        <div className="mt-3 flex flex-col gap-2">
+          {verdictDefs.map(def => {
+            const used = verdictUsage(def.id);
+            return (
+              <div key={def.id} className="rounded-xl border border-border p-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    aria-label={`${def.label} colour`}
+                    value={def.color}
+                    onChange={e => editVerdict(def.id, { color: e.target.value })}
+                    className="size-8 shrink-0 cursor-pointer rounded-md border border-border bg-surface p-0.5"
+                  />
+                  <Input
+                    value={def.label}
+                    onChange={e => editVerdict(def.id, { label: e.target.value })}
+                    placeholder="Verdict name"
+                    className="py-1.5 text-[13px]"
+                  />
+                  <button
+                    type="button"
+                    title={
+                      used > 0
+                        ? `Used by ${used} option(s) — removing clears them to Neutral`
+                        : 'Remove verdict'
+                    }
+                    onClick={() => {
+                      if (
+                        used > 0 &&
+                        !window.confirm(
+                          `“${def.label}” is used by ${used} answer option(s).\n\n` +
+                            'Removing it will set those options to Neutral. Continue?',
+                        )
+                      ) {
+                        return;
+                      }
+                      removeVerdict(def.id);
+                    }}
+                    className="flex size-7 shrink-0 items-center justify-center rounded-md text-ink-faint hover:bg-error-50 hover:text-error-500 cursor-pointer dark:hover:bg-error-500/10"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <Select
+                    value={def.scoring}
+                    onChange={e => editVerdict(def.id, { scoring: e.target.value as VerdictScoring })}
+                    className="py-1.5 text-[12px]"
+                  >
+                    {SCORING_OPTIONS.map(s => (
+                      <option key={s.value} value={s.value}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </Select>
+                  <span className="shrink-0 text-[11px] text-ink-faint">
+                    {used} option{used === 1 ? '' : 's'}
+                  </span>
+                </div>
+                {isBuiltinVerdict(def.id) && (
+                  <p className="mt-1.5 text-[11px] text-ink-faint">
+                    Built-in — its name stays translated for learners; the colour and scoring are
+                    yours to change.
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Modal>
 
       {/* Editor panel + canvas */}
       <div className="flex min-h-0 flex-1">

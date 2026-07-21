@@ -2,12 +2,14 @@ import React from 'react';
 import { Bell, Film, Info, Link2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge, Card } from '../ui';
-import type { TriggeredAction } from '../../lib/flowTypes';
+import type { TriggeredAction, VerdictDef } from '../../lib/flowTypes';
 import { formatTimestamp, resolveAssetUrl, youTubeEmbedUrl } from '../../lib/flowGraph';
 import VerdictChip from './VerdictChip';
 
 export interface ActionCardProps {
   item: TriggeredAction;
+  /** Resolved verdict definition for the answer that triggered this action. */
+  verdictDef?: VerdictDef | null;
   index: number;
 }
 
@@ -37,7 +39,7 @@ const Callout: React.FC<{ icon: React.ReactNode; children: React.ReactNode }> = 
  * One coaching to-do: the question, the answer that triggered it, its verdict,
  * and the attached action (message callout, YouTube clip, or uploaded video).
  */
-const ActionCard: React.FC<ActionCardProps> = ({ item, index }) => {
+const ActionCard: React.FC<ActionCardProps> = ({ item, index, verdictDef = null }) => {
   const { t } = useTranslation('assessments');
   const a = item.action;
 
@@ -116,7 +118,7 @@ const ActionCard: React.FC<ActionCardProps> = ({ item, index }) => {
       <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
         <span className="text-ink-muted">{t('plan.youChose')}</span>
         <span className="font-semibold text-ink">{item.optionLabel}</span>
-        <VerdictChip verdict={item.verdict} />
+        <VerdictChip def={verdictDef} />
       </div>
       {body}
     </Card>

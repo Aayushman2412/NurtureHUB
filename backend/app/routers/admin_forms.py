@@ -17,7 +17,7 @@ import uuid
 from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -67,7 +67,9 @@ class FlowOptionModel(BaseModel):
     id: str
     label: str = ""
     media: List[FlowMediaModel] = Field(default_factory=list)
-    verdict: Optional[Literal["green", "red"]] = None
+    # A VerdictDef id (`null` = no verdict). Not a Literal any more: a form may
+    # define its own verdicts. FlowSchemaModel checks the id actually exists.
+    verdict: Optional[str] = None
     action: FlowActionModel = Field(default_factory=FlowActionModel)
     next: Optional[str] = None
 
@@ -102,9 +104,66 @@ class FlowNodeModel(BaseModel):
     next: Optional[str] = None
 
 
+class FlowDisplayModel(BaseModel):
+    """Admin switches for what the learner sees. Display only — every answer is
+    still collected and stored. Absent keys fall back to these defaults."""
+    helpText: bool = True
+    questionMedia: bool = True
+    optionMedia: bool = True
+    # Default to feedback-after-submit: revealing a verdict while answering lets
+    # the worker change the answer once they see it, corrupting the record.
+    verdictTiming: Literal["during", "after", "never"] = "after"
+    actions: bool = True
+
+
+class VerdictDefModel(BaseModel):
+    """One entry in a form's verdict vocabulary.
+
+    `scoring` is what keeps the summary a stable {green, red, neutral} shape no
+    matter how many verdicts a form defines — see _snapshot_answers.
+    """
+    id: str
+    label: str = ""
+    color: str = "#6366f1"
+    scoring: Literal["positive", "negative", "neutral"] = "neutral"
+
+
+DEFAULT_VERDICTS: List[Dict[str, Any]] = [
+    {"id": "green", "label": "As per LAP", "color": "#10b981", "scoring": "positive"},
+    {"id": "red", "label": "Needs tutorial", "color": "#f43f5e", "scoring": "negative"},
+]
+
+
 class FlowSchemaModel(BaseModel):
     startNodeId: Optional[str] = None
     nodes: Dict[str, FlowNodeModel] = Field(default_factory=dict)
+    display: FlowDisplayModel = Field(default_factory=FlowDisplayModel)
+    verdicts: List[VerdictDefModel] = Field(
+        default_factory=lambda: [VerdictDefModel(**v) for v in DEFAULT_VERDICTS]
+    )
+
+    @model_validator(mode="after")
+    def _verdict_ids_resolve(self) -> "FlowSchemaModel":
+        """Every option's verdict must name a declared verdict.
+
+        Options store a verdict *id*, so a typo or a stale reference would
+        silently score as neutral. Rejecting it here keeps the definition and
+        its vocabulary consistent.
+        """
+        known = {v.id for v in self.verdicts}
+        dupes = len(known) != len(self.verdicts)
+        if dupes:
+            raise ValueError("verdict ids must be unique")
+        for node_id, node in self.nodes.items():
+            questions = node.children if node.kind == "section" else [node]
+            for q in questions:
+                for opt in q.options:
+                    if opt.verdict is not None and opt.verdict not in known:
+                        raise ValueError(
+                            f"nodes.{node_id}: option '{opt.id}' references "
+                            f"unknown verdict '{opt.verdict}'"
+                        )
+        return self
 
 
 class FlatFieldOptionModel(BaseModel):

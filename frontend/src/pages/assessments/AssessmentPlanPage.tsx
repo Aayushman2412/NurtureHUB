@@ -13,8 +13,15 @@ import {
 } from 'lucide-react';
 import { Alert, Badge, Button, Card, PageLoader, ProgressRing } from '../../components/ui';
 import { cn } from '../../utils/cn';
-import { getResponse } from '../../api/forms';
-import type { FormResponseDetail } from '../../lib/flowTypes';
+import { getFormDefinition, getResponse } from '../../api/forms';
+import type { FlowSchema, FormResponseDetail } from '../../lib/flowTypes';
+import {
+  DEFAULT_DISPLAY,
+  DEFAULT_VERDICTS,
+  findVerdict,
+  resolveDisplay,
+  resolveVerdicts,
+} from '../../lib/flowTypes';
 import ActionCard from '../../components/assessments/ActionCard';
 import ConfettiBurst from '../../components/assessments/ConfettiBurst';
 import { formatDisplayDate } from '../../components/assessments/flowRunner';
@@ -29,14 +36,31 @@ const AssessmentPlanPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [doingWellOpen, setDoingWellOpen] = useState(false);
+  const [display, setDisplay] = useState(DEFAULT_DISPLAY);
+  const [verdictDefs, setVerdictDefs] = useState(DEFAULT_VERDICTS);
+  const showActions = display.actions;
+  /** The plan is post-submission, so only 'never' hides verdicts here. */
+  const showVerdicts = display.verdictTiming !== 'never';
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setLoadError(false);
     getResponse(id)
-      .then(r => {
-        if (!cancelled) setResp(r);
+      .then(async r => {
+        if (cancelled) return;
+        setResp(r);
+        // The admin's learner-visibility switches live on the form definition.
+        // A failure here must not break the plan — fall back to showing everything.
+        try {
+          const def = await getFormDefinition(r.form_key);
+          if (cancelled) return;
+          const s = def.schema_json as FlowSchema;
+          setDisplay(resolveDisplay(s?.display));
+          setVerdictDefs(resolveVerdicts(s?.verdicts));
+        } catch {
+          /* keep the defaults */
+        }
       })
       .catch(() => {
         if (!cancelled) setLoadError(true);
@@ -49,23 +73,30 @@ const AssessmentPlanPage: React.FC = () => {
     };
   }, [id]);
 
-  // Green answers ("doing well") and red answers with NO attached action.
+  // Green answers ("doing well") and red answers with NO attached action —
+  // the actioned ones render as ActionCards instead. When the admin has hidden
+  // actions there are no such cards, so every red answer falls back to here
+  // rather than disappearing from the plan entirely.
   const { doingWell, reviewItems } = useMemo(() => {
     const well: { key: string; question: string; labels: string[] }[] = [];
     const review: { key: string; question: string; label: string }[] = [];
+    // Score by the verdict's polarity, not its id — a form may define its own
+    // verdicts, and only `scoring` says which side of the ledger they fall on.
+    const scoringOf = (v: string | null) => findVerdict(verdictDefs, v)?.scoring ?? 'neutral';
     for (const ans of resp?.answers_json ?? []) {
-      const greens = ans.selected.filter(s => s.verdict === 'green');
-      if (greens.length > 0) {
-        well.push({ key: ans.nodeId, question: ans.question, labels: greens.map(s => s.label) });
+      const positives = ans.selected.filter(s => scoringOf(s.verdict) === 'positive');
+      if (positives.length > 0) {
+        well.push({ key: ans.nodeId, question: ans.question, labels: positives.map(s => s.label) });
       }
       for (const sel of ans.selected) {
-        if (sel.verdict === 'red' && sel.action.type === 'none') {
+        const negative = scoringOf(sel.verdict) === 'negative';
+        if (negative && (!showActions || sel.action.type === 'none')) {
           review.push({ key: `${ans.nodeId}-${sel.optionId}`, question: ans.question, label: sel.label });
         }
       }
     }
     return { doingWell: well, reviewItems: review };
-  }, [resp]);
+  }, [resp, showActions, verdictDefs]);
 
   if (loading) return <PageLoader label={t('plan.loading')} className="min-h-60" />;
 
@@ -88,7 +119,8 @@ const AssessmentPlanPage: React.FC = () => {
   const denom = summary.green + summary.red;
   const pct = denom > 0 ? (summary.green / denom) * 100 : 100;
   const allGreen = summary.red === 0 && summary.green > 0;
-  const actions = resp.actions_json ?? [];
+  // Admin can hide coaching actions from the learner; the data is still stored.
+  const actions = showActions ? (resp.actions_json ?? []) : [];
   const isDraft = resp.status === 'draft';
 
   const historyUrl = `/mothers/${resp.mother_id}/children/${resp.child_id}/assessments/${resp.form_key}`;
@@ -169,7 +201,12 @@ const AssessmentPlanPage: React.FC = () => {
           <p className="mt-1 text-sm text-ink-muted">{t('plan.needsAttentionSub')}</p>
           <div className="mt-4 flex flex-col gap-4">
             {actions.map((a, i) => (
-              <ActionCard key={`${a.nodeId}-${a.optionId}-${i}`} item={a} index={i} />
+              <ActionCard
+                key={`${a.nodeId}-${a.optionId}-${i}`}
+                item={a}
+                index={i}
+                verdictDef={showVerdicts ? findVerdict(verdictDefs, a.verdict) : null}
+              />
             ))}
           </div>
         </section>

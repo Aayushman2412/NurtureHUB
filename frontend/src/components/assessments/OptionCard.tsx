@@ -1,7 +1,7 @@
 import React from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import type { FlowOption } from '../../lib/flowTypes';
+import type { FlowOption, VerdictDef } from '../../lib/flowTypes';
 import { resolveAssetUrl } from '../../lib/flowGraph';
 import VerdictChip from './VerdictChip';
 
@@ -9,6 +9,13 @@ export interface OptionCardProps {
   option: FlowOption;
   selected: boolean;
   onToggle: () => void;
+  /** Admin switch: show the option's image (falls back to the letter tile). */
+  showMedia?: boolean;
+  /**
+   * The resolved verdict definition to reveal on selection, or null to reveal
+   * nothing (verdict timing is 'after'/'never', or the option has no verdict).
+   */
+  verdictDef?: VerdictDef | null;
 }
 
 /**
@@ -16,8 +23,14 @@ export interface OptionCardProps {
  * letter tile when there is none — label below, ring + check when selected,
  * and a soft verdict chip revealed after selection.
  */
-const OptionCard: React.FC<OptionCardProps> = ({ option, selected, onToggle }) => {
-  const media = option.media[0];
+const OptionCard: React.FC<OptionCardProps> = ({
+  option,
+  selected,
+  onToggle,
+  showMedia = true,
+  verdictDef = null,
+}) => {
+  const media = showMedia ? option.media[0] : undefined;
   const initial = (option.label.trim()[0] ?? '?').toUpperCase();
 
   return (
@@ -54,7 +67,9 @@ const OptionCard: React.FC<OptionCardProps> = ({ option, selected, onToggle }) =
 
       <div className="flex flex-1 flex-col items-start gap-1.5 p-3">
         <span className="text-sm font-semibold leading-snug text-ink">{option.label}</span>
-        {selected && <VerdictChip verdict={option.verdict} className="animate-fade-in" />}
+        {selected && verdictDef && (
+          <VerdictChip def={verdictDef} className="animate-fade-in" />
+        )}
       </div>
 
       {/* selection check */}
