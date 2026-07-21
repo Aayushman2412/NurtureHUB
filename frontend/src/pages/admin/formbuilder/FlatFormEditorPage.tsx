@@ -38,7 +38,9 @@ import { inputClasses } from '../../../components/ui/Input';
 import { cn } from '../../../utils/cn';
 import { useDirtyGuard } from '../../../components/flowbuilder/useDirtyGuard';
 
-const FIELD_TYPE_VALUES: FlatField['type'][] = ['text', 'number', 'date', 'dropdown', 'radio', 'textarea'];
+const FIELD_TYPE_VALUES: FlatField['type'][] = [
+  'text', 'number', 'date', 'dropdown', 'radio', 'textarea', 'checkbox', 'image',
+];
 
 const TYPE_ICONS: Record<FlatField['type'], string> = {
   text: '📝',
@@ -47,6 +49,8 @@ const TYPE_ICONS: Record<FlatField['type'], string> = {
   dropdown: '📋',
   radio: '🔘',
   textarea: '📄',
+  checkbox: '☑️',
+  image: '🖼️',
 };
 
 const emptyNewField = (): FlatField => ({
