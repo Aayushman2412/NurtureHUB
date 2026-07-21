@@ -24,7 +24,13 @@ cd backend && venv/bin/uvicorn app.main:app --reload --port 8000
 cd frontend && npm install && npm run dev
 ```
 
-Type-check / lint the frontend: `cd frontend && npx tsc --noEmit` and `npm run lint`.
+Type-check / lint the frontend: `cd frontend && npx tsc -b` and `npm run lint`.
+
+> **Use `tsc -b`, never `tsc --noEmit`.** The root `tsconfig.json` is a solution-style
+> config (`"files": []` plus `references`), so `tsc --noEmit` type-checks **zero files**
+> and always exits 0 — it will happily pass on code that fails the real build. `tsc -b`
+> is what `npm run build` runs. Before anything that produces a build artifact (a Docker
+> image, a deploy), run the real thing: `npm run build`.
 
 ## Database migrations — Alembic (IMPORTANT)
 
