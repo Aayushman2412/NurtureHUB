@@ -377,13 +377,24 @@ def _notify_on_submit(
 ) -> None:
     """One summary notification + one per coaching action (capped).
 
-    The per-action notifications are suppressed when the admin has switched
-    coaching actions off for this form (`schema_json.display.actions == false`),
-    so a learner is not notified about actions the app never shows them. The
-    summary notification is always sent, and `actions_json` is still stored.
+    Per-action notifications are suppressed for questions whose coaching
+    actions are hidden — either form-wide (`schema_json.display.actions`) or by
+    the question's own override (`question.display.actions`) — so a learner is
+    never notified about an action the app will not show them. The summary
+    notification is always sent, and `actions_json` is still stored.
     """
-    display = (definition.schema_json or {}).get("display") or {}
-    show_actions = display.get("actions", True)
+    schema = definition.schema_json or {}
+    default_actions = ((schema.get("display") or {}).get("actions", True))
+    actions_visible: Dict[str, bool] = {}
+    for node in (schema.get("nodes") or {}).values():
+        if not isinstance(node, dict):
+            continue
+        questions = node.get("children") or [] if node.get("kind") == "section" else [node]
+        for q in questions:
+            if not isinstance(q, dict) or not q.get("id"):
+                continue
+            override = (q.get("display") or {}).get("actions")
+            actions_visible[q["id"]] = default_actions if override is None else bool(override)
 
     db.add(models.Notification(
         user_id=user.id,
@@ -393,7 +404,8 @@ def _notify_on_submit(
             "Open the assessment plan to see the recommended actions."
         ),
     ))
-    for item in (actions[:MAX_ACTION_NOTIFICATIONS] if show_actions else []):
+    visible = [a for a in actions if actions_visible.get(a.get("nodeId"), default_actions)]
+    for item in visible[:MAX_ACTION_NOTIFICATIONS]:
         action = item.get("action") or {}
         action_type = action.get("type")
         if action_type in ("notify", "info"):

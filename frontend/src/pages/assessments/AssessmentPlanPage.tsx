@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -14,12 +14,13 @@ import {
 import { Alert, Badge, Button, Card, PageLoader, ProgressRing } from '../../components/ui';
 import { cn } from '../../utils/cn';
 import { getFormDefinition, getResponse } from '../../api/forms';
-import type { FlowSchema, FormResponseDetail } from '../../lib/flowTypes';
+import type { FlowSchema, FormResponseDetail, QuestionDisplayOverride } from '../../lib/flowTypes';
 import {
   DEFAULT_DISPLAY,
   DEFAULT_VERDICTS,
   findVerdict,
   resolveDisplay,
+  resolveQuestionDisplay,
   resolveVerdicts,
 } from '../../lib/flowTypes';
 import ActionCard from '../../components/assessments/ActionCard';
@@ -38,9 +39,14 @@ const AssessmentPlanPage: React.FC = () => {
   const [doingWellOpen, setDoingWellOpen] = useState(false);
   const [display, setDisplay] = useState(DEFAULT_DISPLAY);
   const [verdictDefs, setVerdictDefs] = useState(DEFAULT_VERDICTS);
-  const showActions = display.actions;
-  /** The plan is post-submission, so only 'never' hides verdicts here. */
-  const showVerdicts = display.verdictTiming !== 'never';
+  /** questionId -> that question's display override (from the definition). */
+  const [overrides, setOverrides] = useState<Record<string, QuestionDisplayOverride>>({});
+
+  /** Effective settings for one answered question (form defaults + override). */
+  const displayFor = useCallback(
+    (nodeId: string) => resolveQuestionDisplay(display, overrides[nodeId]),
+    [display, overrides],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -58,6 +64,12 @@ const AssessmentPlanPage: React.FC = () => {
           const s = def.schema_json as FlowSchema;
           setDisplay(resolveDisplay(s?.display));
           setVerdictDefs(resolveVerdicts(s?.verdicts));
+          const map: Record<string, QuestionDisplayOverride> = {};
+          for (const node of Object.values(s?.nodes ?? {})) {
+            const qs = node.kind === 'section' ? node.children : [node];
+            for (const q of qs) if (q.display) map[q.id] = q.display;
+          }
+          setOverrides(map);
         } catch {
           /* keep the defaults */
         }
@@ -90,13 +102,13 @@ const AssessmentPlanPage: React.FC = () => {
       }
       for (const sel of ans.selected) {
         const negative = scoringOf(sel.verdict) === 'negative';
-        if (negative && (!showActions || sel.action.type === 'none')) {
+        if (negative && (!displayFor(ans.nodeId).actions || sel.action.type === 'none')) {
           review.push({ key: `${ans.nodeId}-${sel.optionId}`, question: ans.question, label: sel.label });
         }
       }
     }
     return { doingWell: well, reviewItems: review };
-  }, [resp, showActions, verdictDefs]);
+  }, [resp, displayFor, verdictDefs]);
 
   if (loading) return <PageLoader label={t('plan.loading')} className="min-h-60" />;
 
@@ -119,8 +131,8 @@ const AssessmentPlanPage: React.FC = () => {
   const denom = summary.green + summary.red;
   const pct = denom > 0 ? (summary.green / denom) * 100 : 100;
   const allGreen = summary.red === 0 && summary.green > 0;
-  // Admin can hide coaching actions from the learner; the data is still stored.
-  const actions = showActions ? (resp.actions_json ?? []) : [];
+  // Admin can hide coaching actions form-wide or per question; still stored.
+  const actions = (resp.actions_json ?? []).filter(a => displayFor(a.nodeId).actions);
   const isDraft = resp.status === 'draft';
 
   const historyUrl = `/mothers/${resp.mother_id}/children/${resp.child_id}/assessments/${resp.form_key}`;
@@ -205,7 +217,11 @@ const AssessmentPlanPage: React.FC = () => {
                 key={`${a.nodeId}-${a.optionId}-${i}`}
                 item={a}
                 index={i}
-                verdictDef={showVerdicts ? findVerdict(verdictDefs, a.verdict) : null}
+                verdictDef={
+                  displayFor(a.nodeId).verdictTiming !== 'never'
+                    ? findVerdict(verdictDefs, a.verdict)
+                    : null
+                }
               />
             ))}
           </div>

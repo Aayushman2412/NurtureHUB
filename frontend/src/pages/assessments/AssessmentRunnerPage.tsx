@@ -22,6 +22,7 @@ import {
   findVerdict,
   isFlowFormKey,
   resolveDisplay,
+  resolveQuestionDisplay,
   resolveVerdicts,
 } from '../../lib/flowTypes';
 import { flattenAnswerable, resolveAssetUrl } from '../../lib/flowGraph';
@@ -332,6 +333,8 @@ const AssessmentRunnerPage: React.FC = () => {
   }
 
   const q = current.question;
+  /** Form defaults overlaid with this question's own overrides. */
+  const qDisplay = resolveQuestionDisplay(display, q.display);
   const answer = answers[current.id];
   const selectedIds = answer?.optionIds ?? [];
   const canProceed = !q.required || isAnswered(q, answer);
@@ -393,13 +396,13 @@ const AssessmentRunnerPage: React.FC = () => {
             <h2 className="text-balance text-center font-display text-xl font-bold text-ink sm:text-2xl">
               {q.title}
             </h2>
-            {display.helpText && q.helpText && (
+            {qDisplay.helpText && q.helpText && (
               <p className="mt-2 text-center text-sm text-ink-muted">{q.helpText}</p>
             )}
             {!q.required && (
               <p className="mt-2 text-center text-xs text-ink-faint">{t('runner.optionalHint')}</p>
             )}
-            {display.questionMedia && (q.media?.length ?? 0) > 0 && (
+            {qDisplay.questionMedia && (q.media?.length ?? 0) > 0 && (
               <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
                 {q.media!.map((m, i) => (
                   <img
@@ -451,9 +454,9 @@ const AssessmentRunnerPage: React.FC = () => {
                         option={o}
                         selected={selectedIds.includes(o.id)}
                         onToggle={() => toggleOption(current, o.id)}
-                        showMedia={display.optionMedia}
+                        showMedia={qDisplay.optionMedia}
                         verdictDef={
-                          display.verdictTiming === 'during'
+                          qDisplay.verdictTiming === 'during'
                             ? findVerdict(verdictDefs, o.verdict)
                             : null
                         }

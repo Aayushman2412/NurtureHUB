@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import type {
+  FlowDisplaySettings,
   FlowQuestionNode,
   FlowSectionChild,
+  QuestionDisplayOverride,
   QuestionType,
   VerdictDef,
+  VerdictTiming,
 } from '../../lib/flowTypes';
 import { Checkbox, FieldLabel, Input, Select } from '../ui';
 import { inputClasses } from '../ui/Input';
@@ -19,6 +22,8 @@ export interface QuestionEditorProps {
   question: FlowQuestionNode | FlowSectionChild;
   /** The form's verdict vocabulary, for the per-option verdict picker. */
   verdictDefs: VerdictDef[];
+  /** The form-level learner-view defaults this question can override. */
+  formDisplay: FlowDisplaySettings;
   /** False for common-section children (no branching there). */
   allowBranching: boolean;
   branchTargets?: TargetOption[];
@@ -36,6 +41,7 @@ const QUESTION_TYPES = Object.entries(QUESTION_TYPE_LABELS) as [QuestionType, st
 const QuestionEditor: React.FC<QuestionEditorProps> = ({
   question,
   verdictDefs,
+  formDisplay,
   allowBranching,
   branchTargets = [],
   connectingOptionId,
@@ -46,6 +52,44 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
   const [expandedOptionId, setExpandedOptionId] = useState<string | null>(null);
   const hasOptions = question.questionType === 'single' || question.questionType === 'multi';
   const branchable = allowBranching && question.questionType === 'single';
+
+  // ── Per-question learner-view overrides ────────────────────────────────────
+  // Unset keys inherit the form default; a cleared select removes its key so
+  // the schema stays free of no-op overrides.
+  const override: QuestionDisplayOverride = question.display ?? {};
+  const overrideCount = (Object.keys(override) as (keyof QuestionDisplayOverride)[]).filter(
+    k => override[k] != null,
+  ).length;
+
+  const setOverride = (patch: QuestionDisplayOverride) => {
+    const next: QuestionDisplayOverride = { ...override, ...patch };
+    (Object.keys(next) as (keyof QuestionDisplayOverride)[]).forEach(k => {
+      if (next[k] == null) delete next[k];
+    });
+    onPatch({ display: Object.keys(next).length > 0 ? next : undefined });
+  };
+
+  type BoolOverrideKey = 'helpText' | 'questionMedia' | 'optionMedia' | 'actions';
+  const boolOverrideSelect = (key: BoolOverrideKey, ariaLabel: string) => (
+    <Select
+      aria-label={ariaLabel}
+      className="py-1.5 text-[12px]"
+      value={override[key] == null ? '' : override[key] ? 'show' : 'hide'}
+      onChange={e =>
+        setOverride({ [key]: e.target.value === '' ? null : e.target.value === 'show' })
+      }
+    >
+      <option value="">Form default ({formDisplay[key] ? 'shown' : 'hidden'})</option>
+      <option value="show">Show</option>
+      <option value="hide">Hide</option>
+    </Select>
+  );
+
+  const TIMING_LABELS: Record<VerdictTiming, string> = {
+    during: 'While answering',
+    after: 'After submitting',
+    never: 'Never',
+  };
 
   const changeType = (value: string) => {
     const questionType = value as QuestionType;
@@ -137,6 +181,63 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
           checked={question.required}
           onChange={e => onPatch({ required: e.target.checked })}
         />
+      </div>
+
+      {/* Per-question learner-view overrides (defaults live in the toolbar's
+          "Learner view" panel; a row left on "Form default" inherits it). */}
+      <div className="rounded-lg border border-border p-3">
+        <div className="flex items-baseline justify-between">
+          <FieldLabel size="sm" className="mb-0">
+            Learner view — this question
+          </FieldLabel>
+          <span className="text-[11px] text-ink-faint">
+            {overrideCount > 0 ? `${overrideCount} override${overrideCount === 1 ? '' : 's'}` : 'form defaults'}
+          </span>
+        </div>
+        <div className="mt-2 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[12px] text-ink-muted">Help text</span>
+            <div className="w-44 shrink-0">{boolOverrideSelect('helpText', 'Help text visibility')}</div>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[12px] text-ink-muted">Question images</span>
+            <div className="w-44 shrink-0">{boolOverrideSelect('questionMedia', 'Question images visibility')}</div>
+          </div>
+          {hasOptions && (
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[12px] text-ink-muted">Option images</span>
+              <div className="w-44 shrink-0">{boolOverrideSelect('optionMedia', 'Option images visibility')}</div>
+            </div>
+          )}
+          {hasOptions && (
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[12px] text-ink-muted">Verdicts</span>
+              <div className="w-44 shrink-0">
+                <Select
+                  aria-label="Verdict visibility"
+                  className="py-1.5 text-[12px]"
+                  value={override.verdictTiming ?? ''}
+                  onChange={e =>
+                    setOverride({
+                      verdictTiming: e.target.value === '' ? null : (e.target.value as VerdictTiming),
+                    })
+                  }
+                >
+                  <option value="">Form default ({TIMING_LABELS[formDisplay.verdictTiming]})</option>
+                  <option value="during">While answering</option>
+                  <option value="after">After submitting</option>
+                  <option value="never">Never</option>
+                </Select>
+              </div>
+            </div>
+          )}
+          {hasOptions && (
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[12px] text-ink-muted">Coaching actions</span>
+              <div className="w-44 shrink-0">{boolOverrideSelect('actions', 'Coaching actions visibility')}</div>
+            </div>
+          )}
+        </div>
       </div>
 
       {defaultNextSlot}
