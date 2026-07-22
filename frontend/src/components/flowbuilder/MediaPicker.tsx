@@ -87,7 +87,7 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ media, onChange, label = 'Ima
           onClick={() => fileRef.current?.click()}
           className={cn(
             tileBtn,
-            'border-border-strong/70 text-ink-faint hover:border-primary hover:text-primary',
+            'border-border-strong/70 text-ink-faint hover:border-primary hover:text-primary-ink',
             uploading && 'pointer-events-none opacity-70',
           )}
         >
@@ -100,8 +100,8 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ media, onChange, label = 'Ima
           className={cn(
             tileBtn,
             showUrlRow
-              ? 'border-primary text-primary'
-              : 'border-border-strong/70 text-ink-faint hover:border-primary hover:text-primary',
+              ? 'border-primary text-primary-ink'
+              : 'border-border-strong/70 text-ink-faint hover:border-primary hover:text-primary-ink',
           )}
         >
           <Link2 className="size-4.5" />
@@ -120,7 +120,7 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ media, onChange, label = 'Ima
             type="button"
             title="Add image URL"
             onClick={addUrl}
-            className="flex size-9.5 shrink-0 items-center justify-center rounded-lg border border-border-strong/60 text-ink-muted hover:border-primary hover:text-primary cursor-pointer"
+            className="flex size-9.5 shrink-0 items-center justify-center rounded-lg border border-border-strong/60 text-ink-muted hover:border-primary hover:text-primary-ink cursor-pointer"
           >
             <Plus className="size-4" />
           </button>

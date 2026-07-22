@@ -121,7 +121,7 @@ const AdminDashboardPage: React.FC = () => {
                 <p className="text-sm text-ink-muted">{action.desc}</p>
               </div>
             </div>
-            <ArrowRight className="size-5 shrink-0 text-primary" />
+            <ArrowRight className="size-5 shrink-0 text-primary-ink" />
           </Card>
         ))}
       </div>

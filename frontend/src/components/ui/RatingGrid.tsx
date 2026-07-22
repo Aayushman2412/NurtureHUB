@@ -54,7 +54,7 @@ const RatingGrid: React.FC<RatingGridProps> = ({
                 'disabled:cursor-not-allowed disabled:opacity-60',
                 selected
                   ? 'border-primary bg-primary text-primary-fg font-semibold'
-                  : 'border-border-strong/60 text-ink-muted hover:border-primary hover:text-primary',
+                  : 'border-border-strong/60 text-ink-muted hover:border-primary hover:text-primary-ink',
               )}
             >
               {n}

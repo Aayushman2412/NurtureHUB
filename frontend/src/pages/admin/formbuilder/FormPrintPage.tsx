@@ -187,7 +187,7 @@ const InfoBlock: React.FC<{ node: FlowInfoNode; label: string }> = ({ node, labe
     <div className="break-inside-avoid rounded-2xl border border-primary/25 bg-coral-50/40 p-5 dark:bg-coral-500/5">
       <div className="mb-1.5 flex flex-wrap items-center gap-2">
         <Badge variant="coral">{label}</Badge>
-        <span className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-primary">
+        <span className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-primary-ink">
           <Info className="size-3.5" /> Info — no answer collected
         </span>
       </div>
@@ -438,7 +438,7 @@ const FormPrintPage: React.FC = () => {
       <main className="mx-auto max-w-3xl px-5 py-8">
         {/* Cover */}
         <div className="mb-7 border-b-2 border-primary/60 pb-5">
-          <p className="text-xs font-bold uppercase tracking-widest text-primary">
+          <p className="text-xs font-bold uppercase tracking-widest text-primary-ink">
             NurtureHUB — questionnaire preview
           </p>
           <h1 className="mt-1 font-display text-3xl font-extrabold text-ink">{def.title}</h1>

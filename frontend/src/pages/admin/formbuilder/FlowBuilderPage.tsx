@@ -922,7 +922,7 @@ const FlowBuilderPage: React.FC = () => {
           {selectedIds.length > 1 ? (
             <div className="space-y-4 p-4">
               <div className="flex items-center gap-2">
-                <span className="flex size-9 items-center justify-center rounded-lg bg-coral-50 text-primary dark:bg-coral-500/10">
+                <span className="flex size-9 items-center justify-center rounded-lg bg-coral-50 text-primary-ink dark:bg-coral-500/10">
                   <BoxSelect className="size-4.5" />
                 </span>
                 <div>

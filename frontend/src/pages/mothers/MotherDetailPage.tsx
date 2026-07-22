@@ -101,7 +101,7 @@ const MotherDetailPage: React.FC = () => {
                              transition-colors hover:bg-surface-sunken focus-visible:outline-none
                              focus-visible:ring-2 focus-visible:ring-primary/40"
                 >
-                  <span className="flex size-9 items-center justify-center rounded-lg bg-coral-50 text-primary dark:bg-coral-500/10">
+                  <span className="flex size-9 items-center justify-center rounded-lg bg-coral-50 text-primary-ink dark:bg-coral-500/10">
                     <Baby className="size-4.5" />
                   </span>
                   <div className="min-w-0 flex-1">

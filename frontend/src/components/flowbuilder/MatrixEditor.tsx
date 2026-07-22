@@ -241,7 +241,7 @@ const MatrixEditor: React.FC<MatrixEditorProps> = ({ node, onPatch }) => {
         <button
           type="button"
           onClick={() => setColumns([...node.columns, makeMatrixColumn('', 'dropdown')])}
-          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border-strong/70 py-2 text-sm font-semibold text-ink-muted transition-colors hover:border-primary hover:text-primary cursor-pointer"
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border-strong/70 py-2 text-sm font-semibold text-ink-muted transition-colors hover:border-primary hover:text-primary-ink cursor-pointer"
         >
           <Plus className="size-4" /> Add column
         </button>

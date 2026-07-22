@@ -186,7 +186,7 @@ const TutorialPlayerPage: React.FC = () => {
 
           <Card className="p-6">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-primary">
+              <span className="text-xs font-bold uppercase tracking-wider text-primary-ink">
                 {currentTutorial.module_number} • {t('player.videoLesson')}
               </span>
               <div className="flex items-center gap-2">
@@ -211,7 +211,7 @@ const TutorialPlayerPage: React.FC = () => {
                 <Clock className="size-3.5" /> {t('player.durationMins', { minutes: currentTutorial.duration_minutes })}
               </span>
               <span className="hidden sm:inline">•</span>
-              <span className="font-semibold text-primary">
+              <span className="font-semibold text-primary-ink">
                 {t('player.watchNote')}
               </span>
             </div>
@@ -242,7 +242,7 @@ const TutorialPlayerPage: React.FC = () => {
                           className={cn(
                             'flex w-full items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors',
                             isPlaying
-                              ? 'border-primary/40 bg-coral-50 text-primary dark:bg-coral-500/10'
+                              ? 'border-primary/40 bg-coral-50 text-primary-ink dark:bg-coral-500/10'
                               : 'border-transparent text-ink hover:bg-surface-sunken',
                           )}
                         >
@@ -266,7 +266,7 @@ const TutorialPlayerPage: React.FC = () => {
 
                           <div className="min-w-0 flex-1">
                             <span className="block truncate text-[13px] font-semibold">{tut.title}</span>
-                            <span className={cn('text-[11px]', isPlaying ? 'text-primary' : 'text-ink-faint')}>
+                            <span className={cn('text-[11px]', isPlaying ? 'text-primary-ink' : 'text-ink-faint')}>
                               {t('player.watchStat', {
                                 minutes: tut.duration_minutes,
                                 pct: Math.round(tut.watch_pct || 0),

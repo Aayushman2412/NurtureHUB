@@ -364,7 +364,7 @@ const AdminResultsPage: React.FC = () => {
       <PageHeader
         title={
           <span className="inline-flex items-center gap-2">
-            <GraduationCap className="size-5 text-primary" />
+            <GraduationCap className="size-5 text-primary-ink" />
             {t('f2f.title')}
           </span>
         }

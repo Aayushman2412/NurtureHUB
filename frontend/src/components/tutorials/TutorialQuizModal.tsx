@@ -90,7 +90,7 @@ const TutorialQuizModal: React.FC<TutorialQuizModalProps> = ({
       onClose={handleSkip}
       title={
         <span className="flex items-center gap-2">
-          <HelpCircle className="size-5 text-primary" /> {t('quiz.title')}
+          <HelpCircle className="size-5 text-primary-ink" /> {t('quiz.title')}
         </span>
       }
       footer={
@@ -148,7 +148,7 @@ const TutorialQuizModal: React.FC<TutorialQuizModalProps> = ({
                             : 'border-border bg-surface text-ink hover:bg-surface-sunken'
                         )}
                       >
-                        <span className={cn('min-w-4 font-bold', selected ? 'text-primary' : 'text-ink-faint')}>
+                        <span className={cn('min-w-4 font-bold', selected ? 'text-primary-ink' : 'text-ink-faint')}>
                           {opt.label}
                         </span>
                         <span>{opt.text}</span>

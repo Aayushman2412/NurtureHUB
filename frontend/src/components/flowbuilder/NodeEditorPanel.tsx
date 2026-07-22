@@ -61,7 +61,7 @@ const PanelHeader: React.FC<{
       ) : kind === 'matrix' ? (
         <Table className="size-4 text-amber-600" />
       ) : (
-        <CircleHelp className="size-4 text-primary" />
+        <CircleHelp className="size-4 text-primary-ink" />
       )}
       <h3 className="font-display text-sm font-bold text-ink">{label}</h3>
     </div>
@@ -364,7 +364,7 @@ const SectionPanel: React.FC<{
           <button
             type="button"
             onClick={addChild}
-            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border-strong/70 py-2 text-sm font-semibold text-ink-muted transition-colors hover:border-primary hover:text-primary cursor-pointer"
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border-strong/70 py-2 text-sm font-semibold text-ink-muted transition-colors hover:border-primary hover:text-primary-ink cursor-pointer"
           >
             <Plus className="size-4" /> Add question
           </button>

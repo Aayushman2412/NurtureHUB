@@ -63,7 +63,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   cn(
                     'flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold transition-colors',
                     isActive
-                      ? 'bg-coral-50 text-primary dark:bg-coral-500/10'
+                      ? 'bg-coral-50 text-primary-ink dark:bg-coral-500/10'
                       : 'text-ink-muted hover:bg-surface-sunken hover:text-ink',
                   )
                 }

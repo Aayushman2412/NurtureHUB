@@ -208,7 +208,7 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
                 type="button"
                 disabled={disabled || uploading}
                 onClick={() => fileRef.current?.click()}
-                className="flex w-fit cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border px-4 py-3 text-sm font-semibold text-ink-muted transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex w-fit cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border px-4 py-3 text-sm font-semibold text-ink-muted transition-colors hover:border-primary hover:text-primary-ink disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {uploading ? (
                   <Loader2 className="size-4 animate-spin" />

@@ -44,7 +44,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) =>
               </span>
               <div>
                 <span className="block font-display text-2xl font-extrabold">{t('common:brand.name')}</span>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-primary-ink">
                   {t('common:brand.tagline')}
                 </span>
               </div>

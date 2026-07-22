@@ -565,7 +565,7 @@ const AdminTestsPage: React.FC = () => {
           <Input type="datetime-local" value={scheduleValue} onChange={e => setScheduleValue(e.target.value)} />
         </div>
         {scheduleValue && (
-          <p className="mt-2 mb-0 text-sm text-primary">
+          <p className="mt-2 mb-0 text-sm text-primary-ink">
             {t('scheduleModal.preview', { date: new Date(scheduleValue).toLocaleString() })}
           </p>
         )}

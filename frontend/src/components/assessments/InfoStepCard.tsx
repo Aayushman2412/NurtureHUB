@@ -39,7 +39,7 @@ const InfoStepCard: React.FC<InfoStepCardProps> = ({ node }) => {
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-2 text-primary">
+      <div className="mb-4 flex items-center gap-2 text-primary-ink">
         <Info className="size-5" aria-hidden />
         <span className="text-[11px] font-bold uppercase tracking-wider">{t('runner.infoBadge')}</span>
       </div>
@@ -102,7 +102,7 @@ const InfoStepCard: React.FC<InfoStepCardProps> = ({ node }) => {
 
       {(a.type === 'notify' || a.type === 'info') && a.message.trim() && (
         <div className="mt-4 flex gap-3 rounded-lg bg-coral-50 px-4 py-3 dark:bg-coral-500/10">
-          <span className="mt-0.5 shrink-0 text-primary" aria-hidden>
+          <span className="mt-0.5 shrink-0 text-primary-ink" aria-hidden>
             {a.type === 'notify' ? <Bell className="size-4.5" /> : <Info className="size-4.5" />}
           </span>
           <p className="text-sm leading-relaxed text-ink">{a.message}</p>
@@ -111,14 +111,14 @@ const InfoStepCard: React.FC<InfoStepCardProps> = ({ node }) => {
 
       {a.type === 'youtube' && !embed && isSafeHttpUrl(a.url) && (
         <div className="mt-4 flex gap-3 rounded-lg bg-coral-50 px-4 py-3 dark:bg-coral-500/10">
-          <span className="mt-0.5 shrink-0 text-primary" aria-hidden>
+          <span className="mt-0.5 shrink-0 text-primary-ink" aria-hidden>
             <Link2 className="size-4.5" />
           </span>
           <a
             href={a.url.trim()}
             target="_blank"
             rel="noreferrer"
-            className="text-sm font-semibold text-primary underline underline-offset-2"
+            className="text-sm font-semibold text-primary-ink underline underline-offset-2"
           >
             {a.message || t('plan.watchClip')}
           </a>

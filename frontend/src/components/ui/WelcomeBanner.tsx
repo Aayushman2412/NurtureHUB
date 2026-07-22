@@ -19,7 +19,7 @@ const WelcomeBanner: React.FC<WelcomeBannerProps> = ({ eyebrow, title, subtitle,
   <div className="relative flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-coral-50/70 to-surface px-6 py-7 shadow-(--shadow-card) sm:px-8 sm:py-8 dark:from-coral-500/10 dark:to-surface">
     <div className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full bg-coral-200/25 blur-3xl dark:bg-coral-500/10" aria-hidden />
     <div className="relative min-w-0">
-      <span className="text-xs font-bold uppercase tracking-widest text-primary">{eyebrow}</span>
+      <span className="text-xs font-bold uppercase tracking-widest text-primary-ink">{eyebrow}</span>
       <h1 className="mt-1.5 mb-2 font-display text-2xl font-extrabold text-ink sm:text-3xl">{title}</h1>
       <p className="max-w-xl text-[15px] text-ink-muted">{subtitle}</p>
     </div>

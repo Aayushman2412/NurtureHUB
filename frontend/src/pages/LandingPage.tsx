@@ -58,7 +58,7 @@ const LandingPage: React.FC = () => {
           </span>
           <div>
             <span className="block font-display text-lg font-extrabold leading-tight">{t('common:brand.name')}</span>
-            <span className="hidden text-[10px] font-bold uppercase tracking-widest text-primary sm:block">
+            <span className="hidden text-[10px] font-bold uppercase tracking-widest text-primary-ink sm:block">
               {t('landing:nav.badge')}
             </span>
           </div>
@@ -98,7 +98,7 @@ const LandingPage: React.FC = () => {
             {t('landing:hero.eyebrow')}
           </span>
           <h1 className="font-display text-4xl font-extrabold leading-tight sm:text-6xl">
-            <Trans t={t} i18nKey="landing:hero.title" components={{ hl: <span className="text-primary" /> }} />
+            <Trans t={t} i18nKey="landing:hero.title" components={{ hl: <span className="text-primary-ink" /> }} />
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg text-ink-muted">
             {t('landing:hero.subtitle')}

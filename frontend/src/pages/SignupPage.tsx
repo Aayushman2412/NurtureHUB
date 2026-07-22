@@ -96,7 +96,7 @@ const SignupPage: React.FC = () => {
 
         <p className="mt-4 text-center text-sm text-ink-muted">
           {t('signup.haveAccount')}{' '}
-          <Link to="/login" className="font-semibold text-primary hover:text-primary-hover">
+          <Link to="/login" className="font-semibold text-primary-ink hover:text-primary-ink-hover">
             {t('signup.signIn')}
           </Link>
         </p>

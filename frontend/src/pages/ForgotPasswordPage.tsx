@@ -91,7 +91,7 @@ const ForgotPasswordPage: React.FC = () => {
           </Button>
 
           <p className="mt-2 text-center text-sm text-ink-muted">
-            <Link to="/login" className="font-semibold text-primary hover:text-primary-hover">
+            <Link to="/login" className="font-semibold text-primary-ink hover:text-primary-ink-hover">
               {t('forgot.backToSignIn')}
             </Link>
           </p>

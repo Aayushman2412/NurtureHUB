@@ -264,7 +264,7 @@ const AdminLiveMonitorPage: React.FC = () => {
         <Card className="flex flex-col items-center gap-3 px-10 py-12 text-center">
           <div className="relative flex size-14 items-center justify-center">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/30" />
-            <Radio className="relative size-8 text-primary" />
+            <Radio className="relative size-8 text-primary-ink" />
           </div>
           <h3 className="font-display text-lg font-bold text-ink">{t('loading.title')}</h3>
           <p className="text-sm text-ink-muted">{t('loading.subtitle')}</p>
@@ -780,7 +780,7 @@ const AdminLiveMonitorPage: React.FC = () => {
                   <div className="flex flex-col gap-2">
                     {detailData.admin_actions.map((a: any) => (
                       <div key={a.id} className="flex items-start gap-2.5 rounded-lg bg-surface-sunken p-3">
-                        <Shield className="mt-0.5 size-4 shrink-0 text-primary" />
+                        <Shield className="mt-0.5 size-4 shrink-0 text-primary-ink" />
                         <div className="min-w-0">
                           <div className="font-semibold text-ink">{t(`actionTypes.${a.action_type}`, { defaultValue: a.action_type })}</div>
                           {a.notes && <div className="text-sm text-ink-muted">{a.notes}</div>}

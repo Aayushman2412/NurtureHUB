@@ -100,7 +100,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           </span>
           <div className="flex-1">
             <h2 className="font-display text-base font-extrabold leading-tight">NurtureHUB</h2>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-primary-ink">
               {t('layout.panel')}
             </span>
           </div>
@@ -121,7 +121,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               <button
                 className="flex w-full items-center gap-2.5 rounded-lg border border-border bg-surface-sunken px-3.5 py-2.5 text-[13px] font-semibold text-ink hover:border-border-strong cursor-pointer"
               >
-                <MapPin className="size-4 shrink-0 text-primary" />
+                <MapPin className="size-4 shrink-0 text-primary-ink" />
                 <span className="flex-1 truncate text-left">{selectedDistrict?.name || t('layout.selectDistrict')}</span>
                 <ChevronDown className={cn('size-3.5 shrink-0 opacity-60 transition-transform', open && 'rotate-180')} />
               </button>
@@ -154,7 +154,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 cn(
                   'flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold transition-colors',
                   isActive
-                    ? 'bg-coral-50 text-primary dark:bg-coral-500/10'
+                    ? 'bg-coral-50 text-primary-ink dark:bg-coral-500/10'
                     : 'text-ink-muted hover:bg-surface-sunken hover:text-ink',
                 )
               }

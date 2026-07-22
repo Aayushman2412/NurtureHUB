@@ -67,13 +67,17 @@
         the salmon-leaning coral primary) ──────────────────────── */
   --color-success-50:  #EFFAF3;
   --color-success-500: #2F9E56;
-  --color-success-600: #27874A;
+  /* Used as text on success-50 chips/alerts — #27874A sat at 4.22:1 (AA fail).
+     #21753F clears it at 5.34:1 on the tint, 5.71:1 on white. */
+  --color-success-600: #21753F;
   --color-error-50:  #FDF0F0;
   --color-error-500: #DC2F2F;
   --color-error-600: #BE2525;
   --color-info-50:  var(--color-coral-50);
   --color-info-500: var(--color-coral-500);
-  --color-info-600: var(--color-coral-600);
+  /* info-600 renders as text on info-50 chips — coral-600 was 4.27:1 there;
+     coral-700 clears AA at 5.87:1. */
+  --color-info-600: var(--color-coral-700);
 
   /* ── Typography ────────────────────────────────────────────── */
   /* 'Noto Sans Devanagari' is a fallback so Hindi (and other Devanagari) text
@@ -135,9 +139,17 @@
   --ink: var(--color-cream-900);
   --ink-muted: var(--color-cream-700);
   --ink-faint: var(--color-cream-600);
-  --primary: var(--color-coral-500);
-  --primary-hover: var(--color-coral-600);
+  /* coral-600, not 500: primary buttons paint white 14px labels on this fill,
+     and white-on-coral-500 was 3.44:1 (AA fail). On coral-600 it is 4.58:1.
+     Brand gradients/banners keep using the raw coral-400/500 classes. */
+  --primary: var(--color-coral-600);
+  --primary-hover: var(--color-coral-700);
   --primary-fg: #FFFFFF;
+  /* Coral used AS TEXT. The coral-500/600 fills are 3.4–4.3:1 as small text on
+     light surfaces — coral-700 clears 4.5:1 everywhere incl. coral-50 chips
+     (6.3 white · 5.87 coral-50). */
+  --primary-ink: var(--color-coral-700);
+  --primary-ink-hover: var(--color-coral-800);
 
   /* z-index scale (used as z-(--z-modal) etc.) */
   --z-dropdown: 100;
@@ -163,6 +175,9 @@
   --primary: var(--color-coral-400);
   --primary-hover: var(--color-coral-300);
   --primary-fg: #34120A;
+  /* Coral text on dark surfaces: coral-300 sits at 8.6:1. */
+  --primary-ink: var(--color-coral-300);
+  --primary-ink-hover: var(--color-coral-200);
 }
 
 /* Expose semantic tokens as Tailwind color utilities that resolve
@@ -180,4 +195,6 @@
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-fg: var(--primary-fg);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-ink-hover: var(--primary-ink-hover);
 }

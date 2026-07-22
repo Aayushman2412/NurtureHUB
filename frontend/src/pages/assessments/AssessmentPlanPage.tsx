@@ -152,7 +152,7 @@ const AssessmentPlanPage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate(`${runUrl}?responseId=${resp.id}`)}
-            className="cursor-pointer font-semibold text-primary underline underline-offset-2"
+            className="cursor-pointer font-semibold text-primary-ink underline underline-offset-2"
           >
             {t('plan.continueDraft')}
           </button>
