@@ -8,6 +8,7 @@ import {
   ListChecks,
   Milk,
   Ruler,
+  Salad,
   Stethoscope,
   UtensilsCrossed,
   Workflow,
@@ -47,6 +48,10 @@ const FORM_META: Record<FormKey, { icon: LucideIcon; blurb: string }> = {
   antenatal: {
     icon: Stethoscope,
     blurb: 'Antenatal visit details recorded for expectant mothers.',
+  },
+  mother_protein_intake: {
+    icon: Salad,
+    blurb: "The mother's daily protein-intake recall — food-group matrices plus info blocks, filled per visit.",
   },
 };
 

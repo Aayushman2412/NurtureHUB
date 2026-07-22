@@ -64,6 +64,9 @@ const FlatAssessmentRunnerPage: React.FC = () => {
   const [values, setValues] = useState<FlatFormValues>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [responseId, setResponseId] = useState<number | null>(resumeId);
+  /** Editing an already-submitted response — Save-draft is hidden (backend keeps
+   *  it submitted). */
+  const [editingSubmitted, setEditingSubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -113,6 +116,7 @@ const FlatAssessmentRunnerPage: React.FC = () => {
         const next = emptyFlatValues(defFields);
 
         if (resp) {
+          setEditingSubmitted(resp.status === 'submitted');
           // Rehydrate a draft: snapshots keep option ids for choice fields.
           const byId = new Map(defFields.map(f => [f.id, f]));
           for (const ans of resp.answers_json ?? []) {
@@ -264,22 +268,24 @@ const FlatAssessmentRunnerPage: React.FC = () => {
       </Card>
 
       <div className="flex flex-wrap items-center justify-end gap-2 pb-4">
-        <Button
-          variant="outline"
-          onClick={handleSaveDraft}
-          loading={saving}
-          disabled={submitting}
-          iconLeft={<Save className="size-4" />}
-        >
-          {t('growth.saveDraft')}
-        </Button>
+        {!editingSubmitted && (
+          <Button
+            variant="outline"
+            onClick={handleSaveDraft}
+            loading={saving}
+            disabled={submitting}
+            iconLeft={<Save className="size-4" />}
+          >
+            {t('growth.saveDraft')}
+          </Button>
+        )}
         <Button
           onClick={handleSubmit}
           loading={submitting}
           disabled={saving}
           iconLeft={<Send className="size-4" />}
         >
-          {t('growth.submit')}
+          {editingSubmitted ? t('runner.saveChanges') : t('growth.submit')}
         </Button>
       </div>
     </div>

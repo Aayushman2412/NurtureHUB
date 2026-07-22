@@ -11,31 +11,41 @@
 import axios from 'axios';
 import type {
   AnswerIn,
+  FlowInfoNode,
+  FlowMatrixNode,
   FlowQuestionNode,
   FlowSchema,
   FlowSectionChild,
 } from '../../lib/flowTypes';
-import { isSectionNode } from '../../lib/flowTypes';
+import { isInfoNode, isMatrixNode, isSectionNode, parseMatrixAnswer } from '../../lib/flowTypes';
 import { nextNodeId } from '../../lib/flowGraph';
 
 // ── Answer state ─────────────────────────────────────────────────────────────
 
 export interface AnswerState {
   optionIds: string[];
+  /** For number questions the raw numeric string; for matrix nodes the
+   *  JSON-encoded per-cell map (see parseMatrixAnswer); else free text. */
   value: string;
 }
 
 /** questionId → answer (section children keyed by their own child id). */
 export type AnswersMap = Record<string, AnswerState>;
 
-export interface PathStep {
-  /** The question id — unique per step (child id for section children). */
-  id: string;
-  /** Owning common-section node id, when the question lives inside one. */
-  sectionId: string | null;
-  sectionTitle: string | null;
-  question: FlowQuestionNode | FlowSectionChild;
-}
+/**
+ * One screen of the runner. Most steps are questions; a flow may also contain
+ * non-answerable info blocks and multi-dropdown matrix grids.
+ */
+export type PathStep =
+  | {
+      kind: 'question';
+      id: string;
+      sectionId: string | null;
+      sectionTitle: string | null;
+      question: FlowQuestionNode | FlowSectionChild;
+    }
+  | { kind: 'info'; id: string; sectionId: null; sectionTitle: null; info: FlowInfoNode }
+  | { kind: 'matrix'; id: string; sectionId: null; sectionTitle: null; matrix: FlowMatrixNode };
 
 export interface DerivedPath {
   steps: PathStep[];
@@ -59,11 +69,42 @@ export function isAnswered(
   return a.value.trim().length > 0;
 }
 
+/** A matrix is "answered" when every required cell of every row has a value.
+ *  Required cells = columns explicitly marked required; if none are but the
+ *  matrix node itself is required, every column is required (so the node-level
+ *  toggle is never a silent no-op). */
+export function isMatrixAnswered(m: FlowMatrixNode, a: AnswerState | undefined): boolean {
+  let requiredCols = m.columns.filter(c => c.required);
+  if (requiredCols.length === 0) {
+    if (!m.required) return true;
+    requiredCols = m.columns;
+  }
+  if (requiredCols.length === 0) return true;
+  const grid = parseMatrixAnswer(a?.value);
+  return m.rows.every(row =>
+    requiredCols.every(col => (grid[row.id]?.[col.id] ?? '').toString().trim().length > 0),
+  );
+}
+
+/** Whether a step is "answered"/passable — info blocks always are. */
+export function isStepAnswered(step: PathStep, answers: AnswersMap): boolean {
+  if (step.kind === 'info') return true;
+  if (step.kind === 'matrix') return isMatrixAnswered(step.matrix, answers[step.id]);
+  return isAnswered(step.question, answers[step.id]);
+}
+
+/** Does this step block forward progress until answered? */
+const stepBlocks = (step: PathStep, answers: AnswersMap): boolean => {
+  if (step.kind === 'info') return false;
+  if (step.kind === 'matrix') return step.matrix.required && !isMatrixAnswered(step.matrix, answers[step.id]);
+  return step.question.required && !isAnswered(step.question, answers[step.id]);
+};
+
 /**
- * Replay the answers over the graph. Emits one step per answerable question in
- * visit order and stops at the first unanswered *required* question (the
- * frontier) or at the end of the tree. Cycles and dangling `next` pointers are
- * treated as the end of the form so the learner is never dead-locked.
+ * Replay the answers over the graph. Emits one step per answerable question /
+ * matrix / info block in visit order and stops at the first unanswered
+ * *required* step (the frontier) or at the end of the tree. Cycles and dangling
+ * `next` pointers are treated as the end so the learner is never dead-locked.
  */
 export function derivePath(schema: FlowSchema, answers: AnswersMap): DerivedPath {
   const steps: PathStep[] = [];
@@ -86,17 +127,33 @@ export function derivePath(schema: FlowSchema, answers: AnswersMap): DerivedPath
     if (isSectionNode(node)) {
       let blocked = false;
       for (const child of node.children) {
-        steps.push({ id: child.id, sectionId: node.id, sectionTitle: node.title, question: child });
-        if (child.required && !isAnswered(child, answers[child.id])) {
+        const step: PathStep = {
+          kind: 'question',
+          id: child.id,
+          sectionId: node.id,
+          sectionTitle: node.title,
+          question: child,
+        };
+        steps.push(step);
+        if (stepBlocks(step, answers)) {
           blocked = true;
           break;
         }
       }
       if (blocked) break; // frontier inside the section
       currentId = node.next;
+    } else if (isInfoNode(node)) {
+      steps.push({ kind: 'info', id: node.id, sectionId: null, sectionTitle: null, info: node });
+      currentId = node.next;
+    } else if (isMatrixNode(node)) {
+      const step: PathStep = { kind: 'matrix', id: node.id, sectionId: null, sectionTitle: null, matrix: node };
+      steps.push(step);
+      if (stepBlocks(step, answers)) break; // frontier
+      currentId = node.next;
     } else {
-      steps.push({ id: node.id, sectionId: null, sectionTitle: null, question: node });
-      if (node.required && !isAnswered(node, answers[node.id])) break; // frontier
+      const step: PathStep = { kind: 'question', id: node.id, sectionId: null, sectionTitle: null, question: node };
+      steps.push(step);
+      if (stepBlocks(step, answers)) break; // frontier
       currentId = nextNodeId(node, answers[node.id]?.optionIds ?? []);
     }
     if (currentId == null) complete = true;
@@ -105,12 +162,21 @@ export function derivePath(schema: FlowSchema, answers: AnswersMap): DerivedPath
   return { steps, complete };
 }
 
-/** Answers payload built ONLY from answered steps on the derived path. */
+/** Answers payload built ONLY from answered steps on the derived path. Info
+ *  steps carry no answer; matrix + number/text/date steps encode into `value`. */
 export function buildAnswersPayload(steps: PathStep[], answers: AnswersMap): AnswerIn[] {
   const out: AnswerIn[] = [];
   for (const s of steps) {
+    if (s.kind === 'info') continue;
     const a = answers[s.id];
-    if (!a || !isAnswered(s.question, a)) continue;
+    if (!a) continue;
+    if (s.kind === 'matrix') {
+      const grid = parseMatrixAnswer(a.value);
+      if (Object.keys(grid).length === 0) continue;
+      out.push({ nodeId: s.id, sectionId: null, optionIds: [], value: a.value });
+      continue;
+    }
+    if (!isAnswered(s.question, a)) continue;
     out.push({
       nodeId: s.id,
       sectionId: s.sectionId,
@@ -128,8 +194,8 @@ export function buildAnswersPayload(steps: PathStep[], answers: AnswersMap): Ans
  * assessment happened.
  */
 export function pathAssessmentDate(steps: PathStep[], answers: AnswersMap): string {
-  const first = steps[0];
-  if (first && first.question.questionType === 'date') {
+  const first = steps.find(s => s.kind === 'question');
+  if (first && first.kind === 'question' && first.question.questionType === 'date') {
     const v = answers[first.id]?.value.trim();
     if (v) return v;
   }

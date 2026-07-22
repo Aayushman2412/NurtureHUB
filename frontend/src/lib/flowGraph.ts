@@ -11,7 +11,7 @@ import type {
   FlowSchema,
   FlowSectionChild,
 } from './flowTypes';
-import { isQuestionNode, isSectionNode } from './flowTypes';
+import { isInfoNode, isMatrixNode, isQuestionNode, isSectionNode } from './flowTypes';
 
 // ── Ids ──────────────────────────────────────────────────────────────────────
 
@@ -76,9 +76,10 @@ export function flattenAnswerable(schema: FlowSchema): AnswerableQuestion[] {
       for (const child of node.children) {
         out.push({ nodeId: child.id, sectionId: node.id, question: child });
       }
-    } else {
+    } else if (isQuestionNode(node)) {
       out.push({ nodeId: node.id, sectionId: null, question: node });
     }
+    // info + matrix nodes are steps but not answerable "questions"
   }
   return out;
 }
@@ -133,6 +134,41 @@ export function validateFlow(schema: FlowSchema): FlowIssue[] {
   };
 
   for (const node of Object.values(schema.nodes)) {
+    if (isInfoNode(node)) {
+      checkTarget(node.id, node.next, `"${node.title || 'Info block'}" next step`);
+      if (!node.title.trim() && !node.body.trim() && node.media.length === 0) {
+        issues.push({ level: 'warning', nodeId: node.id, message: 'Info block has no title, text or media.' });
+      }
+      if (node.action.type === 'youtube' && !node.action.url.trim()) {
+        issues.push({ level: 'warning', nodeId: node.id, message: 'Info block has a YouTube action without a link.' });
+      }
+      if (node.action.type === 'video' && !node.action.url.trim()) {
+        issues.push({ level: 'warning', nodeId: node.id, message: 'Info block has a video action without a file or URL.' });
+      }
+      continue;
+    }
+    if (isMatrixNode(node)) {
+      checkTarget(node.id, node.next, `"${node.title || 'Matrix'}" next step`);
+      if (!node.title.trim()) {
+        issues.push({ level: 'warning', nodeId: node.id, message: 'Matrix question has no title.' });
+      }
+      if (node.rows.length === 0) {
+        issues.push({ level: 'warning', nodeId: node.id, message: `"${node.title || 'Matrix'}" has no rows.` });
+      }
+      if (node.columns.length === 0) {
+        issues.push({ level: 'warning', nodeId: node.id, message: `"${node.title || 'Matrix'}" has no columns.` });
+      }
+      node.columns.forEach((c, i) => {
+        if (!c.label.trim()) {
+          issues.push({ level: 'warning', nodeId: node.id, message: `Matrix column ${i + 1} has no label.` });
+        }
+        if (c.type === 'dropdown' && (!c.options || c.options.length === 0)) {
+          issues.push({ level: 'warning', nodeId: node.id, message: `Matrix column "${c.label || i + 1}" is a dropdown with no options.` });
+        }
+      });
+      continue;
+    }
+
     if (!node.title.trim()) {
       issues.push({ level: 'warning', nodeId: node.id, message: 'Question text is empty.' });
     }

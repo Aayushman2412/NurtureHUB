@@ -4,6 +4,7 @@ import type {
   FlowDisplaySettings,
   FlowQuestionNode,
   FlowSectionChild,
+  NumericRange,
   QuestionDisplayOverride,
   QuestionType,
   VerdictDef,
@@ -91,28 +92,39 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
     never: 'Never',
   };
 
+  const numeric: NumericRange = question.numeric ?? {};
+  const setNumeric = (patch: Partial<NumericRange>) => onPatch({ numeric: { ...numeric, ...patch } });
+  const numInput = (raw: string): number | null => {
+    const v = raw.trim();
+    if (v === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
   const changeType = (value: string) => {
     const questionType = value as QuestionType;
     if (questionType === question.questionType) return;
-    if (questionType === 'text' || questionType === 'date') {
+    if (questionType === 'text' || questionType === 'date' || questionType === 'number') {
       if (
         question.options.length > 0 &&
-        !window.confirm('Text and date questions have no answer options — the existing options will be removed. Continue?')
+        !window.confirm('Text, date and numerical questions have no answer options — the existing options will be removed. Continue?')
       ) {
         return;
       }
-      onPatch({ questionType, options: [] });
+      onPatch({
+        questionType,
+        options: [],
+        numeric: questionType === 'number' ? (question.numeric ?? { decimals: 1 }) : null,
+      });
       return;
     }
-    if (questionType === 'multi') {
-      // Multi-select never branches per option — clear stale branch targets.
-      onPatch({ questionType, options: question.options.map(o => ({ ...o, next: null })) });
-      return;
-    }
-    onPatch({
-      questionType,
-      options: question.options.length > 0 ? question.options : [makeOption(), makeOption()],
-    });
+    // single/multi both need at least two options; seed them if switching from
+    // an option-less type (text/date/number) so the question isn't left empty.
+    const options =
+      question.options.length > 0
+        ? question.options.map(o => (questionType === 'multi' ? { ...o, next: null } : o))
+        : [makeOption(), makeOption()];
+    onPatch({ questionType, options, numeric: null });
   };
 
   const updateOption = (i: number, option: (typeof question.options)[number]) =>
@@ -182,6 +194,48 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
           onChange={e => onPatch({ required: e.target.checked })}
         />
       </div>
+
+      {question.questionType === 'number' && (
+        <div className="space-y-2 rounded-lg border border-border p-3">
+          <FieldLabel size="sm" className="mb-0">
+            Numerical settings
+          </FieldLabel>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <FieldLabel size="sm">Decimal places</FieldLabel>
+              <Input
+                type="number"
+                min={0}
+                max={4}
+                value={numeric.decimals ?? ''}
+                onChange={e => setNumeric({ decimals: numInput(e.target.value) })}
+                placeholder="1"
+              />
+            </div>
+            <div>
+              <FieldLabel size="sm">Flag if below</FieldLabel>
+              <Input
+                type="number"
+                value={numeric.flagMin ?? ''}
+                onChange={e => setNumeric({ flagMin: numInput(e.target.value) })}
+                placeholder="min"
+              />
+            </div>
+            <div>
+              <FieldLabel size="sm">Flag if above</FieldLabel>
+              <Input
+                type="number"
+                value={numeric.flagMax ?? ''}
+                onChange={e => setNumeric({ flagMax: numInput(e.target.value) })}
+                placeholder="max"
+              />
+            </div>
+          </div>
+          <p className="text-[11px] leading-snug text-ink-faint">
+            Values outside the range are still saved but flagged red to the learner and admin.
+          </p>
+        </div>
+      )}
 
       {/* Per-question learner-view overrides (defaults live in the toolbar's
           "Learner view" panel; a row left on "Form default" inherits it). */}

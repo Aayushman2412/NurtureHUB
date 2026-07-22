@@ -27,6 +27,7 @@ import MotherDetailPage from './pages/mothers/MotherDetailPage';
 import ChildFormPage from './pages/mothers/ChildFormPage';
 import AssessmentHistoryPage from './pages/assessments/AssessmentHistoryPage';
 import AssessmentRunnerRoute from './pages/assessments/AssessmentRunnerRoute';
+import AssessmentRunnerPage from './pages/assessments/AssessmentRunnerPage';
 import AssessmentPlanPage from './pages/assessments/AssessmentPlanPage';
 import GrowthChartsPage from './pages/growth/GrowthChartsPage';
 
@@ -150,6 +151,9 @@ const AppRoutes: React.FC = () => {
       {/* Per-child assessments: BF/CF (flow) + Check Growth (flat) */}
       <Route path="/mothers/:motherId/children/:childId/assessments/:formKey" element={<CompleteRoute><AssessmentHistoryPage /></CompleteRoute>} />
       <Route path="/mothers/:motherId/children/:childId/assessments/:formKey/run" element={<CompleteRoute><AssessmentRunnerRoute /></CompleteRoute>} />
+      {/* Per-mother assessments (protein intake — flow only) */}
+      <Route path="/mothers/:motherId/assessments/:formKey" element={<CompleteRoute><AssessmentHistoryPage /></CompleteRoute>} />
+      <Route path="/mothers/:motherId/assessments/:formKey/run" element={<CompleteRoute><AssessmentRunnerPage /></CompleteRoute>} />
       <Route path="/assessments/:responseId/plan" element={<CompleteRoute><AssessmentPlanPage /></CompleteRoute>} />
 
       {/* Growth charts (LAP monitoring) — case-wise WHO percentile charts */}

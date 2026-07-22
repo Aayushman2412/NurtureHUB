@@ -12,7 +12,7 @@
     {
       "name": "backend",
       "runtimeExecutable": "venv-win/Scripts/python.exe",
-      "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8010"],
+      "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8010", "--reload"],
       "cwd": "backend",
       "port": 8010,
       "autoPort": false

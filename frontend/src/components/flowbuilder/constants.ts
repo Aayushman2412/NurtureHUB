@@ -5,10 +5,13 @@
 
 import type { FlowIssue } from '../../lib/flowGraph';
 import type {
+  FlowAction,
   FlowNode,
   FlowQuestionNode,
   FlowSchema,
   FlowSectionChild,
+  MatrixColumn,
+  MatrixRow,
   QuestionType,
   Verdict,
   VerdictDef,
@@ -32,6 +35,7 @@ export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   multi: 'Multiple choice',
   text: 'Text answer',
   date: 'Date answer',
+  number: 'Numerical answer',
 };
 
 /**
@@ -97,10 +101,18 @@ export interface ConnectRequest {
 export type QuestionPatch = Partial<
   Pick<
     FlowQuestionNode,
-    'title' | 'helpText' | 'required' | 'questionType' | 'options' | 'media' | 'display'
+    'title' | 'helpText' | 'required' | 'questionType' | 'options' | 'media' | 'numeric' | 'display'
   >
 >;
 
-/** Patch of any editable node field (question or section). */
+/** Patch of any editable node field (question / section / info / matrix). */
 export type NodePatch = QuestionPatch &
-  Partial<Pick<FlowQuestionNode, 'next'>> & { children?: FlowSectionChild[] };
+  Partial<Pick<FlowQuestionNode, 'next'>> & {
+    children?: FlowSectionChild[];
+    /** info block (media is already covered by QuestionPatch) */
+    body?: string;
+    action?: FlowAction;
+    /** matrix */
+    rows?: MatrixRow[];
+    columns?: MatrixColumn[];
+  };

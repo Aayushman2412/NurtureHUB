@@ -135,7 +135,11 @@ const AssessmentPlanPage: React.FC = () => {
   const actions = (resp.actions_json ?? []).filter(a => displayFor(a.nodeId).actions);
   const isDraft = resp.status === 'draft';
 
-  const historyUrl = `/mothers/${resp.mother_id}/children/${resp.child_id}/assessments/${resp.form_key}`;
+  // Mother-level responses (child_id null) link to the mother-level assessment
+  // path; child-level ones keep the child in the path.
+  const historyUrl = resp.child_id != null
+    ? `/mothers/${resp.mother_id}/children/${resp.child_id}/assessments/${resp.form_key}`
+    : `/mothers/${resp.mother_id}/assessments/${resp.form_key}`;
   const runUrl = `${historyUrl}/run`;
   const formTitle = t(`common.formTitle.${resp.form_key}`, { defaultValue: resp.form_key });
 
@@ -181,7 +185,8 @@ const AssessmentPlanPage: React.FC = () => {
               {t('plan.scoreTitle', { green: summary.green, total: denom })}
             </h2>
             <p className="mt-1 text-sm text-ink-muted">
-              {formTitle} · {resp.child_name} ·{' '}
+              {formTitle}
+              {(resp.child_name ?? resp.mother_name) ? ` · ${resp.child_name ?? resp.mother_name}` : ''} ·{' '}
               {formatDisplayDate(resp.assessment_date, i18n.language)}
             </p>
             {allGreen ? (

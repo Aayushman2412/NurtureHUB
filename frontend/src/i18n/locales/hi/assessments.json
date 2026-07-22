@@ -13,7 +13,8 @@
     "ageMonths": "{{n}} माह",
     "formTitle": {
       "breastfeeding": "स्तनपान जाँच",
-      "complementary_feeding": "पूरक आहार"
+      "complementary_feeding": "पूरक आहार",
+      "mother_protein_intake": "माता का प्रोटीन सेवन"
     }
   },
   "history": {
@@ -26,6 +27,7 @@
     "chipDraftProgress": "{{total}} में से {{answered}} उत्तर दिए गए",
     "viewPlan": "योजना देखें",
     "continue": "जारी रखें",
+    "edit": "संपादित करें",
     "deleteDraft": "ड्राफ़्ट हटाएँ",
     "deleteTitle": "यह ड्राफ़्ट हटाएँ?",
     "deleteBody": "{{date}} का ड्राफ़्ट हटा दिया जाएगा। इसे वापस नहीं लिया जा सकता।",
@@ -46,6 +48,13 @@
     "optionalHint": "वैकल्पिक — आप इसे छोड़ सकती हैं",
     "multiHint": "सभी लागू विकल्प चुनें",
     "textPlaceholder": "अपना अवलोकन लिखें…",
+    "numberPlaceholder": "एक संख्या दर्ज करें",
+    "selectPlaceholder": "चुनें…",
+    "saveChanges": "परिवर्तन सहेजें",
+    "infoBadge": "जानकारी",
+    "numberInvalid": "मान्य संख्या दर्ज करें",
+    "decimalsExceeded": "अधिकतम {{decimals}} दशमलव स्थान का उपयोग करें",
+    "outOfRange": "अपेक्षित सीमा ({{min}}–{{max}}) से बाहर — सहेजा गया पर फ़्लैग किया गया",
     "back": "पीछे",
     "next": "आगे",
     "finish": "समाप्त करें",

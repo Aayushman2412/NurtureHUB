@@ -140,10 +140,8 @@ const AdminGrowthMonitorPage: React.FC = () => {
             label={t('admin.district')}
             value={district}
             onChange={setDistrict}
-            options={[
-              { value: '', label: t('admin.allDistricts') },
-              ...districts.map(d => ({ value: d.slug, label: d.name })),
-            ]}
+            placeholder={t('admin.allDistricts')}
+            options={districts.map(d => ({ value: d.slug, label: d.name }))}
           />
         </div>
       </div>

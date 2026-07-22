@@ -21,14 +21,27 @@ export const FORM_KEYS = [
   'complementary_feeding',
   'growth_monitoring',
   'antenatal',
+  'mother_protein_intake',
 ] as const;
 
 export type FormKey = (typeof FORM_KEYS)[number];
 
-export const FLOW_FORM_KEYS: FormKey[] = ['breastfeeding', 'complementary_feeding'];
+export const FLOW_FORM_KEYS: FormKey[] = [
+  'breastfeeding',
+  'complementary_feeding',
+  'mother_protein_intake',
+];
 
-export const isFlowFormKey = (key: string): key is 'breastfeeding' | 'complementary_feeding' =>
-  key === 'breastfeeding' || key === 'complementary_feeding';
+export const isFlowFormKey = (
+  key: string,
+): key is 'breastfeeding' | 'complementary_feeding' | 'mother_protein_intake' =>
+  key === 'breastfeeding' || key === 'complementary_feeding' || key === 'mother_protein_intake';
+
+/** Forms that attach to a MOTHER (per-visit) rather than a child. */
+export const MOTHER_FORM_KEYS: FormKey[] = ['mother_protein_intake'];
+
+export const isMotherFormKey = (key: string): key is 'mother_protein_intake' =>
+  key === 'mother_protein_intake';
 
 /**
  * Flat forms that accept learner responses (rendered by the flat runner).
@@ -49,7 +62,7 @@ export const CF_MIN_AGE_DAYS = 150;
 
 // ── Flow schema (canvas decision tree) ───────────────────────────────────────
 
-export type QuestionType = 'single' | 'multi' | 'text' | 'date';
+export type QuestionType = 'single' | 'multi' | 'text' | 'date' | 'number';
 
 /**
  * An option's verdict, stored as a VerdictDef **id** (`null` = no verdict).
@@ -98,6 +111,22 @@ export const findVerdict = (defs: VerdictDef[], id: Verdict): VerdictDef | null 
 export type VerdictTiming = 'during' | 'after' | 'never';
 export type ActionType = 'none' | 'notify' | 'youtube' | 'video' | 'info';
 export type MediaType = 'image' | 'gif';
+
+/**
+ * A soft numeric "expected range". Unlike a hard min/max (which rejects the
+ * input), a value outside [flagMin, flagMax] is still accepted and stored but
+ * flagged red to the learner and admin after submission. Either bound may be
+ * null (open-ended on that side). Used by `number` questions/fields and numeric
+ * matrix columns.
+ */
+export interface NumericRange {
+  /** Max decimal places allowed (hard). Defaults to 1 for the numerical type. */
+  decimals?: number | null;
+  /** Flag (not block) when the value is below this. */
+  flagMin?: number | null;
+  /** Flag (not block) when the value is above this. */
+  flagMax?: number | null;
+}
 
 export interface FlowMedia {
   type: MediaType;
@@ -166,6 +195,8 @@ export interface FlowSectionChild {
    *  Optional: definitions saved before this field existed omit it. */
   media?: FlowMedia[];
   options: FlowOption[];
+  /** Numeric constraints (questionType 'number' only). */
+  numeric?: NumericRange | null;
   /** Per-question learner-view overrides; absent = inherit the form defaults. */
   display?: QuestionDisplayOverride | null;
 }
@@ -182,6 +213,8 @@ export interface FlowQuestionNode {
   media?: FlowMedia[];
   position: { x: number; y: number };
   options: FlowOption[];
+  /** Numeric constraints (questionType 'number' only). */
+  numeric?: NumericRange | null;
   /** Default next node id; null = end of form. */
   next: string | null;
   /** Per-question learner-view overrides; absent = inherit the form defaults. */
@@ -197,7 +230,69 @@ export interface FlowSectionNode {
   next: string | null;
 }
 
-export type FlowNode = FlowQuestionNode | FlowSectionNode;
+// ── Info block ────────────────────────────────────────────────────────────────
+
+/**
+ * A non-answerable informational block shown between questions: a heading +
+ * rich body text, optional images/GIFs, and an optional call-to-action
+ * (watch a YouTube clip from a timestamp, open an uploaded video, or a link/
+ * "go do this" prompt). Collects no answer and never scores.
+ */
+export interface FlowInfoNode {
+  id: string;
+  kind: 'info';
+  title: string;
+  /** Body/explanatory text (multi-line). */
+  body: string;
+  /** Illustrative images/GIFs. */
+  media: FlowMedia[];
+  /** Optional call-to-action (youtube clip / uploaded video / link prompt). */
+  action: FlowAction;
+  position: { x: number; y: number };
+  next: string | null;
+}
+
+// ── Multi-dropdown matrix ─────────────────────────────────────────────────────
+
+/** The input kind of one matrix column. */
+export type MatrixColumnType = 'number' | 'text' | 'date' | 'datetime' | 'dropdown';
+
+export interface MatrixColumn {
+  id: string;
+  label: string;
+  type: MatrixColumnType;
+  required: boolean;
+  /** For 'dropdown': the selectable values (e.g. 0, 0.5, 1, …). */
+  options: FlatFieldOption[] | null;
+  /** For 'number': decimal + soft flag range. */
+  numeric?: NumericRange | null;
+}
+
+export interface MatrixRow {
+  id: string;
+  label: string;
+  helpText?: string;
+}
+
+/**
+ * A grid question: each row is a subject (e.g. a food) and each column a
+ * dropdown/input (e.g. "portions in last 24h", "days per week"). Answers are a
+ * per-cell map. Modeled on the Cuedwell protein-intake matrix.
+ */
+export interface FlowMatrixNode {
+  id: string;
+  kind: 'matrix';
+  title: string;
+  helpText: string;
+  /** When true, every required column must be answered for every row. */
+  required: boolean;
+  rows: MatrixRow[];
+  columns: MatrixColumn[];
+  position: { x: number; y: number };
+  next: string | null;
+}
+
+export type FlowNode = FlowQuestionNode | FlowSectionNode | FlowInfoNode | FlowMatrixNode;
 
 /**
  * Admin-controlled switches for what the LEARNER sees while running the form.
@@ -265,6 +360,22 @@ export interface FlowSchema {
 
 export const isSectionNode = (n: FlowNode): n is FlowSectionNode => n.kind === 'section';
 export const isQuestionNode = (n: FlowNode): n is FlowQuestionNode => n.kind === 'question';
+export const isInfoNode = (n: FlowNode): n is FlowInfoNode => n.kind === 'info';
+export const isMatrixNode = (n: FlowNode): n is FlowMatrixNode => n.kind === 'matrix';
+
+/** A matrix answer: { [rowId]: { [colId]: value } }, JSON-encoded in the wire
+ * `value` field so the {nodeId, optionIds, value} answer shape is unchanged. */
+export type MatrixAnswer = Record<string, Record<string, string>>;
+
+export const parseMatrixAnswer = (raw: string | null | undefined): MatrixAnswer => {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? (parsed as MatrixAnswer) : {};
+  } catch {
+    return {};
+  }
+};
 
 // ── Flat schema (classic field list) ─────────────────────────────────────────
 
@@ -312,6 +423,11 @@ export interface FlatField {
   max?: number | null;
   /** Allowed decimal places (0 = integers only; null/undefined = any). */
   decimals?: number | null;
+  /** Soft "expected range": a value below flagMin or above flagMax is still
+   *  accepted and stored, but flagged red to the learner + admin after submit
+   *  (distinct from the hard min/max which reject). */
+  flagMin?: number | null;
+  flagMax?: number | null;
   // date fields
   noFuture?: boolean;
   /** Date must not be before the child's date of birth (child-scoped forms). */
@@ -401,10 +517,12 @@ export interface FormResponseListItem {
 
 export interface FormResponseDetail extends FormResponseListItem {
   form_key: FormKey;
-  child_id: number;
-  /** Included so pages deep-linked by response id can navigate back to the child. */
-  mother_id: number;
-  child_name: string;
+  /** Child-level responses set child_id; mother-level set mother_id. */
+  child_id: number | null;
+  /** Included so pages deep-linked by response id can navigate back. */
+  mother_id: number | null;
+  child_name: string | null;
+  mother_name: string | null;
   answers_json: AnswerSnapshot[];
   actions_json: TriggeredAction[];
 }

@@ -15,23 +15,31 @@ import {
 import { inputClasses } from '../../components/ui/Input';
 import { useToast } from '../../context/ToastContext';
 import { getChild, type Child } from '../../api/children';
+import { getMother, type Mother } from '../../api/mothers';
 import { createResponse, getFormDefinition, getResponse, updateResponse } from '../../api/forms';
-import type { FlowSchema, FormDefinition, FormKey } from '../../lib/flowTypes';
+import type { FlowSchema, FormDefinition, FormKey, MatrixAnswer } from '../../lib/flowTypes';
 import {
   CF_MIN_AGE_DAYS,
   findVerdict,
   isFlowFormKey,
+  isMotherFormKey,
+  parseMatrixAnswer,
   resolveDisplay,
   resolveQuestionDisplay,
   resolveVerdicts,
 } from '../../lib/flowTypes';
 import { flattenAnswerable, resolveAssetUrl } from '../../lib/flowGraph';
+import { numberFlagState } from '../../lib/numericField';
 import OptionCard from '../../components/assessments/OptionCard';
+import InfoStepCard from '../../components/assessments/InfoStepCard';
+import MatrixStepCard from '../../components/assessments/MatrixStepCard';
 import {
   apiErrorMessage,
   buildAnswersPayload,
   derivePath,
   isAnswered,
+  isMatrixAnswered,
+  isStepAnswered,
   pathAssessmentDate,
   todayIso,
   type AnswersMap,
@@ -60,13 +68,17 @@ const AssessmentRunnerPage: React.FC = () => {
 
   const validKey = isFlowFormKey(keyParam ?? '');
   const formKey = (keyParam ?? 'breastfeeding') as FormKey;
+  const isMother = isMotherFormKey(formKey);
   const resumeIdParam = searchParams.get('responseId');
   const resumeId = resumeIdParam ? Number(resumeIdParam) : null;
 
-  const historyUrl = `/mothers/${motherId}/children/${childId}/assessments/${formKey}`;
+  const historyUrl = isMother
+    ? `/mothers/${motherId}/assessments/${formKey}`
+    : `/mothers/${motherId}/children/${childId}/assessments/${formKey}`;
 
   const [definition, setDefinition] = useState<FormDefinition | null>(null);
   const [child, setChild] = useState<Child | null>(null);
+  const [mother, setMother] = useState<Mother | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
@@ -74,6 +86,9 @@ const AssessmentRunnerPage: React.FC = () => {
   const [stepIndex, setStepIndex] = useState(0);
   const [direction, setDirection] = useState<'fwd' | 'back'>('fwd');
   const [responseId, setResponseId] = useState<number | null>(null);
+  /** True when editing an already-submitted response — it can't be saved as a
+   *  draft (the backend keeps it submitted), so the Save-draft control is hidden. */
+  const [editingSubmitted, setEditingSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
@@ -98,13 +113,14 @@ const AssessmentRunnerPage: React.FC = () => {
     setLoadError(false);
     Promise.all([
       getFormDefinition(formKey),
-      getChild(motherId, childId),
+      isMother ? getMother(motherId) : getChild(motherId, childId),
       resumeId != null ? getResponse(resumeId) : Promise.resolve(null),
     ])
-      .then(([def, c, resp]) => {
+      .then(([def, subject, resp]) => {
         if (cancelled) return;
         setDefinition(def);
-        setChild(c);
+        if (isMother) setMother(subject as Mother);
+        else setChild(subject as Child);
         if (resp) {
           const prefill: AnswersMap = {};
           // Validate the draft against the CURRENT definition — the admin may
@@ -120,7 +136,19 @@ const AssessmentRunnerPage: React.FC = () => {
               });
             }
           }
+          // Matrix nodes aren't in `currentQuestions` (they aren't answerable
+          // "questions"); their JSON `value` is carried over verbatim below.
+          const matrixIds = new Set<string>();
+          if (def.builder_type === 'flow') {
+            for (const node of Object.values((def.schema_json as FlowSchema).nodes)) {
+              if (node.kind === 'matrix') matrixIds.add(node.id);
+            }
+          }
           for (const a of resp.answers_json) {
+            if (matrixIds.has(a.nodeId)) {
+              prefill[a.nodeId] = { optionIds: [], value: a.value ?? '' };
+              continue;
+            }
             const q = currentQuestions.get(a.nodeId);
             if (!q) continue;
             const optionIds = a.selected.map(s => s.optionId).filter(id => q.optionIds.has(id));
@@ -130,11 +158,12 @@ const AssessmentRunnerPage: React.FC = () => {
           }
           setAnswers(prefill);
           setResponseId(resp.id);
+          setEditingSubmitted(resp.status === 'submitted');
           savedRef.current = JSON.stringify(prefill);
           // Resume at the frontier: the first unanswered step on the derived path.
           if (def.builder_type === 'flow') {
             const { steps } = derivePath(def.schema_json as FlowSchema, prefill);
-            const idx = steps.findIndex(s => !isAnswered(s.question, prefill[s.id]));
+            const idx = steps.findIndex(s => !isStepAnswered(s, prefill));
             setStepIndex(Math.max(0, idx < 0 ? steps.length - 1 : idx));
           }
         } else {
@@ -150,7 +179,7 @@ const AssessmentRunnerPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [motherId, childId, formKey, resumeId, validKey]);
+  }, [motherId, childId, formKey, resumeId, validKey, isMother]);
 
   // ── Derived path (replayed from answers — no manual step stack) ────────────
   const schema = useMemo<FlowSchema | null>(
@@ -166,7 +195,7 @@ const AssessmentRunnerPage: React.FC = () => {
   );
   const totalQuestions = useMemo(() => (schema ? flattenAnswerable(schema).length : 0), [schema]);
   const answeredCount = useMemo(
-    () => derived.steps.filter(s => isAnswered(s.question, answers[s.id])).length,
+    () => derived.steps.filter(s => isStepAnswered(s, answers)).length,
     [derived.steps, answers],
   );
 
@@ -183,8 +212,8 @@ const AssessmentRunnerPage: React.FC = () => {
 
   // Default the FIRST date question on the path to today when it comes up empty.
   useEffect(() => {
-    if (!current || current.question.questionType !== 'date') return;
-    const firstDate = derived.steps.find(s => s.question.questionType === 'date');
+    if (!current || current.kind !== 'question' || current.question.questionType !== 'date') return;
+    const firstDate = derived.steps.find(s => s.kind === 'question' && s.question.questionType === 'date');
     if (firstDate?.id !== current.id) return;
     setAnswers(prev =>
       prev[current.id]?.value ? prev : { ...prev, [current.id]: { optionIds: [], value: todayIso() } },
@@ -195,7 +224,17 @@ const AssessmentRunnerPage: React.FC = () => {
   const setValueAnswer = (stepId: string, value: string) =>
     setAnswers(prev => ({ ...prev, [stepId]: { optionIds: [], value } }));
 
-  const toggleOption = (step: PathStep, optionId: string) => {
+  const setMatrixCell = (stepId: string, rowId: string, colId: string, value: string) =>
+    setAnswers(prev => {
+      const grid: MatrixAnswer = parseMatrixAnswer(prev[stepId]?.value);
+      const row = { ...(grid[rowId] ?? {}) };
+      if (value) row[colId] = value;
+      else delete row[colId];
+      const nextGrid = { ...grid, [rowId]: row };
+      return { ...prev, [stepId]: { optionIds: [], value: JSON.stringify(nextGrid) } };
+    });
+
+  const toggleOption = (step: Extract<PathStep, { kind: 'question' }>, optionId: string) => {
     const q = step.question;
     if (q.questionType === 'single') {
       setAnswers(prev => ({ ...prev, [step.id]: { optionIds: [optionId], value: '' } }));
@@ -236,7 +275,7 @@ const AssessmentRunnerPage: React.FC = () => {
     };
     const saved = responseId
       ? await updateResponse(responseId, payload)
-      : await createResponse(formKey, { child_id: childId, ...payload });
+      : await createResponse(formKey, isMother ? { mother_id: motherId, ...payload } : { child_id: childId, ...payload });
     setResponseId(saved.id);
     savedRef.current = JSON.stringify(answers);
     return saved;
@@ -277,7 +316,8 @@ const AssessmentRunnerPage: React.FC = () => {
   if (!validKey) return <Navigate to={`/mothers/${motherId}`} replace />;
   if (loading) return <PageLoader label={t('runner.loading')} className="min-h-60" />;
 
-  if (loadError || !definition || !child || !schema) {
+  const subject = isMother ? mother : child;
+  if (loadError || !definition || !subject || !schema) {
     return (
       <div className="mx-auto flex max-w-2xl flex-col gap-4">
         <Alert variant="error" title={t('common.loadFailedTitle')}>
@@ -292,10 +332,14 @@ const AssessmentRunnerPage: React.FC = () => {
     );
   }
 
-  // Client-side CF age gate (server enforces it too).
+  const subjectName = isMother ? mother!.mother_name : child!.child_name;
+  const subjectUid = isMother ? mother!.mother_uid : child!.child_uid;
+
+  // Client-side CF age gate (server enforces it too). Child forms only.
   if (
+    !isMother &&
     formKey === 'complementary_feeding' &&
-    (child.age_days == null || child.age_days < CF_MIN_AGE_DAYS)
+    (child!.age_days == null || child!.age_days < CF_MIN_AGE_DAYS)
   ) {
     return (
       <div className="mx-auto max-w-2xl">
@@ -332,15 +376,18 @@ const AssessmentRunnerPage: React.FC = () => {
     );
   }
 
-  const q = current.question;
-  /** Form defaults overlaid with this question's own overrides. */
-  const qDisplay = resolveQuestionDisplay(display, q.display);
   const answer = answers[current.id];
   const selectedIds = answer?.optionIds ?? [];
-  const canProceed = !q.required || isAnswered(q, answer);
+  const canProceed =
+    current.kind === 'info'
+      ? true
+      : current.kind === 'matrix'
+        ? !current.matrix.required || isMatrixAnswered(current.matrix, answer)
+        : !current.question.required || isAnswered(current.question, answer);
   const isLast = stepIndex === derived.steps.length - 1;
   const showFinish = isLast && derived.complete;
-  const progressPct = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
+  const denom = Math.max(totalQuestions, derived.steps.length);
+  const progressPct = denom > 0 ? Math.min(100, (answeredCount / denom) * 100) : 0;
 
   return (
     <div className="flex flex-col">
@@ -355,8 +402,8 @@ const AssessmentRunnerPage: React.FC = () => {
                 {definition.title}
               </div>
               <div className="truncate text-xs text-ink-muted">
-                {child.child_name}
-                {child.child_uid ? ` · ${child.child_uid}` : ''}
+                {subjectName}
+                {subjectUid ? ` · ${subjectUid}` : ''}
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -393,79 +440,128 @@ const AssessmentRunnerPage: React.FC = () => {
 
         <div key={current.id} className={direction === 'back' ? 'assess-step-back' : 'assess-step-fwd'}>
           <Card className="p-6 sm:p-8">
-            <h2 className="text-balance text-center font-display text-xl font-bold text-ink sm:text-2xl">
-              {q.title}
-            </h2>
-            {qDisplay.helpText && q.helpText && (
-              <p className="mt-2 text-center text-sm text-ink-muted">{q.helpText}</p>
-            )}
-            {!q.required && (
-              <p className="mt-2 text-center text-xs text-ink-faint">{t('runner.optionalHint')}</p>
-            )}
-            {qDisplay.questionMedia && (q.media?.length ?? 0) > 0 && (
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-                {q.media!.map((m, i) => (
-                  <img
-                    key={`${m.url}-${i}`}
-                    src={resolveAssetUrl(m.url)}
-                    alt=""
-                    className={
-                      q.media!.length === 1
-                        ? 'max-h-64 w-auto max-w-full rounded-xl border border-border object-contain'
-                        : 'h-32 w-auto max-w-full rounded-lg border border-border object-contain sm:h-40'
-                    }
-                  />
-                ))}
-              </div>
-            )}
+            {current.kind === 'info' && <InfoStepCard node={current.info} />}
 
-            <div className="mt-6">
-              {q.questionType === 'date' && (
-                <div className="mx-auto max-w-xs">
-                  <DateInput
-                    value={answer?.value ?? ''}
-                    onChange={v => setValueAnswer(current.id, v)}
-                    max={todayIso()}
+            {current.kind === 'matrix' && (
+              <>
+                <h2 className="text-balance text-center font-display text-xl font-bold text-ink sm:text-2xl">
+                  {current.matrix.title}
+                </h2>
+                {current.matrix.helpText && (
+                  <p className="mt-2 text-center text-sm text-ink-muted">{current.matrix.helpText}</p>
+                )}
+                <div className="mt-6">
+                  <MatrixStepCard
+                    node={current.matrix}
+                    value={parseMatrixAnswer(answer?.value)}
+                    onChange={(rowId, colId, v) => setMatrixCell(current.id, rowId, colId, v)}
                   />
                 </div>
-              )}
+              </>
+            )}
 
-              {q.questionType === 'text' && (
-                <textarea
-                  rows={4}
-                  value={answer?.value ?? ''}
-                  onChange={e => setValueAnswer(current.id, e.target.value)}
-                  placeholder={t('runner.textPlaceholder')}
-                  className={inputClasses(false, false)}
-                />
-              )}
+            {current.kind === 'question' &&
+              (() => {
+                const q = current.question;
+                const qDisplay = resolveQuestionDisplay(display, q.display);
+                const numberFlag =
+                  q.questionType === 'number' ? numberFlagState(answer?.value ?? '', q.numeric) : null;
+                return (
+                  <>
+                    <h2 className="text-balance text-center font-display text-xl font-bold text-ink sm:text-2xl">
+                      {q.title}
+                    </h2>
+                    {qDisplay.helpText && q.helpText && (
+                      <p className="mt-2 text-center text-sm text-ink-muted">{q.helpText}</p>
+                    )}
+                    {!q.required && (
+                      <p className="mt-2 text-center text-xs text-ink-faint">{t('runner.optionalHint')}</p>
+                    )}
+                    {qDisplay.questionMedia && (q.media?.length ?? 0) > 0 && (
+                      <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                        {q.media!.map((m, i) => (
+                          <img
+                            key={`${m.url}-${i}`}
+                            src={resolveAssetUrl(m.url)}
+                            alt=""
+                            className={
+                              q.media!.length === 1
+                                ? 'max-h-64 w-auto max-w-full rounded-xl border border-border object-contain'
+                                : 'h-32 w-auto max-w-full rounded-lg border border-border object-contain sm:h-40'
+                            }
+                          />
+                        ))}
+                      </div>
+                    )}
 
-              {(q.questionType === 'single' || q.questionType === 'multi') && (
-                <>
-                  {q.questionType === 'multi' && (
-                    <p className="mb-3 text-center text-xs font-semibold text-ink-faint">
-                      {t('runner.multiHint')}
-                    </p>
-                  )}
-                  <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-                    {q.options.map(o => (
-                      <OptionCard
-                        key={o.id}
-                        option={o}
-                        selected={selectedIds.includes(o.id)}
-                        onToggle={() => toggleOption(current, o.id)}
-                        showMedia={qDisplay.optionMedia}
-                        verdictDef={
-                          qDisplay.verdictTiming === 'during'
-                            ? findVerdict(verdictDefs, o.verdict)
-                            : null
-                        }
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+                    <div className="mt-6">
+                      {q.questionType === 'date' && (
+                        <div className="mx-auto max-w-xs">
+                          <DateInput
+                            value={answer?.value ?? ''}
+                            onChange={v => setValueAnswer(current.id, v)}
+                            max={todayIso()}
+                          />
+                        </div>
+                      )}
+
+                      {q.questionType === 'number' && (
+                        <div className="mx-auto max-w-xs">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={answer?.value ?? ''}
+                            onChange={e => setValueAnswer(current.id, e.target.value)}
+                            placeholder={t('runner.numberPlaceholder')}
+                            className={`${inputClasses(!!numberFlag, false)} text-center`}
+                          />
+                          {numberFlag && (
+                            <p className="mt-2 text-center text-xs text-error-600">
+                              {t(`runner.${numberFlag.key}`, numberFlag.params)}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {q.questionType === 'text' && (
+                        <textarea
+                          rows={4}
+                          value={answer?.value ?? ''}
+                          onChange={e => setValueAnswer(current.id, e.target.value)}
+                          placeholder={t('runner.textPlaceholder')}
+                          className={inputClasses(false, false)}
+                        />
+                      )}
+
+                      {(q.questionType === 'single' || q.questionType === 'multi') && (
+                        <>
+                          {q.questionType === 'multi' && (
+                            <p className="mb-3 text-center text-xs font-semibold text-ink-faint">
+                              {t('runner.multiHint')}
+                            </p>
+                          )}
+                          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                            {q.options.map(o => (
+                              <OptionCard
+                                key={o.id}
+                                option={o}
+                                selected={selectedIds.includes(o.id)}
+                                onToggle={() => toggleOption(current, o.id)}
+                                showMedia={qDisplay.optionMedia}
+                                verdictDef={
+                                  qDisplay.verdictTiming === 'during'
+                                    ? findVerdict(verdictDefs, o.verdict)
+                                    : null
+                                }
+                              />
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
           </Card>
         </div>
 
@@ -479,15 +575,17 @@ const AssessmentRunnerPage: React.FC = () => {
           >
             {t('runner.back')}
           </Button>
-          <Button
-            variant="ghost"
-            onClick={() => saveDraft(false)}
-            loading={saving}
-            disabled={finishing}
-            className="ml-auto"
-          >
-            {t('runner.saveDraft')}
-          </Button>
+          {!editingSubmitted && (
+            <Button
+              variant="ghost"
+              onClick={() => saveDraft(false)}
+              loading={saving}
+              disabled={finishing}
+              className="ml-auto"
+            >
+              {t('runner.saveDraft')}
+            </Button>
+          )}
           {showFinish ? (
             <Button
               size="lg"
@@ -495,14 +593,16 @@ const AssessmentRunnerPage: React.FC = () => {
               loading={finishing}
               disabled={!canProceed || saving}
               iconLeft={<CheckCircle2 className="size-4" />}
+              className={editingSubmitted ? 'ml-auto' : undefined}
             >
-              {t('runner.finish')}
+              {editingSubmitted ? t('runner.saveChanges') : t('runner.finish')}
             </Button>
           ) : (
             <Button
               onClick={goNext}
               disabled={!canProceed || finishing}
               iconRight={<ArrowRight className="size-4" />}
+              className={editingSubmitted ? 'ml-auto' : undefined}
             >
               {t('runner.next')}
             </Button>

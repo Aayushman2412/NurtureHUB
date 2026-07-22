@@ -84,15 +84,44 @@ class QuestionDisplayModel(BaseModel):
     actions: Optional[bool] = None
 
 
+class NumericRangeModel(BaseModel):
+    """Numerical-answer constraints. `decimals` is hard (max decimal places);
+    flagMin/flagMax are soft — an out-of-range value is stored but flagged."""
+    decimals: Optional[int] = None
+    flagMin: Optional[float] = None
+    flagMax: Optional[float] = None
+
+
+class MatrixColumnOptionModel(BaseModel):
+    label: str = ""
+    value: str = ""
+
+
+class MatrixColumnModel(BaseModel):
+    id: str
+    label: str = ""
+    type: Literal["number", "text", "date", "datetime", "dropdown"] = "dropdown"
+    required: bool = False
+    options: Optional[List[MatrixColumnOptionModel]] = None
+    numeric: Optional[NumericRangeModel] = None
+
+
+class MatrixRowModel(BaseModel):
+    id: str
+    label: str = ""
+    helpText: Optional[str] = None
+
+
 class FlowSectionChildModel(BaseModel):
     id: str
     kind: Literal["question"] = "question"
-    questionType: Literal["single", "multi", "text", "date"] = "single"
+    questionType: Literal["single", "multi", "text", "date", "number"] = "single"
     title: str = ""
     helpText: str = ""
     required: bool = True
     media: List[FlowMediaModel] = Field(default_factory=list)  # question-level illustrations
     options: List[FlowOptionModel] = Field(default_factory=list)
+    numeric: Optional[NumericRangeModel] = None
     display: Optional[QuestionDisplayModel] = None
 
 
@@ -103,8 +132,8 @@ class FlowPositionModel(BaseModel):
 
 class FlowNodeModel(BaseModel):
     id: str
-    kind: Literal["question", "section"] = "question"
-    questionType: Optional[Literal["single", "multi", "text", "date"]] = None
+    kind: Literal["question", "section", "info", "matrix"] = "question"
+    questionType: Optional[Literal["single", "multi", "text", "date", "number"]] = None
     title: str = ""
     helpText: str = ""
     required: bool = True
@@ -112,6 +141,13 @@ class FlowNodeModel(BaseModel):
     position: FlowPositionModel = Field(default_factory=FlowPositionModel)
     options: List[FlowOptionModel] = Field(default_factory=list)
     children: List[FlowSectionChildModel] = Field(default_factory=list)
+    numeric: Optional[NumericRangeModel] = None
+    # info block
+    body: Optional[str] = None
+    action: Optional[FlowActionModel] = None
+    # matrix
+    rows: Optional[List[MatrixRowModel]] = None
+    columns: Optional[List[MatrixColumnModel]] = None
     next: Optional[str] = None
     display: Optional[QuestionDisplayModel] = None
 
@@ -201,6 +237,9 @@ class FlatFieldModel(BaseModel):
     min: Optional[float] = None
     max: Optional[float] = None
     decimals: Optional[int] = None
+    # soft "expected range" — out-of-range is stored but flagged (not rejected)
+    flagMin: Optional[float] = None
+    flagMax: Optional[float] = None
     noFuture: Optional[bool] = None
     notBeforeDob: Optional[bool] = None
     showIf: Optional[List[FlatFieldConditionModel]] = None

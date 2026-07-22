@@ -40,6 +40,15 @@
     "title": "Options",
     "newPlaceholder": "New option label"
   },
+  "numeric": {
+    "title": "Numerical settings",
+    "decimals": "Decimal places",
+    "flagMin": "Flag if below",
+    "flagMax": "Flag if above",
+    "min": "min",
+    "max": "max",
+    "hint": "Values outside the range are still saved but flagged red to the learner and admin after they submit."
+  },
   "preview": {
     "title": "Form Preview",
     "selectPlaceholder": "Select..."

@@ -13,7 +13,8 @@
     "ageMonths": "{{n}} mo",
     "formTitle": {
       "breastfeeding": "Breastfeeding Assessment",
-      "complementary_feeding": "Complementary Feeding"
+      "complementary_feeding": "Complementary Feeding",
+      "mother_protein_intake": "Mother's Protein Intake"
     }
   },
   "history": {
@@ -26,6 +27,7 @@
     "chipDraftProgress": "{{answered}} of {{total}} answered",
     "viewPlan": "View plan",
     "continue": "Continue",
+    "edit": "Edit",
     "deleteDraft": "Delete draft",
     "deleteTitle": "Delete this draft?",
     "deleteBody": "The draft from {{date}} will be removed. This cannot be undone.",
@@ -46,6 +48,13 @@
     "optionalHint": "Optional — you can skip this",
     "multiHint": "Select all that apply",
     "textPlaceholder": "Type your observation…",
+    "numberPlaceholder": "Enter a number",
+    "selectPlaceholder": "Select…",
+    "saveChanges": "Save changes",
+    "infoBadge": "Information",
+    "numberInvalid": "Enter a valid number",
+    "decimalsExceeded": "Use at most {{decimals}} decimal place(s)",
+    "outOfRange": "Outside the expected range ({{min}}–{{max}}) — saved but flagged",
     "back": "Back",
     "next": "Next",
     "finish": "Finish",

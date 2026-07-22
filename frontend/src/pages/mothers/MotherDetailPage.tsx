@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Baby, ChevronRight, Heart, Ruler, Utensils, Activity } from 'lucide-react';
-import { Badge, Button, Card, EmptyState, PageHeader, PageLoader } from '../../components/ui';
+import { Button, Card, EmptyState, PageHeader, PageLoader } from '../../components/ui';
+import LearnerMotherCard from '../../components/mothers/LearnerMotherCard';
 import { useToast } from '../../context/ToastContext';
 import { getMother, type Mother } from '../../api/mothers';
 import { listChildren, type ChildListItem } from '../../api/children';
@@ -46,12 +47,9 @@ const MotherDetailPage: React.FC = () => {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <PageHeader
-        title={mother.mother_name}
-        description={mother.mother_uid}
-        backTo="/mothers"
-        actions={<Badge variant="info">{mother.gestational_weeks != null ? t('detail.weeks', { n: mother.gestational_weeks }) : t('detail.registered')}</Badge>}
-      />
+      <PageHeader title={mother.mother_name} description={mother.mother_uid} backTo="/mothers" />
+
+      <LearnerMotherCard mother={mother} />
 
       <Card className="p-6">
         <h3 className="mb-3 font-display text-lg font-bold text-ink">{t('detail.clinical')}</h3>

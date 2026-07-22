@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, BoxSelect, ClipboardPaste, Copy, Eye, Layers, Plus, Redo2, Save, Trash2, Undo2, X } from 'lucide-react';
+import { ArrowLeft, BoxSelect, ClipboardPaste, Copy, Eye, Info, Layers, Plus, Redo2, Save, Table, Trash2, Undo2, X } from 'lucide-react';
 import { adminGetForm, adminSaveForm } from '../../../api/forms';
 import { validateFlow } from '../../../lib/flowGraph';
 import {
@@ -28,6 +28,8 @@ import ValidationChip from '../../../components/flowbuilder/ValidationChip';
 import {
   cloneNodesForPaste,
   duplicateNode,
+  makeInfoNode,
+  makeMatrixNode,
   makeQuestionNode,
   makeSectionNode,
 } from '../../../components/flowbuilder/factories';
@@ -247,8 +249,9 @@ const FlowBuilderPage: React.FC = () => {
   const verdictUsage = useCallback(
     (id: string) =>
       Object.values(schema.nodes).reduce((total, node) => {
+        // Only questions and section children carry options — info/matrix don't.
         const questions: { options: FlowOption[] }[] =
-          node.kind === 'section' ? node.children : [node];
+          node.kind === 'section' ? node.children : node.kind === 'question' ? [node] : [];
         return (
           total +
           questions.reduce((n, q) => n + q.options.filter(o => o.verdict === id).length, 0)
@@ -277,7 +280,9 @@ const FlowBuilderPage: React.FC = () => {
               nodeId,
               node.kind === 'section'
                 ? { ...node, children: node.children.map(clear) }
-                : clear(node),
+                : node.kind === 'question'
+                  ? clear(node)
+                  : node, // info / matrix carry no options
             ];
           }),
         ) as Record<string, FlowNode>,
@@ -358,6 +363,18 @@ const FlowBuilderPage: React.FC = () => {
 
   const addSection = useCallback(() => {
     const node = makeSectionNode(spawnPosition(schemaRef.current));
+    patchSchema(s => ({ startNodeId: s.startNodeId ?? node.id, nodes: { ...s.nodes, [node.id]: node } }));
+    setSelectedIds([node.id]);
+  }, [patchSchema]);
+
+  const addInfo = useCallback(() => {
+    const node = makeInfoNode(spawnPosition(schemaRef.current));
+    patchSchema(s => ({ startNodeId: s.startNodeId ?? node.id, nodes: { ...s.nodes, [node.id]: node } }));
+    setSelectedIds([node.id]);
+  }, [patchSchema]);
+
+  const addMatrix = useCallback(() => {
+    const node = makeMatrixNode(spawnPosition(schemaRef.current));
     patchSchema(s => ({ startNodeId: s.startNodeId ?? node.id, nodes: { ...s.nodes, [node.id]: node } }));
     setSelectedIds([node.id]);
   }, [patchSchema]);
@@ -675,6 +692,12 @@ const FlowBuilderPage: React.FC = () => {
           </Button>
           <Button size="sm" variant="outline" iconLeft={<Layers className="size-4" />} onClick={addSection}>
             Common section
+          </Button>
+          <Button size="sm" variant="outline" iconLeft={<Table className="size-4" />} onClick={addMatrix}>
+            Matrix
+          </Button>
+          <Button size="sm" variant="outline" iconLeft={<Info className="size-4" />} onClick={addInfo}>
+            Info block
           </Button>
           <Button
             size="sm"

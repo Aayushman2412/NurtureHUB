@@ -6,19 +6,23 @@ import {
   CircleDot,
   Copy,
   Flag,
+  Hash,
+  Info,
   Layers,
+  Table,
   Trash2,
 } from 'lucide-react';
-import { isQuestionNode } from '../../lib/flowTypes';
+import { isInfoNode, isMatrixNode, isQuestionNode } from '../../lib/flowTypes';
 import type { FlowNode, QuestionType, Verdict } from '../../lib/flowTypes';
 import { cn } from '../../utils/cn';
-import { GRID, NODE_W, nodeTitle, verdictEdgeColor } from './constants';
+import { GRID, NODE_W, nodeTitle, truncate, verdictEdgeColor } from './constants';
 
 const TYPE_BADGES: Record<QuestionType, { label: string; icon: React.FC<{ className?: string }>; classes: string }> = {
   single: { label: 'Single', icon: CircleDot, classes: 'bg-coral-50 text-coral-700 dark:bg-coral-500/15 dark:text-coral-300' },
   multi: { label: 'Multi', icon: CheckSquare, classes: 'bg-sage-100 text-sage-700 dark:bg-sage-500/15 dark:text-sage-300' },
   text: { label: 'Text', icon: AlignLeft, classes: 'bg-surface-sunken text-ink-muted' },
   date: { label: 'Date', icon: Calendar, classes: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-500' },
+  number: { label: 'Number', icon: Hash, classes: 'bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500' },
 };
 
 const DotMini: React.FC<{ verdict: Verdict }> = ({ verdict }) =>
@@ -134,6 +138,8 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
 
   const isSection = node.kind === 'section';
   const question = isQuestionNode(node) ? node : null;
+  const info = isInfoNode(node) ? node : null;
+  const matrix = isMatrixNode(node) ? node : null;
   const hasOptions =
     question !== null && (question.questionType === 'single' || question.questionType === 'multi');
   const endsHere =
@@ -186,12 +192,22 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
 
         <div className="px-3.5 pb-3 pt-3.5">
           <div className="mb-1.5 flex items-center gap-1.5">
-            {isSection ? (
+            {isSection && (
               <span className="inline-flex items-center gap-1 rounded-full bg-sage-100 px-2 py-0.5 text-[10px] font-bold text-sage-700 dark:bg-sage-500/15 dark:text-sage-300">
                 <Layers className="size-3" /> Section
               </span>
-            ) : (
-              question &&
+            )}
+            {info && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-info-50 px-2 py-0.5 text-[10px] font-bold text-info-600 dark:bg-coral-500/15 dark:text-coral-300">
+                <Info className="size-3" /> Info block
+              </span>
+            )}
+            {matrix && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-500/15 dark:text-amber-500">
+                <Table className="size-3" /> Matrix
+              </span>
+            )}
+            {question &&
               (() => {
                 const badge = TYPE_BADGES[question.questionType];
                 const Icon = badge.icon;
@@ -200,8 +216,7 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
                     <Icon className="size-3" /> {badge.label}
                   </span>
                 );
-              })()
-            )}
+              })()}
           </div>
 
           <div className="line-clamp-2 text-[13px] font-semibold leading-snug text-ink">
@@ -236,7 +251,29 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
           )}
           {question && !hasOptions && (
             <div className="mt-2 text-[11px] text-ink-faint">
-              {question.questionType === 'text' ? 'Free text answer' : 'Date answer'}
+              {question.questionType === 'text'
+                ? 'Free text answer'
+                : question.questionType === 'number'
+                  ? 'Numerical answer'
+                  : 'Date answer'}
+            </div>
+          )}
+
+          {info && (info.body.trim() || info.action.type !== 'none') && (
+            <div className="mt-2 space-y-0.5">
+              {info.body.trim() && (
+                <div className="line-clamp-2 text-[11px] text-ink-faint">{truncate(info.body.trim(), 90)}</div>
+              )}
+              {info.action.type !== 'none' && (
+                <div className="text-[11px] font-semibold text-ink-faint">▶ {info.action.type} attached</div>
+              )}
+            </div>
+          )}
+
+          {matrix && (
+            <div className="mt-2 text-[11px] text-ink-faint">
+              {matrix.rows.length} row{matrix.rows.length === 1 ? '' : 's'} ×{' '}
+              {matrix.columns.length} column{matrix.columns.length === 1 ? '' : 's'}
             </div>
           )}
 

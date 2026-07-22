@@ -742,7 +742,9 @@ class FormDefinition(Base):
 
 
 class FormResponse(Base):
-    """One BF/CF assessment for a child. Answers are denormalized snapshots
+    """One assessment. Most forms attach to a child (BF/CF/growth); mother-level
+    forms (e.g. the protein-intake form) attach to a mother instead — exactly
+    one of child_id / mother_id is set. Answers are denormalized snapshots
     (question text, option labels, verdicts, actions) taken at submit time so
     history stays readable even after the admin edits the form definition.
     """
@@ -751,7 +753,9 @@ class FormResponse(Base):
     id = Column(Integer, primary_key=True, index=True)
     form_key = Column(String, index=True, nullable=False)
     definition_version = Column(Integer, nullable=False, default=1)
-    child_id = Column(Integer, ForeignKey("children.id", ondelete="CASCADE"), nullable=False)
+    # Child-level forms set child_id; mother-level forms set mother_id instead.
+    child_id = Column(Integer, ForeignKey("children.id", ondelete="CASCADE"), nullable=True)
+    mother_id = Column(Integer, ForeignKey("mothers.id", ondelete="CASCADE"), nullable=True)
     submitted_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     assessment_date = Column(Date, nullable=False)
     status = Column(String, nullable=False, default="draft")   # 'draft' | 'submitted'
@@ -762,6 +766,10 @@ class FormResponse(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     child = relationship("Child")
+    mother = relationship("Mother")
     submitted_by = relationship("User")
 
-    __table_args__ = (Index("ix_form_responses_child_form", "child_id", "form_key"),)
+    __table_args__ = (
+        Index("ix_form_responses_child_form", "child_id", "form_key"),
+        Index("ix_form_responses_mother_form", "mother_id", "form_key"),
+    )

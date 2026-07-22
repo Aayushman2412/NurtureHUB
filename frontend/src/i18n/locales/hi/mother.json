@@ -16,6 +16,14 @@
     },
     "weeks": "{{n}} सप्ताह"
   },
+  "card": {
+    "learnerFallback": "स्वास्थ्य कार्यकर्ता",
+    "proteinIntake": "प्रोटीन सेवन",
+    "age": "आयु",
+    "village": "गाँव",
+    "mobile": "मोबाइल",
+    "edd": "ईडीडी"
+  },
   "detail": {
     "loading": "लोड हो रहा है",
     "loadFailed": "माता को लोड करने में असफल",

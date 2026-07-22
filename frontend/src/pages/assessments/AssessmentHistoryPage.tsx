@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ClipboardList,
   Lock,
+  Pencil,
   Play,
   Plus,
   Trash2,
@@ -22,9 +23,15 @@ import {
 } from '../../components/ui';
 import { useToast } from '../../context/ToastContext';
 import { getChild, type Child } from '../../api/children';
-import { deleteResponse, getFormDefinition, listChildResponses } from '../../api/forms';
+import { getMother, type Mother } from '../../api/mothers';
+import {
+  deleteResponse,
+  getFormDefinition,
+  listChildResponses,
+  listMotherResponses,
+} from '../../api/forms';
 import type { FormDefinition, FormKey, FormResponseListItem } from '../../lib/flowTypes';
-import { CF_MIN_AGE_DAYS, isFlowFormKey, isResponseFormKey } from '../../lib/flowTypes';
+import { CF_MIN_AGE_DAYS, isFlowFormKey, isMotherFormKey, isResponseFormKey } from '../../lib/flowTypes';
 import ChildChip from '../../components/assessments/ChildChip';
 import TrendStrip from '../../components/assessments/TrendStrip';
 import { formatDisplayDate } from '../../components/assessments/flowRunner';
@@ -39,10 +46,12 @@ const AssessmentHistoryPage: React.FC = () => {
 
   const validKey = isResponseFormKey(keyParam ?? '');
   const formKey = (keyParam ?? 'breastfeeding') as FormKey;
+  const isMother = isMotherFormKey(formKey);
   /** Flat forms (Check Growth) have no green/red verdicts — hide those bits. */
   const scored = isFlowFormKey(keyParam ?? '');
 
   const [child, setChild] = useState<Child | null>(null);
+  const [mother, setMother] = useState<Mother | null>(null);
   const [definition, setDefinition] = useState<FormDefinition | null>(null);
   const [responses, setResponses] = useState<FormResponseListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +60,9 @@ const AssessmentHistoryPage: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
 
   const backTo = `/mothers/${motherId}`;
-  const runUrl = `/mothers/${motherId}/children/${childId}/assessments/${formKey}/run`;
+  const runUrl = isMother
+    ? `/mothers/${motherId}/assessments/${formKey}/run`
+    : `/mothers/${motherId}/children/${childId}/assessments/${formKey}/run`;
 
   useEffect(() => {
     if (!validKey) return;
@@ -59,13 +70,14 @@ const AssessmentHistoryPage: React.FC = () => {
     setLoading(true);
     setLoadError(false);
     Promise.all([
-      getChild(motherId, childId),
+      isMother ? getMother(motherId) : getChild(motherId, childId),
       getFormDefinition(formKey),
-      listChildResponses(formKey, childId),
+      isMother ? listMotherResponses(formKey, motherId) : listChildResponses(formKey, childId),
     ])
-      .then(([c, d, r]) => {
+      .then(([subject, d, r]) => {
         if (cancelled) return;
-        setChild(c);
+        if (isMother) setMother(subject as Mother);
+        else setChild(subject as Child);
         setDefinition(d);
         setResponses(r);
       })
@@ -78,7 +90,7 @@ const AssessmentHistoryPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [motherId, childId, formKey, validKey]);
+  }, [motherId, childId, formKey, validKey, isMother]);
 
   // Newest first for the list; oldest first for the trend strip.
   const sorted = useMemo(
@@ -96,7 +108,8 @@ const AssessmentHistoryPage: React.FC = () => {
   if (!validKey) return <Navigate to={backTo} replace />;
   if (loading) return <PageLoader label={t('common.loading')} className="min-h-60" />;
 
-  if (loadError || !child || !definition) {
+  const subject = isMother ? mother : child;
+  if (loadError || !subject || !definition) {
     return (
       <div className="mx-auto flex max-w-3xl flex-col gap-4">
         <Alert variant="error" title={t('common.loadFailedTitle')}>
@@ -111,11 +124,13 @@ const AssessmentHistoryPage: React.FC = () => {
     );
   }
 
+  const subjectName = isMother ? mother!.mother_name : child!.child_name;
   const cfLocked =
+    !isMother &&
     formKey === 'complementary_feeding' &&
-    (child.age_days == null || child.age_days < CF_MIN_AGE_DAYS);
+    (child!.age_days == null || child!.age_days < CF_MIN_AGE_DAYS);
   const cfRemaining =
-    child.age_days == null ? null : Math.max(1, CF_MIN_AGE_DAYS - child.age_days);
+    !isMother && child!.age_days != null ? Math.max(1, CF_MIN_AGE_DAYS - child!.age_days) : null;
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
@@ -138,13 +153,17 @@ const AssessmentHistoryPage: React.FC = () => {
         title={definition.title}
         backTo={backTo}
         description={
-          <ChildChip
-            name={child.child_name}
-            uid={child.child_uid}
-            ageDays={child.age_days}
-            ageMonths={child.age_months}
-            className="mt-1"
-          />
+          isMother ? (
+            <ChildChip name={mother!.mother_name} uid={mother!.mother_uid} className="mt-1" />
+          ) : (
+            <ChildChip
+              name={child!.child_name}
+              uid={child!.child_uid}
+              ageDays={child!.age_days}
+              ageMonths={child!.age_months}
+              className="mt-1"
+            />
+          )
         }
         actions={
           !cfLocked && (
@@ -162,7 +181,7 @@ const AssessmentHistoryPage: React.FC = () => {
           </div>
           <h3 className="mt-4 font-display text-lg font-bold text-ink">{t('history.lockedTitle')}</h3>
           <p className="mx-auto mt-2 max-w-md text-sm text-ink-muted">
-            {child.age_days == null
+            {child!.age_days == null
               ? t('history.lockedNoDob', { min: CF_MIN_AGE_DAYS })
               : t('history.lockedBody', { min: CF_MIN_AGE_DAYS })}
           </p>
@@ -181,7 +200,7 @@ const AssessmentHistoryPage: React.FC = () => {
             <EmptyState
               icon={<ClipboardList />}
               title={t('history.emptyTitle')}
-              description={t('history.emptyBody', { name: child.child_name })}
+              description={t('history.emptyBody', { name: subjectName })}
               action={
                 <Button onClick={() => navigate(runUrl)} iconLeft={<Plus className="size-4" />}>
                   {t('history.startNew')}
@@ -241,14 +260,24 @@ const AssessmentHistoryPage: React.FC = () => {
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
                         {submitted ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => navigate(`/assessments/${r.id}/plan`)}
-                            iconRight={<ArrowRight className="size-3.5" />}
-                          >
-                            {t('history.viewPlan')}
-                          </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => navigate(`${runUrl}?responseId=${r.id}`)}
+                              iconLeft={<Pencil className="size-3.5" />}
+                            >
+                              {t('history.edit')}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => navigate(`/assessments/${r.id}/plan`)}
+                              iconRight={<ArrowRight className="size-3.5" />}
+                            >
+                              {t('history.viewPlan')}
+                            </Button>
+                          </>
                         ) : (
                           <>
                             <Button

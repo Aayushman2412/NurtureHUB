@@ -16,6 +16,14 @@
     },
     "weeks": "{{n}} weeks"
   },
+  "card": {
+    "learnerFallback": "Health worker",
+    "proteinIntake": "Protein intake",
+    "age": "Age",
+    "village": "Village",
+    "mobile": "Mobile",
+    "edd": "EDD"
+  },
   "detail": {
     "loading": "Loading",
     "loadFailed": "Failed to load mother",

@@ -5,20 +5,31 @@ import {
   ChevronRight,
   ChevronUp,
   CircleHelp,
+  Info,
   Layers,
   Plus,
+  Table,
   Trash2,
   X,
   XCircle,
 } from 'lucide-react';
 import { flattenAnswerable } from '../../lib/flowGraph';
 import type { FlowIssue } from '../../lib/flowGraph';
-import type { FlowQuestionNode, FlowSchema, FlowSectionNode } from '../../lib/flowTypes';
+import type {
+  FlowInfoNode,
+  FlowMatrixNode,
+  FlowQuestionNode,
+  FlowSchema,
+  FlowSectionNode,
+} from '../../lib/flowTypes';
 import { resolveDisplay, resolveVerdicts } from '../../lib/flowTypes';
-import { Badge, FieldLabel, Input } from '../ui';
+import { Badge, Checkbox, FieldLabel, Input } from '../ui';
 import { inputClasses } from '../ui/Input';
 import { cn } from '../../utils/cn';
 import QuestionEditor from './QuestionEditor';
+import MediaPicker from './MediaPicker';
+import ActionEditor from './ActionEditor';
+import MatrixEditor from './MatrixEditor';
 import TargetPicker from './TargetPicker';
 import { makeSectionChild } from './factories';
 import { EDGE_COLORS, QUESTION_TYPE_LABELS, issueCounts, nodeTitle, targetOptionsFor } from './constants';
@@ -36,15 +47,19 @@ export interface NodeEditorPanelProps {
   onSelect: (id: string | null) => void;
 }
 
-const PanelHeader: React.FC<{ label: string; kind: 'question' | 'section'; onClose: () => void }> = ({
-  label,
-  kind,
-  onClose,
-}) => (
+const PanelHeader: React.FC<{
+  label: string;
+  kind: 'question' | 'section' | 'info' | 'matrix';
+  onClose: () => void;
+}> = ({ label, kind, onClose }) => (
   <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border bg-surface px-4 py-3">
     <div className="flex items-center gap-2">
       {kind === 'section' ? (
         <Layers className="size-4 text-sage-600 dark:text-sage-300" />
+      ) : kind === 'info' ? (
+        <Info className="size-4 text-info-600" />
+      ) : kind === 'matrix' ? (
+        <Table className="size-4 text-amber-600" />
       ) : (
         <CircleHelp className="size-4 text-primary" />
       )}
@@ -404,6 +419,119 @@ const QuestionPanel: React.FC<{
   );
 };
 
+/* ── Info block editor ─────────────────────────────────────────────────────── */
+
+const InfoPanel: React.FC<{
+  node: FlowInfoNode;
+  schema: FlowSchema;
+  connect: ConnectRequest | null;
+  onPatchNode: (id: string, patch: NodePatch) => void;
+  onStartConnect: (req: ConnectRequest) => void;
+  onSelect: (id: string | null) => void;
+}> = ({ node, schema, connect, onPatchNode, onStartConnect, onSelect }) => {
+  const targets = targetOptionsFor(schema, node.id);
+  return (
+    <div>
+      <PanelHeader label="Info block" kind="info" onClose={() => onSelect(null)} />
+      <div className="space-y-4 p-4">
+        <p className="text-[11px] leading-snug text-ink-faint">
+          A read-only screen shown between questions — a heading, text, images/GIFs and an optional
+          video or link. It collects no answer.
+        </p>
+        <div>
+          <FieldLabel size="sm">Heading</FieldLabel>
+          <Input
+            value={node.title}
+            onChange={e => onPatchNode(node.id, { title: e.target.value })}
+            placeholder="e.g. Details about Grains and Millets"
+          />
+        </div>
+        <div>
+          <FieldLabel size="sm">Information text</FieldLabel>
+          <textarea
+            rows={4}
+            className={cn(inputClasses(), 'resize-y')}
+            value={node.body}
+            onChange={e => onPatchNode(node.id, { body: e.target.value })}
+            placeholder="Explain what the health worker should know or do here."
+          />
+        </div>
+        <MediaPicker
+          label="Images / GIFs (optional)"
+          media={node.media}
+          onChange={media => onPatchNode(node.id, { media })}
+        />
+        <div className="rounded-lg border border-border p-3">
+          <FieldLabel size="sm" className="mb-2">
+            Call to action (optional)
+          </FieldLabel>
+          <ActionEditor action={node.action} onChange={action => onPatchNode(node.id, { action })} />
+        </div>
+        <TargetPicker
+          label="Next step"
+          value={node.next}
+          options={targets}
+          onChange={next => onPatchNode(node.id, { next })}
+          onStartConnect={() => onStartConnect({ nodeId: node.id, optionId: null })}
+          connectActive={!!connect && connect.nodeId === node.id && connect.optionId === null}
+        />
+      </div>
+    </div>
+  );
+};
+
+/* ── Matrix editor ─────────────────────────────────────────────────────────── */
+
+const MatrixPanel: React.FC<{
+  node: FlowMatrixNode;
+  schema: FlowSchema;
+  connect: ConnectRequest | null;
+  onPatchNode: (id: string, patch: NodePatch) => void;
+  onStartConnect: (req: ConnectRequest) => void;
+  onSelect: (id: string | null) => void;
+}> = ({ node, schema, connect, onPatchNode, onStartConnect, onSelect }) => {
+  const targets = targetOptionsFor(schema, node.id);
+  return (
+    <div>
+      <PanelHeader label="Multi-dropdown matrix" kind="matrix" onClose={() => onSelect(null)} />
+      <div className="space-y-4 p-4">
+        <div>
+          <FieldLabel size="sm">Question title</FieldLabel>
+          <Input
+            value={node.title}
+            onChange={e => onPatchNode(node.id, { title: e.target.value })}
+            placeholder="e.g. Grains and millets eaten"
+          />
+        </div>
+        <div>
+          <FieldLabel size="sm">Help text (optional)</FieldLabel>
+          <Input
+            value={node.helpText}
+            onChange={e => onPatchNode(node.id, { helpText: e.target.value })}
+            placeholder="Extra guidance shown under the title"
+          />
+        </div>
+        <Checkbox
+          label="Required (every required column of every row must be filled)"
+          checked={node.required}
+          onChange={e => onPatchNode(node.id, { required: e.target.checked })}
+        />
+
+        <MatrixEditor node={node} onPatch={patch => onPatchNode(node.id, patch)} />
+
+        <TargetPicker
+          label="Next step"
+          value={node.next}
+          options={targets}
+          onChange={next => onPatchNode(node.id, { next })}
+          onStartConnect={() => onStartConnect({ nodeId: node.id, optionId: null })}
+          connectActive={!!connect && connect.nodeId === node.id && connect.optionId === null}
+        />
+      </div>
+    </div>
+  );
+};
+
 /* ── Host ──────────────────────────────────────────────────────────────────── */
 
 /** Left editor panel: form info when nothing is selected, else the node editor. */
@@ -432,17 +560,46 @@ const NodeEditorPanel: React.FC<NodeEditorPanelProps> = ({
     );
   }
 
-  return node.kind === 'section' ? (
-    <SectionPanel
-      key={node.id}
-      node={node}
-      schema={schema}
-      connect={connect}
-      onPatchNode={onPatchNode}
-      onStartConnect={onStartConnect}
-      onSelect={onSelect}
-    />
-  ) : (
+  if (node.kind === 'section') {
+    return (
+      <SectionPanel
+        key={node.id}
+        node={node}
+        schema={schema}
+        connect={connect}
+        onPatchNode={onPatchNode}
+        onStartConnect={onStartConnect}
+        onSelect={onSelect}
+      />
+    );
+  }
+  if (node.kind === 'info') {
+    return (
+      <InfoPanel
+        key={node.id}
+        node={node}
+        schema={schema}
+        connect={connect}
+        onPatchNode={onPatchNode}
+        onStartConnect={onStartConnect}
+        onSelect={onSelect}
+      />
+    );
+  }
+  if (node.kind === 'matrix') {
+    return (
+      <MatrixPanel
+        key={node.id}
+        node={node}
+        schema={schema}
+        connect={connect}
+        onPatchNode={onPatchNode}
+        onStartConnect={onStartConnect}
+        onSelect={onSelect}
+      />
+    );
+  }
+  return (
     <QuestionPanel
       key={node.id}
       node={node}

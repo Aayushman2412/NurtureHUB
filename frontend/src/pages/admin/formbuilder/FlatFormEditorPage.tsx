@@ -42,6 +42,14 @@ const FIELD_TYPE_VALUES: FlatField['type'][] = [
   'text', 'number', 'date', 'dropdown', 'radio', 'textarea', 'checkbox', 'image',
 ];
 
+/** Parse a numeric-input string → number | null (blank clears the setting). */
+const numOrNull = (raw: string): number | null => {
+  const v = raw.trim();
+  if (v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
 const TYPE_ICONS: Record<FlatField['type'], string> = {
   text: '📝',
   number: '🔢',
@@ -408,6 +416,46 @@ const FlatFormEditorPage: React.FC = () => {
                       setOptionLabel={setEditOptionLabel}
                       onAdd={() => addOptionToField(field.id)}
                     />
+                  )}
+
+                  {field.type === 'number' && (
+                    <div className="mt-4 rounded-lg border border-border p-3">
+                      <FieldLabel size="sm" className="mb-2">
+                        {t('numeric.title')}
+                      </FieldLabel>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        <div>
+                          <FieldLabel size="sm">{t('numeric.decimals')}</FieldLabel>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={4}
+                            value={field.decimals ?? ''}
+                            onChange={e => updateField(field.id, { decimals: numOrNull(e.target.value) })}
+                            placeholder="1"
+                          />
+                        </div>
+                        <div>
+                          <FieldLabel size="sm">{t('numeric.flagMin')}</FieldLabel>
+                          <Input
+                            type="number"
+                            value={field.flagMin ?? ''}
+                            onChange={e => updateField(field.id, { flagMin: numOrNull(e.target.value) })}
+                            placeholder={t('numeric.min')}
+                          />
+                        </div>
+                        <div>
+                          <FieldLabel size="sm">{t('numeric.flagMax')}</FieldLabel>
+                          <Input
+                            type="number"
+                            value={field.flagMax ?? ''}
+                            onChange={e => updateField(field.id, { flagMax: numOrNull(e.target.value) })}
+                            placeholder={t('numeric.max')}
+                          />
+                        </div>
+                      </div>
+                      <p className="mt-2 text-[11px] leading-snug text-ink-faint">{t('numeric.hint')}</p>
+                    </div>
                   )}
                 </div>
               )}

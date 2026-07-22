@@ -354,6 +354,148 @@ def build_complementary_feeding_schema() -> dict:
     return _chain_and_position(nodes)
 
 
+# ── Mother protein-intake (flow: info blocks + multi-dropdown matrices) ───────
+
+def _info(iid: str, title: str, body: str, media: list | None = None,
+          action: dict | None = None) -> dict:
+    return {
+        "id": iid, "kind": "info", "title": title, "body": body,
+        "media": media or [], "action": action or dict(_NO_ACTION),
+        "position": {"x": 0, "y": 0}, "next": None,
+    }
+
+
+def _mrow(rid: str, label: str) -> dict:
+    return {"id": rid, "label": label}
+
+
+def _mcol_dropdown(cid: str, label: str, values: list, required: bool = False) -> dict:
+    return {
+        "id": cid, "label": label, "type": "dropdown", "required": required,
+        "options": [{"label": str(v), "value": str(v)} for v in values], "numeric": None,
+    }
+
+
+def _mcol_number(cid: str, label: str, decimals: int = 1,
+                 flag_min: float | None = None, flag_max: float | None = None,
+                 required: bool = False) -> dict:
+    return {
+        "id": cid, "label": label, "type": "number", "required": required, "options": None,
+        "numeric": {"decimals": decimals, "flagMin": flag_min, "flagMax": flag_max},
+    }
+
+
+def _matrix(mid: str, title: str, rows: list, columns: list,
+            help_text: str = "", required: bool = True) -> dict:
+    return {
+        "id": mid, "kind": "matrix", "title": title, "helpText": help_text,
+        "required": required, "rows": rows, "columns": columns,
+        "position": {"x": 0, "y": 0}, "next": None,
+    }
+
+
+# Portions eaten in the last 24 hours (0–10, half-serving granularity) and
+# days/week ("0 days" … "7 days"), matching the Cuedwell instrument.
+_PORTIONS = [round(x * 0.5, 1) for x in range(0, 21)]  # 0, 0.5, 1, … 10
+_DAYS_OPTS = [{"label": f"{d} day" + ("" if d == 1 else "s"), "value": str(d)} for d in range(0, 8)]
+
+
+def _food_matrix(mid: str, title: str, foods: list[tuple[str, str]]) -> dict:
+    """A protein food-group grid (one row per food): a required 'portions in the
+    last 24 hours' dropdown (0–10 half-steps) and an optional 'days per week'
+    dropdown. Mirrors the Cuedwell 'X consumed by mother' matrices."""
+    days_col = {
+        "id": f"{mid}_c_days", "label": "Days per week eaten", "type": "dropdown",
+        "required": False, "options": _DAYS_OPTS, "numeric": None,
+    }
+    return _matrix(
+        mid, title,
+        rows=[_mrow(f"{mid}_{suffix}", label) for suffix, label in foods],
+        columns=[
+            _mcol_dropdown(f"{mid}_c_portions", "Number of portions eaten in the last 24 hours", _PORTIONS, required=True),
+            days_col,
+        ],
+    )
+
+
+# (info-section title, "Protein information for …" caption, matrix title,
+#  [(row-suffix, food label)]) — transcribed from the Cuedwell protein form.
+_PROTEIN_GROUPS = [
+    ("Details about Pulses", "Protein information for pulses (whole beans, sprouts, dal)",
+     "Pulses consumed by mother", "mpi_pulses", [
+        ("beans", "1 cup of cooked whole beans or sprouts or thick consistency dal (10 grams of protein)"),
+        ("soya", "1 cup of cooked whole soyabeans (22 grams of protein)"),
+    ]),
+    ("Details about Milk Products", "Protein information for milk and milk products",
+     "Milk products consumed by mother", "mpi_milk", [
+        ("curd", "1 cup of curd (8 grams of protein)"),
+        ("paneer", "3 to 4 pieces of paneer (8.8 grams of protein)"),
+        ("milk", "1 glass of milk (8 grams of protein)"),
+    ]),
+    ("Details about Grains and Millets", "Protein information for grains and millets",
+     "Grains and millets consumed by mother", "mpi_grains", [
+        ("roti", "1 roti or chapati (6 grams of protein)"),
+        ("rice", "1 cup of rice (5 grams of protein)"),
+        ("bhakri", "1 bhakri (jowar/bajra/etc.) (10.9 grams of protein)"),
+        ("millets", "1 cup of cooked millets (jowar/bajra/ragi/kodo, etc.) (7.5 grams of protein)"),
+    ]),
+    ("Details about green leafy vegetables", "Protein information for green leafy vegetables",
+     "Green leafy vegetables consumed by mother", "mpi_leafy", [
+        ("dry", "Half cup or wati of dry cooked green leafy vegetables (not curry) (150 grams raw) (3.6 grams of protein)"),
+        ("curry", "1 cup or wati of thinly cooked curry (100 grams raw) (5.4 grams of protein)"),
+    ]),
+    ("Details about other vegetables", "Protein information for other vegetables",
+     "Other vegetables consumed by mother", "mpi_veg", [
+        ("dry", "1 cup or wati of dry cooked vegetables (200 grams raw) (3.4 grams of protein)"),
+        ("curry", "1 cup or wati of thinly cooked vegetable curry (100 grams raw) (1.7 grams of protein)"),
+    ]),
+    ("Details about roots and tubers", "Protein information for roots and tubers",
+     "Roots and tubers consumed by mother", "mpi_roots", [
+        ("dry", "1 cup or wati of dry cooked roots and tubers (200 grams raw) (2.6 grams of protein)"),
+        ("curry", "1 cup or wati of thinly cooked roots and tubers curry (100 grams raw) (1.3 grams of protein)"),
+    ]),
+    ("Details about nuts and seeds", "Protein information for nuts and seeds",
+     "Nuts and seeds consumed by mother", "mpi_nuts", [
+        ("tbsp", "1 tablespoon (15 grams) (3 grams of protein)"),
+    ]),
+]
+
+
+def build_mother_protein_intake_schema() -> dict:
+    """The mother's protein-intake recall (Cuedwell 'Record protein-rich food
+    intake by mother'): assessment date, diet type, mother's status, a
+    household-measures info block, then an info block + food-group matrix for
+    each of seven food groups. Filled for the MOTHER on every visit."""
+    nodes: list[dict] = []
+
+    nodes.append(_question(
+        "mpi_date", "Assessment date", [], qtype="date",
+        help_text="Enter date of assessment.",
+    ))
+
+    nodes.append(_question("mpi_diet_type", "Diet type", [
+        _opt("mpi_diet_veg", "Vegetarian"),
+        _opt("mpi_diet_egg", "Eggetarian (vegetarian who eats eggs)"),
+        _opt("mpi_diet_nonveg", "Non Vegetarian"),
+    ], help_text="Select applicable choice."))
+
+    nodes.append(_question("mpi_status", "Mother's status", [
+        _opt("mpi_status_pregnant", "Pregnant Mother (ANC stage)"),
+        _opt("mpi_status_lactating", "Lactating Mother (PNC stage)"),
+    ], help_text="Select applicable choice."))
+
+    nodes.append(_info(
+        "mpi_household", "Food quantity according to household items",
+        "1 Teaspoon = 5 grams\n1 Tablespoon = 15 grams\n1 cup or Wati = 250 milliliter\n1 Glass = 250 milliliter",
+    ))
+
+    for info_title, caption, matrix_title, mid, foods in _PROTEIN_GROUPS:
+        nodes.append(_info(f"{mid}_info", info_title, caption))
+        nodes.append(_food_matrix(mid, matrix_title, foods))
+
+    return _chain_and_position(nodes)
+
+
 # ── Flat form defaults ───────────────────────────────────────────────────────
 
 def _flat(fields: list[dict]) -> dict:
@@ -626,6 +768,11 @@ FORM_SPECS: dict[str, tuple[str, str, str, callable]] = {
         "Antenatal Form",
         "Antenatal visit record for the mother.",
         "flat", build_antenatal_fields),
+    "mother_protein_intake": (
+        "Mother's Protein Intake",
+        "Daily protein-intake recall for the mother — food-group matrices with a "
+        "portions/day-per-week grid. Filled for the mother on every visit.",
+        "flow", build_mother_protein_intake_schema),
 }
 
 

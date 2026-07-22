@@ -59,8 +59,19 @@ export const listChildResponses = (
     .get(`/api/forms/${formKey}/responses`, { params: { child_id: childId } })
     .then(r => r.data);
 
+/** List responses of a MOTHER-level form (e.g. protein intake) for one mother. */
+export const listMotherResponses = (
+  formKey: FormKey,
+  motherId: number,
+): Promise<FormResponseListItem[]> =>
+  client
+    .get(`/api/forms/${formKey}/responses`, { params: { mother_id: motherId } })
+    .then(r => r.data);
+
 export interface ResponsePayload {
-  child_id: number;
+  /** Exactly one of child_id / mother_id, matching the form's level. */
+  child_id?: number;
+  mother_id?: number;
   assessment_date: string; // ISO date
   status: 'draft' | 'submitted';
   answers: AnswerIn[];
@@ -74,7 +85,7 @@ export const createResponse = (
 
 export const updateResponse = (
   responseId: number,
-  payload: Omit<ResponsePayload, 'child_id'>,
+  payload: Omit<ResponsePayload, 'child_id' | 'mother_id'>,
 ): Promise<FormResponseDetail> =>
   client.put(`/api/forms/responses/${responseId}`, payload).then(r => r.data);
 
