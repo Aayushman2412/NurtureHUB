@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, BoxSelect, ClipboardPaste, Copy, Download, Eye, Info, Layers, Plus, Redo2, Save, Table, Trash2, Undo2, X } from 'lucide-react';
+import { ArrowLeft, BoxSelect, ClipboardPaste, Copy, Download, Eye, Info, Layers, Plus, Printer, Redo2, Save, Table, Trash2, Undo2, X } from 'lucide-react';
 import { adminExportForm, adminGetForm, adminSaveForm } from '../../../api/forms';
 import { validateFlow } from '../../../lib/flowGraph';
 import {
@@ -742,6 +742,22 @@ const FlowBuilderPage: React.FC = () => {
             title="Download the saved form as a template zip — includes the full flow, skip logic, restrictions, plus every image and media link"
           >
             Export
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            iconLeft={<Printer className="size-4" />}
+            onClick={() => {
+              if (
+                dirty &&
+                !window.confirm('You have unsaved changes. The preview shows the last SAVED version — continue?')
+              )
+                return;
+              window.open(`/admin/form-builder/print/${formKey}`, '_blank');
+            }}
+            title="Open a learner-view preview of the whole form, ready to save as PDF"
+          >
+            Print / PDF
           </Button>
           <ValidationChip issues={issues} onSelectIssue={selectIssue} />
           {dirty && (

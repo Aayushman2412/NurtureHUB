@@ -9,6 +9,7 @@ import {
   Eye,
   GripVertical,
   Plus,
+  Printer,
   Save,
   Trash2,
 } from 'lucide-react';
@@ -331,6 +332,17 @@ const FlatFormEditorPage: React.FC = () => {
               title={t('header.exportHint')}
             >
               {t('header.export')}
+            </Button>
+            <Button
+              variant="outline"
+              iconLeft={<Printer className="size-4" />}
+              onClick={() => {
+                if (dirty && !window.confirm(t('exportDirtyConfirm'))) return;
+                window.open(`/admin/form-builder/print/${formKey}`, '_blank');
+              }}
+              title={t('header.printHint')}
+            >
+              {t('header.print')}
             </Button>
             <Button iconLeft={<Save className="size-4" />} loading={saving} disabled={!dirty} onClick={save}>
               Save

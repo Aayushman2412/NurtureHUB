@@ -7,7 +7,9 @@
     "hidePreview": "Hide Preview",
     "addField": "Add Field",
     "export": "Export",
-    "exportHint": "Download the saved form as a template zip — includes all fields and restrictions, plus every image and media link"
+    "exportHint": "Download the saved form as a template zip — includes all fields and restrictions, plus every image and media link",
+    "print": "Print / PDF",
+    "printHint": "Open a learner-view preview of the whole form, ready to save as PDF"
   },
   "exportDirtyConfirm": "You have unsaved changes. The export contains the last SAVED version — export anyway?",
   "toast": {
