@@ -2,7 +2,12 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, BoxSelect, ClipboardPaste, Copy, Download, Eye, Info, Layers, Plus, Printer, Redo2, Save, Table, Trash2, Undo2, X } from 'lucide-react';
 import { adminExportForm, adminGetForm, adminSaveForm } from '../../../api/forms';
-import { validateFlow } from '../../../lib/flowGraph';
+import {
+  moveChildOutOfSection,
+  moveIntoSectionImpact,
+  moveQuestionIntoSection,
+  validateFlow,
+} from '../../../lib/flowGraph';
 import {
   emptyFlowSchema,
   isBuiltinVerdict,
@@ -434,6 +439,48 @@ const FlowBuilderPage: React.FC = () => {
   const setStart = useCallback(
     (id: string) => patchSchema(s => (s.startNodeId === id ? s : { ...s, startNodeId: id })),
     [patchSchema],
+  );
+
+  // ── Move a question in / out of a common section ─────────────────────────
+  const moveIntoSection = useCallback(
+    (questionId: string, sectionId: string) => {
+      const s = schemaRef.current;
+      const question = s.nodes[questionId];
+      const section = s.nodes[sectionId];
+      if (!question || !section || section.kind !== 'section') return;
+
+      const impact = moveIntoSectionImpact(s, questionId);
+      const consequences: string[] = [];
+      if (impact.branchOverrides > 0) {
+        consequences.push(
+          `${impact.branchOverrides} answer branch${impact.branchOverrides > 1 ? 'es' : ''} will be removed (section questions cannot branch)`,
+        );
+      }
+      if (impact.incomingRefs > 0 || impact.isStart) {
+        consequences.push('steps that pointed at this question will enter the section instead');
+      }
+      const title = 'title' in question && question.title ? `“${question.title}”` : 'this question';
+      const msg =
+        `Move ${title} into the section “${section.title || 'Untitled'}” as its last question?` +
+        (consequences.length ? `\n\nNote: ${consequences.join('; ')}.` : '');
+      if (!window.confirm(msg)) return;
+
+      setConnect(null);
+      patchSchema(prev => moveQuestionIntoSection(prev, questionId, sectionId) ?? prev);
+      setSelectedIds([sectionId]);
+      showToast('Question moved into the section', 'success');
+    },
+    [patchSchema, showToast],
+  );
+
+  const moveChildOut = useCallback(
+    (sectionId: string, childId: string) => {
+      setConnect(null);
+      patchSchema(prev => moveChildOutOfSection(prev, sectionId, childId) ?? prev);
+      setSelectedIds([childId]);
+      showToast('Question moved out — it now follows the section', 'success');
+    },
+    [patchSchema, showToast],
   );
 
   // ── Click-to-connect ──────────────────────────────────────────────────────
@@ -978,6 +1025,8 @@ const FlowBuilderPage: React.FC = () => {
               onPatchNode={patchNode}
               onStartConnect={startConnect}
               onSelect={selectNode}
+              onMoveIntoSection={moveIntoSection}
+              onMoveChildOut={moveChildOut}
             />
           )}
         </aside>

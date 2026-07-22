@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   AlertTriangle,
+  ArrowUpRight,
   ChevronDown,
   ChevronRight,
   ChevronUp,
@@ -22,7 +23,7 @@ import type {
   FlowSchema,
   FlowSectionNode,
 } from '../../lib/flowTypes';
-import { resolveDisplay, resolveVerdicts } from '../../lib/flowTypes';
+import { isSectionNode, resolveDisplay, resolveVerdicts } from '../../lib/flowTypes';
 import { Badge, Checkbox, FieldLabel, Input } from '../ui';
 import { inputClasses } from '../ui/Input';
 import { cn } from '../../utils/cn';
@@ -45,6 +46,10 @@ export interface NodeEditorPanelProps {
   onPatchNode: (id: string, patch: NodePatch) => void;
   onStartConnect: (req: ConnectRequest) => void;
   onSelect: (id: string | null) => void;
+  /** Move a standalone question into a common section (confirmed upstream). */
+  onMoveIntoSection: (questionId: string, sectionId: string) => void;
+  /** Pull a section child back onto the canvas after the section. */
+  onMoveChildOut: (sectionId: string, childId: string) => void;
 }
 
 const PanelHeader: React.FC<{
@@ -218,7 +223,8 @@ const SectionPanel: React.FC<{
   onPatchNode: (id: string, patch: NodePatch) => void;
   onStartConnect: (req: ConnectRequest) => void;
   onSelect: (id: string | null) => void;
-}> = ({ node, schema, connect, onPatchNode, onStartConnect, onSelect }) => {
+  onMoveChildOut: (sectionId: string, childId: string) => void;
+}> = ({ node, schema, connect, onPatchNode, onStartConnect, onSelect, onMoveChildOut }) => {
   const [expandedChildId, setExpandedChildId] = useState<string | null>(null);
   const targets = targetOptionsFor(schema, node.id);
 
@@ -328,6 +334,14 @@ const SectionPanel: React.FC<{
                       </button>
                       <button
                         type="button"
+                        title="Move out of the section — becomes a standalone question right after it"
+                        onClick={() => onMoveChildOut(node.id, child.id)}
+                        className={childIconBtn}
+                      >
+                        <ArrowUpRight className="size-3.5" />
+                      </button>
+                      <button
+                        type="button"
                         title="Remove question"
                         onClick={() => removeChild(child.id)}
                         className={cn(childIconBtn, 'hover:bg-error-50 hover:text-error-500 dark:hover:bg-error-500/10')}
@@ -383,16 +397,38 @@ const QuestionPanel: React.FC<{
   onPatchNode: (id: string, patch: NodePatch) => void;
   onStartConnect: (req: ConnectRequest) => void;
   onSelect: (id: string | null) => void;
-}> = ({ node, schema, connect, onPatchNode, onStartConnect, onSelect }) => {
+  onMoveIntoSection: (questionId: string, sectionId: string) => void;
+}> = ({ node, schema, connect, onPatchNode, onStartConnect, onSelect, onMoveIntoSection }) => {
   const targets = targetOptionsFor(schema, node.id);
   const connecting = connect && connect.nodeId === node.id ? connect : null;
+  const sections = Object.values(schema.nodes).filter(isSectionNode);
 
   return (
     <div>
       <PanelHeader label="Question" kind="question" onClose={() => onSelect(null)} />
       <div className="p-4">
-        <div className="mb-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <Badge variant="coral">{QUESTION_TYPE_LABELS[node.questionType]}</Badge>
+          {sections.length > 0 && (
+            <select
+              className="max-w-[190px] cursor-pointer rounded-md border border-border bg-surface px-2 py-1 text-[11px] font-semibold text-ink-muted hover:border-border-strong"
+              value=""
+              onChange={e => {
+                if (e.target.value) onMoveIntoSection(node.id, e.target.value);
+                e.target.value = '';
+              }}
+              title="Move this question inside a common section (it will be asked in order there and can no longer branch)"
+            >
+              <option value="" disabled>
+                Move into section…
+              </option>
+              {sections.map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.title || 'Untitled section'}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <QuestionEditor
           verdictDefs={resolveVerdicts(schema.verdicts)}
@@ -545,6 +581,8 @@ const NodeEditorPanel: React.FC<NodeEditorPanelProps> = ({
   onPatchNode,
   onStartConnect,
   onSelect,
+  onMoveIntoSection,
+  onMoveChildOut,
 }) => {
   const node = selectedId ? schema.nodes[selectedId] : undefined;
 
@@ -570,6 +608,7 @@ const NodeEditorPanel: React.FC<NodeEditorPanelProps> = ({
         onPatchNode={onPatchNode}
         onStartConnect={onStartConnect}
         onSelect={onSelect}
+        onMoveChildOut={onMoveChildOut}
       />
     );
   }
@@ -608,6 +647,7 @@ const NodeEditorPanel: React.FC<NodeEditorPanelProps> = ({
       onPatchNode={onPatchNode}
       onStartConnect={onStartConnect}
       onSelect={onSelect}
+      onMoveIntoSection={onMoveIntoSection}
     />
   );
 };

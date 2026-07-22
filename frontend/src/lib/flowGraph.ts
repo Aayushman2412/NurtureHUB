@@ -205,6 +205,160 @@ export function validateFlow(schema: FlowSchema): FlowIssue[] {
   return issues;
 }
 
+// ── Restructuring (admin builder) ────────────────────────────────────────────
+
+/**
+ * What moving a question into a section would change — shown to the admin
+ * before the move, because section children cannot branch.
+ */
+export interface MoveIntoSectionImpact {
+  /** Per-option branch overrides that will be discarded. */
+  branchOverrides: number;
+  /** Other steps/answers currently pointing at this question (they will be
+   *  redirected to the section, i.e. the flow will enter at the section's
+   *  first question instead). */
+  incomingRefs: number;
+  /** The question is the form's start step. */
+  isStart: boolean;
+}
+
+export function moveIntoSectionImpact(schema: FlowSchema, questionId: string): MoveIntoSectionImpact {
+  const node = schema.nodes[questionId];
+  const branchOverrides =
+    node && isQuestionNode(node) ? node.options.filter(o => o.next).length : 0;
+  let incomingRefs = 0;
+  for (const other of Object.values(schema.nodes)) {
+    if (other.id === questionId) continue;
+    if (other.next === questionId) incomingRefs += 1;
+    if (isQuestionNode(other)) {
+      incomingRefs += other.options.filter(o => o.next === questionId).length;
+    }
+  }
+  return { branchOverrides, incomingRefs, isStart: schema.startNodeId === questionId };
+}
+
+/**
+ * Move a standalone question node into a common section, as its last child.
+ *
+ * The question's id AND its option ids are preserved — stored responses and
+ * drafts key answers by these ids (the backend's question index covers
+ * section children), so a move must never mint new ones.
+ *
+ * What changes:
+ *  - `position`, `next` and every option's branch `next` are dropped
+ *    (section children run in order and cannot branch);
+ *  - every pointer at the question (other nodes' `next`, option branches,
+ *    `startNodeId`) is redirected to the section — except the section's own
+ *    `next`, which skips over the absorbed question to the question's old
+ *    `next` (redirecting it to itself would self-loop).
+ *
+ * Returns null when ids are missing or of the wrong kind (caller keeps the
+ * schema unchanged).
+ */
+export function moveQuestionIntoSection(
+  schema: FlowSchema,
+  questionId: string,
+  sectionId: string,
+): FlowSchema | null {
+  const question = schema.nodes[questionId];
+  const section = schema.nodes[sectionId];
+  if (!question || !section || !isQuestionNode(question) || !isSectionNode(section)) return null;
+
+  const child: FlowSectionChild = {
+    id: question.id,
+    kind: 'question',
+    questionType: question.questionType,
+    title: question.title,
+    helpText: question.helpText,
+    required: question.required,
+    ...(question.media !== undefined && { media: question.media }),
+    options: question.options.map(o => ({ ...o, next: null })),
+    ...(question.numeric !== undefined && { numeric: question.numeric }),
+    ...(question.display !== undefined && { display: question.display }),
+  };
+
+  const redirect = (target: string | null): string | null =>
+    target === questionId ? sectionId : target;
+
+  const nodes: Record<string, FlowNode> = {};
+  for (const node of Object.values(schema.nodes)) {
+    if (node.id === questionId) continue; // absorbed
+    if (node.id === sectionId) {
+      nodes[node.id] = {
+        ...section,
+        children: [...section.children, child],
+        // Skip over the absorbed question rather than self-looping.
+        next: section.next === questionId ? question.next : section.next,
+      };
+      continue;
+    }
+    let updated: FlowNode = node;
+    if (node.next === questionId) updated = { ...updated, next: sectionId };
+    if (isQuestionNode(updated) && updated.options.some(o => o.next === questionId)) {
+      updated = {
+        ...updated,
+        options: updated.options.map(o => (o.next === questionId ? { ...o, next: sectionId } : o)),
+      };
+    }
+    nodes[node.id] = updated;
+  }
+
+  return {
+    ...schema,
+    startNodeId: redirect(schema.startNodeId),
+    nodes,
+  };
+}
+
+/**
+ * Pull a question out of a common section and back onto the canvas as a
+ * standalone node, inserted into the default chain immediately AFTER the
+ * section (child order inside the section no longer applies once it leaves).
+ *
+ * Ids are preserved for the same stored-response reasons as the move in.
+ * Returns null when ids are missing or of the wrong kind.
+ */
+export function moveChildOutOfSection(
+  schema: FlowSchema,
+  sectionId: string,
+  childId: string,
+): FlowSchema | null {
+  const section = schema.nodes[sectionId];
+  if (!section || !isSectionNode(section)) return null;
+  const childIndex = section.children.findIndex(c => c.id === childId);
+  if (childIndex === -1 || schema.nodes[childId]) return null;
+
+  const child = section.children[childIndex];
+  const node: FlowQuestionNode = {
+    id: child.id,
+    kind: 'question',
+    questionType: child.questionType,
+    title: child.title,
+    helpText: child.helpText,
+    required: child.required,
+    ...(child.media !== undefined && { media: child.media }),
+    // Right of the section card, staggered so repeated ejects don't stack.
+    position: { x: section.position.x + 360, y: section.position.y + childIndex * 56 },
+    options: child.options.map(o => ({ ...o })),
+    ...(child.numeric !== undefined && { numeric: child.numeric }),
+    ...(child.display !== undefined && { display: child.display }),
+    next: section.next,
+  };
+
+  return {
+    ...schema,
+    nodes: {
+      ...schema.nodes,
+      [sectionId]: {
+        ...section,
+        children: section.children.filter(c => c.id !== childId),
+        next: node.id,
+      },
+      [node.id]: node,
+    },
+  };
+}
+
 // ── YouTube & timestamps ─────────────────────────────────────────────────────
 
 /** Extract a YouTube video id from watch/short/embed/youtu.be URLs (or a bare id). */
