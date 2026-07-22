@@ -127,9 +127,14 @@
   --surface-sunken: var(--color-cream-200);
   --border: var(--color-cream-300);
   --border-strong: var(--color-cream-400);
+  /* Text ramp. Every step clears WCAG AA (4.5:1) on all three light surfaces —
+     white, cream-100 background and cream-200 sunken — because muted/faint are
+     used for real content (field labels, hints, node-card body) at 10–12px,
+     which never qualifies for the relaxed large-text bar.
+     ink 15.8:1 · ink-muted 8.6:1 · ink-faint 5.9:1 (on white). */
   --ink: var(--color-cream-900);
-  --ink-muted: var(--color-cream-600);
-  --ink-faint: var(--color-cream-500);
+  --ink-muted: var(--color-cream-700);
+  --ink-faint: var(--color-cream-600);
   --primary: var(--color-coral-500);
   --primary-hover: var(--color-coral-600);
   --primary-fg: #FFFFFF;
@@ -151,9 +156,10 @@
   --surface-sunken: #12100E;
   --border: #38322C;
   --border-strong: #4A423A;
+  /* Same AA floor as light mode — the old faint (#7A7268) sat at 3.5:1. */
   --ink: #F3EFE9;
-  --ink-muted: #A89F93;
-  --ink-faint: #7A7268;
+  --ink-muted: #C6BDB0;
+  --ink-faint: #A79E90;
   --primary: var(--color-coral-400);
   --primary-hover: var(--color-coral-300);
   --primary-fg: #34120A;

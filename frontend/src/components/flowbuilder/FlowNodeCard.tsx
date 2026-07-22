@@ -225,11 +225,11 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
 
           {isSection && node.kind === 'section' && (
             <div className="mt-2 space-y-0.5">
-              <div className="text-[11px] font-semibold text-ink-faint">
+              <div className="text-[11px] font-semibold text-ink-muted">
                 {node.children.length} question{node.children.length === 1 ? '' : 's'} inside
               </div>
               {node.children.slice(0, 2).map(c => (
-                <div key={c.id} className="truncate text-[11px] text-ink-faint">
+                <div key={c.id} className="truncate text-[11px] text-ink-muted">
                   · {nodeTitle(c)}
                 </div>
               ))}
@@ -242,15 +242,15 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
                 <DotMini key={o.id} verdict={o.verdict} />
               ))}
               {question.options.length > 8 && (
-                <span className="text-[10px] font-bold text-ink-faint">+{question.options.length - 8}</span>
+                <span className="text-[10px] font-bold text-ink-muted">+{question.options.length - 8}</span>
               )}
-              <span className="ml-1 text-[11px] text-ink-faint">
+              <span className="ml-1 text-[11px] text-ink-muted">
                 {question.options.length} option{question.options.length === 1 ? '' : 's'}
               </span>
             </div>
           )}
           {question && !hasOptions && (
-            <div className="mt-2 text-[11px] text-ink-faint">
+            <div className="mt-2 text-[11px] text-ink-muted">
               {question.questionType === 'text'
                 ? 'Free text answer'
                 : question.questionType === 'number'
@@ -262,23 +262,23 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
           {info && (info.body.trim() || info.action.type !== 'none') && (
             <div className="mt-2 space-y-0.5">
               {info.body.trim() && (
-                <div className="line-clamp-2 text-[11px] text-ink-faint">{truncate(info.body.trim(), 90)}</div>
+                <div className="line-clamp-2 text-[11px] text-ink-muted">{truncate(info.body.trim(), 90)}</div>
               )}
               {info.action.type !== 'none' && (
-                <div className="text-[11px] font-semibold text-ink-faint">▶ {info.action.type} attached</div>
+                <div className="text-[11px] font-semibold text-ink-muted">▶ {info.action.type} attached</div>
               )}
             </div>
           )}
 
           {matrix && (
-            <div className="mt-2 text-[11px] text-ink-faint">
+            <div className="mt-2 text-[11px] text-ink-muted">
               {matrix.rows.length} row{matrix.rows.length === 1 ? '' : 's'} ×{' '}
               {matrix.columns.length} column{matrix.columns.length === 1 ? '' : 's'}
             </div>
           )}
 
           {endsHere && (
-            <div className="mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-ink-faint">
+            <div className="mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-ink-muted">
               <Flag className="size-3" /> Ends form
             </div>
           )}
