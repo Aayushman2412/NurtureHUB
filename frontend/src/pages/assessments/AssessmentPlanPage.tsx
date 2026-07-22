@@ -67,7 +67,7 @@ const AssessmentPlanPage: React.FC = () => {
           const map: Record<string, QuestionDisplayOverride> = {};
           for (const node of Object.values(s?.nodes ?? {})) {
             const qs = node.kind === 'section' ? node.children : [node];
-            for (const q of qs) if (q.display) map[q.id] = q.display;
+            for (const q of qs) if (q.kind === 'question' && q.display) map[q.id] = q.display;
           }
           setOverrides(map);
         } catch {
