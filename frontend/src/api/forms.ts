@@ -28,6 +28,23 @@ export const adminSaveForm = (
 ): Promise<FormDefinition> =>
   client.put(`/api/admin/forms/${formKey}`, payload).then(r => r.data);
 
+/**
+ * Download a form as a template zip: form.json (re-importable definition),
+ * media-manifest.csv (every image/video link + where it's used) and assets/
+ * with copies of the referenced uploads. Triggers the browser download.
+ */
+export const adminExportForm = async (formKey: FormKey, version?: number): Promise<void> => {
+  const res = await client.get(`/api/admin/forms/${formKey}/export`, { responseType: 'blob' });
+  const url = URL.createObjectURL(res.data as Blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `${formKey}-template${version ? `-v${version}` : ''}.zip`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+};
+
 /** Upload an image/GIF/video asset; returns a backend-relative `/uploads/...` URL. */
 export const adminUploadFormAsset = (file: File): Promise<{ url: string }> => {
   const data = new FormData();

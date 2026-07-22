@@ -4,19 +4,27 @@ Admin endpoints for the Form Builder.
 Seven form definitions exist (see app.seed_forms.FORM_SPECS): five 'flat'
 field-list forms and the two 'flow' canvas decision-trees (breastfeeding,
 complementary feeding). Saving a definition bumps its version and is live for
-learners immediately — there is no draft/publish step, and no import/export.
+learners immediately — there is no draft/publish step. Each form can be
+downloaded as a template zip (definition JSON + media manifest + bundled
+uploads) via GET /forms/{form_key}/export; there is no import yet.
 
 Also hosts the media upload endpoint used by the canvas builder for option
 images/GIFs and action videos; files land in backend/uploads/form_assets/ and
 are served by the StaticFiles mount at /uploads (see app.main).
 """
 
+import csv
+import io
+import json
 import os
 import re
 import uuid
-from typing import Any, Dict, List, Literal, Optional
+import zipfile
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 from sqlalchemy.orm import Session
 
@@ -373,6 +381,119 @@ def update_form(
     db.commit()
     db.refresh(definition)
     return _serialize(definition)
+
+
+def _collect_media_refs(builder_type: str, schema: Dict[str, Any]) -> List[Tuple[str, str, str]]:
+    """Every media/action reference in a schema as (where-used, kind, url).
+
+    Flow schemas carry media on questions, options, option actions and info
+    blocks; flat schemas and matrix nodes have none. Order follows the node
+    map so the manifest reads roughly top-to-bottom of the form.
+    """
+    refs: List[Tuple[str, str, str]] = []
+    if builder_type != "flow":
+        return refs
+
+    def add_media(where: str, media: Any) -> None:
+        for item in media or []:
+            if isinstance(item, dict) and (item.get("url") or "").strip():
+                refs.append((where, item.get("type") or "image", item["url"].strip()))
+
+    def add_action(where: str, action: Any) -> None:
+        if not isinstance(action, dict):
+            return
+        url = (action.get("url") or "").strip()
+        if action.get("type") in ("youtube", "video") and url:
+            refs.append((where, action["type"], url))
+
+    def add_question(where: str, question: Dict[str, Any]) -> None:
+        add_media(f"{where} — question media", question.get("media"))
+        for option in question.get("options") or []:
+            label = option.get("label") or option.get("id") or "?"
+            add_media(f"{where} — option '{label}'", option.get("media"))
+            add_action(f"{where} — option '{label}' action", option.get("action"))
+
+    for node in (schema.get("nodes") or {}).values():
+        if not isinstance(node, dict):
+            continue
+        title = node.get("title") or node.get("id") or "?"
+        kind = node.get("kind")
+        if kind == "question":
+            add_question(f"Question '{title}'", node)
+        elif kind == "section":
+            for child in node.get("children") or []:
+                child_title = child.get("title") or child.get("id") or "?"
+                add_question(f"Section '{title}' > '{child_title}'", child)
+        elif kind == "info":
+            add_media(f"Info block '{title}' — media", node.get("media"))
+            add_action(f"Info block '{title}' — action", node.get("action"))
+    return refs
+
+
+@router.get("/forms/{form_key}/export")
+def export_form(form_key: str, db: Session = Depends(get_db)):
+    """Download a form as a self-contained template zip.
+
+    Contains form.json (the full definition envelope, re-importable),
+    media-manifest.csv (every image/GIF/video link and where it is used), and
+    assets/ with a copy of each referenced /uploads file so the template
+    survives moving to another environment. External URLs (YouTube, pasted
+    links) are listed in the manifest but not bundled.
+    """
+    definition = _get_definition(db, form_key)
+    schema = definition.schema_json or {}
+    refs = _collect_media_refs(definition.builder_type, schema)
+    uploads_root = os.path.realpath(_uploads_root())
+
+    # url -> (arcname, absolute path) for local uploads that exist on disk.
+    bundled: Dict[str, Tuple[str, str]] = {}
+    manifest_rows: List[List[str]] = []
+    for where, kind, url in refs:
+        if url.startswith("/uploads/"):
+            relative = url[len("/uploads/"):]
+            path = os.path.realpath(os.path.join(uploads_root, relative))
+            # Refuse anything that escapes the uploads dir (a crafted ../ url).
+            if path.startswith(uploads_root + os.sep) and os.path.isfile(path):
+                arcname = f"assets/{relative}"
+                bundled.setdefault(url, (arcname, path))
+                status, bundled_as = "bundled", bundled[url][0]
+            else:
+                status, bundled_as = "missing-file", ""
+        else:
+            status, bundled_as = "external-link", ""
+        manifest_rows.append([where, kind, url, status, bundled_as])
+
+    envelope = {
+        "format": "nurturehub-form-template",
+        "formatVersion": 1,
+        "exportedAt": datetime.now(timezone.utc).isoformat(),
+        "form_key": definition.form_key,
+        "title": definition.title,
+        "description": definition.description,
+        "builder_type": definition.builder_type,
+        "sourceVersion": definition.version,
+        "schema_json": schema,
+    }
+
+    manifest = io.StringIO()
+    writer = csv.writer(manifest)
+    writer.writerow(["used at", "kind", "url", "status", "bundled as"])
+    writer.writerows(manifest_rows)
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("form.json", json.dumps(envelope, ensure_ascii=False, indent=2))
+        archive.writestr("media-manifest.csv", manifest.getvalue())
+        for arcname, path in bundled.values():
+            archive.write(path, arcname)
+    buffer.seek(0)
+
+    filename = f"{definition.form_key}-template-v{definition.version}.zip"
+    return StreamingResponse(
+        buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.post("/forms/assets")

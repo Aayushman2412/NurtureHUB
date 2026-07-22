@@ -5,7 +5,14 @@
     "description": "Add, remove, and reorder fields in the user registration form. Changes are saved automatically.",
     "previewForm": "Preview Form",
     "hidePreview": "Hide Preview",
-    "addField": "Add Field"
+    "addField": "Add Field",
+    "export": "Export",
+    "exportHint": "Download the saved form as a template zip — includes all fields and restrictions, plus every image and media link"
+  },
+  "exportDirtyConfirm": "You have unsaved changes. The export contains the last SAVED version — export anyway?",
+  "toast": {
+    "exported": "Template exported — images and links are in the zip",
+    "exportFailed": "Could not export the form. Please try again."
   },
   "fieldTypes": {
     "text": "Text Input",

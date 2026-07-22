@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, BoxSelect, ClipboardPaste, Copy, Eye, Info, Layers, Plus, Redo2, Save, Table, Trash2, Undo2, X } from 'lucide-react';
-import { adminGetForm, adminSaveForm } from '../../../api/forms';
+import { ArrowLeft, BoxSelect, ClipboardPaste, Copy, Download, Eye, Info, Layers, Plus, Redo2, Save, Table, Trash2, Undo2, X } from 'lucide-react';
+import { adminExportForm, adminGetForm, adminSaveForm } from '../../../api/forms';
 import { validateFlow } from '../../../lib/flowGraph';
 import {
   emptyFlowSchema,
@@ -97,6 +97,7 @@ const FlowBuilderPage: React.FC = () => {
   const [connect, setConnect] = useState<ConnectRequest | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [displayOpen, setDisplayOpen] = useState(false);
 
   // The editor panel edits a single node — only when exactly one is selected.
@@ -534,6 +535,25 @@ const FlowBuilderPage: React.FC = () => {
     navigate('/admin/form-builder');
   };
 
+  /** Download the template zip (form.json + media manifest + bundled assets). */
+  const exportTemplate = async () => {
+    if (!formKey || !isFlowFormKey(formKey)) return;
+    if (
+      dirty &&
+      !window.confirm('You have unsaved changes. The export contains the last SAVED version — export anyway?')
+    )
+      return;
+    setExporting(true);
+    try {
+      await adminExportForm(formKey, def?.version);
+      showToast('Template exported — images and links are in the zip', 'success');
+    } catch {
+      showToast('Could not export the form. Please try again.', 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // ── Selection ─────────────────────────────────────────────────────────────
   const selectIssue = useCallback((nodeId: string | null) => setSelectedIds(nodeId ? [nodeId] : []), []);
   const selectNode = useCallback((id: string | null) => setSelectedIds(id ? [id] : []), []);
@@ -712,6 +732,16 @@ const FlowBuilderPage: React.FC = () => {
                 {hiddenCount} hidden
               </Badge>
             )}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            iconLeft={<Download className="size-4" />}
+            loading={exporting}
+            onClick={exportTemplate}
+            title="Download the saved form as a template zip — includes the full flow, skip logic, restrictions, plus every image and media link"
+          >
+            Export
           </Button>
           <ValidationChip issues={issues} onSelectIssue={selectIssue} />
           {dirty && (

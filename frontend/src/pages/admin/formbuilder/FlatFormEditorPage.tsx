@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ChevronDown,
   ChevronUp,
+  Download,
   Edit3,
   Eye,
   GripVertical,
@@ -11,7 +12,7 @@ import {
   Save,
   Trash2,
 } from 'lucide-react';
-import { adminGetForm, adminSaveForm } from '../../../api/forms';
+import { adminExportForm, adminGetForm, adminSaveForm } from '../../../api/forms';
 import { FORM_KEYS } from '../../../lib/flowTypes';
 import type {
   FlatField,
@@ -131,6 +132,7 @@ const FlatFormEditorPage: React.FC = () => {
   const [reloadTick, setReloadTick] = useState(0);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
@@ -183,6 +185,21 @@ const FlatFormEditorPage: React.FC = () => {
       showToast('Could not save the form. Please try again.', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  /** Download the template zip (form.json + media manifest). */
+  const exportTemplate = async () => {
+    if (!formKey) return;
+    if (dirty && !window.confirm(t('exportDirtyConfirm'))) return;
+    setExporting(true);
+    try {
+      await adminExportForm(formKey as FormKey, def?.version);
+      showToast(t('toast.exported'), 'success');
+    } catch {
+      showToast(t('toast.exportFailed'), 'error');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -305,6 +322,15 @@ const FlatFormEditorPage: React.FC = () => {
             </Button>
             <Button variant="outline" iconLeft={<Plus className="size-4" />} onClick={() => setShowAddModal(true)}>
               {t('header.addField')}
+            </Button>
+            <Button
+              variant="outline"
+              iconLeft={<Download className="size-4" />}
+              loading={exporting}
+              onClick={exportTemplate}
+              title={t('header.exportHint')}
+            >
+              {t('header.export')}
             </Button>
             <Button iconLeft={<Save className="size-4" />} loading={saving} disabled={!dirty} onClick={save}>
               Save
