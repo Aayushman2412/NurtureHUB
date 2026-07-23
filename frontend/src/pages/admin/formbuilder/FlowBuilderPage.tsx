@@ -1,8 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, BoxSelect, ClipboardPaste, Copy, Eye, Info, Layers, Plus, Redo2, Save, Table, Trash2, Undo2, X } from 'lucide-react';
-import { adminGetForm, adminSaveForm } from '../../../api/forms';
-import { validateFlow } from '../../../lib/flowGraph';
+import { ArrowLeft, BoxSelect, ClipboardPaste, Copy, Download, Eye, Info, Layers, Plus, Printer, Redo2, Save, Table, Trash2, Undo2, X } from 'lucide-react';
+import { adminExportForm, adminGetForm, adminSaveForm } from '../../../api/forms';
+import {
+  moveChildOutOfSection,
+  moveIntoSectionImpact,
+  moveQuestionIntoSection,
+  validateFlow,
+} from '../../../lib/flowGraph';
 import {
   emptyFlowSchema,
   isBuiltinVerdict,
@@ -97,6 +102,7 @@ const FlowBuilderPage: React.FC = () => {
   const [connect, setConnect] = useState<ConnectRequest | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [displayOpen, setDisplayOpen] = useState(false);
 
   // The editor panel edits a single node — only when exactly one is selected.
@@ -435,6 +441,48 @@ const FlowBuilderPage: React.FC = () => {
     [patchSchema],
   );
 
+  // ── Move a question in / out of a common section ─────────────────────────
+  const moveIntoSection = useCallback(
+    (questionId: string, sectionId: string) => {
+      const s = schemaRef.current;
+      const question = s.nodes[questionId];
+      const section = s.nodes[sectionId];
+      if (!question || !section || section.kind !== 'section') return;
+
+      const impact = moveIntoSectionImpact(s, questionId);
+      const consequences: string[] = [];
+      if (impact.branchOverrides > 0) {
+        consequences.push(
+          `${impact.branchOverrides} answer branch${impact.branchOverrides > 1 ? 'es' : ''} will be removed (section questions cannot branch)`,
+        );
+      }
+      if (impact.incomingRefs > 0 || impact.isStart) {
+        consequences.push('steps that pointed at this question will enter the section instead');
+      }
+      const title = 'title' in question && question.title ? `“${question.title}”` : 'this question';
+      const msg =
+        `Move ${title} into the section “${section.title || 'Untitled'}” as its last question?` +
+        (consequences.length ? `\n\nNote: ${consequences.join('; ')}.` : '');
+      if (!window.confirm(msg)) return;
+
+      setConnect(null);
+      patchSchema(prev => moveQuestionIntoSection(prev, questionId, sectionId) ?? prev);
+      setSelectedIds([sectionId]);
+      showToast('Question moved into the section', 'success');
+    },
+    [patchSchema, showToast],
+  );
+
+  const moveChildOut = useCallback(
+    (sectionId: string, childId: string) => {
+      setConnect(null);
+      patchSchema(prev => moveChildOutOfSection(prev, sectionId, childId) ?? prev);
+      setSelectedIds([childId]);
+      showToast('Question moved out — it now follows the section', 'success');
+    },
+    [patchSchema, showToast],
+  );
+
   // ── Click-to-connect ──────────────────────────────────────────────────────
   const connectTarget = useCallback(
     (targetId: string) => {
@@ -532,6 +580,25 @@ const FlowBuilderPage: React.FC = () => {
   const goBack = () => {
     if (dirty && !window.confirm(LEAVE_MESSAGE)) return;
     navigate('/admin/form-builder');
+  };
+
+  /** Download the template zip (form.json + media manifest + bundled assets). */
+  const exportTemplate = async () => {
+    if (!formKey || !isFlowFormKey(formKey)) return;
+    if (
+      dirty &&
+      !window.confirm('You have unsaved changes. The export contains the last SAVED version — export anyway?')
+    )
+      return;
+    setExporting(true);
+    try {
+      await adminExportForm(formKey, def?.version);
+      showToast('Template exported — images and links are in the zip', 'success');
+    } catch {
+      showToast('Could not export the form. Please try again.', 'error');
+    } finally {
+      setExporting(false);
+    }
   };
 
   // ── Selection ─────────────────────────────────────────────────────────────
@@ -713,6 +780,32 @@ const FlowBuilderPage: React.FC = () => {
               </Badge>
             )}
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            iconLeft={<Download className="size-4" />}
+            loading={exporting}
+            onClick={exportTemplate}
+            title="Download the saved form as a template zip — includes the full flow, skip logic, restrictions, plus every image and media link"
+          >
+            Export
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            iconLeft={<Printer className="size-4" />}
+            onClick={() => {
+              if (
+                dirty &&
+                !window.confirm('You have unsaved changes. The preview shows the last SAVED version — continue?')
+              )
+                return;
+              window.open(`/admin/form-builder/print/${formKey}`, '_blank');
+            }}
+            title="Open a learner-view preview of the whole form, ready to save as PDF"
+          >
+            Print / PDF
+          </Button>
           <ValidationChip issues={issues} onSelectIssue={selectIssue} />
           {dirty && (
             <span
@@ -876,7 +969,7 @@ const FlowBuilderPage: React.FC = () => {
           {selectedIds.length > 1 ? (
             <div className="space-y-4 p-4">
               <div className="flex items-center gap-2">
-                <span className="flex size-9 items-center justify-center rounded-lg bg-coral-50 text-primary dark:bg-coral-500/10">
+                <span className="flex size-9 items-center justify-center rounded-lg bg-coral-50 text-primary-ink dark:bg-coral-500/10">
                   <BoxSelect className="size-4.5" />
                 </span>
                 <div>
@@ -932,6 +1025,8 @@ const FlowBuilderPage: React.FC = () => {
               onPatchNode={patchNode}
               onStartConnect={startConnect}
               onSelect={selectNode}
+              onMoveIntoSection={moveIntoSection}
+              onMoveChildOut={moveChildOut}
             />
           )}
         </aside>

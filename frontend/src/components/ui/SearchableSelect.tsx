@@ -110,7 +110,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                       className={cn(
                         'flex w-full items-center justify-between gap-2 px-3.5 py-2 text-left text-sm transition-colors',
                         i === active ? 'bg-surface-sunken' : 'hover:bg-surface-sunken',
-                        isSelected ? 'font-semibold text-primary' : 'text-ink',
+                        isSelected ? 'font-semibold text-primary-ink' : 'text-ink',
                       )}
                     >
                       <span className="truncate">{o.label}</span>

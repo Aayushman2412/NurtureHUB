@@ -30,7 +30,7 @@ function Tabs<T extends string = string>({ value, onChange, items, className }: 
               'inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold whitespace-nowrap cursor-pointer',
               'border-b-2 -mb-px transition-colors',
               active
-                ? 'border-primary text-primary'
+                ? 'border-primary text-primary-ink'
                 : 'border-transparent text-ink-muted hover:text-ink',
             )}
           >

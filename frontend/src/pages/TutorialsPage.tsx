@@ -123,7 +123,7 @@ const TutorialsPage: React.FC = () => {
                   <p className="mt-1 max-w-3xl text-sm leading-snug text-ink-muted">{stage.description}</p>
                 </div>
                 {!stage.is_locked && (
-                  <span className="whitespace-nowrap text-[13px] font-semibold text-primary">
+                  <span className="whitespace-nowrap text-[13px] font-semibold text-primary-ink">
                     {t('stageProgress', {
                       completed: stage.tutorials_completed,
                       total: stage.total_tutorials,

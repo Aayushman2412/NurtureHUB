@@ -21,7 +21,7 @@ const Stepper: React.FC<StepperProps> = ({ steps, current, className }) => (
             className={cn(
               'flex items-center justify-center size-7 rounded-full text-xs font-bold shrink-0 transition-colors',
               done && 'bg-primary text-primary-fg',
-              active && 'bg-primary/15 text-primary ring-2 ring-primary',
+              active && 'bg-primary/15 text-primary-ink ring-2 ring-primary',
               !done && !active && 'bg-surface-sunken text-ink-faint',
             )}
             aria-current={active ? 'step' : undefined}

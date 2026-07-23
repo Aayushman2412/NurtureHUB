@@ -362,7 +362,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
               )}
             </div>
             {hoverVisit && onPointClick && (
-              <div className="mt-1.5 border-t border-border pt-1.5 font-semibold text-primary">
+              <div className="mt-1.5 border-t border-border pt-1.5 font-semibold text-primary-ink">
                 {t('tooltip.clickForDetails')}
               </div>
             )}

@@ -27,7 +27,7 @@ const Spec: React.FC<{ label: string; icon: React.ReactNode; value: string }> = 
   <div className="flex flex-col gap-1">
     <span className="text-xs font-medium text-ink-faint">{label}</span>
     <div className="flex items-center gap-2 text-lg font-bold text-ink">
-      <span className="text-primary">{icon}</span>
+      <span className="text-primary-ink">{icon}</span>
       <span>{value}</span>
     </div>
   </div>
@@ -99,7 +99,7 @@ const TestInstructionsPage: React.FC = () => {
       </div>
 
       <Card className="p-8 sm:p-9">
-        <span className="text-xs font-bold uppercase tracking-wider text-primary">{t('instructions.eyebrow')}</span>
+        <span className="text-xs font-bold uppercase tracking-wider text-primary-ink">{t('instructions.eyebrow')}</span>
         <h2 className="mt-1 mb-4 font-display text-3xl font-extrabold text-ink">{test.title}</h2>
         <p className="mb-8 text-[15px] leading-relaxed text-ink-muted">{test.description}</p>
 

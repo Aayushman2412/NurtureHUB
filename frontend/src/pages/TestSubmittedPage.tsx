@@ -74,7 +74,7 @@ const TestSubmittedPage: React.FC = () => {
         </div>
 
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-primary">{t('submitted.eyebrow')}</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-primary-ink">{t('submitted.eyebrow')}</span>
           <h2 className="mt-1 mb-2 font-display text-3xl font-extrabold text-ink">
             {is_passed ? t('submitted.headingPass') : t('submitted.headingComplete')}
           </h2>

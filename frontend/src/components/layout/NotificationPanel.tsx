@@ -102,7 +102,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
         {/* Header */}
         <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
           <div className="flex items-center gap-2">
-            <Bell className="size-5 text-primary" />
+            <Bell className="size-5 text-primary-ink" />
             <span className="font-display font-bold">{t('notifications.title')}</span>
           </div>
           <div className="flex items-center gap-2">

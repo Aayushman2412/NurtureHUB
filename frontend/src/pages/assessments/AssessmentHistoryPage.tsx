@@ -218,7 +218,7 @@ const AssessmentHistoryPage: React.FC = () => {
                 return (
                   <Card key={r.id} className="p-4 sm:p-5">
                     <div className="flex flex-wrap items-center gap-3">
-                      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-coral-50 text-primary dark:bg-coral-500/10">
+                      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-coral-50 text-primary-ink dark:bg-coral-500/10">
                         <CalendarDays className="size-5" aria-hidden />
                       </span>
                       <div className="min-w-0 flex-1">

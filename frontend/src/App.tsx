@@ -43,6 +43,7 @@ import StyleguidePage from './pages/dev/StyleguidePage';
 import FormBuilderHubPage from './pages/admin/formbuilder/FormBuilderHubPage';
 import FlatFormEditorPage from './pages/admin/formbuilder/FlatFormEditorPage';
 import FlowBuilderPage from './pages/admin/formbuilder/FlowBuilderPage';
+import FormPrintPage from './pages/admin/formbuilder/FormPrintPage';
 import AdminTutorialsPage from './pages/admin/AdminTutorialsPage';
 import AdminTutorialTrackingPage from './pages/admin/AdminTutorialTrackingPage';
 import AdminResultsPage from './pages/admin/AdminResultsPage';
@@ -96,6 +97,13 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isAdmin = localStorage.getItem('nh_admin') === 'true';
   if (!isAdmin) return <Navigate to="/login" replace />;
   return <AdminLayout>{children}</AdminLayout>;
+};
+
+/** Admin-gated but without the sidebar layout — for full-page/print views. */
+const AdminBareRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const isAdmin = localStorage.getItem('nh_admin') === 'true';
+  if (!isAdmin) return <Navigate to="/login" replace />;
+  return <>{children}</>;
 };
 
 const AppRoutes: React.FC = () => {
@@ -165,6 +173,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/admin/form-builder" element={<AdminRoute><FormBuilderHubPage /></AdminRoute>} />
       <Route path="/admin/form-builder/flat/:formKey" element={<AdminRoute><FlatFormEditorPage /></AdminRoute>} />
       <Route path="/admin/form-builder/flow/:formKey" element={<AdminRoute><FlowBuilderPage /></AdminRoute>} />
+      <Route path="/admin/form-builder/print/:formKey" element={<AdminBareRoute><FormPrintPage /></AdminBareRoute>} />
       <Route path="/admin/tutorials" element={<AdminRoute><AdminTutorialsPage /></AdminRoute>} />
       <Route path="/admin/tutorial-tracking" element={<AdminRoute><AdminTutorialTrackingPage /></AdminRoute>} />
       <Route path="/admin/results" element={<AdminRoute><AdminResultsPage /></AdminRoute>} />

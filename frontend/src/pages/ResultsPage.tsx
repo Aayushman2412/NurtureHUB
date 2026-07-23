@@ -49,7 +49,7 @@ const StatItem: React.FC<{ icon: React.ReactNode; label: string; value: React.Re
   value,
 }) => (
   <div className="flex items-center gap-2.5">
-    <span className="text-primary">{icon}</span>
+    <span className="text-primary-ink">{icon}</span>
     <div>
       <span className="block text-xs text-ink-faint">{label}</span>
       <strong className="text-[15px] text-ink">{value}</strong>
@@ -103,7 +103,7 @@ const ResultsPage: React.FC = () => {
       <Card className="p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-primary">
+            <span className="text-xs font-bold uppercase tracking-wider text-primary-ink">
               {t('results.reportEyebrow', { n: attempt.attempt_number })}
             </span>
             <h2 className="mt-1 mb-2 font-display text-3xl font-extrabold text-ink">{test_title}</h2>
@@ -173,7 +173,7 @@ const ResultsPage: React.FC = () => {
             )}
           >
             <div className="mb-4 flex items-center justify-between">
-              <span className="font-display text-base font-extrabold text-primary">
+              <span className="font-display text-base font-extrabold text-primary-ink">
                 {t('common.question', { n: idx + 1 })}
               </span>
 

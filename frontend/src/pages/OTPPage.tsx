@@ -78,7 +78,7 @@ const OTPPage: React.FC = () => {
             <button
               onClick={handleResend}
               disabled={resending || loading}
-              className="cursor-pointer p-1 text-sm font-semibold text-primary hover:text-primary-hover
+              className="cursor-pointer p-1 text-sm font-semibold text-primary-ink hover:text-primary-ink-hover
                          disabled:opacity-50"
             >
               {resending ? t('otp.resending') : t('otp.resend')}

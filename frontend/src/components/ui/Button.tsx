@@ -13,7 +13,7 @@ const base =
 const variants: Record<ButtonVariant, string> = {
   primary: 'bg-primary text-primary-fg hover:bg-primary-hover shadow-sm hover:shadow-md active:translate-y-px',
   secondary: 'bg-sage-600 text-white hover:bg-sage-700 shadow-sm active:translate-y-px dark:bg-sage-500 dark:hover:bg-sage-400 dark:text-sage-950',
-  outline: 'border-2 border-primary text-primary bg-transparent hover:bg-coral-50 dark:hover:bg-coral-950/40',
+  outline: 'border-2 border-primary text-primary-ink bg-transparent hover:bg-coral-50 dark:hover:bg-coral-950/40',
   ghost: 'text-ink-muted hover:text-ink hover:bg-surface-sunken',
   danger: 'bg-error-500 text-white hover:bg-error-600 shadow-sm active:translate-y-px',
 };

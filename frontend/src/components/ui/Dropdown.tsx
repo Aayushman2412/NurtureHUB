@@ -60,7 +60,7 @@ const Dropdown: React.FC<DropdownProps> = ({ trigger, items, align = 'left', cla
               className={cn(
                 'flex w-full items-center gap-2 px-3.5 py-2 text-sm text-left cursor-pointer transition-colors',
                 'hover:bg-surface-sunken',
-                item.selected ? 'text-primary font-semibold' : 'text-ink',
+                item.selected ? 'text-primary-ink font-semibold' : 'text-ink',
               )}
             >
               {item.label}

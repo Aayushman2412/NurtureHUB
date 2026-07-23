@@ -28,7 +28,7 @@ const Callout: React.FC<{ icon: React.ReactNode; children: React.ReactNode }> = 
   children,
 }) => (
   <div className="mt-4 flex gap-3 rounded-lg bg-coral-50 px-4 py-3 dark:bg-coral-500/10">
-    <span className="mt-0.5 shrink-0 text-primary" aria-hidden>
+    <span className="mt-0.5 shrink-0 text-primary-ink" aria-hidden>
       {icon}
     </span>
     <p className="text-sm leading-relaxed text-ink">{children}</p>
@@ -88,7 +88,7 @@ const ActionCard: React.FC<ActionCardProps> = ({ item, index, verdictDef = null 
             href={a.url.trim()}
             target="_blank"
             rel="noreferrer"
-            className="font-semibold text-primary underline underline-offset-2"
+            className="font-semibold text-primary-ink underline underline-offset-2"
           >
             {a.message || t('plan.watchClip')}
           </a>

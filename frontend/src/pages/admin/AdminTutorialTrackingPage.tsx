@@ -221,7 +221,7 @@ const AdminTutorialTrackingPage: React.FC = () => {
               {data!.tutorials.map((tut) => (
                 <Th key={tut.id} className="whitespace-nowrap text-center" title={`${tut.stage_title} — ${tut.title}`}>
                   {tut.module_number || tut.title}
-                  {tut.has_quiz && <span className="text-primary"> ?</span>}
+                  {tut.has_quiz && <span className="text-primary-ink"> ?</span>}
                 </Th>
               ))}
               <Th className="text-center">{t('tracking.colAvgWatch')}</Th>

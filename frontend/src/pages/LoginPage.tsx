@@ -175,7 +175,7 @@ const LoginPage: React.FC = () => {
 
           <p className="mt-6 text-center text-sm text-ink-muted">
             {t('login.noAccount')}{' '}
-            <Link to="/signup" className="font-semibold text-primary hover:text-primary-hover">
+            <Link to="/signup" className="font-semibold text-primary-ink hover:text-primary-ink-hover">
               {t('login.createAccount')}
             </Link>
           </p>
@@ -205,7 +205,7 @@ const LoginPage: React.FC = () => {
             <label htmlFor="password-input" className="text-sm font-semibold text-ink">
               {t('fields.password')}
             </label>
-            <Link to="/forgot-password" className="text-[13px] font-semibold text-primary hover:text-primary-hover">
+            <Link to="/forgot-password" className="text-[13px] font-semibold text-primary-ink hover:text-primary-ink-hover">
               {t('login.forgotPassword')}
             </Link>
           </div>

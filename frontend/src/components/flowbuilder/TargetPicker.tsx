@@ -50,8 +50,8 @@ const TargetPicker: React.FC<TargetPickerProps> = ({
           className={cn(
             'flex size-9.5 shrink-0 items-center justify-center rounded-lg border transition-colors cursor-pointer',
             connectActive
-              ? 'border-primary bg-coral-50 text-primary ring-2 ring-primary/25 dark:bg-coral-500/15'
-              : 'border-border-strong/60 text-ink-muted hover:border-primary hover:text-primary',
+              ? 'border-primary bg-coral-50 text-primary-ink ring-2 ring-primary/25 dark:bg-coral-500/15'
+              : 'border-border-strong/60 text-ink-muted hover:border-primary hover:text-primary-ink',
           )}
         >
           <Crosshair className="size-4" />

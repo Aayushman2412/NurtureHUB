@@ -124,7 +124,7 @@ const TestsPage: React.FC = () => {
                 >
                   <div>
                     <div className="mb-3 flex items-start justify-between gap-2">
-                      <span className="text-xs font-bold uppercase tracking-wider text-primary">{typeLabel}</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary-ink">{typeLabel}</span>
                       {test.is_passed ? (
                         <Badge variant="success">{t('list.badge.passed')}</Badge>
                       ) : test.status === 'active' && !test.is_locked ? (
@@ -162,7 +162,7 @@ const TestsPage: React.FC = () => {
                     {/* Scheduled window */}
                     {test.status !== 'active' && (
                       <div className="mb-2 flex items-center gap-2 rounded-lg border border-dashed border-border bg-surface-sunken px-3 py-2.5 text-[13px] text-ink-muted">
-                        <CalendarClock className="size-4 shrink-0 text-primary" />
+                        <CalendarClock className="size-4 shrink-0 text-primary-ink" />
                         <span>
                           {test.status === 'ended' ? (
                             t('list.testEnded')

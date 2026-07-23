@@ -294,7 +294,7 @@ const ActiveTestPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-5 py-4">
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-primary">{t('active.eyebrow')}</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-primary-ink">{t('active.eyebrow')}</span>
           <h3 className="font-display text-lg font-bold text-ink">{testTitle}</h3>
         </div>
 
@@ -497,7 +497,7 @@ const ActiveTestPage: React.FC = () => {
           </>
         }
       >
-        <div className="mb-4 flex gap-3 text-primary">
+        <div className="mb-4 flex gap-3 text-primary-ink">
           <AlertCircle className="size-6 shrink-0" />
           <p className="text-sm text-ink-muted">{t('active.confirmBody')}</p>
         </div>
@@ -506,7 +506,7 @@ const ActiveTestPage: React.FC = () => {
           <dt className="text-ink-muted">{t('active.totalQuestions')}</dt>
           <dd className="text-right font-bold text-ink">{totalQuestions}</dd>
           <dt className="text-ink-muted">{t('active.answered')}</dt>
-          <dd className="text-right font-bold text-primary">{answeredCount}</dd>
+          <dd className="text-right font-bold text-primary-ink">{answeredCount}</dd>
           <dt className="text-ink-muted">{t('active.flaggedReview')}</dt>
           <dd className="text-right font-bold text-amber-600">{reviewCount}</dd>
           <dt className="text-ink-muted">{t('active.unanswered')}</dt>

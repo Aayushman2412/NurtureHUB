@@ -89,7 +89,7 @@ const FormCard: React.FC<{ summary: FormDefinitionSummary; onEdit: () => void }>
               'flex size-11 shrink-0 items-center justify-center rounded-xl',
               isFlow
                 ? 'bg-gradient-to-br from-coral-400 to-coral-600 text-white shadow-(--shadow-glow)'
-                : 'bg-coral-50 text-primary dark:bg-coral-500/10',
+                : 'bg-coral-50 text-primary-ink dark:bg-coral-500/10',
             )}
           >
             <Icon className="size-5.5" />

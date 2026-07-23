@@ -295,7 +295,7 @@ const DashboardPage: React.FC = () => {
                 <Card key={stg.id} accent="coral" className="p-6">
                   <div className="mb-2 flex items-start justify-between gap-4">
                     <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary-ink">
                         {t('phase', { n: i + 1 })} • {t('videos.label')}
                       </span>
                       <h4 className="mt-0.5 mb-1.5 font-display text-lg font-bold text-ink">{stg.title}</h4>
@@ -370,7 +370,7 @@ const DashboardPage: React.FC = () => {
           {/* Activity feed */}
           <Card className="p-6">
             <h3 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink">
-              <CheckCircle2 className="size-[18px] text-primary" />
+              <CheckCircle2 className="size-[18px] text-primary-ink" />
               <span>{t('activity.title')}</span>
             </h3>
 

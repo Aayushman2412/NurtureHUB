@@ -27,7 +27,7 @@ const ReadOnly: React.FC<{ label: string; value: string; hint: string }> = ({ la
 
 const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="mb-4 border-b-2 border-coral-100 pb-2 text-[13px] font-bold uppercase tracking-wider
-                  text-primary dark:border-coral-950">{children}</div>
+                  text-primary-ink dark:border-coral-950">{children}</div>
 );
 
 const YesNo: React.FC<{ name: string; value: string; onChange: (v: string) => void }> = ({ name, value, onChange }) => {
