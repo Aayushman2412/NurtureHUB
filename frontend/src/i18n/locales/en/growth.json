@@ -37,7 +37,83 @@
     "sources": "Visit data source"
   },
   "chart": {
-    "noData": "No visits plotted yet"
+    "noData": "No visits plotted yet",
+    "download": "Download PNG",
+    "expand": "Expand",
+    "close": "Close"
+  },
+  "charts": {
+    "tab": "Growth charts",
+    "downloadAll": "Download all"
+  },
+  "filters": {
+    "role": "Role",
+    "allRoles": "All roles",
+    "department": "Department",
+    "allDepartments": "All departments",
+    "learner": "Learner",
+    "allLearners": "All learners",
+    "noLearners": "No learners found",
+    "clear": "Clear filters"
+  },
+  "summary": {
+    "tab": "Summary table",
+    "layout": "Layout",
+    "width": "Width",
+    "compact": "Compact",
+    "columns": "Columns",
+    "reset": "Reset",
+    "rowCount": "{{count}} cases",
+    "clickHint": "click a row for full detail",
+    "downloadXlsx": "Download XLSX",
+    "downloading": "Preparing…",
+    "mockBanner": "Demo values: adoption type, expected counts and z-score fall-backs are illustrative (GROWTH_SUMMARY_MOCK). Actual counts and computed z-scores are real.",
+    "demoValue": "Demo value",
+    "learner": "Learner",
+    "role": "Role",
+    "mother": "Mother",
+    "childId": "Child ID",
+    "type": "Type",
+    "adoptionType": "Adoption type",
+    "adoptAge": "Adopt age",
+    "adoptAgeFull": "Child's age at adoption (months)",
+    "duration": "Duration",
+    "durationFull": "Adoption duration (months)",
+    "antenatal": "Antenatal (adopted before birth)",
+    "antenatalShort": "AN",
+    "monthShort": "m",
+    "ec": "Expected count",
+    "ac": "Actual count (%)",
+    "ic": "Incomplete count (%)",
+    "wfaz": "Weight-for-age z (WFAz)",
+    "hfaz": "Height-for-age z (HFAz)",
+    "bv": "Baseline visit",
+    "av": "Assessment (mid) visit",
+    "lv": "Last visit",
+    "groups": {
+      "identity": "Identity",
+      "case": "Case details",
+      "total": "Total",
+      "totalFull": "Total activities (all forms)",
+      "cg": "Check Growth (growth monitoring)",
+      "bf": "Breastfeeding Assessment",
+      "cf": "Complementary Feeding Assessment",
+      "outcomes": "Outcomes (z)",
+      "outcomesFull": "WFAz / HFAz at Baseline / Assessment / Last visit"
+    }
+  },
+  "caseDetail": {
+    "metrics": "Activity & outcome summary",
+    "visits": "Visits",
+    "motherForms": "Mother-level forms",
+    "gender": "Gender",
+    "born": "Date of birth",
+    "village": "Village",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "noVisits": "No submitted visits for this case yet.",
+    "noAnswers": "No answers recorded.",
+    "formCount": "{{count}} forms"
   },
   "tooltip": {
     "age": "Age",
@@ -67,7 +143,7 @@
   },
   "admin": {
     "title": "Growth Monitor",
-    "description": "WHO growth charts for every learner–mother pair's baby, plotted from LAP visit records.",
+    "description": "Learner-level activity completion and WHO growth outcomes across all cases, plotted from LAP visit records. Filter by district, role, department or learner.",
     "loading": "Loading growth data…",
     "district": "District",
     "allDistricts": "All districts",

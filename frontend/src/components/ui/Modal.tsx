@@ -6,6 +6,7 @@ const sizes = {
   sm: 'max-w-sm',
   md: 'max-w-lg',
   lg: 'max-w-3xl',
+  xl: 'max-w-5xl',
 } as const;
 
 export interface ModalProps {

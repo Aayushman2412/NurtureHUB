@@ -1,18 +1,26 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity } from 'lucide-react';
+import { Activity, AlertTriangle, Download } from 'lucide-react';
 import client from '../../api/client';
 import {
   getAdminGrowthMonitor,
   getAdminGrowthResponse,
+  getAdminGrowthSummary,
   getGrowthStandards,
+  getGrowthSummaryFilters,
+  downloadGrowthSummaryXlsx,
   type GrowthCase,
+  type GrowthFilters,
   type GrowthStandards,
+  type GrowthSummaryFilterOptions,
+  type GrowthSummaryRow,
 } from '../../api/growth';
 import GrowthChartGrid, { GrowthLegend } from '../../components/growth/GrowthChartGrid';
+import GrowthSummaryTable from '../../components/growth/GrowthSummaryTable';
+import CaseDetailModal from '../../components/growth/CaseDetailModal';
 import VisitDetailModal from '../../components/growth/VisitDetailModal';
-import { AlertTriangle } from 'lucide-react';
-import { Button, Chip, EmptyState, PageLoader, SelectField, Tabs } from '../../components/ui';
+import { Button, EmptyState, PageLoader, SearchableSelect, SelectField, Tabs } from '../../components/ui';
+import { downloadChartsCombined } from '../../lib/chartExport';
 import { sexKeyForGender, type GrowthPoint } from '../../lib/growthChart';
 
 interface ProgramDistrict {
@@ -21,24 +29,36 @@ interface ProgramDistrict {
   slug: string;
 }
 
+const EMPTY_OPTIONS: GrowthSummaryFilterOptions = { learners: [], roles: [], departments: [] };
+
 /**
- * Admin Growth Monitor: WHO growth charts for every learner-mother-child case
- * across all districts. Six charts per sex (2 age cohorts × weight-for-age /
- * length-for-age / weight-for-length); learner-mother pairs can be toggled in
- * and out of the plots.
+ * Admin Growth Monitor. Two views over the same filtered case set:
+ *  - a learner-level SUMMARY TABLE (default): activity completion (EC/AC/IC per
+ *    form) + WFAz/HFAz outcomes per learner-mother-child case, and
+ *  - the WHO growth CHARTS (expandable + downloadable).
+ * Filters: district, role, department and a single learner apply to both.
  */
 const AdminGrowthMonitorPage: React.FC = () => {
   const { t } = useTranslation('growth');
 
-  const [standards, setStandards] = useState<GrowthStandards | null>(null);
-  const [cases, setCases] = useState<GrowthCase[]>([]);
+  const [view, setView] = useState<'table' | 'charts'>('table');
+  const [filters, setFilters] = useState<GrowthFilters>({});
+  const [options, setOptions] = useState<GrowthSummaryFilterOptions>(EMPTY_OPTIONS);
   const [districts, setDistricts] = useState<ProgramDistrict[]>([]);
-  const [district, setDistrict] = useState(''); // '' = all districts
-  const [loading, setLoading] = useState(true);
+
+  const [rows, setRows] = useState<GrowthSummaryRow[]>([]);
+  const [summaryMock, setSummaryMock] = useState(false);
+  const [cases, setCases] = useState<GrowthCase[]>([]);
+
+  const [standards, setStandards] = useState<GrowthStandards | null>(null);
   const [standardsError, setStandardsError] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
+
   const [sexTab, setSexTab] = useState<'boys' | 'girls'>('boys');
-  const [excludedMothers, setExcludedMothers] = useState<Set<number>>(new Set());
   const [detailPoint, setDetailPoint] = useState<GrowthPoint | null>(null);
+  const [detailRow, setDetailRow] = useState<GrowthSummaryRow | null>(null);
+  const chartsRef = useRef<HTMLDivElement>(null);
 
   const loadStandards = useCallback(() => {
     setStandardsError(false);
@@ -49,69 +69,65 @@ const AdminGrowthMonitorPage: React.FC = () => {
 
   useEffect(() => {
     loadStandards();
+    getGrowthSummaryFilters().then(setOptions).catch(() => setOptions(EMPTY_OPTIONS));
     client
       .get<ProgramDistrict[]>('/api/admin/districts')
       .then(res => setDistricts(res.data))
       .catch(() => {});
   }, [loadStandards]);
 
+  // Both views read the same filtered set; fetch both so switching tabs is instant.
+  // `active` guards against out-of-order responses when filters change quickly:
+  // only the latest request's results (and its blank-on-error) are applied.
   useEffect(() => {
-    setLoading(true);
-    getAdminGrowthMonitor(district || undefined)
-      .then(res => setCases(res.cases))
-      .catch(() => setCases([]))
-      .finally(() => setLoading(false));
-  }, [district]);
+    let active = true;
+    setDataLoading(true);
+    Promise.all([getAdminGrowthSummary(filters), getAdminGrowthMonitor(filters)])
+      .then(([summary, monitor]) => {
+        if (!active) return;
+        setRows(summary.rows);
+        setSummaryMock(summary.mock);
+        setCases(monitor.cases);
+      })
+      .catch(() => {
+        if (!active) return;
+        setRows([]);
+        setCases([]);
+      })
+      .finally(() => {
+        if (!active) return;
+        setDataLoading(false);
+        setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [filters]);
 
-  // Learner–mother pairs (the filter unit): one chip per mother, listing her
-  // children and how many plotted visits the pair contributes.
-  const pairs = useMemo(() => {
-    const byMother = new Map<
-      number,
-      { motherId: number; label: string; childNames: string[]; visitCount: number }
-    >();
-    for (const c of cases) {
-      const entry = byMother.get(c.mother.id) ?? {
-        motherId: c.mother.id,
-        label: `${c.learner.name ?? t('admin.orphanLearner')} · ${c.mother.name}`,
-        childNames: [],
-        visitCount: 0,
-      };
-      entry.childNames.push(c.child.name);
-      entry.visitCount += c.visits.filter(v => v.weight != null || v.length != null).length;
-      byMother.set(c.mother.id, entry);
-    }
-    return [...byMother.values()].sort((a, b) => a.label.localeCompare(b.label));
-  }, [cases, t]);
-
-  const togglePair = (motherId: number) => {
-    setExcludedMothers(prev => {
-      const next = new Set(prev);
-      if (next.has(motherId)) next.delete(motherId);
-      else next.add(motherId);
-      return next;
-    });
-  };
-
-  const includedCases = useMemo(
-    () => cases.filter(c => !excludedMothers.has(c.mother.id)),
-    [cases, excludedMothers],
-  );
+  const patch = (p: Partial<GrowthFilters>) => setFilters(f => ({ ...f, ...p }));
+  const resetFilters = () => setFilters({});
+  const hasFilters = !!(filters.district || filters.role || filters.department || filters.learnerId);
 
   const sexCases = useMemo(
-    () => includedCases.filter(c => sexKeyForGender(c.child.gender) === sexTab),
-    [includedCases, sexTab],
+    () => cases.filter(c => sexKeyForGender(c.child.gender) === sexTab),
+    [cases, sexTab],
   );
-
   const counts = useMemo(
     () => ({
-      boys: includedCases.filter(c => sexKeyForGender(c.child.gender) === 'boys').length,
-      girls: includedCases.filter(c => sexKeyForGender(c.child.gender) === 'girls').length,
+      boys: cases.filter(c => sexKeyForGender(c.child.gender) === 'boys').length,
+      girls: cases.filter(c => sexKeyForGender(c.child.gender) === 'girls').length,
     }),
-    [includedCases],
+    [cases],
   );
 
   const fetchResponse = useCallback((id: number) => getAdminGrowthResponse(id), []);
+
+  const downloadAllCharts = useCallback(async () => {
+    const container = chartsRef.current;
+    if (!container) return;
+    const svgs = Array.from(container.querySelectorAll<SVGSVGElement>('svg[data-growth-chart]'));
+    await downloadChartsCombined(svgs, `growth-charts-${sexTab}.png`);
+  }, [sexTab]);
 
   if (standardsError && !standards) {
     return (
@@ -130,88 +146,127 @@ const AdminGrowthMonitorPage: React.FC = () => {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-extrabold text-ink">{t('admin.title')}</h1>
-          <p className="mt-1 text-sm text-ink-muted">{t('admin.description')}</p>
-        </div>
-        <div className="w-56">
+      <div>
+        <h1 className="font-display text-2xl font-extrabold text-ink">{t('admin.title')}</h1>
+        <p className="mt-1 text-sm text-ink-muted">{t('admin.description')}</p>
+      </div>
+
+      {/* filters — apply to both the table and the charts */}
+      <div className="rounded-xl border border-border bg-surface p-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <SelectField
             label={t('admin.district')}
-            value={district}
-            onChange={setDistrict}
+            value={filters.district ?? ''}
+            onChange={v => patch({ district: v })}
             placeholder={t('admin.allDistricts')}
             options={districts.map(d => ({ value: d.slug, label: d.name }))}
           />
+          <SelectField
+            label={t('filters.role')}
+            value={filters.role ?? ''}
+            onChange={v => patch({ role: v })}
+            placeholder={t('filters.allRoles')}
+            options={options.roles.map(r => ({ value: r, label: r }))}
+          />
+          <SelectField
+            label={t('filters.department')}
+            value={filters.department ?? ''}
+            onChange={v => patch({ department: v })}
+            placeholder={t('filters.allDepartments')}
+            options={options.departments.map(d => ({ value: d, label: d }))}
+          />
+          <SearchableSelect
+            label={t('filters.learner')}
+            value={filters.learnerId ?? ''}
+            onChange={v => patch({ learnerId: v ? Number(v) : null })}
+            placeholder={t('filters.allLearners')}
+            emptyMessage={t('filters.noLearners')}
+            options={[
+              { value: '', label: t('filters.allLearners') },
+              ...options.learners.map(l => ({
+                value: l.id,
+                label: l.district ? `${l.name} · ${l.district}` : l.name,
+              })),
+            ]}
+          />
         </div>
-      </div>
-
-      {/* learner–mother pair filter */}
-      <div className="rounded-xl border border-border bg-surface p-4">
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <span className="text-sm font-bold text-ink">{t('admin.pairs')}</span>
-          <div className="flex gap-2">
-            <Button size="sm" variant="ghost" onClick={() => setExcludedMothers(new Set())}>
-              {t('admin.selectAll')}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setExcludedMothers(new Set(pairs.map(p => p.motherId)))}
-            >
-              {t('admin.clearAll')}
+        {hasFilters && (
+          <div className="mt-3 flex justify-end">
+            <Button size="sm" variant="ghost" onClick={resetFilters}>
+              {t('filters.clear')}
             </Button>
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {pairs.map(pair => (
-            <Chip
-              key={pair.motherId}
-              selected={!excludedMothers.has(pair.motherId)}
-              count={pair.visitCount}
-              onClick={() => togglePair(pair.motherId)}
-              title={pair.childNames.join(', ')}
-            >
-              {pair.label}
-            </Chip>
-          ))}
-          {pairs.length === 0 && (
-            <span className="text-sm text-ink-muted">{t('admin.noCases')}</span>
-          )}
-        </div>
+        )}
       </div>
 
-      <GrowthLegend />
-
       <Tabs
-        value={sexTab}
-        onChange={setSexTab}
+        value={view}
+        onChange={setView}
         items={[
-          { value: 'boys' as const, label: `${t('sexTabs.boys')} (${counts.boys})` },
-          { value: 'girls' as const, label: `${t('sexTabs.girls')} (${counts.girls})` },
+          { value: 'table' as const, label: t('summary.tab') },
+          { value: 'charts' as const, label: t('charts.tab') },
         ]}
       />
 
-      {sexCases.length === 0 ? (
-        <EmptyState
-          icon={<Activity className="size-8" />}
-          title={t('admin.noCasesTitle')}
-          description={t('admin.noCases')}
+      {view === 'table' ? (
+        <GrowthSummaryTable
+          rows={rows}
+          mock={summaryMock}
+          onRowClick={setDetailRow}
+          onDownloadXlsx={() => downloadGrowthSummaryXlsx(filters)}
         />
       ) : (
-        <GrowthChartGrid
-          cases={sexCases}
-          sex={sexTab}
-          standards={standards}
-          onPointClick={setDetailPoint}
-        />
+        <div className="space-y-5">
+          <GrowthLegend />
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Tabs
+              value={sexTab}
+              onChange={setSexTab}
+              items={[
+                { value: 'boys' as const, label: `${t('sexTabs.boys')} (${counts.boys})` },
+                { value: 'girls' as const, label: `${t('sexTabs.girls')} (${counts.girls})` },
+              ]}
+            />
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={downloadAllCharts}
+              disabled={sexCases.length === 0}
+            >
+              <Download className="size-4" />
+              {t('charts.downloadAll')}
+            </Button>
+          </div>
+
+          {sexCases.length === 0 ? (
+            <EmptyState
+              icon={<Activity className="size-8" />}
+              title={t('admin.noCasesTitle')}
+              description={t('admin.noCases')}
+            />
+          ) : (
+            <div ref={chartsRef}>
+              <GrowthChartGrid
+                cases={sexCases}
+                sex={sexTab}
+                standards={standards}
+                onPointClick={setDetailPoint}
+              />
+            </div>
+          )}
+        </div>
       )}
+
+      {dataLoading && <p className="text-xs text-ink-faint">{t('admin.loading')}</p>}
 
       <VisitDetailModal
         point={detailPoint}
         onClose={() => setDetailPoint(null)}
         fetchResponse={fetchResponse}
       />
+
+      <CaseDetailModal row={detailRow} onClose={() => setDetailRow(null)} />
     </div>
   );
 };

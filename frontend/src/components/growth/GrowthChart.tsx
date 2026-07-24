@@ -1,6 +1,8 @@
-import React, { useEffect, useId, useMemo, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Download, Maximize2, X } from 'lucide-react';
 import type { GrowthStandardPoint } from '../../api/growth';
+import { downloadChartPng, slugify } from '../../lib/chartExport';
 import {
   clipStandards,
   formatAge,
@@ -77,6 +79,19 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
   const { t } = useTranslation('growth');
   const clipId = useId();
   const [hover, setHover] = useState<Hover | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setExpanded(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [expanded]);
+
+  const download = async () => {
+    if (svgRef.current) await downloadChartPng(svgRef.current, `${slugify(title)}.png`, title, subtitle);
+  };
 
   // A hovered point can disappear when filters/tabs change without a mouse
   // move; drop the tooltip whenever the plotted data changes.
@@ -134,25 +149,25 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
   const hasData = visibleSeries.length > 0;
   const hoverVisit = hover?.point.visit ?? null;
 
-  return (
-    <div className="rounded-xl border border-border bg-surface p-4 shadow-(--shadow-card)">
-      <div className="mb-2">
-        <h3 className="font-display text-sm font-bold text-ink">{title}</h3>
-        {subtitle && <p className="text-xs text-ink-muted">{subtitle}</p>}
-      </div>
-
+  const renderPlot = (ref?: React.Ref<SVGSVGElement>, idSuffix = '') => {
+    const cid = `${clipId}${idSuffix}`;
+    return (
       <div className="relative">
         <svg
+          ref={ref}
           viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
           className="h-auto w-full select-none"
           role="img"
           aria-label={title}
+          data-growth-chart={ref ? '' : undefined}
+          data-chart-title={title}
+          data-chart-subtitle={subtitle ?? ''}
           onMouseLeave={() => setHover(null)}
         >
           {/* clip curves/series to the plot box so they never overdraw the
               axis tick labels or the right-margin percentile labels */}
           <defs>
-            <clipPath id={clipId}>
+            <clipPath id={cid}>
               <rect x={M.left} y={M.top} width={PLOT_W} height={PLOT_H} />
             </clipPath>
           </defs>
@@ -230,7 +245,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
           </text>
 
           {/* WHO percentile curves (clipped to the plot box) */}
-          <g clipPath={`url(#${clipId})`}>
+          <g clipPath={`url(#${cid})`}>
             {percentilePaths.map(p => (
               <path
                 key={p.key}
@@ -256,7 +271,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
           ))}
 
           {/* visit series: segment color = the source combo of its later point */}
-          <g clipPath={`url(#${clipId})`}>
+          <g clipPath={`url(#${cid})`}>
             {visibleSeries.map(s => (
               <g key={s.caseId}>
                 {s.points.slice(1).map((p, i) => (
@@ -370,6 +385,82 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
           );
         })()}
       </div>
+    );
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-surface p-4 shadow-(--shadow-card)">
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <div>
+          <h3 className="font-display text-sm font-bold text-ink">{title}</h3>
+          {subtitle && <p className="text-xs text-ink-muted">{subtitle}</p>}
+        </div>
+        <div className="flex shrink-0 gap-1">
+          <button
+            type="button"
+            onClick={download}
+            title={t('chart.download')}
+            aria-label={t('chart.download')}
+            className="rounded-lg p-1.5 text-ink-faint transition-colors hover:bg-surface-sunken hover:text-ink"
+          >
+            <Download className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            title={t('chart.expand')}
+            aria-label={t('chart.expand')}
+            className="rounded-lg p-1.5 text-ink-faint transition-colors hover:bg-surface-sunken hover:text-ink"
+          >
+            <Maximize2 className="size-4" />
+          </button>
+        </div>
+      </div>
+
+      {renderPlot(svgRef)}
+
+      {expanded && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+          onClick={() => setExpanded(false)}
+        >
+          <div
+            className="max-h-[92vh] w-full max-w-5xl overflow-auto rounded-2xl border border-border bg-surface p-5 shadow-(--shadow-hover)"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-start justify-between gap-2">
+              <div>
+                <h3 className="font-display text-lg font-bold text-ink">{title}</h3>
+                {subtitle && <p className="text-sm text-ink-muted">{subtitle}</p>}
+              </div>
+              <div className="flex shrink-0 gap-1">
+                <button
+                  type="button"
+                  onClick={download}
+                  title={t('chart.download')}
+                  aria-label={t('chart.download')}
+                  className="rounded-lg p-2 text-ink-muted transition-colors hover:bg-surface-sunken hover:text-ink"
+                >
+                  <Download className="size-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpanded(false)}
+                  title={t('chart.close')}
+                  aria-label={t('chart.close')}
+                  className="rounded-lg p-2 text-ink-muted transition-colors hover:bg-surface-sunken hover:text-ink"
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+            </div>
+            {renderPlot(undefined, '-modal')}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -44,16 +44,151 @@ export interface GrowthCase {
   visits: GrowthVisit[];
 }
 
+// ── Learner-level summary table ───────────────────────────────────────────────
+
+/** Expected / Actual / Incomplete counts (+ %) for one form group. */
+export interface ActivityBlock {
+  expected: number | null;
+  actual: number;
+  incomplete: number | null;
+  actual_pct: number | null;
+  incomplete_pct: number | null;
+}
+
+/** A metric at Baseline / Assessment (mid) / Last visit. */
+export interface ZTriplet {
+  bv: number | null;
+  av: number | null;
+  lv: number | null;
+}
+
+/** One learner-mother-child row of the growth-monitor summary table. */
+export interface GrowthSummaryRow {
+  case_id: number;
+  learner_id: number | null;
+  identity: {
+    learner_name: string | null;
+    role_group: string | null;
+    mother_name: string;
+    child_uid: string;
+  };
+  case_details: {
+    adoption_type: string | null;
+    age_of_adoption_days: number | null;
+    adoption_duration_days: number | null;
+  };
+  activities: { total: ActivityBlock; cg: ActivityBlock; bf: ActivityBlock; cf: ActivityBlock };
+  outcomes: { wfaz: ZTriplet; hfaz: ZTriplet };
+  meta: {
+    sex: string | null;
+    district: string | null;
+    department: string | null;
+    /** Any of these true → that column is a demo/mock value (GROWTH_SUMMARY_MOCK). */
+    expected_is_mock: boolean;
+    adoption_type_is_mock: boolean;
+    timing_is_mock: boolean;
+    z_is_mock: boolean;
+  };
+}
+
+export interface GrowthSummaryLearner {
+  id: number;
+  name: string;
+  role: string | null;
+  department: string | null;
+  district: string | null;
+}
+
+export interface GrowthSummaryFilterOptions {
+  learners: GrowthSummaryLearner[];
+  roles: string[];
+  departments: string[];
+}
+
+/** The four growth-monitor filters (shared by the table and the charts). */
+export interface GrowthFilters {
+  district?: string;
+  role?: string;
+  department?: string;
+  learnerId?: number | null;
+}
+
+const filterParams = (f: GrowthFilters) => ({
+  ...(f.district ? { district: f.district } : {}),
+  ...(f.role ? { role: f.role } : {}),
+  ...(f.department ? { department: f.department } : {}),
+  ...(f.learnerId ? { learner_id: f.learnerId } : {}),
+});
+
 export const getGrowthStandards = (): Promise<GrowthStandards> =>
   client.get('/api/growth/standards').then(r => r.data);
 
 export const getMyGrowthCases = (): Promise<{ cases: GrowthCase[] }> =>
   client.get('/api/growth/my-cases').then(r => r.data);
 
-export const getAdminGrowthMonitor = (district?: string): Promise<{ cases: GrowthCase[] }> =>
-  client
-    .get('/api/admin/growth/monitor', { params: district ? { district } : {} })
-    .then(r => r.data);
+export const getAdminGrowthMonitor = (filters: GrowthFilters = {}): Promise<{ cases: GrowthCase[] }> =>
+  client.get('/api/admin/growth/monitor', { params: filterParams(filters) }).then(r => r.data);
+
+export const getAdminGrowthSummary = (
+  filters: GrowthFilters = {},
+): Promise<{ rows: GrowthSummaryRow[]; mock: boolean }> =>
+  client.get('/api/admin/growth/summary', { params: filterParams(filters) }).then(r => r.data);
+
+export const getGrowthSummaryFilters = (): Promise<GrowthSummaryFilterOptions> =>
+  client.get('/api/admin/growth/summary/filters').then(r => r.data);
+
+/** Download the (filtered) summary table as an .xlsx. Triggers the browser download. */
+export const downloadGrowthSummaryXlsx = async (filters: GrowthFilters = {}): Promise<void> => {
+  const res = await client.get('/api/admin/growth/summary/export', {
+    params: filterParams(filters),
+    responseType: 'blob',
+  });
+  const url = URL.createObjectURL(res.data as Blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = 'growth-summary.xlsx';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+};
 
 export const getAdminGrowthResponse = (responseId: number): Promise<FormResponseDetail> =>
   client.get(`/api/admin/growth/responses/${responseId}`).then(r => r.data);
+
+// ── Case drill-down (all forms across all visits) ─────────────────────────────
+
+export interface GrowthVisitDetail {
+  date: string;
+  age_days: number | null;
+  weight: number | null;
+  length: number | null;
+  responses: FormResponseDetail[];
+}
+
+export interface GrowthCaseDetail {
+  child: {
+    id: number;
+    uid: string;
+    name: string;
+    gender: string | null;
+    dob: string | null;
+    birth_weight: number | null;
+    birth_length: number | null;
+    adoption_date: string | null;
+  };
+  mother: {
+    id: number;
+    uid: string;
+    name: string;
+    mobile: string | null;
+    village: string | null;
+    age: number | null;
+  } | null;
+  learner: { id: number; name: string; role: string | null; department: string | null; email: string | null } | null;
+  visits: GrowthVisitDetail[];
+  mother_forms: FormResponseDetail[];
+}
+
+export const getGrowthCaseDetail = (childId: number): Promise<GrowthCaseDetail> =>
+  client.get(`/api/admin/growth/cases/${childId}/detail`).then(r => r.data);

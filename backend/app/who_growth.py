@@ -103,3 +103,37 @@ def value_for_z(indicator: str, sex: str, x: float, z: float) -> Optional[float]
     if lms is None:
         return None
     return _lms_value(*lms, z)
+
+
+def zscore_for_value(indicator: str, sex: str, x: float, value: Optional[float]) -> Optional[float]:
+    """Z-score of a measurement ``value`` at age-in-days / length-cm ``x``, per the
+    WHO Child Growth Standards LMS method.
+
+    Standard LMS inside |z| ≤ 3::
+
+        z = ((value / M) ** L - 1) / (L * S)          (L ≠ 0)
+        z = ln(value / M) / S                          (L = 0)
+
+    Outside it, the WHO extreme-value correction (WHO Anthro / ``igrowup`` rule):
+    beyond ±3 SD the standard deviation is fixed to the ±2↔±3 gap so the skewed
+    Box-Cox tails don't yield implausible scores. Returns None when ``value`` is
+    missing/non-positive or ``x`` falls outside the reference table range.
+    """
+    if value is None or value <= 0:
+        return None
+    lms = _interpolated_lms(indicator, sex, x)
+    if lms is None:
+        return None
+    L, M, S = lms
+    if abs(L) < 1e-9:
+        from math import log
+        z = log(value / M) / S
+    else:
+        z = ((value / M) ** L - 1.0) / (L * S)
+    if z > 3.0:
+        sd3, sd2 = _lms_value(L, M, S, 3.0), _lms_value(L, M, S, 2.0)
+        z = 3.0 + (value - sd3) / (sd3 - sd2)
+    elif z < -3.0:
+        sd3, sd2 = _lms_value(L, M, S, -3.0), _lms_value(L, M, S, -2.0)
+        z = -3.0 + (value - sd3) / (sd2 - sd3)
+    return round(z, 2)
