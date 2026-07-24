@@ -16,13 +16,17 @@ const verdictVariant = (verdict: string | null): 'success' | 'error' | 'neutral'
 };
 
 export const AnswerRow: React.FC<{ answer: AnswerSnapshot }> = ({ answer }) => {
-  // Flat scalar answers are snapshotted into BOTH `value` and `selected`
-  // (same string) — show each answer once.
+  // Matrix answers keep a raw JSON cell-map in `value` (preserved for editing);
+  // the human-readable per-cell entries live in `selected`, so never print the
+  // JSON for them. Flat scalar answers are snapshotted into BOTH `value` and
+  // `selected` (same string) — show each answer once.
+  const isMatrix = (answer.questionType as string) === 'matrix';
+  const showValue = !isMatrix && answer.value != null && answer.value !== '';
   const chips = answer.selected.filter(sel => sel.label !== answer.value);
   return (
     <div className="flex flex-col gap-0.5 border-b border-border py-2 last:border-b-0">
       <span className="text-xs text-ink-muted">{answer.question}</span>
-      {answer.value != null && answer.value !== '' && (
+      {showValue && (
         <span className="text-sm font-semibold text-ink">{answer.value}</span>
       )}
       {chips.length > 0 && (
