@@ -15,6 +15,7 @@ import type {
   QuestionType,
   Verdict,
   VerdictDef,
+  VisibleIf,
 } from '../../lib/flowTypes';
 import { findVerdict, resolveVerdicts } from '../../lib/flowTypes';
 
@@ -115,4 +116,6 @@ export type NodePatch = QuestionPatch &
     /** matrix */
     rows?: MatrixRow[];
     columns?: MatrixColumn[];
+    /** answer-dependent visibility (all node kinds) */
+    visibleIf?: VisibleIf | null;
   };
