@@ -46,6 +46,17 @@ const Anno: React.FC<{ icon?: React.ReactNode; children: React.ReactNode; classN
   </span>
 );
 
+const visibleIfLabel = (schema: FlowSchema, rule: { nodeId: string; anyOf: string[] } | null | undefined): string | null => {
+  if (!rule) return null;
+  const source = schema.nodes[rule.nodeId];
+  const title = source && 'title' in source && source.title ? source.title : rule.nodeId;
+  const opts =
+    source && isQuestionNode(source)
+      ? rule.anyOf.map(id => source.options.find(o => o.id === id)?.label ?? id)
+      : rule.anyOf;
+  return `shown only when "${title}" = ${opts.join(' / ')}`;
+};
+
 const numericLabel = (numeric: NumericRange | null | undefined): string | null => {
   if (!numeric) return null;
   const parts: string[] = [];
@@ -263,19 +274,29 @@ const FlowPrint: React.FC<{ schema: FlowSchema }> = ({ schema }) => {
           return (
             <div key={node.id}>
               {isQuestionNode(node) && (
-                <QuestionBlock
-                  question={node}
-                  label={label}
-                  verdicts={verdicts}
-                  stepNoFor={stepNoFor}
-                  defaultNextId={node.next}
-                />
+                <>
+                  {node.visibleIf && (
+                    <p className="mb-1">
+                      <Anno icon={<GitBranch className="size-3" />}>{visibleIfLabel(schema, node.visibleIf)}</Anno>
+                    </p>
+                  )}
+                  <QuestionBlock
+                    question={node}
+                    label={label}
+                    verdicts={verdicts}
+                    stepNoFor={stepNoFor}
+                    defaultNextId={node.next}
+                  />
+                </>
               )}
 
               {isSectionNode(node) && (
                 <div className="break-inside-avoid-page rounded-2xl border border-sage-500/40 bg-sage-50/40 p-4 dark:bg-sage-500/5">
                   <div className="mb-3 flex flex-wrap items-center gap-2">
                     <Badge variant="coral">{label}</Badge>
+                    {node.visibleIf && (
+                      <Anno icon={<GitBranch className="size-3" />}>{visibleIfLabel(schema, node.visibleIf)}</Anno>
+                    )}
                     <span className="text-[11px] font-bold uppercase tracking-wider text-sage-700 dark:text-sage-300">
                       Common section — {node.title || 'Untitled'}
                     </span>
@@ -301,8 +322,30 @@ const FlowPrint: React.FC<{ schema: FlowSchema }> = ({ schema }) => {
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <Badge variant="coral">{label}</Badge>
                     {node.required && <Anno>required</Anno>}
+                    {node.visibleIf && (
+                      <Anno icon={<GitBranch className="size-3" />}>{visibleIfLabel(schema, node.visibleIf)}</Anno>
+                    )}
                   </div>
+                  <h3 className="mb-2 font-display text-lg font-bold text-ink">{node.title}</h3>
                   <MatrixStepCard node={node as FlowMatrixNode} value={{}} onChange={() => {}} />
+                  <p className="mt-2 flex flex-wrap gap-1.5">
+                    {node.columns.filter(c => c.learnerHidden).map(c => (
+                      <Anno key={c.id}>column "{c.label}" hidden from learner</Anno>
+                    ))}
+                    {node.columns.filter(c => c.zeroesRow).map(c => (
+                      <Anno key={c.id} icon={<Flag className="size-3" />}>
+                        "{c.label}" = 0 auto-fills the row with 0
+                      </Anno>
+                    ))}
+                    {node.rows.some(r => r.proteinPerServing != null) && (
+                      <Anno icon={<Flag className="size-3" />}>
+                        protein g/serving: {node.rows
+                          .filter(r => r.proteinPerServing != null)
+                          .map(r => `${r.proteinPerServing}${r.highQuality ? ' (HQ)' : ''}`)
+                          .join(' · ')}
+                      </Anno>
+                    )}
+                  </p>
                 </div>
               )}
 

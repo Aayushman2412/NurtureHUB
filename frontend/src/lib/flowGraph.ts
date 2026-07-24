@@ -192,6 +192,33 @@ export function validateFlow(schema: FlowSchema): FlowIssue[] {
     }
   }
 
+  // Visibility rules must reference an existing single/multi question and its
+  // real option ids — a broken rule would silently hide the node forever.
+  for (const node of Object.values(schema.nodes)) {
+    const rule = node.visibleIf;
+    if (!rule) continue;
+    const label = ('title' in node && node.title) || node.id;
+    const source = schema.nodes[rule.nodeId];
+    if (!source) {
+      issues.push({ level: 'error', nodeId: node.id, message: `"${label}" visibility depends on a deleted question.` });
+      continue;
+    }
+    if (!isQuestionNode(source) || (source.questionType !== 'single' && source.questionType !== 'multi')) {
+      issues.push({ level: 'error', nodeId: node.id, message: `"${label}" visibility must depend on a single/multi-select question.` });
+      continue;
+    }
+    if (rule.anyOf.length === 0) {
+      issues.push({ level: 'warning', nodeId: node.id, message: `"${label}" has a visibility rule with no options — it will never be shown.` });
+    }
+    const optionIds = new Set(source.options.map(o => o.id));
+    for (const id of rule.anyOf) {
+      if (!optionIds.has(id)) {
+        issues.push({ level: 'error', nodeId: node.id, message: `"${label}" visibility references a deleted answer option.` });
+        break;
+      }
+    }
+  }
+
   const reachable = reachableNodeIds(schema);
   const orphans = nodeIds.filter(id => !reachable.has(id));
   if (schema.startNodeId && schema.nodes[schema.startNodeId] && orphans.length > 0) {

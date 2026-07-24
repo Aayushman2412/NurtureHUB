@@ -92,7 +92,13 @@
     "backToAssessments": "Back to assessments",
     "newAssessment": "New assessment",
     "draftNotice": "This assessment is still a draft — finish it to get the full plan.",
-    "continueDraft": "Continue filling"
+    "continueDraft": "Continue filling",
+    "proteinTitle": "Protein intake summary",
+    "proteinSub": "Computed from the food and supplement grids of this visit.",
+    "proteinTotal24": "Total protein — last 24 h",
+    "proteinHq24": "High-quality protein — last 24 h",
+    "proteinDailyAvg": "Average daily protein (habitual)",
+    "proteinHqDailyAvg": "Average daily high-quality protein"
   },
   "growth": {
     "optional": "(optional)",

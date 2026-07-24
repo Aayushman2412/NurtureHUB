@@ -161,7 +161,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/mothers/:motherId/children/:childId/assessments/:formKey/run" element={<CompleteRoute><AssessmentRunnerRoute /></CompleteRoute>} />
       {/* Per-mother assessments (protein intake — flow only) */}
       <Route path="/mothers/:motherId/assessments/:formKey" element={<CompleteRoute><AssessmentHistoryPage /></CompleteRoute>} />
-      <Route path="/mothers/:motherId/assessments/:formKey/run" element={<CompleteRoute><AssessmentRunnerPage /></CompleteRoute>} />
+      <Route path="/mothers/:motherId/assessments/:formKey/run" element={<CompleteRoute><AssessmentRunnerRoute /></CompleteRoute>} />
       <Route path="/assessments/:responseId/plan" element={<CompleteRoute><AssessmentPlanPage /></CompleteRoute>} />
 
       {/* Growth charts (LAP monitoring) — case-wise WHO percentile charts */}

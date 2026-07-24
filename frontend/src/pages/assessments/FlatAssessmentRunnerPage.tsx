@@ -19,8 +19,12 @@ import { ClipboardList, Save, Send } from 'lucide-react';
 import { Alert, Button, Card, EmptyState, PageHeader, PageLoader } from '../../components/ui';
 import { useToast } from '../../context/ToastContext';
 import { getChild, type Child } from '../../api/children';
-import { createResponse, getFormDefinition, getResponse, updateResponse } from '../../api/forms';
+import { getMother, type Mother } from '../../api/mothers';
+import {
+  createResponse, getFormDefinition, getResponse, listMotherResponses, updateResponse,
+} from '../../api/forms';
 import type { FlatField, FlatSchema, FormDefinition, FormKey } from '../../lib/flowTypes';
+import { isMotherFormKey } from '../../lib/flowTypes';
 import {
   buildFlatAnswersPayload,
   buildFlatZodSchema,
@@ -43,11 +47,20 @@ const ageDaysAt = (dob: string | null | undefined, atIso: string): number | null
   return Math.floor((at.getTime() - birth.getTime()) / 86_400_000);
 };
 
+/** "X completed weeks + Y completed days" from the mother's LMP at a date. */
+const gestationalAgeText = (lmp: string | null | undefined, atIso: string): string => {
+  const days = ageDaysAt(lmp, atIso);
+  if (days == null || days < 0) return '';
+  return `${Math.floor(days / 7)} completed weeks + ${days % 7} completed days`;
+};
+
 const FlatAssessmentRunnerPage: React.FC = () => {
   const { motherId: motherParam, childId: childParam, formKey: keyParam } = useParams();
   const motherId = Number(motherParam);
   const childId = Number(childParam);
   const formKey = (keyParam ?? 'growth_monitoring') as FormKey;
+  /** Mother-level flat forms (antenatal) have no child in scope. */
+  const motherLevel = isMotherFormKey(formKey);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { t } = useTranslation('assessments');
@@ -56,11 +69,16 @@ const FlatAssessmentRunnerPage: React.FC = () => {
   const resumeIdParam = searchParams.get('responseId');
   const resumeId = resumeIdParam ? Number(resumeIdParam) : null;
 
-  const historyUrl = `/mothers/${motherId}/children/${childId}/assessments/${formKey}`;
+  const historyUrl = motherLevel
+    ? `/mothers/${motherId}/assessments/${formKey}`
+    : `/mothers/${motherId}/children/${childId}/assessments/${formKey}`;
   const today = useRef(todayIso()).current;
 
   const [definition, setDefinition] = useState<FormDefinition | null>(null);
   const [child, setChild] = useState<Child | null>(null);
+  const [mother, setMother] = useState<Mother | null>(null);
+  /** Latest previously SUBMITTED weight (kg) — the weight-gain baseline. */
+  const [previousWeight, setPreviousWeight] = useState<number | null>(null);
   const [values, setValues] = useState<FlatFormValues>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [responseId, setResponseId] = useState<number | null>(resumeId);
@@ -104,13 +122,32 @@ const FlatAssessmentRunnerPage: React.FC = () => {
     setLoadError(false);
     Promise.all([
       getFormDefinition(formKey),
-      getChild(motherId, childId),
+      motherLevel ? Promise.resolve(null) : getChild(motherId, childId),
+      motherLevel ? getMother(motherId) : Promise.resolve(null),
       resumeId != null ? getResponse(resumeId) : Promise.resolve(null),
+      motherLevel ? listMotherResponses(formKey, motherId).catch(() => []) : Promise.resolve([]),
     ])
-      .then(([def, c, resp]) => {
+      .then(([def, c, m, resp, prior]) => {
         if (cancelled) return;
         setDefinition(def);
         setChild(c);
+        setMother(m);
+
+        // Weight-gain baseline: the most recent SUBMITTED visit other than the
+        // one being edited. Its stored current_weight is a plain text answer.
+        const previous = (prior ?? [])
+          .filter(r => r.status === 'submitted' && r.id !== resumeId)
+          .sort((a, b) => (a.assessment_date < b.assessment_date ? 1 : -1))[0];
+        if (previous) {
+          getResponse(previous.id)
+            .then(full => {
+              if (cancelled) return;
+              const w = (full.answers_json ?? []).find(ans => ans.nodeId === 'current_weight');
+              const n = w?.value != null ? parseFloat(String(w.value)) : NaN;
+              setPreviousWeight(Number.isFinite(n) ? n : null);
+            })
+            .catch(() => {});
+        }
 
         const defFields = (def.schema_json as FlatSchema | undefined)?.fields ?? [];
         const next = emptyFlatValues(defFields);
@@ -144,7 +181,37 @@ const FlatAssessmentRunnerPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [formKey, motherId, childId, resumeId, today]);
+  }, [formKey, motherId, childId, motherLevel, resumeId, today]);
+
+  // ── Read-only computed fields (antenatal) ─────────────────────────────────
+  const weightFieldId = 'current_weight';
+  const computedValues = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const f of fields) {
+      if (f.computed === 'gestational_age') {
+        out[f.id] = gestationalAgeText(mother?.lmp ?? null, assessmentDate) || '—';
+      } else if (f.computed === 'weight_gain') {
+        const raw = values[weightFieldId];
+        const current = typeof raw === 'string' ? parseFloat(raw) : NaN;
+        if (!Number.isFinite(current)) out[f.id] = '—';
+        else if (previousWeight == null) out[f.id] = 'First recorded visit — no previous weight';
+        else {
+          const diff = current - previousWeight;
+          out[f.id] = `${diff >= 0 ? '+' : '−'}${Math.abs(diff).toFixed(1)} kg (previous: ${previousWeight.toFixed(1)} kg)`;
+        }
+      }
+    }
+    return out;
+  }, [fields, mother?.lmp, assessmentDate, values, previousWeight]);
+
+  // Mirror computed values into the answers map so they are stored verbatim.
+  useEffect(() => {
+    const patch: Record<string, string> = {};
+    for (const [id, v] of Object.entries(computedValues)) {
+      if ((values[id] ?? '') !== v) patch[id] = v;
+    }
+    if (Object.keys(patch).length > 0) setValues(prev => ({ ...prev, ...patch }));
+  }, [computedValues, values]);
 
   const setValue = (id: string, v: string | string[]) => {
     setValues(prev => ({ ...prev, [id]: v }));
@@ -156,7 +223,10 @@ const FlatAssessmentRunnerPage: React.FC = () => {
     const payload = { assessment_date: assessmentDate, status, answers };
     return responseId != null
       ? updateResponse(responseId, payload)
-      : createResponse(formKey, { child_id: childId, ...payload });
+      : createResponse(
+          formKey,
+          motherLevel ? { mother_id: motherId, ...payload } : { child_id: childId, ...payload },
+        );
   };
 
   const handleSaveDraft = async () => {
@@ -174,6 +244,7 @@ const FlatAssessmentRunnerPage: React.FC = () => {
 
   const handleSubmit = async () => {
     const schema = buildFlatZodSchema(fields, values, { t, ageDays, dobIso: child?.dob ?? null });
+    // Computed fields are read-only text — they never block submission.
     // Only visible fields are in the schema, so parse only those keys.
     const subset: FlatFormValues = {};
     for (const f of visible) subset[f.id] = values[f.id] ?? (f.type === 'checkbox' ? [] : '');
@@ -201,7 +272,7 @@ const FlatAssessmentRunnerPage: React.FC = () => {
 
   if (loading) return <PageLoader label={t('runner.loading')} className="min-h-60" />;
 
-  if (loadError || !definition || !child) {
+  if (loadError || !definition || (motherLevel ? !mother : !child)) {
     return (
       <div className="mx-auto flex max-w-3xl flex-col gap-4">
         <Alert variant="error" title={t('common.loadFailedTitle')}>
@@ -236,35 +307,57 @@ const FlatAssessmentRunnerPage: React.FC = () => {
         title={definition.title}
         backTo={historyUrl}
         description={
-          <ChildChip
-            name={child.child_name}
-            uid={child.child_uid}
-            ageDays={child.age_days}
-            ageMonths={child.age_months}
-            className="mt-1"
-          />
+          motherLevel && mother ? (
+            <span className="mt-1 inline-flex items-center gap-2 text-sm text-ink-muted">
+              <span className="font-semibold text-ink">{mother.mother_name}</span>
+              <span className="font-mono text-xs">{mother.mother_uid}</span>
+              {mother.lmp == null && (
+                <span className="font-semibold text-amber-700 dark:text-amber-500">
+                  No LMP on record — gestational age cannot be computed
+                </span>
+              )}
+            </span>
+          ) : child ? (
+            <ChildChip
+              name={child.child_name}
+              uid={child.child_uid}
+              ageDays={child.age_days}
+              ageMonths={child.age_months}
+              className="mt-1"
+            />
+          ) : undefined
         }
       />
 
-      {child.dob == null && (
+      {!motherLevel && child && child.dob == null && (
         <Alert variant="warning" title={t('growth.noDobTitle')}>
           {t('growth.noDobBody')}
         </Alert>
       )}
 
       <Card className="flex flex-col gap-5 p-5 sm:p-6">
-        {visible.map(f => (
-          <FlatFieldInput
-            key={f.id}
-            field={f}
-            value={values[f.id] ?? (f.type === 'checkbox' ? [] : '')}
-            onChange={v => setValue(f.id, v)}
-            error={errors[f.id]}
-            disabled={busy}
-            dobIso={child.dob ?? null}
-            todayIso={today}
-          />
-        ))}
+        {visible.map(f =>
+          f.computed ? (
+            <div key={f.id} id={f.id}>
+              <span className="mb-1.5 block text-sm font-semibold text-ink">{f.label}</span>
+              <div className="rounded-lg border border-dashed border-border-strong/70 bg-surface-sunken/50 px-3.5 py-2.5 text-sm font-semibold text-ink">
+                {computedValues[f.id] || '—'}
+              </div>
+              {f.helpText && <p className="mt-1 text-xs text-ink-muted">{f.helpText}</p>}
+            </div>
+          ) : (
+            <FlatFieldInput
+              key={f.id}
+              field={f}
+              value={values[f.id] ?? (f.type === 'checkbox' ? [] : '')}
+              onChange={v => setValue(f.id, v)}
+              error={errors[f.id]}
+              disabled={busy}
+              dobIso={child?.dob ?? null}
+              todayIso={today}
+            />
+          ),
+        )}
       </Card>
 
       <div className="flex flex-wrap items-center justify-end gap-2 pb-4">

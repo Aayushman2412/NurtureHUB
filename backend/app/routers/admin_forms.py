@@ -112,12 +112,20 @@ class MatrixColumnModel(BaseModel):
     required: bool = False
     options: Optional[List[MatrixColumnOptionModel]] = None
     numeric: Optional[NumericRangeModel] = None
+    # Admin switch: column is not shown to (or collected from) the learner.
+    learnerHidden: Optional[bool] = None
+    # Frequency-style column: 0 auto-fills the row's other inputs with 0.
+    zeroesRow: Optional[bool] = None
 
 
 class MatrixRowModel(BaseModel):
     id: str
     label: str = ""
     helpText: Optional[str] = None
+    # Protein grams per standard serving — feeds the computed intake totals.
+    proteinPerServing: Optional[float] = None
+    # Row counts toward the high-quality (animal/dairy) protein totals.
+    highQuality: Optional[bool] = None
 
 
 class FlowSectionChildModel(BaseModel):
@@ -136,6 +144,13 @@ class FlowSectionChildModel(BaseModel):
 class FlowPositionModel(BaseModel):
     x: float = 0
     y: float = 0
+
+
+class VisibleIfModel(BaseModel):
+    """Answer-dependent node visibility: shown only when the referenced
+    single/multi question's answer includes any of `anyOf` option ids."""
+    nodeId: str
+    anyOf: List[str] = Field(default_factory=list)
 
 
 class FlowNodeModel(BaseModel):
@@ -158,6 +173,7 @@ class FlowNodeModel(BaseModel):
     columns: Optional[List[MatrixColumnModel]] = None
     next: Optional[str] = None
     display: Optional[QuestionDisplayModel] = None
+    visibleIf: Optional[VisibleIfModel] = None
 
 
 class FlowDisplayModel(BaseModel):
@@ -251,6 +267,8 @@ class FlatFieldModel(BaseModel):
     noFuture: Optional[bool] = None
     notBeforeDob: Optional[bool] = None
     showIf: Optional[List[FlatFieldConditionModel]] = None
+    # Read-only derived field computed by the runner (stored as text).
+    computed: Optional[Literal["gestational_age", "weight_gain"]] = None
 
 
 class FlatSchemaModel(BaseModel):
