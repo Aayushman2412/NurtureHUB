@@ -44,3 +44,6 @@ deploy/pgbouncer/userlist.txt
 
 # Admin form-builder media uploads (user content, served at /uploads)
 backend/uploads/
+
+# Form-definition refresh backups (app.refresh_form_definitions)
+backend/form_backups/
