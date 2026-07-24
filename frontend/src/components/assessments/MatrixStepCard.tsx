@@ -10,6 +10,11 @@ import { numberFlagState } from '../../lib/numericField';
  * (dropdowns/inputs). Mirrors the Cuedwell protein-intake grid. Each cell edit
  * calls onChange(rowId, colId, value); the parent stores the whole grid as one
  * JSON-encoded answer value.
+ *
+ * Column behaviours the admin controls per column:
+ *  - learnerHidden: the column is not rendered and collects nothing;
+ *  - zeroesRow (frequency-style): when its value is 0, the row's other input
+ *    columns are auto-filled with "0" and locked (PCA "0 days" skip rule).
  */
 interface MatrixStepCardProps {
   node: FlowMatrixNode;
@@ -17,16 +22,19 @@ interface MatrixStepCardProps {
   onChange: (rowId: string, colId: string, value: string) => void;
 }
 
+const isZero = (v: string | undefined): boolean => v !== undefined && v !== '' && parseFloat(v) === 0;
+
 const Cell: React.FC<{
   col: MatrixColumn;
   value: string;
+  disabled?: boolean;
   onChange: (v: string) => void;
-}> = ({ col, value, onChange }) => {
+}> = ({ col, value, disabled = false, onChange }) => {
   const { t } = useTranslation('assessments');
 
   if (col.type === 'dropdown') {
     return (
-      <Select value={value} onChange={e => onChange(e.target.value)}>
+      <Select value={value} disabled={disabled} onChange={e => onChange(e.target.value)}>
         <option value="">{t('runner.selectPlaceholder')}</option>
         {(col.options ?? []).map(o => (
           <option key={o.value} value={o.value}>
@@ -37,13 +45,14 @@ const Cell: React.FC<{
     );
   }
   if (col.type === 'date') {
-    return <DateInput value={value} onChange={onChange} />;
+    return <DateInput value={value} onChange={onChange} disabled={disabled} />;
   }
   if (col.type === 'datetime') {
     return (
       <input
         type="datetime-local"
         value={value}
+        disabled={disabled}
         onChange={e => onChange(e.target.value)}
         className={inputClasses(false, false)}
       />
@@ -57,6 +66,7 @@ const Cell: React.FC<{
           type="text"
           inputMode="decimal"
           value={value}
+          disabled={disabled}
           onChange={e => onChange(e.target.value)}
           className={inputClasses(!!flag, false)}
         />
@@ -68,6 +78,7 @@ const Cell: React.FC<{
     <input
       type="text"
       value={value}
+      disabled={disabled}
       onChange={e => onChange(e.target.value)}
       className={inputClasses(false, false)}
     />
@@ -75,13 +86,27 @@ const Cell: React.FC<{
 };
 
 const MatrixStepCard: React.FC<MatrixStepCardProps> = ({ node, value, onChange }) => {
+  const columns = node.columns.filter(c => !c.learnerHidden);
+  const zeroCol = columns.find(c => c.zeroesRow);
+
+  /** When the frequency-style column is set to 0, zero-fill and lock the row's
+   *  other input columns; clearing/raising it unlocks them (values kept). */
+  const handleChange = (rowId: string, col: MatrixColumn, v: string) => {
+    onChange(rowId, col.id, v);
+    if (col.zeroesRow && isZero(v)) {
+      for (const other of columns) {
+        if (other.id !== col.id && other.type !== 'text') onChange(rowId, other.id, '0');
+      }
+    }
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[32rem] border-collapse text-sm">
         <thead>
           <tr>
             <th className="border-b border-border bg-surface-sunken px-3 py-2.5 text-left" />
-            {node.columns.map(col => (
+            {columns.map(col => (
               <th
                 key={col.id}
                 className="border-b border-border bg-surface-sunken px-3 py-2.5 text-center align-bottom font-semibold text-ink"
@@ -93,23 +118,27 @@ const MatrixStepCard: React.FC<MatrixStepCardProps> = ({ node, value, onChange }
           </tr>
         </thead>
         <tbody>
-          {node.rows.map(row => (
-            <tr key={row.id} className="align-top">
-              <td className="border-b border-border px-3 py-3 text-left font-medium text-ink">
-                {row.label}
-                {row.helpText && <span className="block text-xs font-normal text-ink-muted">{row.helpText}</span>}
-              </td>
-              {node.columns.map(col => (
-                <td key={col.id} className="border-b border-border px-3 py-3">
-                  <Cell
-                    col={col}
-                    value={value[row.id]?.[col.id] ?? ''}
-                    onChange={v => onChange(row.id, col.id, v)}
-                  />
+          {node.rows.map(row => {
+            const rowZeroed = zeroCol ? isZero(value[row.id]?.[zeroCol.id]) : false;
+            return (
+              <tr key={row.id} className="align-top">
+                <td className="border-b border-border px-3 py-3 text-left font-medium text-ink">
+                  {row.label}
+                  {row.helpText && <span className="block text-xs font-normal text-ink-muted">{row.helpText}</span>}
                 </td>
-              ))}
-            </tr>
-          ))}
+                {columns.map(col => (
+                  <td key={col.id} className="border-b border-border px-3 py-3">
+                    <Cell
+                      col={col}
+                      value={value[row.id]?.[col.id] ?? ''}
+                      disabled={rowZeroed && !col.zeroesRow && col.type !== 'text'}
+                      onChange={v => handleChange(row.id, col, v)}
+                    />
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

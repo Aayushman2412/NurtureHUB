@@ -17,7 +17,13 @@ import type {
   FlowSchema,
   FlowSectionChild,
 } from '../../lib/flowTypes';
-import { isInfoNode, isMatrixNode, isSectionNode, parseMatrixAnswer } from '../../lib/flowTypes';
+import {
+  isInfoNode,
+  isMatrixNode,
+  isSectionNode,
+  parseMatrixAnswer,
+  visibleIfSatisfied,
+} from '../../lib/flowTypes';
 import { nextNodeId } from '../../lib/flowGraph';
 
 // ── Answer state ─────────────────────────────────────────────────────────────
@@ -122,6 +128,15 @@ export function derivePath(schema: FlowSchema, answers: AnswersMap): DerivedPath
     if (!node) {
       complete = true; // dangling pointer — treat as end
       break;
+    }
+
+    // Answer-gated node (e.g. egg/meat food groups for a vegetarian mother):
+    // walk straight through to its `next` without emitting a step. Branch
+    // targets that land on a hidden node fall through the same way.
+    if (!visibleIfSatisfied(node.visibleIf, answers[node.visibleIf?.nodeId ?? '']?.optionIds)) {
+      currentId = node.next;
+      if (currentId == null) complete = true;
+      continue;
     }
 
     if (isSectionNode(node)) {

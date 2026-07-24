@@ -32,6 +32,7 @@ import MediaPicker from './MediaPicker';
 import ActionEditor from './ActionEditor';
 import MatrixEditor from './MatrixEditor';
 import TargetPicker from './TargetPicker';
+import VisibleIfEditor from './VisibleIfEditor';
 import { makeSectionChild } from './factories';
 import { EDGE_COLORS, QUESTION_TYPE_LABELS, issueCounts, nodeTitle, targetOptionsFor } from './constants';
 import type { ConnectRequest, NodePatch, QuestionPatch } from './constants';
@@ -274,6 +275,13 @@ const SectionPanel: React.FC<{
           connectActive={!!connect && connect.nodeId === node.id && connect.optionId === null}
         />
 
+        <VisibleIfEditor
+          schema={schema}
+          nodeId={node.id}
+          value={node.visibleIf}
+          onChange={visibleIf => onPatchNode(node.id, { visibleIf })}
+        />
+
         <div>
           <div className="mb-1.5 flex items-center justify-between">
             <FieldLabel size="sm" className="mb-0">
@@ -430,6 +438,14 @@ const QuestionPanel: React.FC<{
             </select>
           )}
         </div>
+        <div className="mb-3">
+          <VisibleIfEditor
+            schema={schema}
+            nodeId={node.id}
+            value={node.visibleIf}
+            onChange={visibleIf => onPatchNode(node.id, { visibleIf })}
+          />
+        </div>
         <QuestionEditor
           verdictDefs={resolveVerdicts(schema.verdicts)}
           formDisplay={resolveDisplay(schema.display)}
@@ -511,6 +527,12 @@ const InfoPanel: React.FC<{
           onStartConnect={() => onStartConnect({ nodeId: node.id, optionId: null })}
           connectActive={!!connect && connect.nodeId === node.id && connect.optionId === null}
         />
+        <VisibleIfEditor
+          schema={schema}
+          nodeId={node.id}
+          value={node.visibleIf}
+          onChange={visibleIf => onPatchNode(node.id, { visibleIf })}
+        />
       </div>
     </div>
   );
@@ -562,6 +584,12 @@ const MatrixPanel: React.FC<{
           onChange={next => onPatchNode(node.id, { next })}
           onStartConnect={() => onStartConnect({ nodeId: node.id, optionId: null })}
           connectActive={!!connect && connect.nodeId === node.id && connect.optionId === null}
+        />
+        <VisibleIfEditor
+          schema={schema}
+          nodeId={node.id}
+          value={node.visibleIf}
+          onChange={visibleIf => onPatchNode(node.id, { visibleIf })}
         />
       </div>
     </div>

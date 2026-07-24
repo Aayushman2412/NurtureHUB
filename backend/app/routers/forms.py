@@ -32,9 +32,9 @@ router = APIRouter(prefix="/api/forms", tags=["forms"])
 
 FLOW_FORM_KEYS = {"breastfeeding", "complementary_feeding", "mother_protein_intake"}
 # Flat (field-list) forms learners can submit per child.
-FLAT_RESPONSE_FORM_KEYS = {"growth_monitoring"}
+FLAT_RESPONSE_FORM_KEYS = {"growth_monitoring", "antenatal"}
 # Forms that attach to a MOTHER (per-visit) rather than a child.
-MOTHER_FORM_KEYS = {"mother_protein_intake"}
+MOTHER_FORM_KEYS = {"mother_protein_intake", "antenatal"}
 RESPONSE_FORM_KEYS = FLOW_FORM_KEYS | FLAT_RESPONSE_FORM_KEYS
 CF_MIN_AGE_DAYS = 150
 MAX_ACTION_NOTIFICATIONS = 15
@@ -427,7 +427,73 @@ def _snapshot_answers(schema: Dict[str, Any], answers: List[AnswerIn]) -> tuple:
         "answered": len(answer_snapshots),
         "total": _reachable_question_count(schema),
     }
+    protein = _protein_totals(schema, deduped)
+    if protein is not None:
+        summary["protein"] = protein
     return answer_snapshots, summary, triggered_actions
+
+
+def _protein_totals(schema: Dict[str, Any], answers: Dict[str, "AnswerIn"]) -> Optional[Dict[str, float]]:
+    """Computed protein-intake variables (the PCA sheet's calculated fields).
+
+    Uses matrix rows carrying `proteinPerServing` and the well-known column ids
+    freq / usual / qty24. Returns None when the form has no such rows — only
+    the protein form produces the summary block.
+
+      total24    Σ qty24 × protein                (past 24 hours, grams)
+      hq24       same, rows flagged highQuality
+      dailyAvg   Σ (freq ÷ 7) × usual × protein   (habitual daily, grams)
+      hqDailyAvg same, rows flagged highQuality
+    """
+    def num(v: Any) -> float:
+        try:
+            n = float(v)
+            return n if n == n and n >= 0 else 0.0  # NaN-safe
+        except (TypeError, ValueError):
+            return 0.0
+
+    found_any = False
+    total24 = hq24 = daily = hq_daily = 0.0
+    for node in (schema.get("nodes") or {}).values():
+        if not isinstance(node, dict) or node.get("kind") != "matrix":
+            continue
+        rows = [r for r in (node.get("rows") or []) if isinstance(r, dict) and r.get("proteinPerServing") is not None]
+        if not rows:
+            continue
+        found_any = True
+        answer = answers.get(node.get("id") or "")
+        if answer is None:
+            continue
+        try:
+            grid = json.loads(answer.value) if answer.value else {}
+        except (ValueError, TypeError):
+            grid = {}
+        if not isinstance(grid, dict):
+            continue
+        for row in rows:
+            cells = grid.get(row.get("id") or "")
+            if not isinstance(cells, dict):
+                continue
+            protein = num(row.get("proteinPerServing"))
+            qty24 = num(cells.get("qty24"))
+            freq = min(num(cells.get("freq")), 7.0)
+            usual = num(cells.get("usual"))
+            row24 = qty24 * protein
+            row_daily = (freq / 7.0) * usual * protein
+            total24 += row24
+            daily += row_daily
+            if row.get("highQuality"):
+                hq24 += row24
+                hq_daily += row_daily
+
+    if not found_any:
+        return None
+    return {
+        "total24": round(total24, 1),
+        "hq24": round(hq24, 1),
+        "dailyAvg": round(daily, 1),
+        "hqDailyAvg": round(hq_daily, 1),
+    }
 
 
 def _flat_field_visible(field: Dict[str, Any], values: Dict[str, List[str]], age_days: Optional[int]) -> bool:
@@ -451,7 +517,7 @@ def _flat_field_visible(field: Dict[str, Any], values: Dict[str, List[str]], age
 def _snapshot_flat_answers(
     schema: Dict[str, Any],
     answers: List[AnswerIn],
-    child: models.Child,
+    child: Optional[models.Child],
     assessment_date: date,
     enforce: bool,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any], List[Dict[str, Any]]]:
@@ -841,7 +907,8 @@ def create_response(
         subject_name = child.child_name
 
     if definition.builder_type == "flat":
-        # Flat forms are child-scoped today (age conditions need a child).
+        # child may be None for mother-level flat forms (antenatal) — age
+        # conditions simply evaluate as unknown there.
         answers, summary, actions = _snapshot_flat_answers(
             definition.schema_json or {}, data.answers, child, data.assessment_date,
             enforce=data.status == "submitted",

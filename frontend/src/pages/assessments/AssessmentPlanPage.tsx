@@ -205,6 +205,31 @@ const AssessmentPlanPage: React.FC = () => {
         </div>
       </Card>
 
+      {/* Computed protein-intake totals (protein form only) */}
+      {summary.protein && (
+        <Card className="p-5">
+          <h3 className="font-display text-lg font-bold text-ink">{t('plan.proteinTitle')}</h3>
+          <p className="mt-0.5 text-sm text-ink-muted">{t('plan.proteinSub')}</p>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {(
+              [
+                ['proteinTotal24', summary.protein.total24],
+                ['proteinHq24', summary.protein.hq24],
+                ['proteinDailyAvg', summary.protein.dailyAvg],
+                ['proteinHqDailyAvg', summary.protein.hqDailyAvg],
+              ] as const
+            ).map(([key, grams]) => (
+              <div key={key} className="rounded-xl border border-border bg-surface-sunken/50 px-3 py-3 text-center">
+                <div className="font-display text-xl font-extrabold text-ink">{grams}g</div>
+                <div className="mt-0.5 text-[11px] font-semibold leading-snug text-ink-muted">
+                  {t(`plan.${key}`)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Needs attention — the coaching to-do list */}
       {actions.length > 0 && (
         <section>

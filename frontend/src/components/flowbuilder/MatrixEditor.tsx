@@ -75,6 +75,8 @@ const ColumnEditor: React.FC<{
           <span className="text-[10px] text-ink-faint">
             {COLUMN_TYPES.find(c => c.value === col.type)?.label}
             {col.required && ' · required'}
+            {col.learnerHidden && ' · hidden from learner'}
+            {col.zeroesRow && ' · 0 locks the row'}
           </span>
         </button>
         <button type="button" title="Move up" onClick={() => onMove(-1)} disabled={index === 0} className={iconBtn}>
@@ -119,6 +121,18 @@ const ColumnEditor: React.FC<{
               label="Required"
               checked={col.required}
               onChange={e => onChange({ ...col, required: e.target.checked })}
+            />
+          </div>
+          <div className="flex flex-wrap gap-x-5 gap-y-1.5">
+            <Checkbox
+              label="Hidden from learner"
+              checked={!!col.learnerHidden}
+              onChange={e => onChange({ ...col, learnerHidden: e.target.checked || null })}
+            />
+            <Checkbox
+              label="Frequency column — 0 locks the row"
+              checked={!!col.zeroesRow}
+              onChange={e => onChange({ ...col, zeroesRow: e.target.checked || null })}
             />
           </div>
 
@@ -217,6 +231,41 @@ const MatrixEditor: React.FC<MatrixEditorProps> = ({ node, onPatch }) => {
           placeholder={'1 roti or chapati (6 g protein)\n1 cup of rice (5 g protein)'}
         />
       </div>
+
+      {node.rows.length > 0 && (
+        <div>
+          <FieldLabel size="sm">Protein totals (optional)</FieldLabel>
+          <p className="mb-1.5 text-[11px] leading-snug text-ink-faint">
+            Grams of protein per standard serving per row — filled in, the learner's summary shows
+            computed intake totals. "HQ" counts the row toward the high-quality (animal/dairy) total.
+          </p>
+          <div className="space-y-1.5">
+            {node.rows.map((row, i) => (
+              <div key={row.id} className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate text-xs text-ink-muted">{row.label || `Row ${i + 1}`}</span>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.1}
+                  className="w-20 py-1.5 text-xs"
+                  value={row.proteinPerServing ?? ''}
+                  onChange={e =>
+                    setRows(node.rows.map((r, ri) => (ri === i ? { ...r, proteinPerServing: numInput(e.target.value) } : r)))
+                  }
+                  placeholder="g"
+                />
+                <Checkbox
+                  label="HQ"
+                  checked={!!row.highQuality}
+                  onChange={e =>
+                    setRows(node.rows.map((r, ri) => (ri === i ? { ...r, highQuality: e.target.checked || null } : r)))
+                  }
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div>
         <div className="mb-1.5 flex items-baseline justify-between">

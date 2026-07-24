@@ -52,7 +52,9 @@
     "assessCg": "वृद्धि",
     "assessCgTitle": "वृद्धि जाँच दर्ज करें (वज़न और लंबाई)",
     "growthChart": "चार्ट",
-    "growthChartTitle": "इस बच्चे के WHO वृद्धि चार्ट देखें"
+    "growthChartTitle": "इस बच्चे के WHO वृद्धि चार्ट देखें",
+    "ancVisits": "ANC भेंटें",
+    "proteinIntake": "प्रोटीन सेवन"
   },
   "form": {
     "title": "एक माता दर्ज करें",

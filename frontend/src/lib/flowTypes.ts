@@ -38,20 +38,20 @@ export const isFlowFormKey = (
   key === 'breastfeeding' || key === 'complementary_feeding' || key === 'mother_protein_intake';
 
 /** Forms that attach to a MOTHER (per-visit) rather than a child. */
-export const MOTHER_FORM_KEYS: FormKey[] = ['mother_protein_intake'];
+export const MOTHER_FORM_KEYS: FormKey[] = ['mother_protein_intake', 'antenatal'];
 
-export const isMotherFormKey = (key: string): key is 'mother_protein_intake' =>
-  key === 'mother_protein_intake';
+export const isMotherFormKey = (key: string): key is 'mother_protein_intake' | 'antenatal' =>
+  key === 'mother_protein_intake' || key === 'antenatal';
 
 /**
  * Flat forms that accept learner responses (rendered by the flat runner).
  * Mirrors FLAT_RESPONSE_FORM_KEYS on the backend — the registration forms are
  * `flat` too, but they are coded pages and do not accept form responses.
  */
-export const FLAT_RESPONSE_FORM_KEYS: FormKey[] = ['growth_monitoring'];
+export const FLAT_RESPONSE_FORM_KEYS: FormKey[] = ['growth_monitoring', 'antenatal'];
 
-export const isFlatResponseFormKey = (key: string): key is 'growth_monitoring' =>
-  key === 'growth_monitoring';
+export const isFlatResponseFormKey = (key: string): key is 'growth_monitoring' | 'antenatal' =>
+  key === 'growth_monitoring' || key === 'antenatal';
 
 /** Any form key the learner can actually fill in (flow or flat). */
 export const isResponseFormKey = (key: string): key is FormKey =>
@@ -184,6 +184,28 @@ export function resolveQuestionDisplay(
   };
 }
 
+/**
+ * Answer-dependent visibility for a TOP-LEVEL flow node: the node is shown
+ * only when the referenced single/multi question's answer includes at least
+ * one of `anyOf` (option ids). While hidden, the runner walks straight through
+ * the node's `next` without asking it — so gated nodes stay in the default
+ * chain and need no branch gymnastics. Absent = always visible.
+ */
+export interface VisibleIf {
+  nodeId: string;
+  anyOf: string[];
+}
+
+/** Does an answers snapshot satisfy a visibility rule? (absent rule = yes) */
+export const visibleIfSatisfied = (
+  rule: VisibleIf | null | undefined,
+  selectedOptionIds: string[] | undefined,
+): boolean => {
+  if (!rule || rule.anyOf.length === 0) return true;
+  if (!selectedOptionIds || selectedOptionIds.length === 0) return false;
+  return rule.anyOf.some(id => selectedOptionIds.includes(id));
+};
+
 export interface FlowSectionChild {
   id: string;
   kind: 'question';
@@ -219,6 +241,8 @@ export interface FlowQuestionNode {
   next: string | null;
   /** Per-question learner-view overrides; absent = inherit the form defaults. */
   display?: QuestionDisplayOverride | null;
+  /** Answer-dependent visibility; absent = always shown. */
+  visibleIf?: VisibleIf | null;
 }
 
 export interface FlowSectionNode {
@@ -228,6 +252,8 @@ export interface FlowSectionNode {
   position: { x: number; y: number };
   children: FlowSectionChild[];
   next: string | null;
+  /** Answer-dependent visibility; absent = always shown. */
+  visibleIf?: VisibleIf | null;
 }
 
 // ── Info block ────────────────────────────────────────────────────────────────
@@ -250,6 +276,8 @@ export interface FlowInfoNode {
   action: FlowAction;
   position: { x: number; y: number };
   next: string | null;
+  /** Answer-dependent visibility; absent = always shown. */
+  visibleIf?: VisibleIf | null;
 }
 
 // ── Multi-dropdown matrix ─────────────────────────────────────────────────────
@@ -266,12 +294,21 @@ export interface MatrixColumn {
   options: FlatFieldOption[] | null;
   /** For 'number': decimal + soft flag range. */
   numeric?: NumericRange | null;
+  /** Admin switch: collect nothing and show nothing for this column. */
+  learnerHidden?: boolean | null;
+  /** Frequency-style column: a 0 value auto-fills the row's other input
+   *  columns with 0 and locks them (per the PCA sheet's skip rule). */
+  zeroesRow?: boolean | null;
 }
 
 export interface MatrixRow {
   id: string;
   label: string;
   helpText?: string;
+  /** Protein grams per standard serving — feeds the computed intake totals. */
+  proteinPerServing?: number | null;
+  /** Counts toward the high-quality (animal/dairy) protein totals. */
+  highQuality?: boolean | null;
 }
 
 /**
@@ -290,6 +327,8 @@ export interface FlowMatrixNode {
   columns: MatrixColumn[];
   position: { x: number; y: number };
   next: string | null;
+  /** Answer-dependent visibility; absent = always shown. */
+  visibleIf?: VisibleIf | null;
 }
 
 export type FlowNode = FlowQuestionNode | FlowSectionNode | FlowInfoNode | FlowMatrixNode;
@@ -434,6 +473,10 @@ export interface FlatField {
   notBeforeDob?: boolean;
   /** Conditional display; absent/empty = always shown. */
   showIf?: FlatFieldCondition[];
+  /** Read-only derived field, computed by the runner and stored as text:
+   *  gestational_age — from the mother's LMP at the assessment date;
+   *  weight_gain — current weight minus the previous visit's weight. */
+  computed?: 'gestational_age' | 'weight_gain' | null;
 }
 
 export interface FlatSchema {
@@ -494,6 +537,14 @@ export interface ResponseSummary {
   neutral: number;
   answered: number;
   total: number;
+  /** Computed protein-intake totals (grams) — present only when the form's
+   *  matrices carry proteinPerServing values (the protein form). */
+  protein?: {
+    total24: number;
+    hq24: number;
+    dailyAvg: number;
+    hqDailyAvg: number;
+  };
 }
 
 export interface TriggeredAction {

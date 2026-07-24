@@ -52,7 +52,9 @@
     "assessCg": "Growth",
     "assessCgTitle": "Record a growth check (weight & length)",
     "growthChart": "Chart",
-    "growthChartTitle": "See this child's WHO growth charts"
+    "growthChartTitle": "See this child's WHO growth charts",
+    "ancVisits": "ANC Visits",
+    "proteinIntake": "Protein Intake"
   },
   "form": {
     "title": "Register a Mother",
