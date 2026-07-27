@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { toFieldErrors, pickErrors, type FieldErrors } from './validation';
-import { MATRIX_SOURCES } from './motherFields';
+import { HWC_OTHER, MATRIX_SOURCES } from './motherFields';
 
 // `msg` values are i18n keys (validation:*) resolved in toFieldErrors at validation time.
 const requiredId = (msg: string) =>
@@ -23,7 +23,7 @@ export const motherSchema = z
     weight: requiredRange(35, 200, 'validation:mother.weight'),
     height: requiredRange(100, 230, 'validation:mother.height'),
     lmp: requiredStr('validation:mother.lmpRequired'),
-    edd_records: requiredStr('validation:mother.eddRequired'),
+    edd_records: z.string().optional(),
     mobile: z.string().refine(v => /^\d{10}$/.test(digits(v)), { message: 'validation:common.phone10' }),
     alternate_mobile: z.string().optional().refine(v => !v || /^\d{10}$/.test(digits(v)), { message: 'validation:common.altPhone10' }),
     email: z.string().optional().refine(v => !v || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v), { message: 'validation:common.email' }),
@@ -32,14 +32,16 @@ export const motherSchema = z
     district_id: requiredId('validation:common.selectDistrict'),
     taluk_id: requiredId('validation:common.selectTaluk'),
     village: requiredStr('validation:mother.villageRequired'),
-    hwc_id: requiredId('validation:mother.hwc'),
-    phc_id: requiredId('validation:mother.phc'),
+    hwc_id: z.union([z.number(), z.literal('')]),   // a real id, or the HWC_OTHER sentinel — checked in superRefine
+    hwc_other: z.string().optional(),
+    phc_id: z.union([z.number(), z.literal('')]).optional(),   // required only for a real HWC — checked in superRefine
     education_id: requiredId('validation:mother.education'),
     education_field_id: z.union([z.number(), z.literal('')]).optional(),
     education_degree_id: z.union([z.number(), z.literal('')]).optional(),
     occupation: requiredStr('validation:mother.occupation'),
     occupation_other: z.string().optional(),
     ration_card: requiredStr('validation:mother.rationCard'),
+    ration_card_other: z.string().optional(),
     social_category: requiredStr('validation:mother.socialCategory'),
     // KAP
     nutrition_course: requiredStr('validation:common.answerQuestion'),
@@ -57,20 +59,30 @@ export const motherSchema = z
   })
   .superRefine((v, ctx) => {
     const today = new Date();
+    const dob = toDate(v.mother_dob || '');
+    const adoption = toDate(v.adoption_date);
     const lmp = toDate(v.lmp);
     if (lmp) {
       if (daysBetween(lmp, today) > 0) ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.lmpFuture' });
-      else if (daysBetween(today, lmp) > 180) ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.lmp180' });
+      else if (dob && lmp < dob) ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.lmpBeforeDob' });
+      else if (adoption && lmp > adoption) ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.lmpAfterAdoption' });
+      else if (adoption && daysBetween(adoption, lmp) > 180) ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.lmp180' });
     }
-    const dob = toDate(v.mother_dob || '');
     if (dob && daysBetween(dob, today) > 0) ctx.addIssue({ code: 'custom', path: ['mother_dob'], message: 'validation:common.dobFuture' });
     if (typeof v.mother_age === 'number' && (v.mother_age < 10 || v.mother_age > 50))
       ctx.addIssue({ code: 'custom', path: ['mother_dob'], message: 'validation:mother.ageRange' });
-    const adoption = toDate(v.adoption_date);
     if (adoption) {
       if (daysBetween(adoption, today) > 0) ctx.addIssue({ code: 'custom', path: ['adoption_date'], message: 'validation:common.adoptionFuture' });
       if (dob && adoption < dob) ctx.addIssue({ code: 'custom', path: ['adoption_date'], message: 'validation:common.adoptionBeforeDob' });
     }
+    if (!(typeof v.hwc_id === 'number' && (v.hwc_id > 0 || v.hwc_id === HWC_OTHER)))
+      ctx.addIssue({ code: 'custom', path: ['hwc_id'], message: 'validation:mother.hwc' });
+    else if (v.hwc_id === HWC_OTHER) {
+      if (!v.hwc_other?.trim()) ctx.addIssue({ code: 'custom', path: ['hwc_other'], message: 'validation:mother.hwcOther' });
+    } else if (!(typeof v.phc_id === 'number' && v.phc_id > 0))
+      ctx.addIssue({ code: 'custom', path: ['phc_id'], message: 'validation:mother.phc' });
+    if (v.ration_card === 'Others' && !v.ration_card_other?.trim())
+      ctx.addIssue({ code: 'custom', path: ['ration_card_other'], message: 'validation:mother.rationCardOther' });
     if (v.mobile && v.alternate_mobile && digits(v.mobile) === digits(v.alternate_mobile))
       ctx.addIssue({ code: 'custom', path: ['alternate_mobile'], message: 'validation:mother.altDiffers' });
     if (v.showEducationField) {
@@ -95,7 +107,7 @@ export type MotherFormValues = z.input<typeof motherSchema>;
 
 export const MR_STEP_FIELDS: readonly (readonly string[])[] = [
   ['mother_name', 'adoption_date', 'mother_dob', 'mother_age', 'weight', 'height', 'lmp', 'edd_records', 'mobile', 'alternate_mobile', 'email'],
-  ['state_id', 'district_id', 'taluk_id', 'village', 'hwc_id', 'phc_id', 'education_id', 'education_field_id', 'education_degree_id', 'occupation', 'occupation_other', 'ration_card', 'social_category'],
+  ['state_id', 'district_id', 'taluk_id', 'village', 'hwc_id', 'hwc_other', 'phc_id', 'education_id', 'education_field_id', 'education_degree_id', 'occupation', 'occupation_other', 'ration_card', 'ration_card_other', 'social_category'],
   ['nutrition_course', 'nutrition_course_name', 'video_frequency', 'source_ratings', 'implement_video', 'confidence_video', 'willingness_hcw', 'information_seeking'],
 ];
 

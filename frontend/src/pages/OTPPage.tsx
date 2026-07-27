@@ -13,7 +13,7 @@ const OTPPage: React.FC = () => {
   const [resending, setResending] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const { verifyOtp, forgotPassword } = useAuth();
+  const { verifyOtp, forgotPassword, logout } = useAuth();
   const { showToast, updateToast } = useToast();
   const navigate = useNavigate();
 
@@ -65,6 +65,12 @@ const OTPPage: React.FC = () => {
     <AuthLayout
       title={t('otp.title')}
       subtitle={t('otp.subtitle', { email: email || t('otp.subtitleFallback') })}
+      onSignOut={() => {
+        logout();
+        // @ts-ignore
+        window.google?.accounts?.id?.disableAutoSelect?.();
+        navigate('/login', { replace: true });
+      }}
     >
       <div className="flex flex-col gap-5">
         <div className="text-center">

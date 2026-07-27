@@ -17,8 +17,9 @@ const emptyPersonal: PersonalInfoValues = {
 };
 
 const emptyWork: WorkDetailsValues = {
-  departmentId: '', departmentOther: '', designationId: '', facilityTypeId: '',
-  stateId: '', districtId: '', blockId: '', villageId: '', villageName: '', facilityId: '',
+  departmentId: '', departmentOther: '', designationId: '', designationOther: '',
+  facilityTypeId: '', facilityTypeOther: '',
+  stateId: '', districtId: '', blockId: '', villageId: '', villageName: '', facilityId: '', facilityName: '',
   residenceDistance: '', qualificationId: '', qualificationOther: '',
   yearsService: '', yearsDesignation: '', yearsFacility: '', internetWorkplace: '',
   trainings: {},
@@ -61,13 +62,16 @@ const ProfilePage: React.FC = () => {
       departmentId: user.department_id ?? '',
       departmentOther: user.department_other || '',
       designationId: user.designation_id ?? '',
+      designationOther: user.designation_other || '',
       facilityTypeId: user.facility_type_id ?? '',
+      facilityTypeOther: user.facility_type_other || '',
       stateId: user.state_id ?? '',
       districtId: user.district_id ?? '',
       blockId: user.block_id ?? '',
       villageId: user.village_id ?? '',
       villageName: user.village_name || '',
       facilityId: user.facility_id ?? '',
+      facilityName: user.work_center_name || '',
       residenceDistance: user.residence_distance_km ?? '',
       qualificationId: user.qualification_id ?? '',
       qualificationOther: user.qualification_other_detail || '',
@@ -89,6 +93,14 @@ const ProfilePage: React.FC = () => {
       if (v) setWork(w => ({ ...w, villageName: v.name }));
     }
   }, [meta.villages, work.villageId, work.villageName]);
+
+  // Same for a known facility (id) without a stored name.
+  useEffect(() => {
+    if (work.facilityId && !work.facilityName) {
+      const f = meta.facilities.find(opt => opt.id === Number(work.facilityId));
+      if (f) setWork(w => ({ ...w, facilityName: f.name }));
+    }
+  }, [meta.facilities, work.facilityId, work.facilityName]);
 
   // Clears the given error key(s) as the user edits — for trainings, clears the whole group.
   const clearError = (key: string) =>
@@ -114,22 +126,36 @@ const ProfilePage: React.FC = () => {
   const numOr = (v: string): number | '' => (v ? Number(v) : '');
   // Cascade change handlers reset dependent selections (+ clear own error).
   const onDepartment = (v: string) => {
-    setWork(w => ({ ...w, departmentId: numOr(v), designationId: '', facilityTypeId: '', qualificationId: '' }));
+    setWork(w => ({
+      ...w, departmentId: numOr(v), designationId: '', designationOther: '',
+      facilityTypeId: '', facilityTypeOther: '', qualificationId: '',
+    }));
     clearError('departmentId');
   };
-  const onDesignation = (v: string) => { setWork(w => ({ ...w, designationId: numOr(v), facilityTypeId: '' })); clearError('designationId'); };
+  const onDesignation = (v: string) => {
+    setWork(w => ({ ...w, designationId: numOr(v), designationOther: '', facilityTypeId: '', facilityTypeOther: '' }));
+    clearError('designationId');
+  };
+  const onFacilityType = (v: string) => {
+    setWork(w => ({ ...w, facilityTypeId: numOr(v), facilityTypeOther: '' }));
+    clearError('facilityTypeId');
+  };
   const onState = (v: string) => {
-    setWork(w => ({ ...w, stateId: numOr(v), districtId: '', blockId: '', villageId: '', villageName: '', facilityId: '' }));
+    setWork(w => ({ ...w, stateId: numOr(v), districtId: '', blockId: '', villageId: '', villageName: '', facilityId: '', facilityName: '' }));
     clearError('stateId');
   };
   const onDistrict = (v: string) => {
-    setWork(w => ({ ...w, districtId: numOr(v), blockId: '', villageId: '', villageName: '', facilityId: '' }));
+    setWork(w => ({ ...w, districtId: numOr(v), blockId: '', villageId: '', villageName: '', facilityId: '', facilityName: '' }));
     clearError('districtId');
   };
-  const onBlock = (v: string) => { setWork(w => ({ ...w, blockId: numOr(v), villageId: '', villageName: '', facilityId: '' })); clearError('blockId'); };
+  const onBlock = (v: string) => { setWork(w => ({ ...w, blockId: numOr(v), villageId: '', villageName: '', facilityId: '', facilityName: '' })); clearError('blockId'); };
 
   const selectedDept = meta.departments.find(d => d.id === Number(work.departmentId));
   const isOtherDept = selectedDept?.code === 'OTHER';
+  const selectedDesignation = meta.designations.find(d => d.id === Number(work.designationId));
+  const isOtherDesignation = selectedDesignation?.is_other ?? false;
+  const selectedFacilityType = meta.facilityTypes.find(f => f.id === Number(work.facilityTypeId));
+  const isOtherFacilityType = selectedFacilityType?.is_other ?? false;
   const selectedQual = meta.qualifications.find(q => q.id === Number(work.qualificationId));
   const showQualificationOther = selectedQual?.has_semi_open_input ?? false;
 
@@ -137,13 +163,16 @@ const ProfilePage: React.FC = () => {
     dob: personal.dob, age: ageFromDob(personal.dob), gender: personal.gender, phone: personal.phone,
     alternatePhone: personal.alternatePhone, maritalStatus: personal.maritalStatus,
     hasChildren: personal.hasChildren, numberChildren: personal.numberChildren,
-    departmentId: work.departmentId, departmentOther: work.departmentOther, designationId: work.designationId,
-    facilityTypeId: work.facilityTypeId, stateId: work.stateId, districtId: work.districtId, blockId: work.blockId,
-    villageId: work.villageId, villageName: work.villageName, facilityId: work.facilityId, residenceDistance: work.residenceDistance,
+    departmentId: work.departmentId, departmentOther: work.departmentOther,
+    designationId: work.designationId, designationOther: work.designationOther,
+    facilityTypeId: work.facilityTypeId, facilityTypeOther: work.facilityTypeOther,
+    stateId: work.stateId, districtId: work.districtId, blockId: work.blockId,
+    villageId: work.villageId, villageName: work.villageName, facilityId: work.facilityId,
+    facilityName: work.facilityName, residenceDistance: work.residenceDistance,
     qualificationId: work.qualificationId, qualificationOther: work.qualificationOther,
     yearsService: work.yearsService, yearsDesignation: work.yearsDesignation, yearsFacility: work.yearsFacility,
     internetWorkplace: work.internetWorkplace, trainings: work.trainings,
-    isOtherDept, showQualificationOther,
+    isOtherDept, isOtherDesignation, isOtherFacilityType, showQualificationOther,
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -162,10 +191,12 @@ const ProfilePage: React.FC = () => {
     setLoading(true);
     const toastId = showToast(t('profile.toastSaving'), 'loading');
     try {
-      const designationName = meta.designations.find(d => d.id === Number(work.designationId))?.name;
-      const facilityTypeName = meta.facilityTypes.find(f => f.id === Number(work.facilityTypeId))?.name;
       const districtName = meta.districts.find(d => d.id === Number(work.districtId))?.name;
-      const facilityName = meta.facilities.find(f => f.id === Number(work.facilityId))?.name;
+      // role gates profile-complete — when dept = Other or an "Other (Specify)" row is
+      // picked, the free-typed text becomes the legacy string.
+      const roleName = isOtherDept || isOtherDesignation ? work.designationOther.trim() : selectedDesignation?.name;
+      const facilityTypeName = isOtherDept || isOtherFacilityType
+        ? work.facilityTypeOther.trim() : selectedFacilityType?.name;
 
       await updateProfile({
         full_name: personal.fullName,
@@ -182,19 +213,21 @@ const ProfilePage: React.FC = () => {
         department_id: Number(work.departmentId),
         department: selectedDept?.name,
         department_other: isOtherDept ? work.departmentOther : null,
-        designation_id: Number(work.designationId),
-        role: designationName,
-        facility_type_id: Number(work.facilityTypeId),
+        designation_id: isOtherDept ? null : Number(work.designationId),
+        role: roleName,
+        designation_other: isOtherDept || isOtherDesignation ? work.designationOther.trim() : null,
+        facility_type_id: isOtherDept ? null : Number(work.facilityTypeId),
         work_center_type: facilityTypeName,
+        facility_type_other: isOtherDept || isOtherFacilityType ? work.facilityTypeOther.trim() : null,
         // geography: FK + legacy string
         state_id: Number(work.stateId),
         district_id: Number(work.districtId),
         block_id: Number(work.blockId),
         village_id: work.villageId ? Number(work.villageId) : null,
         village_name: work.villageId ? null : (work.villageName || null),
-        facility_id: Number(work.facilityId),
+        facility_id: work.facilityId ? Number(work.facilityId) : null,
         district: districtName,
-        work_center_name: facilityName,
+        work_center_name: work.facilityName.trim() || null,
         residence_distance_km: work.residenceDistance === '' ? null : Number(work.residenceDistance),
         // education & experience
         qualification_id: Number(work.qualificationId),
@@ -266,10 +299,13 @@ const ProfilePage: React.FC = () => {
               meta={meta}
               errors={errors}
               isOtherDept={isOtherDept}
+              isOtherDesignation={isOtherDesignation}
+              isOtherFacilityType={isOtherFacilityType}
               showQualificationOther={showQualificationOther}
               onChange={onWork}
               onDepartment={onDepartment}
               onDesignation={onDesignation}
+              onFacilityType={onFacilityType}
               onState={onState}
               onDistrict={onDistrict}
               onBlock={onBlock}

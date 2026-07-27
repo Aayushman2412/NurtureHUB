@@ -72,9 +72,9 @@ const RatingGrid: React.FC<RatingGridProps> = ({
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-sunken/50">
-              <th className="px-3 py-2.5 text-left font-semibold text-ink-muted">{rowHeader}</th>
+              <th className="px-3 py-2.5 text-left align-top font-semibold text-ink-muted">{rowHeader}</th>
               {columns.map(c => (
-                <th key={c.key} className="px-3 py-2.5 text-left font-semibold text-ink-muted">{c.label}</th>
+                <th key={c.key} className="px-3 py-2.5 text-left align-top text-xs font-semibold text-ink-muted">{c.label}</th>
               ))}
             </tr>
           </thead>

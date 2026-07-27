@@ -22,7 +22,7 @@ const MothersListPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+    <div className="mx-auto flex max-w-7xl flex-col gap-6">
       <PageHeader
         title={t('list.title')}
         description={t('list.description')}
@@ -45,7 +45,7 @@ const MothersListPage: React.FC = () => {
           <Table>
             <THead>
               <Tr>
-                <Th>{t('list.table.motherId')}</Th><Th>{t('list.table.name')}</Th><Th>{t('list.table.village')}</Th><Th>{t('list.table.gestationalAge')}</Th><Th>{t('list.table.edd')}</Th>
+                <Th>{t('list.table.motherId')}</Th><Th>{t('list.table.name')}</Th><Th>{t('list.table.age')}</Th><Th>{t('list.table.mobile')}</Th><Th>{t('list.table.village')}</Th><Th>{t('list.table.hwc')}</Th><Th>{t('list.table.gestationalAge')}</Th><Th>{t('list.table.edd')}</Th><Th>{t('list.table.status')}</Th><Th>{t('list.table.registered')}</Th>
               </Tr>
             </THead>
             <TBody>
@@ -53,9 +53,18 @@ const MothersListPage: React.FC = () => {
                 <Tr key={m.id} className="cursor-pointer hover:bg-surface-sunken/50" onClick={() => navigate(`/mothers/${m.id}`)}>
                   <Td className="font-mono text-xs text-ink-muted">{m.mother_uid}</Td>
                   <Td className="font-semibold text-ink">{m.mother_name}</Td>
+                  <Td>{m.mother_age != null ? m.mother_age : '—'}</Td>
+                  <Td>{m.mobile || '—'}</Td>
                   <Td>{m.village || '—'}</Td>
+                  <Td>{m.hwc_name || '—'}</Td>
                   <Td>{m.gestational_weeks != null ? <Badge variant="info">{t('list.weeks', { n: m.gestational_weeks })}</Badge> : '—'}</Td>
                   <Td>{m.edd_records || '—'}</Td>
+                  <Td>
+                    {m.children_count > 0
+                      ? <Badge variant="success">{t('list.status.lactating')}</Badge>
+                      : <Badge variant="coral">{t('list.status.pregnant')}</Badge>}
+                  </Td>
+                  <Td className="text-ink-muted">{new Date(m.created_at).toLocaleDateString('en-GB')}</Td>
                 </Tr>
               ))}
             </TBody>

@@ -1,32 +1,41 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
-import { Sun, Moon, BookOpen, Award, Sprout } from 'lucide-react';
+import { Sun, Moon, BookOpen, Award, Sprout, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import LanguageSwitcher from '../LanguageSwitcher';
+import { Button } from '../ui';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
   title: string;
   subtitle: string;
+  onSignOut?: () => void;
 }
 
-const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) => {
+const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle, onSignOut }) => {
   const { darkMode, toggleDarkMode } = useTheme();
   const { t } = useTranslation(['auth', 'common']);
 
   return (
     <div className="relative h-screen overflow-hidden bg-background text-ink">
-      {/* Theme toggle, absolute top-right */}
-      <button
-        onClick={toggleDarkMode}
-        title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-        className="absolute top-5 right-5 z-10 flex size-10 items-center justify-center rounded-full
-                   bg-surface border border-border shadow-md text-ink-muted hover:text-ink
-                   transition-colors cursor-pointer"
-      >
-        {darkMode ? <Sun className="size-4.5" /> : <Moon className="size-4.5" />}
-      </button>
+      {/* Sign-out escape hatch + theme toggle, absolute top-right */}
+      <div className="absolute top-5 right-5 z-10 flex items-center gap-2">
+        {onSignOut && (
+          <Button variant="ghost" size="sm" onClick={onSignOut} iconLeft={<LogOut className="size-4" />}>
+            {t('auth:signOut.notYou')}
+          </Button>
+        )}
+        <button
+          onClick={toggleDarkMode}
+          title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          className="flex size-10 items-center justify-center rounded-full
+                     bg-surface border border-border shadow-md text-ink-muted hover:text-ink
+                     transition-colors cursor-pointer"
+        >
+          {darkMode ? <Sun className="size-4.5" /> : <Moon className="size-4.5" />}
+        </button>
+      </div>
 
       <div className="flex h-full">
         {/* Left: form panel (scrolls independently) */}

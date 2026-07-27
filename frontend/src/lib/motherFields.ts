@@ -5,6 +5,9 @@
 
 export interface Option { id: number; name: string; }
 
+/** Sentinel HWC id for "Other (specify)" — stored as hwc_other free text, hwc_id null. */
+export const HWC_OTHER = -1;
+
 // ── Fixed value sets (from the EP HST "MR" sheet, delimiters canonicalised) ──
 export const OCCUPATIONS = [
   'Homemaker', 'Agriculture', 'Skilled Manual Worker', 'Semi-skilled Worker',
@@ -39,7 +42,7 @@ export const LIKERT: { key: string; label: string; options: string[] }[] = [
   {
     key: 'willingness_hcw',
     label: 'If a healthcare worker teaches you a new health practice, how willing are you to try it?',
-    options: ['Very unwilling', 'Unwilling', 'Neutral', 'Willing', 'Very willing'],
+    options: ['I would not try it', 'I would hesitate to try it', 'I might try it', 'I would likely try it', 'I would definitely try it'],
   },
   {
     key: 'information_seeking',
@@ -88,6 +91,18 @@ export const sourceRows = (t: TFn) =>
   MATRIX_SOURCES.map(s => ({ key: s.key, label: t(`options.source.${s.key}`) }));
 
 // ── Date helpers ──
+
+/** ISO date exactly N years before today (e.g. the max DOB for a minimum age). */
+export function isoYearsAgo(years: number): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - years);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Whole days from ISO date `b` to ISO date `a` (a − b); NaN if either is invalid. */
+export function isoDaysBetween(a: string, b: string): number {
+  return Math.floor((new Date(a).getTime() - new Date(b).getTime()) / 86_400_000);
+}
 
 /** Expected date of delivery = LMP + 280 days, as a yyyy-mm-dd string ('' if no LMP). */
 export function eddFromLmp(lmp: string): string {

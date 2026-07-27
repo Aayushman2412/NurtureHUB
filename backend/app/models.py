@@ -55,6 +55,8 @@ class User(Base):
 
     # ── Learner Registration (LR) extension fields (from EP HST "LR" tool) ──
     department_other = Column(String, nullable=True)          # shown only when department = Other
+    designation_other = Column(String, nullable=True)         # free-text designation (dept = Other, or "Other" row picked)
+    facility_type_other = Column(String, nullable=True)       # free-text facility type (dept = Other, or "Other" row picked)
     marital_status = Column(String, nullable=True)            # Never married;Married;Widowed;Divorced;Separated
     has_children = Column(Boolean, nullable=True)
     number_children = Column(Integer, nullable=True)          # shown only when has_children = True
@@ -600,6 +602,7 @@ class Mother(Base):
     taluk_id = Column(Integer, ForeignKey("blocks.id"), nullable=True)
     village = Column(String, nullable=True)
     hwc_id = Column(Integer, ForeignKey("hwcs.id"), nullable=True)
+    hwc_other = Column(String, nullable=True)         # free text when HWC is not in the master list
     phc_id = Column(Integer, ForeignKey("phcs.id"), nullable=True)
 
     # Socio-demographic
@@ -609,6 +612,7 @@ class Mother(Base):
     occupation = Column(String, nullable=True)
     occupation_other = Column(String, nullable=True)
     ration_card = Column(String, nullable=True)
+    ration_card_other = Column(String, nullable=True)
     social_category = Column(String, nullable=True)
 
     # Knowledge / attitudes / practice
@@ -636,14 +640,23 @@ class Mother(Base):
         "Child", back_populates="mother", cascade="all, delete-orphan"
     )
 
-    # Gestational age is time-relative → derived from LMP, never stored.
+    # Gestational age is time-relative → derived from LMP, never stored. An LMP more
+    # than 315 days (45 weeks) old cannot be a current pregnancy → no gestational age.
+    def _gestation_days(self):
+        if not self.lmp:
+            return None
+        days = (date.today() - self.lmp).days
+        return days if 0 <= days <= 315 else None
+
     @property
     def gestational_weeks(self):
-        return (date.today() - self.lmp).days // 7 if self.lmp else None
+        days = self._gestation_days()
+        return days // 7 if days is not None else None
 
     @property
     def gestational_months(self):
-        return (date.today() - self.lmp).days // 30 if self.lmp else None
+        days = self._gestation_days()
+        return days // 30 if days is not None else None
 
 
 class MotherSourceRating(Base):

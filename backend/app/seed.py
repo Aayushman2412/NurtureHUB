@@ -38,6 +38,7 @@ def seed_database(db: Session):
     _seed_metadata(db)
     _seed_achievements(db)
     _seed_professional_axis(db)   # LR reference data — essential, always seeded
+    _ensure_other_dept_rows(db)   # dept=Other designation + education — idempotent per-row, always run
     _seed_mother_reference(db)    # MR education cascade — essential, always seeded
     ensure_form_definitions(db)   # form-builder definitions (BF/CF trees) — essential
 
@@ -963,6 +964,39 @@ def _seed_professional_axis(db: Session):
             ))
     db.commit()
     print("Professional-axis master data seeded.")
+
+
+def _ensure_other_dept_rows(db: Session):
+    """Department = Other used to be a dead-end: no designations and no qualification
+    list under it. Ensure a picked-list "Other (Specify)" designation (no facility-type
+    mapping, so /facility-types falls back to the full list) and a generic education
+    list mirroring the WCD one. Idempotent per-row (query-before-insert), and runs
+    UNCONDITIONALLY — not inside the departments count guard — so already-seeded
+    databases get the rows too."""
+    other_dept = db.query(Department).filter(Department.code == "OTHER").first()
+    if other_dept is None:
+        return
+
+    if not db.query(Designation).filter(
+            Designation.department_id == other_dept.id,
+            Designation.name == "Other (Specify)").first():
+        db.add(Designation(department_id=other_dept.id, name="Other (Specify)",
+                           order_index=0, is_other=True))
+
+    other_edu = [
+        "No formal education", "Primary (I–IV)", "Upper Primary (V–VII)", "High School (VIII–X)",
+        "PUC (XI–XII)", "Anganwadi Training Certificate", "Diploma", "Graduate", "Postgraduate",
+        "BSW", "MSW", "Nutrition/Home Science", "Other",
+    ]
+    for i, name in enumerate(other_edu):
+        if not db.query(EducationalQualification).filter(
+                EducationalQualification.department_id == other_dept.id,
+                EducationalQualification.qualification_name == name).first():
+            db.add(EducationalQualification(
+                qualification_name=name, department_id=other_dept.id, order_index=i,
+                has_semi_open_input=(name == "Other"),
+            ))
+    db.commit()
 
 
 # ═══════════════════════════════════════════════

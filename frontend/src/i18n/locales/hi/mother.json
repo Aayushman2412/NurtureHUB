@@ -10,9 +10,18 @@
     "table": {
       "motherId": "माता आईडी",
       "name": "नाम",
+      "age": "आयु",
+      "mobile": "मोबाइल",
       "village": "गाँव",
+      "hwc": "HWC",
       "gestationalAge": "गर्भकालीन आयु",
-      "edd": "ईडीडी"
+      "edd": "ईडीडी",
+      "status": "स्थिति",
+      "registered": "दर्ज"
+    },
+    "status": {
+      "pregnant": "गर्भवती",
+      "lactating": "स्तनपान कराने वाली"
     },
     "weeks": "{{n}} सप्ताह"
   },
@@ -80,8 +89,9 @@
     "eddLmpHint": "गणना के लिए एलएमपी सेट करें",
     "gestationalAge": "गर्भकालीन आयु",
     "gestationalHint": "गणना के लिए एलएमपी सेट करें",
+    "gestationalInvalidHint": "एलएमपी अपनाने की तिथि से बहुत पहले है",
     "gestationalValue": "{{weeks}} सप्ताह · {{months}} महीने",
-    "eddRecords": "नवीनतम रिकॉर्ड के अनुसार ईडीडी",
+    "eddRecords": "नवीनतम रिकॉर्ड के अनुसार ईडीडी (वैकल्पिक)",
     "mobile": "मोबाइल नंबर",
     "mobilePlaceholder": "10 अंकों का",
     "alternateMobile": "वैकल्पिक मोबाइल (वैकल्पिक)",
@@ -91,6 +101,8 @@
     "taluk": "तालुक",
     "village": "गाँव",
     "hwc": "स्वास्थ्य एवं कल्याण केंद्र (HWC)",
+    "otherSpecify": "अन्य (निर्दिष्ट करें)",
+    "hwcOther": "HWC का नाम निर्दिष्ट करें",
     "phc": "प्राथमिक स्वास्थ्य केंद्र (स्वतः)",
     "phcHint": "चयनित HWC से स्वतः भर जाता है",
     "education": "उच्चतम शिक्षा",
@@ -99,6 +111,7 @@
     "occupation": "व्यवसाय",
     "occupationOther": "व्यवसाय निर्दिष्ट करें",
     "rationCard": "राशन कार्ड प्रकार",
+    "rationCardOther": "राशन कार्ड प्रकार निर्दिष्ट करें",
     "socialCategory": "सामाजिक वर्ग",
     "nutritionCourse": "क्या आपने पोषण, गर्भावस्था या शिशु देखभाल पर कोई प्रमाणपत्र पाठ्यक्रम/प्रशिक्षण पूरा किया है?",
     "nutritionCourseName": "पाठ्यक्रम निर्दिष्ट करें",
@@ -108,6 +121,7 @@
       "selectState": "राज्य चुनें",
       "selectDistrict": "ज़िला चुनें",
       "selectTaluk": "तालुक चुनें",
+      "village": "गाँव का नाम चुनें या लिखें",
       "searchHwc": "HWC खोजें",
       "selectEducation": "शिक्षा स्तर चुनें",
       "selectField": "क्षेत्र चुनें",
@@ -120,8 +134,8 @@
     },
     "ratingGrid": {
       "rowHeader": "स्रोत",
-      "trust": "भरोसा (1–5)",
-      "willingness": "इच्छा (1–5)"
+      "trust": "आप इस स्रोत पर कितना भरोसा करती हैं? (1 = बिल्कुल नहीं, 5 = पूरी तरह)",
+      "willingness": "उसकी सलाह मानने के लिए आप कितनी इच्छुक हैं? (1 = बिल्कुल नहीं, 5 = बहुत इच्छुक)"
     },
     "cancel": "रद्द करें",
     "back": "पीछे",
@@ -241,11 +255,11 @@
         "Extremely confident": "अत्यधिक आत्मविश्वास"
       },
       "willingness_hcw": {
-        "Very unwilling": "बिल्कुल रुचि नहीं",
-        "Unwilling": "रुचि नहीं",
-        "Neutral": "तटस्थ",
-        "Willing": "इच्छुक",
-        "Very willing": "बहुत इच्छुक"
+        "I would not try it": "मैं इसे नहीं आज़माऊँगी",
+        "I would hesitate to try it": "मैं इसे आज़माने में हिचकिचाऊँगी",
+        "I might try it": "मैं शायद इसे आज़माऊँ",
+        "I would likely try it": "मैं संभवतः इसे आज़माऊँगी",
+        "I would definitely try it": "मैं इसे ज़रूर आज़माऊँगी"
       },
       "information_seeking": {
         "Never": "कभी नहीं",

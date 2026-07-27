@@ -139,8 +139,17 @@ const TutorialPlayerPage: React.FC = () => {
 
   const handleQuizClose = (outcome: 'completed' | 'skipped' | 'dismissed') => {
     setQuizOpen(false);
-    if (outcome === 'completed') showToast(t('player.toast.quizRecorded'), 'success');
-    if (outcome === 'skipped') showToast(t('player.toast.quizSkipped'), 'info');
+    if (outcome === 'completed') {
+      showToast(t('player.toast.quizRecorded'), 'success');
+      setCurrentTutorial((prev) => (prev ? { ...prev, quiz_status: 'completed' } : null));
+    }
+    if (outcome === 'skipped') {
+      showToast(t('player.toast.quizSkipped'), 'info');
+      // Backend never downgrades a completed quiz on skip — mirror that here.
+      setCurrentTutorial((prev) =>
+        prev && prev.quiz_status === 'pending' ? { ...prev, quiz_status: 'skipped' } : prev,
+      );
+    }
     getStages().then(setStages).catch(() => {});
   };
 
@@ -172,6 +181,7 @@ const TutorialPlayerPage: React.FC = () => {
               endSeconds={currentTutorial.end_seconds}
               onBeat={handleBeat}
               onEnded={handleVideoEnded}
+              suspended={quizOpen}
             />
           </div>
 
@@ -199,6 +209,18 @@ const TutorialPlayerPage: React.FC = () => {
                   <Badge variant="success">
                     <CheckCircle className="size-3" /> {t('player.completed')}
                   </Badge>
+                )}
+                {currentTutorial.quiz_available && currentTutorial.is_completed && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuizOpen(true)}
+                    iconLeft={<HelpCircle className="size-4" />}
+                  >
+                    {currentTutorial.quiz_status === 'completed'
+                      ? t('player.retakeQuiz')
+                      : t('player.takeQuiz')}
+                  </Button>
                 )}
               </div>
             </div>

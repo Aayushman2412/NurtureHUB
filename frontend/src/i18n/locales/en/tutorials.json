@@ -24,6 +24,8 @@
     "watched": "Watched",
     "videoLesson": "Video Lesson",
     "quizAfterVideo": "Quiz after video",
+    "takeQuiz": "Take quiz",
+    "retakeQuiz": "Retake quiz",
     "completed": "Completed",
     "durationMins": "{{minutes}} Mins Duration",
     "watchNote": "Your watch time is tracked — watch the full video to mark it complete and stay eligible for tests!",

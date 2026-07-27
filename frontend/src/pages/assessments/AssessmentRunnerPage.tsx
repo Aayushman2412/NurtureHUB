@@ -210,16 +210,6 @@ const AssessmentRunnerPage: React.FC = () => {
 
   const current: PathStep | undefined = derived.steps[stepIndex];
 
-  // Default the FIRST date question on the path to today when it comes up empty.
-  useEffect(() => {
-    if (!current || current.kind !== 'question' || current.question.questionType !== 'date') return;
-    const firstDate = derived.steps.find(s => s.kind === 'question' && s.question.questionType === 'date');
-    if (firstDate?.id !== current.id) return;
-    setAnswers(prev =>
-      prev[current.id]?.value ? prev : { ...prev, [current.id]: { optionIds: [], value: todayIso() } },
-    );
-  }, [current, derived.steps]);
-
   // ── Answer handlers ────────────────────────────────────────────────────────
   const setValueAnswer = (stepId: string, value: string) =>
     setAnswers(prev => ({ ...prev, [stepId]: { optionIds: [], value } }));
@@ -440,6 +430,14 @@ const AssessmentRunnerPage: React.FC = () => {
 
         <div key={current.id} className={direction === 'back' ? 'assess-step-back' : 'assess-step-fwd'}>
           <Card className="p-6 sm:p-8">
+            {current.kind !== 'info' && current.preamble && current.preamble.length > 0 && (
+              <div className="mb-6 space-y-6 border-b border-border pb-6">
+                {current.preamble.map(info => (
+                  <InfoStepCard key={info.id} node={info} />
+                ))}
+              </div>
+            )}
+
             {current.kind === 'info' && <InfoStepCard node={current.info} />}
 
             {current.kind === 'matrix' && (

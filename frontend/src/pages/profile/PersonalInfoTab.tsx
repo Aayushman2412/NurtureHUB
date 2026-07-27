@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { User, Phone } from 'lucide-react';
 import { DateInput, Field, Input, Radio, Select } from '../../components/ui';
-import { genderOptions, maritalOptions, ageFromDob } from '../../lib/learnerFields';
+import { genderOptions, maritalOptions, ageFromDob, maxDobForAge } from '../../lib/learnerFields';
 import type { FieldErrors } from '../../lib/validation';
 
 export interface PersonalInfoValues {
@@ -53,6 +53,7 @@ const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
         <DateInput
           id="dob-input"
           value={dob}
+          max={maxDobForAge(18)}
           error={!!errors.dob}
           onChange={v => onChange('dob', v)}
         />
@@ -135,6 +136,7 @@ const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
           id="number-children-input"
           type="number"
           min={0}
+          max={10}
           placeholder={t('fields.numberChildrenPlaceholder')}
           value={numberChildren}
           error={!!errors.numberChildren}

@@ -15,6 +15,8 @@ export interface DateInputProps {
   disabled?: boolean;
   error?: boolean;
   placeholder?: string;
+  /** Fired when the visible text input loses focus (e.g. to mark the field touched). */
+  onBlur?: () => void;
 }
 
 // ISO 'yyyy-mm-dd' -> display 'dd/mm/yyyy'
@@ -46,7 +48,7 @@ const mask = (raw: string): string => {
  * exchanged with the form is always ISO 'yyyy-mm-dd', so validation is unchanged.
  */
 const DateInput: React.FC<DateInputProps> = ({
-  value, onChange, id, max, min, disabled, error, placeholder = 'DD/MM/YYYY',
+  value, onChange, id, max, min, disabled, error, placeholder = 'DD/MM/YYYY', onBlur,
 }) => {
   const [text, setText] = useState(() => isoToDisplay(value));
   const pickerRef = useRef<HTMLInputElement>(null);
@@ -82,6 +84,7 @@ const DateInput: React.FC<DateInputProps> = ({
         disabled={disabled}
         placeholder={placeholder}
         onChange={e => handleText(e.target.value)}
+        onBlur={onBlur}
         className={cn(inputClasses(false, !!error), 'pr-10')}
       />
       {/* Hidden native date input — fills the field so the picker anchors correctly. */}

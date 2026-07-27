@@ -42,6 +42,8 @@ export interface User {
   designation_id: number | null;
   facility_type_id: number | null;
   department_other: string | null;
+  designation_other: string | null;
+  facility_type_other: string | null;
   marital_status: string | null;
   has_children: boolean | null;
   number_children: number | null;

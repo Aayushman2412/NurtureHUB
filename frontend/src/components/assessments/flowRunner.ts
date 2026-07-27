@@ -49,9 +49,19 @@ export type PathStep =
       sectionId: string | null;
       sectionTitle: string | null;
       question: FlowQuestionNode | FlowSectionChild;
+      /** Info blocks directly preceding this step — shown above it on the same screen. */
+      preamble?: FlowInfoNode[];
     }
   | { kind: 'info'; id: string; sectionId: null; sectionTitle: null; info: FlowInfoNode }
-  | { kind: 'matrix'; id: string; sectionId: null; sectionTitle: null; matrix: FlowMatrixNode };
+  | {
+      kind: 'matrix';
+      id: string;
+      sectionId: null;
+      sectionTitle: null;
+      matrix: FlowMatrixNode;
+      /** Info blocks directly preceding this step — shown above it on the same screen. */
+      preamble?: FlowInfoNode[];
+    };
 
 export interface DerivedPath {
   steps: PathStep[];
@@ -108,15 +118,25 @@ const stepBlocks = (step: PathStep, answers: AnswersMap): boolean => {
 
 /**
  * Replay the answers over the graph. Emits one step per answerable question /
- * matrix / info block in visit order and stops at the first unanswered
- * *required* step (the frontier) or at the end of the tree. Cycles and dangling
- * `next` pointers are treated as the end so the learner is never dead-locked.
+ * matrix in visit order and stops at the first unanswered *required* step (the
+ * frontier) or at the end of the tree. Info blocks are buffered and attached as
+ * the `preamble` of the next answerable step so they share its screen; only a
+ * trailing info block (nothing answerable after it) keeps its own step. Cycles
+ * and dangling `next` pointers are treated as the end so the learner is never
+ * dead-locked.
  */
 export function derivePath(schema: FlowSchema, answers: AnswersMap): DerivedPath {
   const steps: PathStep[] = [];
   const visited = new Set<string>();
   let currentId: string | null = schema.startNodeId;
   let complete = currentId == null;
+  let pendingInfos: FlowInfoNode[] = [];
+  const takePreamble = (): FlowInfoNode[] | undefined => {
+    if (pendingInfos.length === 0) return undefined;
+    const taken = pendingInfos;
+    pendingInfos = [];
+    return taken;
+  };
 
   while (currentId) {
     if (visited.has(currentId)) {
@@ -140,14 +160,17 @@ export function derivePath(schema: FlowSchema, answers: AnswersMap): DerivedPath
     }
 
     if (isSectionNode(node)) {
+      const preamble = takePreamble();
       let blocked = false;
-      for (const child of node.children) {
+      for (let ci = 0; ci < node.children.length; ci++) {
+        const child = node.children[ci];
         const step: PathStep = {
           kind: 'question',
           id: child.id,
           sectionId: node.id,
           sectionTitle: node.title,
           question: child,
+          preamble: ci === 0 ? preamble : undefined,
         };
         steps.push(step);
         if (stepBlocks(step, answers)) {
@@ -158,20 +181,40 @@ export function derivePath(schema: FlowSchema, answers: AnswersMap): DerivedPath
       if (blocked) break; // frontier inside the section
       currentId = node.next;
     } else if (isInfoNode(node)) {
-      steps.push({ kind: 'info', id: node.id, sectionId: null, sectionTitle: null, info: node });
+      pendingInfos.push(node); // rides along as the next answerable step's preamble
       currentId = node.next;
     } else if (isMatrixNode(node)) {
-      const step: PathStep = { kind: 'matrix', id: node.id, sectionId: null, sectionTitle: null, matrix: node };
+      const step: PathStep = {
+        kind: 'matrix',
+        id: node.id,
+        sectionId: null,
+        sectionTitle: null,
+        matrix: node,
+        preamble: takePreamble(),
+      };
       steps.push(step);
       if (stepBlocks(step, answers)) break; // frontier
       currentId = node.next;
     } else {
-      const step: PathStep = { kind: 'question', id: node.id, sectionId: null, sectionTitle: null, question: node };
+      const step: PathStep = {
+        kind: 'question',
+        id: node.id,
+        sectionId: null,
+        sectionTitle: null,
+        question: node,
+        preamble: takePreamble(),
+      };
       steps.push(step);
       if (stepBlocks(step, answers)) break; // frontier
       currentId = nextNodeId(node, answers[node.id]?.optionIds ?? []);
     }
     if (currentId == null) complete = true;
+  }
+
+  // Walk exited with infos still buffered (cycle guard, dangling pointer or
+  // natural end): a trailing info block keeps its own screen.
+  for (const info of pendingInfos) {
+    steps.push({ kind: 'info', id: info.id, sectionId: null, sectionTitle: null, info });
   }
 
   return { steps, complete };

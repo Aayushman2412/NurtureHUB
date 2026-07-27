@@ -10,9 +10,18 @@
     "table": {
       "motherId": "Mother ID",
       "name": "Name",
+      "age": "Age",
+      "mobile": "Mobile",
       "village": "Village",
+      "hwc": "HWC",
       "gestationalAge": "Gestational age",
-      "edd": "EDD"
+      "edd": "EDD",
+      "status": "Status",
+      "registered": "Registered"
+    },
+    "status": {
+      "pregnant": "Pregnant",
+      "lactating": "Lactating"
     },
     "weeks": "{{n}} weeks"
   },
@@ -80,8 +89,9 @@
     "eddLmpHint": "Set LMP to calculate",
     "gestationalAge": "Gestational age",
     "gestationalHint": "Set LMP to calculate",
+    "gestationalInvalidHint": "LMP is too far before the adoption date",
     "gestationalValue": "{{weeks}} weeks · {{months}} months",
-    "eddRecords": "EDD as per latest records",
+    "eddRecords": "EDD as per latest records (optional)",
     "mobile": "Mobile number",
     "mobilePlaceholder": "10-digit",
     "alternateMobile": "Alternate mobile (optional)",
@@ -91,6 +101,8 @@
     "taluk": "Taluk",
     "village": "Village",
     "hwc": "Health & Wellness Centre (HWC)",
+    "otherSpecify": "Other (specify)",
+    "hwcOther": "Specify the HWC name",
     "phc": "Primary Health Centre (auto)",
     "phcHint": "Auto-fills from the selected HWC",
     "education": "Highest education",
@@ -99,6 +111,7 @@
     "occupation": "Occupation",
     "occupationOther": "Specify occupation",
     "rationCard": "Ration card type",
+    "rationCardOther": "Specify the ration card type",
     "socialCategory": "Social category",
     "nutritionCourse": "Completed any certificate course/training on nutrition, pregnancy or child care?",
     "nutritionCourseName": "Specify the course",
@@ -108,6 +121,7 @@
       "selectState": "Select state",
       "selectDistrict": "Select district",
       "selectTaluk": "Select taluk",
+      "village": "Select or type the village name",
       "searchHwc": "Search HWC",
       "selectEducation": "Select education level",
       "selectField": "Select field",
@@ -120,8 +134,8 @@
     },
     "ratingGrid": {
       "rowHeader": "Source",
-      "trust": "Trust (1–5)",
-      "willingness": "Willingness (1–5)"
+      "trust": "How much do you trust this source? (1 = not at all, 5 = completely)",
+      "willingness": "How willing are you to follow its advice? (1 = not at all, 5 = very willing)"
     },
     "cancel": "Cancel",
     "back": "Back",
@@ -241,11 +255,11 @@
         "Extremely confident": "Extremely confident"
       },
       "willingness_hcw": {
-        "Very unwilling": "Very unwilling",
-        "Unwilling": "Unwilling",
-        "Neutral": "Neutral",
-        "Willing": "Willing",
-        "Very willing": "Very willing"
+        "I would not try it": "I would not try it",
+        "I would hesitate to try it": "I would hesitate to try it",
+        "I might try it": "I might try it",
+        "I would likely try it": "I would likely try it",
+        "I would definitely try it": "I would definitely try it"
       },
       "information_seeking": {
         "Never": "Never",

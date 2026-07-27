@@ -3,7 +3,7 @@ from datetime import timedelta
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.database import get_db
 from app import models, schemas
@@ -61,12 +61,30 @@ def list_mothers(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return (
+    mothers = (
         db.query(models.Mother)
+        .options(joinedload(models.Mother.hwc), selectinload(models.Mother.children))
         .filter(models.Mother.registered_by_user_id == current_user.id)
         .order_by(models.Mother.created_at.desc())
         .all()
     )
+    return [
+        schemas.MotherListItem(
+            id=m.id,
+            mother_uid=m.mother_uid,
+            mother_name=m.mother_name,
+            mother_age=m.mother_age,
+            mobile=m.mobile,
+            village=m.village,
+            adoption_date=m.adoption_date,
+            hwc_name=m.hwc.name if m.hwc else m.hwc_other,
+            edd_records=m.edd_records,
+            gestational_weeks=m.gestational_weeks,
+            children_count=len(m.children),
+            created_at=m.created_at,
+        )
+        for m in mothers
+    ]
 
 
 @router.get("/{mother_id}", response_model=schemas.MotherOut)

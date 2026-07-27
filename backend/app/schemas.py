@@ -176,6 +176,7 @@ class MotherBase(BaseModel):
     taluk_id: Optional[int] = None
     village: Optional[str] = None
     hwc_id: Optional[int] = None
+    hwc_other: Optional[str] = None
     phc_id: Optional[int] = None
     education_id: Optional[int] = None
     education_field_id: Optional[int] = None
@@ -183,6 +184,7 @@ class MotherBase(BaseModel):
     occupation: Optional[str] = None
     occupation_other: Optional[str] = None
     ration_card: Optional[str] = None
+    ration_card_other: Optional[str] = None
     social_category: Optional[str] = None
     nutrition_course: Optional[bool] = None
     nutrition_course_name: Optional[str] = None
@@ -212,8 +214,13 @@ class MotherBase(BaseModel):
         if self.lmp:
             if self.lmp > today:
                 raise ValueError("LMP cannot be in the future.")
-            if (today - self.lmp).days > 180:
-                raise ValueError("LMP cannot be more than 180 days before today.")
+            if self.mother_dob and self.lmp < self.mother_dob:
+                raise ValueError("LMP cannot be before the date of birth.")
+            if self.adoption_date:
+                if self.lmp > self.adoption_date:
+                    raise ValueError("LMP cannot be after the date of adoption.")
+                if (self.adoption_date - self.lmp).days > 180:
+                    raise ValueError("LMP cannot be more than 180 days before the date of adoption.")
         if self.mobile and self.alternate_mobile and _digits(self.mobile) == _digits(self.alternate_mobile):
             raise ValueError("Alternate mobile must be different from the primary mobile.")
         return self
@@ -247,9 +254,14 @@ class MotherListItem(BaseModel):
     id: int
     mother_uid: str
     mother_name: str
+    mother_age: Optional[int] = None
+    mobile: Optional[str] = None
     village: Optional[str] = None
+    adoption_date: Optional[date] = None
+    hwc_name: Optional[str] = None       # joined HWC name, falls back to hwc_other
     edd_records: Optional[date] = None
     gestational_weeks: Optional[int] = None
+    children_count: int = 0
     created_at: datetime
 
     class Config:
@@ -403,7 +415,7 @@ class Token(BaseModel):
 # Profile Schema
 class UserProfileUpdate(BaseModel):
     full_name: Optional[str] = None
-    age: Optional[int] = None
+    age: Optional[int] = Field(default=None, ge=18, le=120)
     date_of_birth: Optional[date] = None
     gender: Optional[str] = None
     phone: Optional[str] = None
@@ -429,10 +441,12 @@ class UserProfileUpdate(BaseModel):
     designation_id: Optional[int] = None
     facility_type_id: Optional[int] = None
     department_other: Optional[str] = None
+    designation_other: Optional[str] = None
+    facility_type_other: Optional[str] = None
     marital_status: Optional[str] = None
     has_children: Optional[bool] = None
-    number_children: Optional[int] = Field(default=None, ge=0, le=30)
-    residence_distance_km: Optional[float] = Field(default=None, ge=0, le=100)
+    number_children: Optional[int] = Field(default=None, ge=0, le=10)
+    residence_distance_km: Optional[float] = Field(default=None, ge=0.1, le=100)
     years_service: Optional[float] = Field(default=None, ge=0, le=50)
     years_designation: Optional[float] = Field(default=None, ge=0, le=50)
     years_facility: Optional[float] = Field(default=None, ge=0, le=50)
@@ -442,6 +456,19 @@ class UserProfileUpdate(BaseModel):
     breastfeeding_training: Optional[str] = None
     complementary_feeding_training: Optional[str] = None
     growth_monitoring_training: Optional[str] = None
+
+    @field_validator("date_of_birth")
+    @classmethod
+    def _check_min_age(cls, v: Optional[date]):
+        if v is None:
+            return v
+        today = date.today()
+        if v > today:
+            raise ValueError("Date of birth cannot be in the future.")
+        age = today.year - v.year - ((today.month, today.day) < (v.month, v.day))
+        if age < 18:
+            raise ValueError("Learner must be at least 18 years old.")
+        return v
 
     @model_validator(mode="after")
     def _check_year_consistency(self):
@@ -487,6 +514,8 @@ class UserOut(BaseModel):
     designation_id: Optional[int] = None
     facility_type_id: Optional[int] = None
     department_other: Optional[str] = None
+    designation_other: Optional[str] = None
+    facility_type_other: Optional[str] = None
     marital_status: Optional[str] = None
     has_children: Optional[bool] = None
     number_children: Optional[int] = None

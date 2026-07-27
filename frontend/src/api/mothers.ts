@@ -24,6 +24,7 @@ export interface MotherPayload {
   taluk_id?: number | null;
   village?: string | null;
   hwc_id?: number | null;
+  hwc_other?: string | null;
   phc_id?: number | null;
   education_id?: number | null;
   education_field_id?: number | null;
@@ -31,6 +32,7 @@ export interface MotherPayload {
   occupation?: string | null;
   occupation_other?: string | null;
   ration_card?: string | null;
+  ration_card_other?: string | null;
   social_category?: string | null;
   nutrition_course?: boolean | null;
   nutrition_course_name?: string | null;
@@ -46,9 +48,14 @@ export interface MotherListItem {
   id: number;
   mother_uid: string;
   mother_name: string;
+  mother_age: number | null;
+  mobile: string | null;
   village: string | null;
+  adoption_date: string | null;
+  hwc_name: string | null;
   edd_records: string | null;
   gestational_weeks: number | null;
+  children_count: number;
   created_at: string;
 }
 

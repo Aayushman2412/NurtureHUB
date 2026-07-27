@@ -9,13 +9,16 @@ export interface WorkDetailsValues {
   departmentId: number | '';
   departmentOther: string;
   designationId: number | '';
+  designationOther: string;
   facilityTypeId: number | '';
+  facilityTypeOther: string;
   stateId: number | '';
   districtId: number | '';
   blockId: number | '';
   villageId: number | '';
   villageName: string;
   facilityId: number | '';
+  facilityName: string;
   residenceDistance: number | '';
   qualificationId: number | '';
   qualificationOther: string;
@@ -31,11 +34,14 @@ interface WorkDetailsTabProps {
   meta: LearnerMetadata;
   errors: FieldErrors;
   isOtherDept: boolean;
+  isOtherDesignation: boolean;
+  isOtherFacilityType: boolean;
   showQualificationOther: boolean;
   onChange: <K extends keyof WorkDetailsValues>(key: K, value: WorkDetailsValues[K]) => void;
   // cascade handlers (set + reset dependents) live in the parent
   onDepartment: (v: string) => void;
   onDesignation: (v: string) => void;
+  onFacilityType: (v: string) => void;
   onState: (v: string) => void;
   onDistrict: (v: string) => void;
   onBlock: (v: string) => void;
@@ -44,8 +50,8 @@ interface WorkDetailsTabProps {
 const numOr = (v: string): number | '' => (v ? Number(v) : '');
 
 const WorkDetailsTab: React.FC<WorkDetailsTabProps> = ({
-  values, meta, errors, isOtherDept, showQualificationOther, onChange,
-  onDepartment, onDesignation, onState, onDistrict, onBlock,
+  values, meta, errors, isOtherDept, isOtherDesignation, isOtherFacilityType, showQualificationOther, onChange,
+  onDepartment, onDesignation, onFacilityType, onState, onDistrict, onBlock,
 }) => {
   const { t } = useTranslation('learner');
   return (
@@ -60,13 +66,32 @@ const WorkDetailsTab: React.FC<WorkDetailsTabProps> = ({
       </Field>
     )}
 
-    <SelectField label={t('fields.designation')} value={values.designationId} onChange={onDesignation} error={errors.designationId}
-      placeholder={t('placeholders.selectDesignation')} disabled={!values.departmentId}
-      options={meta.designations.map(d => ({ value: d.id, label: d.name }))} />
+    {/* Dept = Other: no picked lists apply — designation & facility type become open questions. */}
+    {!isOtherDept && (
+      <SelectField label={t('fields.designation')} value={values.designationId} onChange={onDesignation} error={errors.designationId}
+        placeholder={t('placeholders.selectDesignation')} disabled={!values.departmentId}
+        options={meta.designations.map(d => ({ value: d.id, label: d.name }))} />
+    )}
 
-    <SelectField label={t('fields.facilityType')} value={values.facilityTypeId} error={errors.facilityTypeId}
-      onChange={v => onChange('facilityTypeId', numOr(v))} placeholder={t('placeholders.selectFacilityType')}
-      disabled={!values.designationId} options={meta.facilityTypes.map(f => ({ value: f.id, label: f.name }))} />
+    {(isOtherDept || isOtherDesignation) && (
+      <Field label={t('fields.specifyDesignation')} htmlFor="desig-other-input" error={errors.designationOther}>
+        <Input id="desig-other-input" type="text" placeholder={t('fields.enterDesignation')} error={!!errors.designationOther}
+          value={values.designationOther} onChange={e => onChange('designationOther', e.target.value)} required />
+      </Field>
+    )}
+
+    {!isOtherDept && (
+      <SelectField label={t('fields.facilityType')} value={values.facilityTypeId} error={errors.facilityTypeId}
+        onChange={onFacilityType} placeholder={t('placeholders.selectFacilityType')}
+        disabled={!values.designationId} options={meta.facilityTypes.map(f => ({ value: f.id, label: f.name }))} />
+    )}
+
+    {(isOtherDept || isOtherFacilityType) && (
+      <Field label={t('fields.specifyFacilityType')} htmlFor="ft-other-input" error={errors.facilityTypeOther}>
+        <Input id="ft-other-input" type="text" placeholder={t('fields.enterFacilityType')} error={!!errors.facilityTypeOther}
+          value={values.facilityTypeOther} onChange={e => onChange('facilityTypeOther', e.target.value)} required />
+      </Field>
+    )}
 
     <SelectField label={t('fields.state')} value={values.stateId} onChange={onState} error={errors.stateId}
       placeholder={t('placeholders.selectState')} options={meta.states.map(s => ({ value: s.id, label: s.name }))} />
@@ -85,13 +110,19 @@ const WorkDetailsTab: React.FC<WorkDetailsTabProps> = ({
       placeholder={t('fields.villagePlaceholder')} disabled={!values.blockId}
       options={meta.villages.map(v => ({ value: v.id, label: v.name }))} />
 
-    <SelectField label={t('fields.facilityName')} value={values.facilityId} error={errors.facilityId}
-      onChange={v => onChange('facilityId', numOr(v))} placeholder={t('placeholders.selectFacility')}
-      disabled={!values.blockId}
+    {/* Facility: pick a known one (sets the id) or type a name — labels carry the
+        "(type)" suffix but the stored name is the raw facility name. */}
+    <ComboBox label={t('fields.facilityName')} value={values.facilityName} error={errors.facilityName}
+      onValueChange={txt => { onChange('facilityName', txt); onChange('facilityId', ''); }}
+      onPick={o => {
+        const f = meta.facilities.find(x => x.id === Number(o.value));
+        onChange('facilityName', f?.name ?? o.label); onChange('facilityId', Number(o.value));
+      }}
+      placeholder={t('fields.facilityPlaceholder')} disabled={!values.blockId}
       options={meta.facilities.map(f => ({ value: f.id, label: `${f.name} (${f.facility_type})` }))} />
 
     <Field label={t('fields.residenceDistance')} htmlFor="residence-distance-input" error={errors.residenceDistance}>
-      <Input id="residence-distance-input" type="number" min={0} max={100} step={0.1} placeholder={t('fields.residenceDistancePlaceholder')}
+      <Input id="residence-distance-input" type="number" min={0.1} max={100} step={0.1} placeholder={t('fields.residenceDistancePlaceholder')}
         value={values.residenceDistance} error={!!errors.residenceDistance}
         onChange={e => onChange('residenceDistance', numOr(e.target.value))} />
     </Field>

@@ -4,6 +4,7 @@ import client from '../api/client';
 export interface StateOpt { id: number; name: string; }
 export interface DistrictOpt { id: number; state_id: number; name: string; }
 export interface BlockOpt { id: number; district_id: number; name: string; }
+export interface VillageOpt { id: number; block_id: number; name: string; }
 export interface HWCOpt { id: number; name: string; block_id: number | null; phc_id: number | null; }
 export interface PHCOpt { id: number; name: string; block_id: number | null; }
 export interface EducationLevelOpt { id: number; name: string; order_index: number; requires_field: boolean; }
@@ -19,7 +20,7 @@ export interface MotherSelection {
 }
 
 /**
- * Loads and cascades the Mother-Registration option lists. State→District→Taluk→HWC,
+ * Loads and cascades the Mother-Registration option lists. State→District→Taluk→(Village, HWC),
  * HWC→PHC (auto-populates the single mapped PHC), and education field→degree. The
  * caller owns the selection state and resets dependents in its change handlers.
  */
@@ -27,6 +28,7 @@ export function useMotherMetadata(sel: MotherSelection, onError?: (msg: string) 
   const [states, setStates] = useState<StateOpt[]>([]);
   const [districts, setDistricts] = useState<DistrictOpt[]>([]);
   const [taluks, setTaluks] = useState<BlockOpt[]>([]);
+  const [villages, setVillages] = useState<VillageOpt[]>([]);
   const [hwcs, setHwcs] = useState<HWCOpt[]>([]);
   const [phc, setPhc] = useState<PHCOpt | null>(null);   // the one PHC an HWC maps to
   const [educationLevels, setEducationLevels] = useState<EducationLevelOpt[]>([]);
@@ -62,14 +64,16 @@ export function useMotherMetadata(sel: MotherSelection, onError?: (msg: string) 
   }, [districtId]);
 
   useEffect(() => {
-    if (!talukId) { setHwcs([]); return; }
+    if (!talukId) { setVillages([]); setHwcs([]); return; }
+    client.get(`/api/metadata/villages?block_id=${talukId}`)
+      .then(r => setVillages(r.data)).catch(() => fail('Failed to load villages'));
     client.get(`/api/metadata/hwcs?block_id=${talukId}`)
       .then(r => setHwcs(r.data)).catch(() => fail('Failed to load HWCs'));
   }, [talukId]);
 
-  // HWC → its single PHC (auto-populate).
+  // HWC → its single PHC (auto-populate). Skipped for the "Other" sentinel (< 0).
   useEffect(() => {
-    if (!hwcId) { setPhc(null); return; }
+    if (!hwcId || hwcId < 0) { setPhc(null); return; }
     client.get(`/api/metadata/phcs?hwc_id=${hwcId}`)
       .then(r => setPhc(r.data[0] ?? null)).catch(() => fail('Failed to load PHC'));
   }, [hwcId]);
@@ -80,7 +84,7 @@ export function useMotherMetadata(sel: MotherSelection, onError?: (msg: string) 
       .then(r => setEducationDegrees(r.data)).catch(() => fail('Failed to load degrees'));
   }, [educationFieldId]);
 
-  return { states, districts, taluks, hwcs, phc, educationLevels, educationFields, educationDegrees };
+  return { states, districts, taluks, villages, hwcs, phc, educationLevels, educationFields, educationDegrees };
 }
 
 export type MotherMetadata = ReturnType<typeof useMotherMetadata>;

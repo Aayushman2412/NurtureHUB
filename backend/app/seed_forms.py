@@ -900,9 +900,9 @@ _PCA_SUPPLEMENT_ROWS = [
 
 
 def build_mother_protein_intake_schema() -> dict:
-    """The mother's protein-intake recall (PCA): assessment date, diet type and
-    mother's status, then one food-group matrix per sheet Food Group (freq /
-    usual / qty24 servings with per-row protein values), a nutritional-
+    """The mother's protein-intake recall (PCA): assessment date, mother's
+    status and diet type, then one food-group matrix per sheet Food Group (freq
+    / usual / qty24 servings with per-row protein values), a nutritional-
     supplements gate and the gated supplement matrix. Filled for the MOTHER on
     every visit; the platform computes the total / high-quality protein
     variables from the matrix answers."""
@@ -910,15 +910,15 @@ def build_mother_protein_intake_schema() -> dict:
 
     nodes.append(_pca_question("pca_date", "Assessment Date", [], qtype="date"))
 
+    nodes.append(_pca_question("pca_status", "Mother's Status", [
+        _pca_opt("pca_status_pregnant", "Pregnant Woman (ANC stage)"),
+        _pca_opt("pca_status_lactating", "Lactating Mother (PNC stage)"),
+    ]))
+
     nodes.append(_pca_question("pca_diet", "Diet Type", [
         _pca_opt("pca_diet_veg", "Vegetarian"),
         _pca_opt("pca_diet_egg", "Eggetarian (Vegetarian who eats eggs)"),
         _pca_opt("pca_diet_nonveg", "Non-Vegetarian"),
-    ]))
-
-    nodes.append(_pca_question("pca_status", "Mother's Status", [
-        _pca_opt("pca_status_pregnant", "Pregnant Woman (ANC stage)"),
-        _pca_opt("pca_status_lactating", "Lactating Mother (PNC stage)"),
     ]))
 
     for slug, title, high_quality, gate, foods in _PCA_FOOD_GROUPS:
@@ -1096,7 +1096,7 @@ def build_growth_monitoring_fields() -> dict:
     return _flat([
         _field("measurement_date", "Measurement date", "date") | {
             "noFuture": True,
-            "helpText": "Defaults to today. Cannot be a future date.",
+            "helpText": "Cannot be a future date.",
         },
         _field("measurement_completed",
                "Were you able to measure the child's weight and length?",
@@ -1239,7 +1239,7 @@ def build_antenatal_fields() -> dict:
     return _flat([
         _field("assessment_date", "Assessment Date", "date") | {
             "noFuture": True,
-            "helpText": "Defaults to today. Cannot be a future date.",
+            "helpText": "Cannot be a future date.",
         },
         _field("gestational_age", "Gestational Age", "text", required=False) | {
             "computed": "gestational_age",

@@ -67,6 +67,13 @@ export const maritalOptions = (t: TFn) => MARITAL.map(v => ({ value: v, label: t
 export const internetOptions = (t: TFn) => INTERNET.map(v => ({ value: v, label: t(`options.internet.${INTERNET_KEY[v]}`) }));
 export const recencyOptions = (t: TFn) => TRAINING_RECENCY.map(v => ({ value: v, label: t(`options.recency.${RECENCY_KEY[v]}`) }));
 
+/** Latest DOB (ISO yyyy-mm-dd) that still satisfies a minimum age in years. */
+export function maxDobForAge(minYears: number): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - minYears);
+  return d.toISOString().slice(0, 10);
+}
+
 /** Age in whole years from a yyyy-mm-dd date string, or '' if invalid. */
 export function ageFromDob(dob: string): number | '' {
   if (!dob) return '';

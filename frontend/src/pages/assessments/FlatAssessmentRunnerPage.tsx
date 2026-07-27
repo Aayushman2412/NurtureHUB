@@ -7,9 +7,11 @@
  * come from `lib/flatForm.ts`; the server re-validates all of it.
  *
  * Convention: the first `date` field in the definition is the response's
- * `assessment_date` (Check Growth → `measurement_date`) and is prefilled with
- * today. Child age for `ageLtDays` / `ageGteDays` conditions is computed
- * against that date, not against today.
+ * `assessment_date` (Check Growth → `measurement_date`). It starts EMPTY so the
+ * learner must actively pick it (required, so submission blocks until then);
+ * until picked, today stands in for age/visibility computations and drafts.
+ * Child age for `ageLtDays` / `ageGteDays` conditions is computed against that
+ * date, not against today.
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -166,9 +168,6 @@ const FlatAssessmentRunnerPage: React.FC = () => {
               next[f.id] = ans.value ?? '';
             }
           }
-        } else {
-          const firstDate = defFields.find(f => f.type === 'date');
-          if (firstDate) next[firstDate.id] = today; // spec: auto-populate today
         }
         setValues(next);
       })
@@ -181,7 +180,7 @@ const FlatAssessmentRunnerPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [formKey, motherId, childId, motherLevel, resumeId, today]);
+  }, [formKey, motherId, childId, motherLevel, resumeId]);
 
   // ── Read-only computed fields (antenatal) ─────────────────────────────────
   const weightFieldId = 'current_weight';

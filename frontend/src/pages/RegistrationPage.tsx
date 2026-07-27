@@ -7,7 +7,7 @@ import AuthLayout from '../components/auth/AuthLayout';
 import { Button, ComboBox, DateInput, Field, Input, Radio, SelectField, Stepper } from '../components/ui';
 import { useLearnerMetadata } from '../hooks/useLearnerMetadata';
 import {
-  TRAINING_KEYS, ageFromDob,
+  TRAINING_KEYS, ageFromDob, maxDobForAge,
   genderOptions, maritalOptions, internetOptions, recencyOptions,
 } from '../lib/learnerFields';
 import { validateLearner, validateLearnerStep, LR_STEP_FIELDS, type LearnerFormValues } from '../lib/learnerSchema';
@@ -40,13 +40,16 @@ const RegistrationPage: React.FC = () => {
   const [departmentId, setDepartmentId] = useState<number | ''>('');
   const [departmentOther, setDepartmentOther] = useState('');
   const [designationId, setDesignationId] = useState<number | ''>('');
+  const [designationOther, setDesignationOther] = useState('');
   const [facilityTypeId, setFacilityTypeId] = useState<number | ''>('');
+  const [facilityTypeOther, setFacilityTypeOther] = useState('');
   const [stateId, setStateId] = useState<number | ''>('');
   const [districtId, setDistrictId] = useState<number | ''>('');
   const [blockId, setBlockId] = useState<number | ''>('');
   const [villageId, setVillageId] = useState<number | ''>('');
   const [villageName, setVillageName] = useState('');
   const [facilityId, setFacilityId] = useState<number | ''>('');
+  const [facilityName, setFacilityName] = useState('');
   const [residenceDistance, setResidenceDistance] = useState<number | ''>('');
 
   // ── Education & experience ──
@@ -61,7 +64,7 @@ const RegistrationPage: React.FC = () => {
   const [trainings, setTrainings] = useState<Record<string, string>>({});
 
   const { t } = useTranslation('learner');
-  const { updateProfile } = useAuth();
+  const { updateProfile, logout } = useAuth();
   const { showToast, updateToast } = useToast();
   const navigate = useNavigate();
 
@@ -74,6 +77,10 @@ const RegistrationPage: React.FC = () => {
 
   const selectedDept = meta.departments.find(d => d.id === Number(departmentId));
   const isOtherDept = selectedDept?.code === 'OTHER';
+  const selectedDesignation = meta.designations.find(d => d.id === Number(designationId));
+  const isOtherDesignation = selectedDesignation?.is_other ?? false;
+  const selectedFacilityType = meta.facilityTypes.find(f => f.id === Number(facilityTypeId));
+  const isOtherFacilityType = selectedFacilityType?.is_other ?? false;
   const selectedQual = meta.qualifications.find(q => q.id === Number(qualificationId));
   const showQualOther = selectedQual?.has_semi_open_input ?? false;
 
@@ -83,16 +90,21 @@ const RegistrationPage: React.FC = () => {
 
   // ── Cascade change handlers (set value + reset dependents + clear own error) ──
   const onDepartment = (v: string) => {
-    setDepartmentId(v ? Number(v) : ''); setDesignationId(''); setFacilityTypeId(''); setQualificationId('');
+    setDepartmentId(v ? Number(v) : ''); setDesignationId(''); setDesignationOther('');
+    setFacilityTypeId(''); setFacilityTypeOther(''); setQualificationId('');
     clearError('departmentId');
   };
-  const onDesignation = (v: string) => { setDesignationId(v ? Number(v) : ''); setFacilityTypeId(''); clearError('designationId'); };
+  const onDesignation = (v: string) => {
+    setDesignationId(v ? Number(v) : ''); setDesignationOther(''); setFacilityTypeId(''); setFacilityTypeOther('');
+    clearError('designationId');
+  };
+  const onFacilityType = (v: string) => { setFacilityTypeId(v ? Number(v) : ''); setFacilityTypeOther(''); clearError('facilityTypeId'); };
   const onState = (v: string) => {
-    setStateId(v ? Number(v) : ''); setDistrictId(''); setBlockId(''); setVillageId(''); setVillageName(''); setFacilityId('');
+    setStateId(v ? Number(v) : ''); setDistrictId(''); setBlockId(''); setVillageId(''); setVillageName(''); setFacilityId(''); setFacilityName('');
     clearError('stateId');
   };
-  const onDistrict = (v: string) => { setDistrictId(v ? Number(v) : ''); setBlockId(''); setVillageId(''); setVillageName(''); setFacilityId(''); clearError('districtId'); };
-  const onBlock = (v: string) => { setBlockId(v ? Number(v) : ''); setVillageId(''); setVillageName(''); setFacilityId(''); clearError('blockId'); };
+  const onDistrict = (v: string) => { setDistrictId(v ? Number(v) : ''); setBlockId(''); setVillageId(''); setVillageName(''); setFacilityId(''); setFacilityName(''); clearError('districtId'); };
+  const onBlock = (v: string) => { setBlockId(v ? Number(v) : ''); setVillageId(''); setVillageName(''); setFacilityId(''); setFacilityName(''); clearError('blockId'); };
 
   // Village combobox: pick a known village (sets the id) or type a custom name (clears it).
   const onVillagePick = (o: { value: number | string; label: string }) => {
@@ -100,15 +112,24 @@ const RegistrationPage: React.FC = () => {
   };
   const onVillageType = (text: string) => { setVillageName(text); setVillageId(''); clearError('villageName'); };
 
+  // Facility combobox: same pick-or-type pattern; labels carry the "(type)" suffix
+  // but the stored name is the raw facility name.
+  const onFacilityPick = (o: { value: number | string; label: string }) => {
+    const f = meta.facilities.find(x => x.id === Number(o.value));
+    setFacilityId(Number(o.value)); setFacilityName(f?.name ?? o.label); clearError('facilityName');
+  };
+  const onFacilityTyped = (text: string) => { setFacilityName(text); setFacilityId(''); clearError('facilityName'); };
+
   // Age is derived from DOB — display only, never an input.
   const age = ageFromDob(dob);
 
   const values: LearnerFormValues = {
     dob, age, gender, phone, alternatePhone, maritalStatus, hasChildren, numberChildren,
-    departmentId, departmentOther, designationId, facilityTypeId, stateId, districtId, blockId,
-    villageId, villageName, facilityId, residenceDistance, qualificationId, qualificationOther,
+    departmentId, departmentOther, designationId, designationOther, facilityTypeId, facilityTypeOther,
+    stateId, districtId, blockId,
+    villageId, villageName, facilityId, facilityName, residenceDistance, qualificationId, qualificationOther,
     yearsService, yearsDesignation, yearsFacility, internetWorkplace, trainings,
-    isOtherDept, showQualificationOther: showQualOther,
+    isOtherDept, isOtherDesignation, isOtherFacilityType, showQualificationOther: showQualOther,
   };
 
   const next = () => {
@@ -132,10 +153,11 @@ const RegistrationPage: React.FC = () => {
     setLoading(true);
     const toastId = showToast(t('registration.toastSubmitting'), 'loading');
     try {
-      const designationName = meta.designations.find(d => d.id === Number(designationId))?.name;
-      const facilityTypeName = meta.facilityTypes.find(f => f.id === Number(facilityTypeId))?.name;
       const districtName = meta.districts.find(d => d.id === Number(districtId))?.name;
-      const facilityName = meta.facilities.find(f => f.id === Number(facilityId))?.name;
+      // role gates profile-complete (auth checks role != null) — when dept = Other or an
+      // "Other (Specify)" row is picked, the free-typed text becomes the legacy string.
+      const roleName = isOtherDept || isOtherDesignation ? designationOther.trim() : selectedDesignation?.name;
+      const facilityTypeName = isOtherDept || isOtherFacilityType ? facilityTypeOther.trim() : selectedFacilityType?.name;
 
       await updateProfile({
         date_of_birth: dob,
@@ -150,19 +172,20 @@ const RegistrationPage: React.FC = () => {
         department_id: Number(departmentId),
         department: selectedDept?.name,
         department_other: isOtherDept ? departmentOther : undefined,
-        designation_id: Number(designationId),
-        role: designationName,
-        facility_type_id: Number(facilityTypeId),
+        ...(isOtherDept ? {} : { designation_id: Number(designationId), facility_type_id: Number(facilityTypeId) }),
+        role: roleName,
+        designation_other: isOtherDept || isOtherDesignation ? designationOther.trim() : undefined,
         work_center_type: facilityTypeName,
+        facility_type_other: isOtherDept || isOtherFacilityType ? facilityTypeOther.trim() : undefined,
         // geography: FK + legacy string
         state_id: Number(stateId),
         district_id: Number(districtId),
         block_id: Number(blockId),
         village_id: villageId ? Number(villageId) : null,
         village_name: villageId ? null : (villageName || null),
-        facility_id: Number(facilityId),
+        facility_id: facilityId ? Number(facilityId) : null,
         district: districtName,
-        work_center_name: facilityName,
+        work_center_name: facilityName.trim() || null,
         residence_distance_km: Number(residenceDistance),
         // education & experience
         qualification_id: Number(qualificationId),
@@ -190,7 +213,16 @@ const RegistrationPage: React.FC = () => {
   const isLastStep = step === STEP_KEYS.length - 1;
 
   return (
-    <AuthLayout title={t('registration.title')} subtitle={t('registration.subtitle')}>
+    <AuthLayout
+      title={t('registration.title')}
+      subtitle={t('registration.subtitle')}
+      onSignOut={() => {
+        logout();
+        // @ts-ignore
+        window.google?.accounts?.id?.disableAutoSelect?.();
+        navigate('/login', { replace: true });
+      }}
+    >
       <form onSubmit={handleSubmit} className="flex flex-col gap-7" noValidate>
         <Stepper steps={steps} current={step} className="mb-1" />
 
@@ -201,7 +233,7 @@ const RegistrationPage: React.FC = () => {
             <div className="flex flex-col gap-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label={t('fields.dob')} htmlFor="dob-input" error={errors.dob}>
-                  <DateInput id="dob-input" value={dob} max={new Date().toISOString().slice(0, 10)}
+                  <DateInput id="dob-input" value={dob} max={maxDobForAge(18)}
                     error={!!errors.dob} onChange={v => { setDob(v); clearError('dob'); }} />
                 </Field>
                 <Field label={t('fields.ageYears')}>
@@ -248,7 +280,7 @@ const RegistrationPage: React.FC = () => {
 
               {hasChildren === 'Yes' && (
                 <Field label={t('fields.numberChildren')} htmlFor="num-children" error={errors.numberChildren}>
-                  <Input id="num-children" type="number" min={0} placeholder={t('fields.numberChildrenPlaceholder')} value={numberChildren}
+                  <Input id="num-children" type="number" min={0} max={10} placeholder={t('fields.numberChildrenPlaceholder')} value={numberChildren}
                     error={!!errors.numberChildren}
                     onChange={e => { setNumberChildren(e.target.value ? Number(e.target.value) : ''); clearError('numberChildren'); }} />
                 </Field>
@@ -272,14 +304,33 @@ const RegistrationPage: React.FC = () => {
                 </Field>
               )}
 
-              <SelectField label={t('fields.designation')} value={designationId} onChange={onDesignation} error={errors.designationId}
-                placeholder={t('placeholders.selectDesignation')} disabled={!departmentId}
-                options={meta.designations.map(d => ({ value: d.id, label: d.name }))} />
+              {/* Dept = Other: no picked lists apply — designation & facility type become open questions. */}
+              {!isOtherDept && (
+                <SelectField label={t('fields.designation')} value={designationId} onChange={onDesignation} error={errors.designationId}
+                  placeholder={t('placeholders.selectDesignation')} disabled={!departmentId}
+                  options={meta.designations.map(d => ({ value: d.id, label: d.name }))} />
+              )}
 
-              <SelectField label={t('fields.facilityType')} value={facilityTypeId} error={errors.facilityTypeId}
-                onChange={v => { setFacilityTypeId(v ? Number(v) : ''); clearError('facilityTypeId'); }}
-                placeholder={t('placeholders.selectFacilityType')} disabled={!designationId}
-                options={meta.facilityTypes.map(f => ({ value: f.id, label: f.name }))} />
+              {(isOtherDept || isOtherDesignation) && (
+                <Field label={t('fields.specifyDesignation')} htmlFor="desig-other" error={errors.designationOther}>
+                  <Input id="desig-other" type="text" placeholder={t('fields.enterDesignation')} error={!!errors.designationOther}
+                    value={designationOther} onChange={e => { setDesignationOther(e.target.value); clearError('designationOther'); }} required />
+                </Field>
+              )}
+
+              {!isOtherDept && (
+                <SelectField label={t('fields.facilityType')} value={facilityTypeId} error={errors.facilityTypeId}
+                  onChange={onFacilityType}
+                  placeholder={t('placeholders.selectFacilityType')} disabled={!designationId}
+                  options={meta.facilityTypes.map(f => ({ value: f.id, label: f.name }))} />
+              )}
+
+              {(isOtherDept || isOtherFacilityType) && (
+                <Field label={t('fields.specifyFacilityType')} htmlFor="ft-other" error={errors.facilityTypeOther}>
+                  <Input id="ft-other" type="text" placeholder={t('fields.enterFacilityType')} error={!!errors.facilityTypeOther}
+                    value={facilityTypeOther} onChange={e => { setFacilityTypeOther(e.target.value); clearError('facilityTypeOther'); }} required />
+                </Field>
+              )}
 
               <SelectField label={t('fields.state')} value={stateId} onChange={onState} error={errors.stateId}
                 placeholder={t('placeholders.selectState')} options={meta.states.map(s => ({ value: s.id, label: s.name }))} />
@@ -297,13 +348,13 @@ const RegistrationPage: React.FC = () => {
                 placeholder={t('fields.villagePlaceholder')} disabled={!blockId}
                 options={meta.villages.map(v => ({ value: v.id, label: v.name }))} />
 
-              <SelectField label={t('fields.facilityName')} value={facilityId} error={errors.facilityId}
-                onChange={v => { setFacilityId(v ? Number(v) : ''); clearError('facilityId'); }}
-                placeholder={t('placeholders.selectFacility')} disabled={!blockId}
+              <ComboBox label={t('fields.facilityName')} value={facilityName} error={errors.facilityName}
+                onValueChange={onFacilityTyped} onPick={onFacilityPick}
+                placeholder={t('fields.facilityPlaceholder')} disabled={!blockId}
                 options={meta.facilities.map(f => ({ value: f.id, label: `${f.name} (${f.facility_type})` }))} />
 
               <Field label={t('fields.residenceDistance')} htmlFor="residence-distance" error={errors.residenceDistance}>
-                <Input id="residence-distance" type="number" min={0} max={100} step={0.1} placeholder={t('fields.residenceDistancePlaceholder')}
+                <Input id="residence-distance" type="number" min={0.1} max={100} step={0.1} placeholder={t('fields.residenceDistancePlaceholder')}
                   value={residenceDistance} error={!!errors.residenceDistance}
                   onChange={e => { setResidenceDistance(e.target.value ? Number(e.target.value) : ''); clearError('residenceDistance'); }} />
               </Field>

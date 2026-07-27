@@ -25,6 +25,8 @@ interface TrackedVideoPlayerProps {
   endSeconds?: number | null;
   onBeat: (beat: PlayerBeat) => void;
   onEnded: () => void;
+  /** Pause playback while true (e.g. quiz modal open); resumes only if we paused it. */
+  suspended?: boolean;
 }
 
 declare global {
@@ -74,10 +76,12 @@ const TrackedVideoPlayer: React.FC<TrackedVideoPlayerProps> = ({
   endSeconds,
   onBeat,
   onEnded,
+  suspended = false,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const ytContainerRef = useRef<HTMLDivElement>(null);
   const ytPlayerRef = useRef<any>(null);
+  const wasPlayingRef = useRef(false);
 
   // Tracking accumulators (refs — no re-renders on ticks)
   const accumulatedRef = useRef(0);
@@ -193,6 +197,32 @@ const TrackedVideoPlayer: React.FC<TrackedVideoPlayerProps> = ({
       flush();
     };
   }, [youtubeId, videoUrl, flush, tick]);
+
+  // ── Suspend / resume (e.g. while a quiz modal is open) ────
+  // Only resumes if *we* paused it, so a quiz triggered by video-end
+  // does not restart playback on close. Pausing fires the existing
+  // pause handlers, which flush the accumulated watch time.
+  useEffect(() => {
+    if (suspended) {
+      const yt = ytPlayerRef.current;
+      if (yt && typeof yt.getPlayerState === 'function') {
+        if (yt.getPlayerState() === window.YT?.PlayerState?.PLAYING) {
+          wasPlayingRef.current = true;
+          yt.pauseVideo();
+        }
+      }
+      const video = videoRef.current;
+      if (video && !video.paused && !video.ended) {
+        wasPlayingRef.current = true;
+        video.pause();
+      }
+    } else if (wasPlayingRef.current) {
+      wasPlayingRef.current = false;
+      const yt = ytPlayerRef.current;
+      if (yt && typeof yt.playVideo === 'function') yt.playVideo();
+      videoRef.current?.play().catch(() => {});
+    }
+  }, [suspended]);
 
   if (youtubeId) {
     return (

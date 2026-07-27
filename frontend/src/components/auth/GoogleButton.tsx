@@ -60,6 +60,12 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({ onSuccessRedirect = '/dashb
       }
     }
 
+    // Mock Google login is a dev-only convenience — never simulate sign-in in production builds
+    if (!import.meta.env.DEV) {
+      showToast(t('google.toast.notConfigured'), 'warning');
+      return;
+    }
+
     // Fallback Mock Google Login flow if VITE_GOOGLE_CLIENT_ID is not configured
     const toastId = showToast(t('google.toast.simulating'), 'loading');
 
