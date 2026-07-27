@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -8,91 +9,138 @@ interface GoogleButtonProps {
   onSuccessRedirect?: string;
 }
 
+/** How long to wait for the async GIS script (index.html) before giving up. */
+const GIS_LOAD_TIMEOUT_MS = 10_000;
+
+/**
+ * Google sign-in.
+ *
+ * When VITE_GOOGLE_CLIENT_ID is set we render Google's OWN button via
+ * `renderButton`, which opens the account-chooser popup. We deliberately do
+ * not rely on One Tap (`prompt()`): it silently declines to display whenever
+ * the browser has no Google session, third-party cookies are blocked, FedCM
+ * errors, or the user has dismissed it a few times (Google then applies an
+ * exponential cooldown lasting hours). In all those cases One Tap calls back
+ * with a "not displayed" notification and the user sees nothing happen at all
+ * — which is exactly how Google sign-in appeared broken in production.
+ *
+ * Without a client ID: dev builds keep the mock login; production says so
+ * plainly rather than simulating a sign-in.
+ */
 const GoogleButton: React.FC<GoogleButtonProps> = ({ onSuccessRedirect = '/dashboard' }) => {
   const { t } = useTranslation('auth');
   const { googleLogin } = useAuth();
-  const { showToast, updateToast, dismissToast } = useToast();
+  const { darkMode } = useTheme();
+  const { showToast, updateToast } = useToast();
   const navigate = useNavigate();
 
-  const handleGoogleClick = async () => {
-    // Check if Client ID is configured
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    
-    if (clientId) {
-      // In a real browser environment, we'd trigger the Google Identity Services flow.
-      // Below is the integration hook.
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+  const containerRef = useRef<HTMLDivElement>(null);
+  /** GIS script never loaded / threw — fall back to the plain button. */
+  const [gisFailed, setGisFailed] = useState(false);
+
+  /** Exchange the Google ID token for a session. */
+  const handleCredential = useCallback(
+    async (credential: string) => {
       const toastId = showToast(t('google.toast.initiating'), 'loading');
       try {
-        // @ts-ignore
-        const google = window.google;
-        if (google && google.accounts && google.accounts.id) {
+        const res = await googleLogin(credential);
+        updateToast(toastId, t('google.toast.success'), 'success');
+        navigate(res.is_profile_complete ? onSuccessRedirect : '/register');
+      } catch (e: any) {
+        updateToast(toastId, e.response?.data?.detail || t('google.toast.failed'), 'error');
+      }
+    },
+    [googleLogin, navigate, onSuccessRedirect, showToast, updateToast, t],
+  );
+
+  // Read through a ref so re-initialising GIS isn't tied to callback identity.
+  const credentialRef = useRef(handleCredential);
+  credentialRef.current = handleCredential;
+
+  useEffect(() => {
+    if (!clientId) return;
+    let cancelled = false;
+    const startedAt = Date.now();
+
+    const init = () => {
+      if (cancelled) return;
+      // @ts-ignore — GIS is loaded by a script tag in index.html
+      const google = window.google;
+      const container = containerRef.current;
+
+      if (google?.accounts?.id && container) {
+        try {
           google.accounts.id.initialize({
             client_id: clientId,
-            callback: async (response: any) => {
-              try {
-                const res = await googleLogin(response.credential);
-                updateToast(toastId, t('google.toast.success'), 'success');
-                if (res.is_profile_complete) {
-                  navigate(onSuccessRedirect);
-                } else {
-                  navigate('/register');
-                }
-              } catch (e: any) {
-                updateToast(toastId, e.response?.data?.detail || t('google.toast.failed'), 'error');
-              }
-            }
+            callback: (response: { credential?: string }) => {
+              if (response?.credential) void credentialRef.current(response.credential);
+            },
           });
-          // Dismiss the loading toast if the user closes/skips the Google prompt
-          // (otherwise it would hang, since the success/error only fires via the callback).
-          google.accounts.id.prompt((notification: any) => {
-            if (
-              notification?.isNotDisplayed?.() ||
-              notification?.isSkippedMoment?.() ||
-              notification?.isDismissedMoment?.()
-            ) {
-              dismissToast(toastId);
-            }
+          container.innerHTML = ''; // re-render cleanly on theme change
+          google.accounts.id.renderButton(container, {
+            type: 'standard',
+            theme: darkMode ? 'filled_black' : 'outline',
+            size: 'large',
+            text: 'continue_with',
+            shape: 'pill',
+            logo_alignment: 'center',
+            // Google caps the rendered button at 400px.
+            width: Math.min(Math.max(container.clientWidth || 320, 200), 400),
           });
-          return;
+        } catch (err) {
+          console.error('Google Identity Services failed to initialise:', err);
+          setGisFailed(true);
         }
-      } catch (err) {
-        console.error('GIS initialization failed:', err);
+        return;
       }
-    }
 
-    // Mock Google login is a dev-only convenience — never simulate sign-in in production builds
-    if (!import.meta.env.DEV) {
+      if (Date.now() - startedAt > GIS_LOAD_TIMEOUT_MS) {
+        setGisFailed(true); // script blocked (offline, ad-blocker, firewall)
+        return;
+      }
+      setTimeout(init, 150);
+    };
+
+    init();
+    return () => {
+      cancelled = true;
+    };
+  }, [clientId, darkMode]);
+
+  /** No client ID (or GIS unavailable): dev mock, else an honest message.
+   *  The mock is ONLY for local dev with no client ID configured — never when
+   *  a real client ID exists (GIS just failed to load) and never in prod. */
+  const handleFallbackClick = async () => {
+    if (clientId || !import.meta.env.DEV) {
       showToast(t('google.toast.notConfigured'), 'warning');
       return;
     }
 
-    // Fallback Mock Google Login flow if VITE_GOOGLE_CLIENT_ID is not configured
     const toastId = showToast(t('google.toast.simulating'), 'loading');
-
-    const testEmail = "ayushman2412@gmail.com";
-    const formattedEmail = "ayushman2412";
-    const mockToken = `mock_google_token_${formattedEmail}`;
+    const testEmail = 'ayushman2412@gmail.com';
+    const mockToken = 'mock_google_token_ayushman2412';
 
     setTimeout(async () => {
       try {
         const response = await googleLogin(mockToken);
         updateToast(toastId, t('google.toast.signedInAs', { email: testEmail }), 'success');
-
-        if (response.is_profile_complete) {
-          navigate(onSuccessRedirect);
-        } else {
-          navigate('/register');
-        }
+        navigate(response.is_profile_complete ? onSuccessRedirect : '/register');
       } catch (err: any) {
         updateToast(toastId, err.response?.data?.detail || t('google.toast.simFailed'), 'error');
       }
     }, 1000);
   };
 
+  // Configured and healthy → Google's own button (reliable popup flow).
+  if (clientId && !gisFailed) {
+    return <div ref={containerRef} className="flex w-full justify-center" />;
+  }
+
   return (
     <button
       type="button"
-      onClick={handleGoogleClick}
+      onClick={handleFallbackClick}
       className="inline-flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-lg
                  border border-border-strong/60 bg-surface px-6 py-3 font-display text-base
                  font-semibold text-ink transition-all duration-150 hover:border-border-strong
