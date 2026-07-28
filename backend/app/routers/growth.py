@@ -268,17 +268,33 @@ def _activity_block(expected: Optional[int], actual: int) -> Dict[str, Any]:
     }
 
 
+def _visit_z(indicator: str, sex: Optional[str], visit: Optional[Dict[str, Any]]) -> Optional[float]:
+    """One visit's z for an indicator.
+
+    wfa: weight at age; lfa: length at age; wfl: weight at LENGTH (the WHO
+    weight-for-height table is indexed by length-cm, not age).
+    """
+    if not visit or not sex:
+        return None
+    if indicator == "wfa":
+        x, value = visit["age_days"], visit["weight"]
+    elif indicator == "lfa":
+        x, value = visit["age_days"], visit["length"]
+    else:  # wfl
+        x, value = visit["length"], visit["weight"]
+    if x is None:
+        return None
+    return zscore_for_value(indicator, sex, x, value)
+
+
 def _z_triplet(child_id: int, sex: Optional[str], visits: List[Dict[str, Any]],
                indicator: str) -> tuple:
-    """WFAz/HFAz at Baseline / Assessment / Last visit. Returns (dict, any_mock)."""
+    """WFAz/HFAz/WFHz at Baseline / Assessment / Last visit. Returns (dict, any_mock)."""
     bv, av, lv = _pick_bal(visits)
     out: Dict[str, Optional[float]] = {}
     any_mock = False
     for label, visit in (("bv", bv), ("av", av), ("lv", lv)):
-        z = None
-        if visit and sex:
-            value = visit["weight"] if indicator == "wfa" else visit["length"]
-            z = zscore_for_value(indicator, sex, visit["age_days"], value)
+        z = _visit_z(indicator, sex, visit)
         if z is None and gsm.MOCK_ENABLED:
             z = gsm.fallback_z(child_id, indicator + label)  # MOCK: z fallback
             any_mock = True
@@ -329,8 +345,10 @@ def _summary_rows(cases: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         # Outcomes — REAL z-scores computed from measurements (mock-filled if none).
         w_visits = [v for v in visits if v["weight"] and v["age_days"] is not None]
         l_visits = [v for v in visits if v["length"] and v["age_days"] is not None]
+        wl_visits = [v for v in visits if v["weight"] and v["length"]]
         wfaz, w_mock = _z_triplet(child_id, sex, w_visits, "wfa")
         hfaz, h_mock = _z_triplet(child_id, sex, l_visits, "lfa")
+        wfhz, wh_mock = _z_triplet(child_id, sex, wl_visits, "wfl")
 
         rows.append({
             "case_id": child_id,
@@ -347,7 +365,7 @@ def _summary_rows(cases: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 "adoption_duration_days": duration_days,
             },
             "activities": {"total": total, "cg": cg, "bf": bf, "cf": cf},
-            "outcomes": {"wfaz": wfaz, "hfaz": hfaz},
+            "outcomes": {"wfaz": wfaz, "hfaz": hfaz, "wfhz": wfhz},
             "meta": {
                 "sex": sex,
                 "district": learner.get("district"),
@@ -355,7 +373,7 @@ def _summary_rows(cases: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 "expected_is_mock": bool(gsm.MOCK_ENABLED),
                 "adoption_type_is_mock": bool(timing_is_mock),
                 "timing_is_mock": bool(timing_is_mock),
-                "z_is_mock": bool(w_mock or h_mock),
+                "z_is_mock": bool(w_mock or h_mock or wh_mock),
             },
         })
     return rows
@@ -420,15 +438,21 @@ def _xlsx_columns() -> List[_ColSpec]:
         ("Case details", "Adopt age (mo)", lambda r: _months(r["case_details"]["age_of_adoption_days"])),
         ("Case details", "Duration (mo)", lambda r: _months(r["case_details"]["adoption_duration_days"])),
         *activity("Total activities", "total"),
+        # Outcomes sit between Total and the per-form groups (client request);
+        # headers put the visit code before the z (W·BVz), and weight-for-height
+        # (WH) completes the WHO triad.
+        ("Outcomes (z)", "W·BVz", lambda r: r["outcomes"]["wfaz"]["bv"]),
+        ("Outcomes (z)", "W·AVz", lambda r: r["outcomes"]["wfaz"]["av"]),
+        ("Outcomes (z)", "W·LVz", lambda r: r["outcomes"]["wfaz"]["lv"]),
+        ("Outcomes (z)", "H·BVz", lambda r: r["outcomes"]["hfaz"]["bv"]),
+        ("Outcomes (z)", "H·AVz", lambda r: r["outcomes"]["hfaz"]["av"]),
+        ("Outcomes (z)", "H·LVz", lambda r: r["outcomes"]["hfaz"]["lv"]),
+        ("Outcomes (z)", "WH·BVz", lambda r: r["outcomes"]["wfhz"]["bv"]),
+        ("Outcomes (z)", "WH·AVz", lambda r: r["outcomes"]["wfhz"]["av"]),
+        ("Outcomes (z)", "WH·LVz", lambda r: r["outcomes"]["wfhz"]["lv"]),
         *activity("CG (Check Growth)", "cg"),
         *activity("BF (Breastfeeding)", "bf"),
         *activity("CF (Compl. Feeding)", "cf"),
-        ("Outcomes (z)", "WFAz BV", lambda r: r["outcomes"]["wfaz"]["bv"]),
-        ("Outcomes (z)", "WFAz AV", lambda r: r["outcomes"]["wfaz"]["av"]),
-        ("Outcomes (z)", "WFAz LV", lambda r: r["outcomes"]["wfaz"]["lv"]),
-        ("Outcomes (z)", "HFAz BV", lambda r: r["outcomes"]["hfaz"]["bv"]),
-        ("Outcomes (z)", "HFAz AV", lambda r: r["outcomes"]["hfaz"]["av"]),
-        ("Outcomes (z)", "HFAz LV", lambda r: r["outcomes"]["hfaz"]["lv"]),
     ]
 
 
@@ -595,6 +619,7 @@ def admin_growth_case_detail(
         by_date[response.assessment_date].append(response)
 
     dob = child.dob
+    sex = _sex_key(child.gender)
     visits: List[Dict[str, Any]] = []
     for visit_date in sorted(k for k in by_date if k is not None):
         responses = by_date[visit_date]
@@ -610,6 +635,31 @@ def admin_growth_case_detail(
             "length": length,
             "responses": [_serialize_detail(r, child, mother) for r in responses],
         })
+
+    # Per-visit z (this visit's own measurements) and cumulative BV/AV/LV
+    # triplets over the visits up to and including each one. REAL values only —
+    # the drill-down never mock-fills; missing measurements stay null.
+    for i, visit in enumerate(visits):
+        visit["z"] = {
+            "wfaz": _visit_z("wfa", sex, visit if visit["weight"] and visit["age_days"] is not None else None),
+            "hfaz": _visit_z("lfa", sex, visit if visit["length"] and visit["age_days"] is not None else None),
+            "wfhz": _visit_z("wfl", sex, visit if visit["weight"] and visit["length"] else None),
+        }
+        upto = visits[: i + 1]
+        to_date: Dict[str, Any] = {}
+        for out_key, indicator, keep in (
+            ("wfaz", "wfa", lambda v: v["weight"] and v["age_days"] is not None),
+            ("hfaz", "lfa", lambda v: v["length"] and v["age_days"] is not None),
+            ("wfhz", "wfl", lambda v: v["weight"] and v["length"]),
+        ):
+            measured = [v for v in upto if keep(v)]
+            bv, av, lv = _pick_bal(measured)
+            to_date[out_key] = {
+                "bv": _visit_z(indicator, sex, bv),
+                "av": _visit_z(indicator, sex, av),
+                "lv": _visit_z(indicator, sex, lv),
+            }
+        visit["z_to_date"] = to_date
 
     mother_forms: List[Dict[str, Any]] = []
     if mother:

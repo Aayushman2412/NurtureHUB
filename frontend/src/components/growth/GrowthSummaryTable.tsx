@@ -204,7 +204,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
     ],
   });
 
-  const zCol = (metric: 'wfaz' | 'hfaz', visit: keyof ZTriplet, code: string): ColDef => ({
+  const zCol = (metric: 'wfaz' | 'hfaz' | 'wfhz', visit: keyof ZTriplet, code: string): ColDef => ({
     key: `${metric}-${visit}`,
     code,
     title: t(`summary.${metric}`) + ' · ' + t(`summary.${visit}`),
@@ -241,28 +241,14 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
             ),
           },
           {
-            key: 'role',
-            code: t('summary.role'),
-            title: t('summary.role'),
-            base: 132,
-            align: 'left',
-            render: r => <span className="text-ink-muted">{r.identity.role_group ?? '—'}</span>,
-          },
-          {
             key: 'mother',
             code: t('summary.mother'),
             title: t('summary.mother'),
             base: 140,
             align: 'left',
-            render: r => <span title={r.identity.mother_name}>{r.identity.mother_name}</span>,
-          },
-          {
-            key: 'child',
-            code: t('summary.childId'),
-            title: t('summary.childId'),
-            base: 108,
-            align: 'left',
-            render: r => <span className="tabular-nums text-ink-muted">{r.identity.child_uid}</span>,
+            // Child uid rides along as the hover tooltip so twin cases under the
+            // same mother stay distinguishable without a dedicated column.
+            render: r => <span title={`${r.identity.mother_name} · ${r.identity.child_uid}`}>{r.identity.mother_name}</span>,
           },
         ],
       },
@@ -311,23 +297,26 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
         ],
       },
       activityGroup('total', t('summary.groups.total'), t('summary.groups.totalFull'), 'total'),
-      activityGroup('cg', 'CG', t('summary.groups.cg'), 'cg'),
-      activityGroup('bf', 'BF', t('summary.groups.bf'), 'bf'),
-      activityGroup('cf', 'CF', t('summary.groups.cf'), 'cf'),
       {
         id: 'outcomes',
         label: t('summary.groups.outcomes'),
         title: t('summary.groups.outcomesFull'),
         tone: 'outcome',
         cols: [
-          zCol('wfaz', 'bv', 'Wz·BV'),
-          zCol('wfaz', 'av', 'Wz·AV'),
-          zCol('wfaz', 'lv', 'Wz·LV'),
-          zCol('hfaz', 'bv', 'Hz·BV'),
-          zCol('hfaz', 'av', 'Hz·AV'),
-          zCol('hfaz', 'lv', 'Hz·LV'),
+          zCol('wfaz', 'bv', 'W·BVz'),
+          zCol('wfaz', 'av', 'W·AVz'),
+          zCol('wfaz', 'lv', 'W·LVz'),
+          zCol('hfaz', 'bv', 'H·BVz'),
+          zCol('hfaz', 'av', 'H·AVz'),
+          zCol('hfaz', 'lv', 'H·LVz'),
+          zCol('wfhz', 'bv', 'WH·BVz'),
+          zCol('wfhz', 'av', 'WH·AVz'),
+          zCol('wfhz', 'lv', 'WH·LVz'),
         ],
       },
+      activityGroup('cg', 'CG', t('summary.groups.cg'), 'cg'),
+      activityGroup('bf', 'BF', t('summary.groups.bf'), 'bf'),
+      activityGroup('cf', 'CF', t('summary.groups.cf'), 'cf'),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [t],
@@ -419,7 +408,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
 
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-ink-muted">{t('summary.columns')}:</span>
-            {(['case', 'total', 'cg', 'bf', 'cf', 'outcomes'] as GroupId[]).map(id => (
+            {(['case', 'total', 'outcomes', 'cg', 'bf', 'cf'] as GroupId[]).map(id => (
               <button
                 key={id}
                 type="button"

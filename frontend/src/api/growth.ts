@@ -78,7 +78,7 @@ export interface GrowthSummaryRow {
     adoption_duration_days: number | null;
   };
   activities: { total: ActivityBlock; cg: ActivityBlock; bf: ActivityBlock; cf: ActivityBlock };
-  outcomes: { wfaz: ZTriplet; hfaz: ZTriplet };
+  outcomes: { wfaz: ZTriplet; hfaz: ZTriplet; wfhz: ZTriplet };
   meta: {
     sex: string | null;
     district: string | null;
@@ -158,11 +158,22 @@ export const getAdminGrowthResponse = (responseId: number): Promise<FormResponse
 
 // ── Case drill-down (all forms across all visits) ─────────────────────────────
 
+/** This visit's own z-scores (real measurements only, never mock-filled). */
+export interface VisitZ {
+  wfaz: number | null;
+  hfaz: number | null;
+  wfhz: number | null;
+}
+
 export interface GrowthVisitDetail {
   date: string;
   age_days: number | null;
   weight: number | null;
   length: number | null;
+  /** z of the measurements taken AT this visit. */
+  z: VisitZ;
+  /** BV/AV/LV triplets computed over the visits up to and including this one. */
+  z_to_date: { wfaz: ZTriplet; hfaz: ZTriplet; wfhz: ZTriplet };
   responses: FormResponseDetail[];
 }
 

@@ -100,7 +100,8 @@
       "cf": "Complementary Feeding Assessment",
       "outcomes": "Outcomes (z)",
       "outcomesFull": "WFAz / HFAz at Baseline / Assessment / Last visit"
-    }
+    },
+    "wfhz": "Weight-for-height z (WFHz)"
   },
   "caseDetail": {
     "metrics": "Activity & outcome summary",
@@ -113,7 +114,17 @@
     "collapseAll": "Collapse all",
     "noVisits": "No submitted visits for this case yet.",
     "noAnswers": "No answers recorded.",
-    "formCount": "{{count}} forms"
+    "formCount": "{{count}} forms",
+    "title": "Case detail",
+    "learnerDetails": "Learner details",
+    "motherDetails": "Mother details",
+    "childDetails": "Child details",
+    "childName": "Name",
+    "mobile": "Mobile",
+    "motherAge": "Age",
+    "zTrends": "z-score trends",
+    "noPlotData": "No measurements yet",
+    "completion": "{{pct}}% done"
   },
   "tooltip": {
     "age": "Age",

@@ -100,7 +100,8 @@
       "cf": "पूरक आहार जाँच",
       "outcomes": "परिणाम (z)",
       "outcomesFull": "आधार / मूल्यांकन / अंतिम भेंट पर WFAz / HFAz"
-    }
+    },
+    "wfhz": "लंबाई अनुसार वज़न z (WFHz)"
   },
   "caseDetail": {
     "metrics": "गतिविधि व परिणाम सारांश",
@@ -113,7 +114,17 @@
     "collapseAll": "सभी बंद करें",
     "noVisits": "इस केस की अभी कोई दर्ज भेंट नहीं है।",
     "noAnswers": "कोई उत्तर दर्ज नहीं।",
-    "formCount": "{{count}} फ़ॉर्म"
+    "formCount": "{{count}} फ़ॉर्म",
+    "title": "केस विवरण",
+    "learnerDetails": "कार्यकर्ता की जानकारी",
+    "motherDetails": "माता की जानकारी",
+    "childDetails": "बच्चे की जानकारी",
+    "childName": "नाम",
+    "mobile": "मोबाइल",
+    "motherAge": "आयु",
+    "zTrends": "z-स्कोर की चाल",
+    "noPlotData": "अभी कोई माप नहीं",
+    "completion": "{{pct}}% पूरा"
   },
   "tooltip": {
     "age": "आयु",
