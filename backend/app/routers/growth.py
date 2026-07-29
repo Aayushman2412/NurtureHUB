@@ -18,6 +18,7 @@ Admin endpoints live under /api/admin/* because the frontend axios client
 attaches the admin JWT only to that prefix.
 """
 
+import colorsys
 from collections import defaultdict
 from datetime import date
 from io import BytesIO
@@ -411,45 +412,84 @@ def _summary_filter_options(db: Session) -> Dict[str, Any]:
     }
 
 
-# (group label, sub label, value getter) — mirrors the on-screen summary table.
-_ColSpec = Tuple[str, str, Callable[[Dict[str, Any]], Any]]
+# (group label, sub label, value getter, cell-fill getter) — mirrors the
+# on-screen summary table, including its spectrum cell colours.
+_ColSpec = Tuple[str, str, Callable[[Dict[str, Any]], Any], Optional[Callable[[Dict[str, Any]], Optional[str]]]]
 
 
 def _months(days: Optional[int]) -> Optional[int]:
     return round(days / 30.44) if days is not None else None
 
 
+# ── Excel-style spectrum fills (mirror frontend/src/lib/growthDisplay.ts) ────
+
+def _spectrum_hex(t: float, alpha: float = 0.32) -> str:
+    """Hue 0 (red) → 120 (green) at hsl(h, 78%, 44%), blended over white by the
+    same alpha the UI uses — the resulting solid tint matches the on-screen cell."""
+    t = max(0.0, min(1.0, t))
+    r, g, b = colorsys.hls_to_rgb(t * 120 / 360, 0.44, 0.78)
+    return "".join(f"{round((alpha * c + (1 - alpha)) * 255):02X}" for c in (r, g, b))
+
+
+def _z_fill(z: Optional[float]) -> Optional[str]:
+    """Deep red at ≤ −3, red around −2, through amber, green at 0 and above."""
+    if z is None:
+        return None
+    return _spectrum_hex((z + 3) / 3, 0.5 if z <= -3 else 0.32)
+
+
+def _pct_fill(pct: Optional[float], invert: bool = False) -> Optional[str]:
+    """AC: 0 % of expected = red → 100 %+ = green. IC (invert): 0 % = green."""
+    if pct is None:
+        return None
+    return _spectrum_hex(((100 - pct) if invert else pct) / 100)
+
+
 def _xlsx_columns() -> List[_ColSpec]:
     def activity(group: str, key: str) -> List[_ColSpec]:
+        def ac_fill(r: Dict[str, Any], k: str = key) -> Optional[str]:
+            return _pct_fill(r["activities"][k]["actual_pct"])
+
+        def ic_fill(r: Dict[str, Any], k: str = key) -> Optional[str]:
+            return _pct_fill(r["activities"][k]["incomplete_pct"], invert=True)
+
         return [
-            (group, "EC", lambda r, k=key: r["activities"][k]["expected"]),
-            (group, "AC", lambda r, k=key: r["activities"][k]["actual"]),
-            (group, "AC %", lambda r, k=key: r["activities"][k]["actual_pct"]),
-            (group, "IC", lambda r, k=key: r["activities"][k]["incomplete"]),
-            (group, "IC %", lambda r, k=key: r["activities"][k]["incomplete_pct"]),
+            (group, "EC", lambda r, k=key: r["activities"][k]["expected"], None),
+            (group, "AC", lambda r, k=key: r["activities"][k]["actual"], ac_fill),
+            (group, "AC %", lambda r, k=key: r["activities"][k]["actual_pct"], ac_fill),
+            (group, "IC", lambda r, k=key: r["activities"][k]["incomplete"], ic_fill),
+            (group, "IC %", lambda r, k=key: r["activities"][k]["incomplete_pct"], ic_fill),
         ]
 
+    def zcol(sub: str, metric: str, visit: str) -> _ColSpec:
+        return (
+            "Outcomes (z)",
+            sub,
+            lambda r, m=metric, v=visit: r["outcomes"][m][v],
+            lambda r, m=metric, v=visit: _z_fill(r["outcomes"][m][v]),
+        )
+
     return [
-        ("Identity", "Learner", lambda r: r["identity"]["learner_name"]),
-        ("Identity", "Role", lambda r: r["identity"]["role_group"]),
-        ("Identity", "Mother", lambda r: r["identity"]["mother_name"]),
-        ("Identity", "Child ID", lambda r: r["identity"]["child_uid"]),
-        ("Case details", "Adoption type", lambda r: r["case_details"]["adoption_type"]),
-        ("Case details", "Adopt age (mo)", lambda r: _months(r["case_details"]["age_of_adoption_days"])),
-        ("Case details", "Duration (mo)", lambda r: _months(r["case_details"]["adoption_duration_days"])),
+        ("Identity", "Learner", lambda r: r["identity"]["learner_name"], None),
+        ("Identity", "Role", lambda r: r["identity"]["role_group"], None),
+        ("Identity", "Mother", lambda r: r["identity"]["mother_name"], None),
+        ("Identity", "Child ID", lambda r: r["identity"]["child_uid"], None),
+        ("Case details", "Adoption type", lambda r: r["case_details"]["adoption_type"], None),
+        ("Case details", "Adopt age (mo)", lambda r: _months(r["case_details"]["age_of_adoption_days"]), None),
+        ("Case details", "Duration (mo)", lambda r: _months(r["case_details"]["adoption_duration_days"]), None),
         *activity("Total activities", "total"),
         # Outcomes sit between Total and the per-form groups (client request);
         # headers put the visit code before the z (W·BVz), and weight-for-height
         # (WH) completes the WHO triad.
-        ("Outcomes (z)", "W·BVz", lambda r: r["outcomes"]["wfaz"]["bv"]),
-        ("Outcomes (z)", "W·AVz", lambda r: r["outcomes"]["wfaz"]["av"]),
-        ("Outcomes (z)", "W·LVz", lambda r: r["outcomes"]["wfaz"]["lv"]),
-        ("Outcomes (z)", "H·BVz", lambda r: r["outcomes"]["hfaz"]["bv"]),
-        ("Outcomes (z)", "H·AVz", lambda r: r["outcomes"]["hfaz"]["av"]),
-        ("Outcomes (z)", "H·LVz", lambda r: r["outcomes"]["hfaz"]["lv"]),
-        ("Outcomes (z)", "WH·BVz", lambda r: r["outcomes"]["wfhz"]["bv"]),
-        ("Outcomes (z)", "WH·AVz", lambda r: r["outcomes"]["wfhz"]["av"]),
-        ("Outcomes (z)", "WH·LVz", lambda r: r["outcomes"]["wfhz"]["lv"]),
+        zcol("W·BVz", "wfaz", "bv"),
+        zcol("W·AVz", "wfaz", "av"),
+        zcol("W·LVz", "wfaz", "lv"),
+        zcol("H·BVz", "hfaz", "bv"),
+        zcol("H·AVz", "hfaz", "av"),
+        zcol("H·LVz", "hfaz", "lv"),
+        zcol("WH·BVz", "wfhz", "bv"),
+        zcol("WH·AVz", "wfhz", "av"),
+        zcol("WH·LVz", "wfhz", "lv"),
         *activity("CG (Check Growth)", "cg"),
         *activity("BF (Breastfeeding)", "bf"),
         *activity("CF (Compl. Feeding)", "cf"),
@@ -474,7 +514,7 @@ def _summary_xlsx(rows: List[Dict[str, Any]]) -> BytesIO:
     center = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
     # Row 2: per-column sub-headers.
-    for ci, (_group, sub, _getter) in enumerate(cols, start=1):
+    for ci, (_group, sub, _getter, _fill) in enumerate(cols, start=1):
         cell = ws.cell(row=2, column=ci, value=sub)
         cell.font = bold
         cell.fill = sub_fill
@@ -495,12 +535,15 @@ def _summary_xlsx(rows: List[Dict[str, Any]]) -> BytesIO:
             ws.merge_cells(start_row=1, start_column=ci, end_row=1, end_column=ci + span - 1)
         ci += span
 
-    # Data rows.
+    # Data rows — value cells carry the same spectrum fills as the UI table.
     for ri, row in enumerate(rows, start=3):
-        for ci, (_group, _sub, getter) in enumerate(cols, start=1):
-            ws.cell(row=ri, column=ci, value=getter(row))
+        for ci, (_group, _sub, getter, fill) in enumerate(cols, start=1):
+            cell = ws.cell(row=ri, column=ci, value=getter(row))
+            color = fill(row) if fill else None
+            if color:
+                cell.fill = PatternFill("solid", fgColor=color)
 
-    for ci, (_group, sub, _getter) in enumerate(cols, start=1):
+    for ci, (_group, sub, _getter, _fill) in enumerate(cols, start=1):
         ws.column_dimensions[get_column_letter(ci)].width = max(9, min(22, len(sub) + 3))
     ws.freeze_panes = "E3"  # freeze the 4 Identity columns + the two header rows
     ws.auto_filter.ref = f"A2:{get_column_letter(len(cols))}{len(rows) + 2}"
