@@ -36,7 +36,12 @@ const Modal: React.FC<ModalProps> = ({ open, onClose, title, size = 'md', footer
   return (
     <dialog
       ref={ref}
-      onCancel={onClose}
+      onCancel={e => {
+        // React propagates the synthetic cancel up the component tree, so a
+        // nested modal's ESC would also close its parent — contain it here.
+        e.stopPropagation();
+        onClose();
+      }}
       onClick={e => {
         // click on the backdrop (the dialog element itself) closes
         if (e.target === ref.current) onClose();

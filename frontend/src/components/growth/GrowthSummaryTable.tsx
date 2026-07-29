@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { SlidersHorizontal, RotateCcw, Info, Download } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import type { ActivityBlock, GrowthSummaryRow, ZTriplet } from '../../api/growth';
+import { adoptionCategory, monthsDays, pctCellFill, zCellFill } from '../../lib/growthDisplay';
 
 /** Toggleable column groups (Identity is always shown). */
 type GroupId = 'case' | 'total' | 'cg' | 'bf' | 'cf' | 'outcomes';
@@ -11,11 +12,15 @@ interface ColDef {
   key: string;
   /** Short header code (EC/AC/IC, BV…). */
   code: string;
+  /** Second sub-header line under the code (e.g. "n|%"). */
+  sub?: string;
   /** Full-name tooltip. */
   title: string;
   /** Base width in px (scaled by the width slider). */
   base: number;
   align?: 'left' | 'right' | 'center';
+  /** Excel-style whole-cell spectrum fill. */
+  fill?: (row: GrowthSummaryRow) => string | undefined;
   render: (row: GrowthSummaryRow) => React.ReactNode;
 }
 
@@ -32,17 +37,6 @@ const PREFS_KEY = 'nh.growth.summary.prefs.v1';
 // ── small formatters ─────────────────────────────────────────────────────────
 
 const fmtZ = (z: number | null) => (z == null ? '—' : `${z > 0 ? '+' : ''}${z.toFixed(1)}`);
-
-const zClass = (z: number | null) =>
-  z == null
-    ? 'text-ink-faint'
-    : z <= -3
-      ? 'text-coral-700 font-semibold'
-      : z <= -2
-        ? 'text-amber-600'
-        : z >= 3
-          ? 'text-coral-600'
-          : 'text-ink';
 
 // ── cell renderers ───────────────────────────────────────────────────────────
 
@@ -73,33 +67,13 @@ const ExpectedCell: React.FC<{ block: ActivityBlock; mock: boolean; demoLabel: s
     </Mockable>
   );
 
-/** "count (pct%)" — the % tinted by how good/bad it is. */
-const CountPctCell: React.FC<{ count: number | null; pct: number | null; kind: 'ac' | 'ic' }> = ({
-  count,
-  pct,
-  kind,
-}) => {
-  const pctClass =
-    pct == null
-      ? ''
-      : kind === 'ac'
-        ? pct >= 100
-          ? 'text-success-600'
-          : pct < 50
-            ? 'text-coral-600'
-            : 'text-ink-muted'
-        : pct >= 50
-          ? 'text-coral-600'
-          : pct > 0
-            ? 'text-amber-600'
-            : 'text-ink-muted';
-  return (
-    <span className="tabular-nums">
-      <span className="text-ink">{count ?? '—'}</span>
-      {pct != null && <span className={cn('ml-1 text-[11px]', pctClass)}>({pct}%)</span>}
-    </span>
-  );
-};
+/** "n|%" pair — the whole cell carries the spectrum fill, so the text stays plain ink. */
+const CountPctCell: React.FC<{ count: number | null; pct: number | null }> = ({ count, pct }) => (
+  <span className="tabular-nums">
+    <span className={cn(count == null ? 'text-ink-faint' : 'text-ink')}>{count ?? '—'}</span>
+    {pct != null && <span className="text-[11px] text-ink-muted">|{pct}</span>}
+  </span>
+);
 
 // ── component ─────────────────────────────────────────────────────────────────
 
@@ -156,10 +130,12 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
 
   const demo = t('summary.demoValue');
 
-  const fmtMonths = (days: number | null) => {
+  /** "Xm Yd" (months + leftover days); antenatal ages render as the AN shorthand. */
+  const fmtMonthsDays = (days: number | null) => {
     if (days == null) return <span className="text-ink-faint">—</span>;
     if (days < 0) return <span title={t('summary.antenatal')}>{t('summary.antenatalShort')}</span>;
-    return `${Math.round(days / 30.44)}${t('summary.monthShort')}`;
+    const v = monthsDays(days)!;
+    return `${v.m}${t('summary.monthShort')} ${v.d}${t('summary.dayShort')}`;
   };
 
   const activityGroup = (
@@ -186,19 +162,23 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
       {
         key: `${id}-ac`,
         code: 'AC',
+        sub: t('summary.nPct'),
         title: t('summary.ac'),
         base: 62,
         align: 'center',
-        render: r => <CountPctCell count={r.activities[key].actual} pct={r.activities[key].actual_pct} kind="ac" />,
+        fill: r => pctCellFill(r.activities[key].actual_pct),
+        render: r => <CountPctCell count={r.activities[key].actual} pct={r.activities[key].actual_pct} />,
       },
       {
         key: `${id}-ic`,
         code: 'IC',
+        sub: t('summary.nPct'),
         title: t('summary.ic'),
         base: 62,
         align: 'center',
+        fill: r => pctCellFill(r.activities[key].incomplete_pct, true),
         render: r => (
-          <CountPctCell count={r.activities[key].incomplete} pct={r.activities[key].incomplete_pct} kind="ic" />
+          <CountPctCell count={r.activities[key].incomplete} pct={r.activities[key].incomplete_pct} />
         ),
       },
     ],
@@ -210,11 +190,12 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
     title: t(`summary.${metric}`) + ' · ' + t(`summary.${visit}`),
     base: 52,
     align: 'center',
+    fill: r => zCellFill(r.outcomes[metric][visit]),
     render: r => {
       const z = r.outcomes[metric][visit];
       return (
         <Mockable mock={r.meta.z_is_mock} demoLabel={demo}>
-          <span className={cn('tabular-nums', zClass(z))}>{fmtZ(z)}</span>
+          <span className={cn('tabular-nums', z == null ? 'text-ink-faint' : 'text-ink')}>{fmtZ(z)}</span>
         </Mockable>
       );
     },
@@ -262,23 +243,33 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
             key: 'atype',
             code: t('summary.type'),
             title: t('summary.adoptionType'),
-            base: 122,
+            base: 96,
             align: 'left',
-            render: r => (
-              <Mockable mock={r.meta.adoption_type_is_mock} demoLabel={demo}>
-                {r.case_details.adoption_type ?? '—'}
-              </Mockable>
-            ),
+            render: r => {
+              const cat = adoptionCategory(r.case_details.age_of_adoption_days);
+              const isMock = cat == null ? r.meta.adoption_type_is_mock : r.meta.timing_is_mock;
+              // Inner title wins over the Mockable one, so fold the demo hint in.
+              const tip = [isMock ? demo : null, r.case_details.adoption_type]
+                .filter(Boolean)
+                .join(' · ');
+              return (
+                <Mockable mock={isMock} demoLabel={demo}>
+                  <span title={tip || undefined}>
+                    {cat ? t(`summary.cat.${cat}`) : (r.case_details.adoption_type ?? '—')}
+                  </span>
+                </Mockable>
+              );
+            },
           },
           {
             key: 'aage',
             code: t('summary.adoptAge'),
             title: t('summary.adoptAgeFull'),
-            base: 68,
+            base: 84,
             align: 'center',
             render: r => (
               <Mockable mock={r.meta.timing_is_mock} demoLabel={demo}>
-                {fmtMonths(r.case_details.age_of_adoption_days)}
+                {fmtMonthsDays(r.case_details.age_of_adoption_days)}
               </Mockable>
             ),
           },
@@ -286,11 +277,11 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
             key: 'adur',
             code: t('summary.duration'),
             title: t('summary.durationFull'),
-            base: 72,
+            base: 84,
             align: 'center',
             render: r => (
               <Mockable mock={r.meta.timing_is_mock} demoLabel={demo}>
-                {fmtMonths(r.case_details.adoption_duration_days)}
+                {fmtMonthsDays(r.case_details.adoption_duration_days)}
               </Mockable>
             ),
           },
@@ -487,6 +478,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
                       )}
                     >
                       {c.code}
+                      {c.sub && <div className="text-[9px] font-normal text-ink-faint">{c.sub}</div>}
                     </th>
                   );
                 }),
@@ -511,7 +503,11 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
                     return (
                       <td
                         key={c.key}
-                        style={isId ? { left: idLeft[c.key] } : undefined}
+                        style={{
+                          ...(isId ? { left: idLeft[c.key] } : {}),
+                          // Excel-style conditional fill covers the whole cell
+                          ...(c.fill ? { backgroundColor: c.fill(r) } : {}),
+                        }}
                         className={cn(
                           pad,
                           'truncate',

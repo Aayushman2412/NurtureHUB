@@ -64,6 +64,11 @@ export async function svgToCanvas(
     img.src = url;
   });
 
+  // The inlined styles are the *computed* (theme-resolved) colours, so a chart
+  // captured in dark mode has light ink text — paint the matching dark surface
+  // behind it instead of white, or the labels are near-invisible.
+  const dark = document.documentElement.classList.contains('dark');
+
   const bandH = opts.title ? TITLE_BAND : 0;
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(w * scale);
@@ -71,14 +76,14 @@ export async function svgToCanvas(
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('canvas 2d context unavailable');
   ctx.scale(scale, scale);
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = dark ? '#211D1A' : '#ffffff'; // --surface per theme.css
   ctx.fillRect(0, 0, w, h + bandH);
   if (opts.title) {
-    ctx.fillStyle = '#1f2937';
+    ctx.fillStyle = dark ? '#F3EFE9' : '#1f2937';
     ctx.font = '600 15px system-ui, -apple-system, sans-serif';
     ctx.fillText(opts.title, 10, 22);
     if (opts.subtitle) {
-      ctx.fillStyle = '#6b7280';
+      ctx.fillStyle = dark ? '#C6BDB0' : '#6b7280';
       ctx.font = '12px system-ui, -apple-system, sans-serif';
       ctx.fillText(opts.subtitle, 10, 39);
     }
@@ -138,7 +143,7 @@ export async function downloadChartsCombined(
   canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('canvas 2d context unavailable');
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = document.documentElement.classList.contains('dark') ? '#211D1A' : '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   let y = gap;
   for (const c of canvases) {

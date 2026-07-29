@@ -76,15 +76,22 @@
     "type": "प्रकार",
     "adoptionType": "गोद लेने का प्रकार",
     "adoptAge": "गोद उम्र",
-    "adoptAgeFull": "गोद लेते समय बच्चे की आयु (माह)",
+    "adoptAgeFull": "गोद लेते समय बच्चे की आयु",
     "duration": "अवधि",
-    "durationFull": "गोद लेने की अवधि (माह)",
+    "durationFull": "गोद लेने की अवधि",
     "antenatal": "प्रसवपूर्व (जन्म से पहले गोद लिया)",
     "antenatalShort": "प्र.पू.",
     "monthShort": "मा",
+    "dayShort": "दि",
+    "cat": {
+      "antenatal": "प्रसवपूर्व",
+      "under5m": "< 5 माह",
+      "over5m": "5+ माह"
+    },
     "ec": "अपेक्षित गणना",
-    "ac": "वास्तविक गणना (%)",
-    "ic": "अपूर्ण गणना (%)",
+    "ac": "वास्तविक गणना | अपेक्षित का %",
+    "ic": "अपूर्ण गणना | अपेक्षित का %",
+    "nPct": "n|%",
     "wfaz": "आयु अनुसार वज़न z (WFAz)",
     "hfaz": "आयु अनुसार लंबाई z (HFAz)",
     "bv": "आधार भेंट",
@@ -99,7 +106,7 @@
       "bf": "स्तनपान जाँच",
       "cf": "पूरक आहार जाँच",
       "outcomes": "परिणाम (z)",
-      "outcomesFull": "आधार / मूल्यांकन / अंतिम भेंट पर WFAz / HFAz"
+      "outcomesFull": "आधार / मूल्यांकन / अंतिम भेंट पर WFAz / HFAz / WFHz"
     },
     "wfhz": "लंबाई अनुसार वज़न z (WFHz)"
   },
@@ -124,7 +131,9 @@
     "motherAge": "आयु",
     "zTrends": "z-स्कोर की चाल",
     "noPlotData": "अभी कोई माप नहीं",
-    "completion": "{{pct}}% पूरा"
+    "completion": "{{pct}}% पूरा",
+    "activityChart": "गतिविधि गणना",
+    "outcomesChart": "परिणाम (z)"
   },
   "tooltip": {
     "age": "आयु",

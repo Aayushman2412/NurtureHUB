@@ -76,15 +76,22 @@
     "type": "Type",
     "adoptionType": "Adoption type",
     "adoptAge": "Adopt age",
-    "adoptAgeFull": "Child's age at adoption (months)",
+    "adoptAgeFull": "Child's age at adoption",
     "duration": "Duration",
-    "durationFull": "Adoption duration (months)",
+    "durationFull": "Adoption duration",
     "antenatal": "Antenatal (adopted before birth)",
     "antenatalShort": "AN",
     "monthShort": "m",
+    "dayShort": "d",
+    "cat": {
+      "antenatal": "Antenatal",
+      "under5m": "< 5 months",
+      "over5m": "5+ months"
+    },
     "ec": "Expected count",
-    "ac": "Actual count (%)",
-    "ic": "Incomplete count (%)",
+    "ac": "Actual count | % of expected",
+    "ic": "Incomplete count | % of expected",
+    "nPct": "n|%",
     "wfaz": "Weight-for-age z (WFAz)",
     "hfaz": "Height-for-age z (HFAz)",
     "bv": "Baseline visit",
@@ -99,7 +106,7 @@
       "bf": "Breastfeeding Assessment",
       "cf": "Complementary Feeding Assessment",
       "outcomes": "Outcomes (z)",
-      "outcomesFull": "WFAz / HFAz at Baseline / Assessment / Last visit"
+      "outcomesFull": "WFAz / HFAz / WFHz at Baseline / Assessment / Last visit"
     },
     "wfhz": "Weight-for-height z (WFHz)"
   },
@@ -124,7 +131,9 @@
     "motherAge": "Age",
     "zTrends": "z-score trends",
     "noPlotData": "No measurements yet",
-    "completion": "{{pct}}% done"
+    "completion": "{{pct}}% done",
+    "activityChart": "Activity counts",
+    "outcomesChart": "Outcomes (z)"
   },
   "tooltip": {
     "age": "Age",
