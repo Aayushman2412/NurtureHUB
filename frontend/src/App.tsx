@@ -47,6 +47,7 @@ import AdminResultsPage from './pages/admin/AdminResultsPage';
 import AdminTestsPage from './pages/admin/AdminTestsPage';
 import AdminDistrictsPage from './pages/admin/AdminDistrictsPage';
 import AdminLiveMonitorPage from './pages/admin/AdminLiveMonitorPage';
+import AdminProfilePage from './pages/admin/AdminProfilePage';
 
 // --- Route Guards ---
 
@@ -152,6 +153,7 @@ const AppRoutes: React.FC = () => {
 
       {/* Admin Panel Routes */}
       <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
+      <Route path="/admin/profile" element={<AdminRoute><AdminProfilePage /></AdminRoute>} />
       <Route path="/admin/districts" element={<AdminRoute><AdminDistrictsPage /></AdminRoute>} />
       <Route path="/admin/form-builder" element={<AdminRoute><FormBuilderHubPage /></AdminRoute>} />
       <Route path="/admin/form-builder/flat/:formKey" element={<AdminRoute><FlatFormEditorPage /></AdminRoute>} />

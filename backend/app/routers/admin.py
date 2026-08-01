@@ -23,7 +23,7 @@ from app.models import (
     TestAttempt, TestAnswer, TutorialQuestion, TutorialQuestionOption,
     TutorialQuizResponse, UserTutorialProgress, Notification, FaceToFaceSelection,
 )
-from app.auth import verify_password, create_access_token
+from app.auth import verify_password, get_password_hash, create_access_token
 from app.dependencies import get_current_admin, get_admin_email, invalidate_user_cache
 from app.rate_limit import limiter
 from app.timeutils import iso_utc, utcnow
@@ -52,6 +52,19 @@ class AdminLoginResponse(BaseModel):
     token_type: str = "bearer"
     is_admin: bool = True
     admin_name: str = "Administrator"
+
+class AdminProfileOut(BaseModel):
+    email: str
+    full_name: str
+    is_hardcoded: bool  # True when there's no backing User row (the hardcoded test admin)
+    created_at: Optional[str] = None
+
+class AdminProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+
+class AdminPasswordChange(BaseModel):
+    current_password: str
+    new_password: str
 
 class FormFieldOption(BaseModel):
     label: str
@@ -172,6 +185,92 @@ def admin_login(request: Request, credentials: AdminLoginRequest, db: Session = 
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid admin credentials"
     )
+
+
+@router.get("/me", response_model=AdminProfileOut)
+def get_admin_profile(db: Session = Depends(get_db), admin_email: str = Depends(get_admin_email)):
+    """Current admin's profile. The hardcoded test admin has no User row at
+    all, so it returns synthesized data (matching admin_login's fallback
+    name) instead of a DB lookup."""
+    if admin_email == HARDCODED_ADMIN_EMAIL:
+        return AdminProfileOut(
+            email=HARDCODED_ADMIN_EMAIL,
+            full_name="NurtureHUB Admin",
+            is_hardcoded=True,
+            created_at=None,
+        )
+
+    user = db.query(User).filter(User.email == admin_email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Admin account not found")
+    return AdminProfileOut(
+        email=user.email,
+        full_name=user.full_name or "Admin",
+        is_hardcoded=False,
+        created_at=iso_utc(user.created_at),
+    )
+
+
+@router.put("/me", response_model=AdminProfileOut)
+def update_admin_profile(
+    data: AdminProfileUpdate,
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Edit the current admin's display name. The hardcoded test admin has
+    no User row to write to — its name is fixed in admin_login's source."""
+    if admin_email == HARDCODED_ADMIN_EMAIL:
+        raise HTTPException(
+            status_code=400,
+            detail="This account's name is set in code and can't be changed here.",
+        )
+
+    user = db.query(User).filter(User.email == admin_email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Admin account not found")
+
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(user, key, value)
+    db.commit()
+    db.refresh(user)
+    invalidate_user_cache(user.email)
+
+    return AdminProfileOut(
+        email=user.email,
+        full_name=user.full_name or "Admin",
+        is_hardcoded=False,
+        created_at=iso_utc(user.created_at),
+    )
+
+
+@router.post("/me/password")
+def change_admin_password(
+    data: AdminPasswordChange,
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Change the current admin's password. The hardcoded test admin's
+    credentials live in source code — there's no password_hash to update."""
+    if admin_email == HARDCODED_ADMIN_EMAIL:
+        raise HTTPException(
+            status_code=400,
+            detail="This account's password is set in code and can't be changed here.",
+        )
+
+    user = db.query(User).filter(User.email == admin_email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Admin account not found")
+
+    if not user.password_hash or not verify_password(data.current_password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+    user.password_hash = get_password_hash(data.new_password)
+    db.commit()
+    return {"message": "Password changed successfully."}
 
 
 # ──────────────────────────────────────────────

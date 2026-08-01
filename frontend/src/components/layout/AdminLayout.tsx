@@ -9,6 +9,8 @@ import client from '../../api/client';
 import { useTheme } from '../../context/ThemeContext';
 import { Avatar, Dropdown } from '../ui';
 import { cn } from '../../utils/cn';
+import { clearAdminSession } from '../../utils/adminAuth';
+import AdminHeader from './AdminHeader';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -40,6 +42,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
 
   const [districts, setDistricts] = useState<ProgramDistrict[]>([]);
   const [selectedSlug, setSelectedSlug] = useState<string>(localStorage.getItem('nh_admin_district') || '');
+  const [adminName, setAdminName] = useState<string>(
+    localStorage.getItem('nh_admin_name') || t('layout.adminFallback'),
+  );
 
   const loadDistricts = () => {
     client
@@ -77,15 +82,24 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     window.dispatchEvent(new Event('district-changed'));
   };
 
+  useEffect(() => {
+    // Keep the sidebar/header name in sync after an edit on /admin/profile
+    // (mirrors the district-changed pattern above — localStorage writes
+    // don't trigger a re-render on their own).
+    const handleNameChange = () => {
+      setAdminName(localStorage.getItem('nh_admin_name') || t('layout.adminFallback'));
+    };
+    window.addEventListener('admin-name-changed', handleNameChange);
+    return () => {
+      window.removeEventListener('admin-name-changed', handleNameChange);
+    };
+  }, [t]);
+
   const handleLogout = () => {
-    localStorage.removeItem('nh_admin');
-    localStorage.removeItem('nh_admin_token');
-    localStorage.removeItem('nh_admin_name');
-    localStorage.removeItem('nh_admin_district');
+    clearAdminSession();
     navigate('/login');
   };
 
-  const adminName = localStorage.getItem('nh_admin_name') || t('layout.adminFallback');
   const selectedDistrict = districts.find(d => d.slug === selectedSlug);
 
   return (
@@ -182,6 +196,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       </aside>
 
       <main className="min-h-screen pl-64">
+        <AdminHeader adminName={adminName} />
         <div className="p-6 lg:p-8">{children}</div>
       </main>
     </div>

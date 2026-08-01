@@ -7,6 +7,8 @@
     "adminFallback": "Administrator",
     "superAdmin": "Super Admin",
     "logout": "Logout",
+    "notifications": "Notifications",
+    "noNotifications": "No notifications yet",
     "nav": {
       "dashboard": "Dashboard",
       "districts": "Districts",
@@ -16,6 +18,41 @@
       "testManager": "Test Manager",
       "liveMonitor": "Live Monitor",
       "results": "Results"
+    }
+  },
+  "profile": {
+    "title": "Admin Profile",
+    "description": "Your admin account details.",
+    "loading": "Loading profile…",
+    "errorTitle": "Could not load your profile",
+    "errorBody": "Check your connection and try again.",
+    "retry": "Retry",
+    "email": "Email",
+    "joined": "Joined",
+    "hardcodedTitle": "Editing unavailable",
+    "hardcodedNote": "This is a shared test account — its name and password are fixed in code and can't be edited here.",
+    "editName": {
+      "title": "Edit Name",
+      "label": "Display name",
+      "save": "Save",
+      "cancel": "Cancel",
+      "errEmpty": "Name can't be empty",
+      "toastSaving": "Saving…",
+      "toastSuccess": "Name updated",
+      "toastFail": "Could not update your name. Please try again."
+    },
+    "changePassword": {
+      "title": "Change Password",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "save": "Change Password",
+      "errCurrentRequired": "Enter your current password",
+      "errTooShort": "New password must be at least 6 characters",
+      "errMismatch": "New passwords don't match",
+      "toastSaving": "Changing password…",
+      "toastSuccess": "Password changed",
+      "toastFail": "Could not change your password. Check your current password and try again."
     }
   },
   "dashboard": {
