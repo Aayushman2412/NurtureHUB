@@ -14,6 +14,7 @@ import type {
   FlatField, FlatSchema, FlowAction, FlowInfoNode, FlowMatrixNode, FlowNode, FlowOption,
   FlowQuestionNode, FlowSchema, FlowSectionChild, FormDefinition, FormKey, NumericRange, VerdictDef,
 } from '../../../lib/flowTypes';
+import { nodeTitle } from '../../../components/flowbuilder/constants';
 import VerdictChip from '../../../components/assessments/VerdictChip';
 import MatrixStepCard from '../../../components/assessments/MatrixStepCard';
 import FlatFieldInput from '../../../components/assessments/FlatFieldInput';
@@ -327,7 +328,9 @@ const FlowPrint: React.FC<{ schema: FlowSchema }> = ({ schema }) => {
                     )}
                   </div>
                   <h3 className="mb-2 font-display text-lg font-bold text-ink">{node.title}</h3>
-                  <MatrixStepCard node={node as FlowMatrixNode} value={{}} onChange={() => {}} />
+                  {/* The printed spec documents the whole grid, so every row is
+                      shown — the answer-gated ones are annotated below. */}
+                  <MatrixStepCard node={node as FlowMatrixNode} rows={node.rows} value={{}} onChange={() => {}} />
                   <p className="mt-2 flex flex-wrap gap-1.5">
                     {node.columns.filter(c => c.learnerHidden).map(c => (
                       <Anno key={c.id}>column "{c.label}" hidden from learner</Anno>
@@ -343,6 +346,12 @@ const FlowPrint: React.FC<{ schema: FlowSchema }> = ({ schema }) => {
                           .filter(r => r.proteinPerServing != null)
                           .map(r => `${r.proteinPerServing}${r.highQuality ? ' (HQ)' : ''}`)
                           .join(' · ')}
+                      </Anno>
+                    )}
+                    {node.rows.some(r => r.visibleIf) && (
+                      <Anno icon={<GitBranch className="size-3" />}>
+                        each row shown only when picked in{' '}
+                        "{nodeTitle(schema.nodes[node.rows.find(r => r.visibleIf)!.visibleIf!.nodeId])}"
                       </Anno>
                     )}
                   </p>

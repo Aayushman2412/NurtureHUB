@@ -15,6 +15,7 @@ import { uploadLearnerMedia } from '../../api/forms';
 import { cn } from '../../utils/cn';
 import { resolveAssetUrl } from '../../lib/flowGraph';
 import type { FlatField } from '../../lib/flowTypes';
+import { isExclusiveOption } from '../../lib/flowTypes';
 import { useToast } from '../../context/ToastContext';
 
 export interface FlatFieldInputProps {
@@ -58,13 +59,22 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
     </>
   );
 
+  /** Same "none of the above" rule as the flow runner: the exclusive option and
+   *  the real answers can never be selected together. */
   const toggleCheckbox = (optionValue: string) => {
     const current = asArray(value);
-    onChange(
-      current.includes(optionValue)
-        ? current.filter(v => v !== optionValue)
-        : [...current, optionValue],
-    );
+    const options = field.options ?? [];
+    if (current.includes(optionValue)) {
+      onChange(current.filter(v => v !== optionValue));
+      return;
+    }
+    const picked = options.find(o => o.value === optionValue);
+    if (picked && isExclusiveOption(picked)) {
+      onChange([optionValue]);
+      return;
+    }
+    const exclusiveValues = new Set(options.filter(isExclusiveOption).map(o => o.value));
+    onChange([...current.filter(v => !exclusiveValues.has(v)), optionValue]);
   };
 
   const handleFile = async (file: File | undefined) => {

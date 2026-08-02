@@ -8,12 +8,14 @@ import {
   getAdminGrowthSummary,
   getGrowthStandards,
   getGrowthSummaryFilters,
+  getGrowthAlerts,
   downloadGrowthSummaryXlsx,
   type GrowthCase,
   type GrowthFilters,
   type GrowthStandards,
   type GrowthSummaryFilterOptions,
   type GrowthSummaryRow,
+  type ProteinAlert,
 } from '../../api/growth';
 import GrowthChartGrid, { GrowthLegend } from '../../components/growth/GrowthChartGrid';
 import GrowthSummaryTable from '../../components/growth/GrowthSummaryTable';
@@ -50,6 +52,7 @@ const AdminGrowthMonitorPage: React.FC = () => {
   const [summaryMock, setSummaryMock] = useState(false);
   const [cases, setCases] = useState<GrowthCase[]>([]);
 
+  const [alerts, setAlerts] = useState<ProteinAlert[]>([]);
   const [standards, setStandards] = useState<GrowthStandards | null>(null);
   const [standardsError, setStandardsError] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -70,6 +73,7 @@ const AdminGrowthMonitorPage: React.FC = () => {
   useEffect(() => {
     loadStandards();
     getGrowthSummaryFilters().then(setOptions).catch(() => setOptions(EMPTY_OPTIONS));
+    getGrowthAlerts().then(r => setAlerts(r.alerts)).catch(() => setAlerts([]));
     client
       .get<ProgramDistrict[]>('/api/admin/districts')
       .then(res => setDistricts(res.data))
@@ -150,6 +154,32 @@ const AdminGrowthMonitorPage: React.FC = () => {
         <h1 className="font-display text-2xl font-extrabold text-ink">{t('admin.title')}</h1>
         <p className="mt-1 text-sm text-ink-muted">{t('admin.description')}</p>
       </div>
+
+      {/* Implausibly high protein totals — flagged to the team at submit time
+          and listed here so they can be worked through. */}
+      {alerts.length > 0 && (
+        <div className="rounded-xl border border-error-500/40 bg-error-50 p-4 dark:bg-error-500/10">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="size-4.5 shrink-0 text-error-600" />
+            <h2 className="font-display text-sm font-bold text-ink">
+              {t('admin.proteinAlertsTitle', { count: alerts.length })}
+            </h2>
+          </div>
+          <p className="mt-1 text-xs text-ink-muted">{t('admin.proteinAlertsSub')}</p>
+          <ul className="mt-2.5 space-y-1 text-sm">
+            {alerts.map(a => (
+              <li key={a.response_id} className="flex flex-wrap items-baseline gap-x-2 text-ink-muted">
+                <b className="tabular-nums text-error-600">{a.total24}g</b>
+                <span className="text-ink">{a.mother_name ?? '—'}</span>
+                <span className="text-ink-faint">·</span>
+                <span>{a.learner_name ?? '—'}</span>
+                <span className="text-ink-faint">·</span>
+                <span className="tabular-nums">{a.assessment_date ?? '—'}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* filters — apply to both the table and the charts */}
       <div className="rounded-xl border border-border bg-surface p-4">

@@ -64,14 +64,14 @@ def plan(db: Session, only: Optional[List[str]]) -> Tuple[List[Changed], List[st
     changed: List[Changed] = []
     unchanged: List[str] = []
     missing: List[str] = []
-    for form_key, (title, desc, btype, build) in seed_forms.FORM_SPECS.items():
+    for form_key, (title, desc, btype, _build) in seed_forms.FORM_SPECS.items():
         if only and form_key not in only:
             continue
         row = rows.get(form_key)
         if row is None:
             missing.append(form_key)
             continue
-        code_schema = build()
+        code_schema = seed_forms.build_schema(form_key)
         if _canonical(row.schema_json) == _canonical(code_schema):
             unchanged.append(form_key)
         else:

@@ -25,6 +25,7 @@ export const childSchema = z
     delivery_place: requiredStr('validation:child.deliveryPlace'),
     delivery_place_other: z.string().optional(),
     bf_within_one_hour: requiredStr('validation:common.answerQuestion'),
+    bf_reason: z.string().optional(),
     ebf_during_stay: requiredStr('validation:common.answerQuestion'),
     ebf_reason: z.string().optional(),
     // Conditions (not required; "Others" reveals a text field)
@@ -32,6 +33,7 @@ export const childSchema = z
     pre_existing_other: z.string().optional(),
     // Derived flags (drive conditional-required rules)
     showDeliveryPlaceOther: z.boolean().optional(),
+    showBfReason: z.boolean().optional(),
     showEbfReason: z.boolean().optional(),
     showConditionOther: z.boolean().optional(),
     isEdit: z.boolean().optional(),   // editing an existing record → skip registration-time freshness bounds
@@ -51,6 +53,8 @@ export const childSchema = z
     }
     if (v.showDeliveryPlaceOther && !v.delivery_place_other?.trim())
       ctx.addIssue({ code: 'custom', path: ['delivery_place_other'], message: 'validation:child.deliveryPlaceOther' });
+    if (v.showBfReason && !v.bf_reason?.trim())
+      ctx.addIssue({ code: 'custom', path: ['bf_reason'], message: 'validation:child.bfReason' });
     if (v.showEbfReason && !v.ebf_reason?.trim())
       ctx.addIssue({ code: 'custom', path: ['ebf_reason'], message: 'validation:child.ebfReason' });
     if (v.showConditionOther && !v.pre_existing_other?.trim())
@@ -61,7 +65,7 @@ export type ChildFormValues = z.input<typeof childSchema>;
 
 export const CR_STEP_FIELDS: readonly (readonly string[])[] = [
   ['babies_born', 'adoption_date', 'child_name', 'dob', 'birth_weight', 'birth_length', 'gender', 'previous_living_children'],
-  ['delivery_method', 'delivery_place', 'delivery_place_other', 'bf_within_one_hour', 'ebf_during_stay', 'ebf_reason', 'birth_conditions', 'pre_existing_other'],
+  ['delivery_method', 'delivery_place', 'delivery_place_other', 'bf_within_one_hour', 'bf_reason', 'ebf_during_stay', 'ebf_reason', 'birth_conditions', 'pre_existing_other'],
 ];
 
 export function validateChild(values: ChildFormValues): FieldErrors {

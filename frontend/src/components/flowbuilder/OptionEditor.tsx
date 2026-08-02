@@ -1,7 +1,7 @@
 import React from 'react';
-import { ChevronDown, ChevronRight, ChevronUp, CornerDownRight, Image as ImageIcon, Trash2, Zap } from 'lucide-react';
+import { Ban, ChevronDown, ChevronRight, ChevronUp, CornerDownRight, Image as ImageIcon, Trash2, Zap } from 'lucide-react';
 import type { FlowOption, Verdict, VerdictDef } from '../../lib/flowTypes';
-import { findVerdict } from '../../lib/flowTypes';
+import { findVerdict, isExclusiveOption } from '../../lib/flowTypes';
 import { FieldLabel, Input } from '../ui';
 import { cn } from '../../utils/cn';
 import ActionEditor from './ActionEditor';
@@ -39,6 +39,8 @@ export interface OptionEditorProps {
   verdictDefs: VerdictDef[];
   /** True on single-select top-level questions — enables the branch picker. */
   allowBranch: boolean;
+  /** True on multi-select questions — enables the "none of the above" switch. */
+  allowExclusive: boolean;
   branchTargets: TargetOption[];
   /** True while connect mode is armed for this option's branch. */
   connecting: boolean;
@@ -60,6 +62,7 @@ const OptionEditor: React.FC<OptionEditorProps> = ({
   count,
   verdictDefs,
   allowBranch,
+  allowExclusive,
   branchTargets,
   connecting,
   expanded,
@@ -86,6 +89,13 @@ const OptionEditor: React.FC<OptionEditorProps> = ({
     summaryBits.push(
       <span key="action" className="inline-flex items-center gap-1">
         <Zap className="size-3" /> {ACTION_SUMMARY[option.action.type]}
+      </span>,
+    );
+  }
+  if (allowExclusive && isExclusiveOption(option)) {
+    summaryBits.push(
+      <span key="exclusive" className="inline-flex items-center gap-1">
+        <Ban className="size-3" /> Clears others
       </span>,
     );
   }
@@ -177,6 +187,21 @@ const OptionEditor: React.FC<OptionEditorProps> = ({
               })}
             </div>
           </div>
+
+          {allowExclusive && (
+            <label className="flex cursor-pointer items-start gap-2 text-[12px] text-ink-muted">
+              <input
+                type="checkbox"
+                className="mt-0.5 size-3.5 shrink-0 cursor-pointer accent-[var(--color-coral-500)]"
+                checked={isExclusiveOption(option)}
+                onChange={e => patch({ exclusive: e.target.checked })}
+              />
+              <span>
+                <span className="font-semibold text-ink">None of the above</span> — picking this
+                clears every other option, and picking another option clears this.
+              </span>
+            </label>
+          )}
 
           <MediaPicker media={option.media} onChange={media => patch({ media })} />
 

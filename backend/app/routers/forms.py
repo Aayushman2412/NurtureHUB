@@ -39,6 +39,11 @@ RESPONSE_FORM_KEYS = FLOW_FORM_KEYS | FLAT_RESPONSE_FORM_KEYS
 CF_MIN_AGE_DAYS = 150
 MAX_ACTION_NOTIFICATIONS = 15
 
+# A 24-hour protein total above this is implausible for one mother and almost
+# always a portion-size data-entry slip — the response is still stored, but the
+# learner and the admin team are both told to re-check it.
+PROTEIN_HIGH_TOTAL_G = 100.0
+
 # Scoring polarity for the two built-in verdicts, used when a definition
 # predates custom verdicts (no `verdicts` list on the schema).
 DEFAULT_VERDICT_SCORING = [
@@ -244,7 +249,11 @@ def _snapshot_matrix(node: Dict[str, Any], raw_value: Optional[str]) -> Tuple[Di
     # Iterate in defined row/column order for a stable, readable snapshot.
     for row_id, row in rows.items():
         cells = grid.get(row_id) if isinstance(grid.get(row_id), dict) else {}
+        # The standard measure is its own column in the UI, but a stored answer
+        # has to stay self-describing — "2" means nothing without "Tablespoon".
         row_label = row.get("label") or row_id
+        if row.get("unit"):
+            row_label = f"{row_label} ({row['unit']})"
         for col_id, col in columns.items():
             val = cells.get(col_id)
             if val in (None, ""):
@@ -444,6 +453,7 @@ def _protein_totals(schema: Dict[str, Any], answers: Dict[str, "AnswerIn"]) -> O
       hq24       same, rows flagged highQuality
       dailyAvg   Σ (freq ÷ 7) × usual × protein   (habitual daily, grams)
       hqDailyAvg same, rows flagged highQuality
+      high24     total24 is implausibly high and needs a second look
     """
     def num(v: Any) -> float:
         try:
@@ -488,11 +498,13 @@ def _protein_totals(schema: Dict[str, Any], answers: Dict[str, "AnswerIn"]) -> O
 
     if not found_any:
         return None
+    total24 = round(total24, 1)
     return {
-        "total24": round(total24, 1),
+        "total24": total24,
         "hq24": round(hq24, 1),
         "dailyAvg": round(daily, 1),
         "hqDailyAvg": round(hq_daily, 1),
+        "high24": total24 > PROTEIN_HIGH_TOTAL_G,
     }
 
 
@@ -630,6 +642,48 @@ def _snapshot_flat_answers(
     return snapshots, summary, flat_actions
 
 
+def _notify_high_protein(
+    db: Session,
+    user: models.User,
+    subject_name: str,
+    summary: Dict[str, Any],
+) -> None:
+    """Raise the "unusually high protein" flag on both sides.
+
+    The learner gets it in their own notification list so they can re-check the
+    portions with the mother; every admin gets a copy because the team asked to
+    be told about implausible totals rather than discovering them in an export.
+    """
+    protein = summary.get("protein") or {}
+    if not protein.get("high24"):
+        return
+    grams = protein.get("total24")
+    title = f"Unusually high protein — {subject_name}"
+    db.add(models.Notification(
+        user_id=user.id,
+        title=title,
+        message=(
+            f"The recorded 24-hour protein total is {grams}g, above the "
+            f"{PROTEIN_HIGH_TOTAL_G:g}g review threshold. Please re-check the portion "
+            "sizes with the mother."
+        ),
+    ))
+    admin_ids = [
+        row.id for row in db.query(models.User.id).filter(models.User.is_admin.is_(True)).all()
+        if row.id != user.id
+    ]
+    for admin_id in admin_ids:
+        db.add(models.Notification(
+            user_id=admin_id,
+            title=title,
+            message=(
+                f"{user.full_name or user.email} recorded a 24-hour protein total of "
+                f"{grams}g for {subject_name}, above the {PROTEIN_HIGH_TOTAL_G:g}g review "
+                "threshold. Worth confirming the portion sizes."
+            ),
+        ))
+
+
 def _notify_on_submit(
     db: Session,
     user: models.User,
@@ -667,6 +721,8 @@ def _notify_on_submit(
             "Open the assessment plan to see the recommended actions."
         ),
     ))
+    _notify_high_protein(db, user, subject_name, summary)
+
     visible = [a for a in actions if actions_visible.get(a.get("nodeId"), default_actions)]
     for item in visible[:MAX_ACTION_NOTIFICATIONS]:
         action = item.get("action") or {}

@@ -575,7 +575,7 @@ const MatrixPanel: React.FC<{
           onChange={e => onPatchNode(node.id, { required: e.target.checked })}
         />
 
-        <MatrixEditor node={node} onPatch={patch => onPatchNode(node.id, patch)} />
+        <MatrixEditor node={node} schema={schema} onPatch={patch => onPatchNode(node.id, patch)} />
 
         <TargetPicker
           label="Next step"

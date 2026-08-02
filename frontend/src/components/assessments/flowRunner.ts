@@ -16,6 +16,7 @@ import type {
   FlowQuestionNode,
   FlowSchema,
   FlowSectionChild,
+  MatrixRow,
 } from '../../lib/flowTypes';
 import {
   isInfoNode,
@@ -85,11 +86,27 @@ export function isAnswered(
   return a.value.trim().length > 0;
 }
 
-/** A matrix is "answered" when every required cell of every row has a value.
- *  Required cells = columns explicitly marked required; if none are but the
- *  matrix node itself is required, every column is required (so the node-level
- *  toggle is never a silent no-op). */
-export function isMatrixAnswered(m: FlowMatrixNode, a: AnswerState | undefined): boolean {
+/**
+ * The rows of a matrix that are currently on screen. A row carrying `visibleIf`
+ * is shown only while the referenced question's answer includes one of its
+ * option ids — that is what narrows the supplement grid to the supplements the
+ * mother actually said she takes.
+ */
+export function visibleMatrixRows(m: FlowMatrixNode, answers: AnswersMap): MatrixRow[] {
+  return m.rows.filter(row =>
+    visibleIfSatisfied(row.visibleIf, answers[row.visibleIf?.nodeId ?? '']?.optionIds),
+  );
+}
+
+/** A matrix is "answered" when every required cell of every VISIBLE row has a
+ *  value. Required cells = columns explicitly marked required; if none are but
+ *  the matrix node itself is required, every column is required (so the
+ *  node-level toggle is never a silent no-op). */
+export function isMatrixAnswered(
+  m: FlowMatrixNode,
+  a: AnswerState | undefined,
+  answers: AnswersMap,
+): boolean {
   let requiredCols = m.columns.filter(c => c.required);
   if (requiredCols.length === 0) {
     if (!m.required) return true;
@@ -97,7 +114,7 @@ export function isMatrixAnswered(m: FlowMatrixNode, a: AnswerState | undefined):
   }
   if (requiredCols.length === 0) return true;
   const grid = parseMatrixAnswer(a?.value);
-  return m.rows.every(row =>
+  return visibleMatrixRows(m, answers).every(row =>
     requiredCols.every(col => (grid[row.id]?.[col.id] ?? '').toString().trim().length > 0),
   );
 }
@@ -105,14 +122,16 @@ export function isMatrixAnswered(m: FlowMatrixNode, a: AnswerState | undefined):
 /** Whether a step is "answered"/passable — info blocks always are. */
 export function isStepAnswered(step: PathStep, answers: AnswersMap): boolean {
   if (step.kind === 'info') return true;
-  if (step.kind === 'matrix') return isMatrixAnswered(step.matrix, answers[step.id]);
+  if (step.kind === 'matrix') return isMatrixAnswered(step.matrix, answers[step.id], answers);
   return isAnswered(step.question, answers[step.id]);
 }
 
 /** Does this step block forward progress until answered? */
 const stepBlocks = (step: PathStep, answers: AnswersMap): boolean => {
   if (step.kind === 'info') return false;
-  if (step.kind === 'matrix') return step.matrix.required && !isMatrixAnswered(step.matrix, answers[step.id]);
+  if (step.kind === 'matrix') {
+    return step.matrix.required && !isMatrixAnswered(step.matrix, answers[step.id], answers);
+  }
   return step.question.required && !isAnswered(step.question, answers[step.id]);
 };
 
@@ -230,8 +249,15 @@ export function buildAnswersPayload(steps: PathStep[], answers: AnswersMap): Ans
     if (!a) continue;
     if (s.kind === 'matrix') {
       const grid = parseMatrixAnswer(a.value);
-      if (Object.keys(grid).length === 0) continue;
-      out.push({ nodeId: s.id, sectionId: null, optionIds: [], value: a.value });
+      // Drop cells belonging to rows that are no longer shown (the mother
+      // de-selected that supplement) — the same rule that keeps answers to
+      // hidden nodes out of the payload.
+      const visibleIds = new Set(visibleMatrixRows(s.matrix, answers).map(r => r.id));
+      const pruned = Object.fromEntries(
+        Object.entries(grid).filter(([rowId]) => visibleIds.has(rowId)),
+      );
+      if (Object.keys(pruned).length === 0) continue;
+      out.push({ nodeId: s.id, sectionId: null, optionIds: [], value: JSON.stringify(pruned) });
       continue;
     }
     if (!isAnswered(s.question, a)) continue;

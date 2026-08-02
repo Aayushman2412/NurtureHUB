@@ -13,9 +13,9 @@ import { validateChild, validateChildStep, CR_STEP_FIELDS, type ChildFormValues 
 import type { FieldErrors } from '../../lib/validation';
 import { createChild, getChild, updateChild, type ChildPayload } from '../../api/children';
 import { getMother } from '../../api/mothers';
+import { MAX_ADOPTION_AGE_DAYS, isoDaysAgo, todayIso } from '../../lib/motherFields';
 
 const STEP_KEYS = ['birth', 'delivery'] as const;
-const today = () => new Date().toISOString().slice(0, 10);
 
 const ReadOnly: React.FC<{ label: string; value: string; hint: string }> = ({ label, value, hint }) => (
   <Field label={label}>
@@ -73,6 +73,7 @@ const ChildFormPage: React.FC = () => {
   const [deliveryPlace, setDeliveryPlace] = useState('');
   const [deliveryPlaceOther, setDeliveryPlaceOther] = useState('');
   const [bfWithinOneHour, setBfWithinOneHour] = useState('');   // 'Yes' | 'No'
+  const [bfReason, setBfReason] = useState('');
   const [ebfDuringStay, setEbfDuringStay] = useState('');        // 'Yes' | 'No'
   const [ebfReason, setEbfReason] = useState('');
   const [birthConditions, setBirthConditions] = useState<string[]>([]);
@@ -98,6 +99,7 @@ const ChildFormPage: React.FC = () => {
         setDeliveryPlace(c.delivery_place ?? '');
         setDeliveryPlaceOther(c.delivery_place_other ?? '');
         setBfWithinOneHour(c.bf_within_one_hour == null ? '' : c.bf_within_one_hour ? 'Yes' : 'No');
+        setBfReason(c.bf_reason ?? '');
         setEbfDuringStay(c.ebf_during_stay == null ? '' : c.ebf_during_stay ? 'Yes' : 'No');
         setEbfReason(c.ebf_reason ?? '');
         setBirthConditions((c.birth_conditions ?? []).map(b => b.condition));
@@ -109,6 +111,11 @@ const ChildFormPage: React.FC = () => {
   }, [motherId, childId]);
 
   const showDeliveryPlaceOther = deliveryPlace === 'Other';
+  const showBfReason = bfWithinOneHour === 'No';
+  const today = todayIso();
+  // A child is adopted on or after its birthday, and no more than a fortnight
+  // ago — bound the picker by whichever of the two is the later date.
+  const adoptionMin = [isoDaysAgo(MAX_ADOPTION_AGE_DAYS), dob].filter(Boolean).sort().pop();
   const showEbfReason = ebfDuringStay === 'No';
   const showConditionOther = birthConditions.includes('Others');
   const age = childAge(dob);
@@ -130,12 +137,13 @@ const ChildFormPage: React.FC = () => {
     babies_born: babiesBorn, adoption_date: adoptionDate, child_name: childName, dob,
     birth_weight: birthWeight, birth_length: birthLength, gender, previous_living_children: previousLivingChildren,
     delivery_method: deliveryMethod, delivery_place: deliveryPlace, delivery_place_other: deliveryPlaceOther,
-    bf_within_one_hour: bfWithinOneHour, ebf_during_stay: ebfDuringStay, ebf_reason: ebfReason,
+    bf_within_one_hour: bfWithinOneHour, bf_reason: bfReason,
+    ebf_during_stay: ebfDuringStay, ebf_reason: ebfReason,
     birth_conditions: birthConditions, pre_existing_other: preExistingOther,
-    showDeliveryPlaceOther, showEbfReason, showConditionOther, isEdit,
+    showDeliveryPlaceOther, showBfReason, showEbfReason, showConditionOther, isEdit,
   }), [babiesBorn, adoptionDate, childName, dob, birthWeight, birthLength, gender, previousLivingChildren,
-    deliveryMethod, deliveryPlace, deliveryPlaceOther, bfWithinOneHour, ebfDuringStay, ebfReason,
-    birthConditions, preExistingOther, showDeliveryPlaceOther, showEbfReason, showConditionOther, isEdit]);
+    deliveryMethod, deliveryPlace, deliveryPlaceOther, bfWithinOneHour, bfReason, ebfDuringStay, ebfReason,
+    birthConditions, preExistingOther, showDeliveryPlaceOther, showBfReason, showEbfReason, showConditionOther, isEdit]);
 
   const next = () => {
     const stepErrs = validateChildStep(values, step);
@@ -152,6 +160,7 @@ const ChildFormPage: React.FC = () => {
     delivery_method: deliveryMethod || null, delivery_place: deliveryPlace || null,
     delivery_place_other: showDeliveryPlaceOther ? deliveryPlaceOther : null,
     bf_within_one_hour: bfWithinOneHour === '' ? null : bfWithinOneHour === 'Yes',
+    bf_reason: showBfReason ? bfReason : null,
     ebf_during_stay: ebfDuringStay === '' ? null : ebfDuringStay === 'Yes',
     ebf_reason: showEbfReason ? ebfReason : null,
     pre_existing_other: showConditionOther ? preExistingOther : null,
@@ -224,11 +233,11 @@ const ChildFormPage: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <Field label={t('child.adoptionDate')} error={errors.adoption_date}>
-                    <DateInput value={adoptionDate} max={today()} error={!!errors.adoption_date}
+                    <DateInput value={adoptionDate} min={adoptionMin} max={today} error={!!errors.adoption_date}
                       onChange={v => { setAdoptionDate(v); clearError('adoption_date'); }} />
                   </Field>
                   <Field label={t('child.dob')} error={errors.dob}>
-                    <DateInput value={dob} max={today()} error={!!errors.dob}
+                    <DateInput value={dob} max={today} error={!!errors.dob}
                       onChange={v => { setDob(v); clearError('dob'); }} />
                   </Field>
                   <ReadOnly label={t('child.age')} value={age ? t('child.ageValue', { days: age.days, months: age.months }) : ''} hint={t('child.ageHint')} />
@@ -275,6 +284,12 @@ const ChildFormPage: React.FC = () => {
                   <YesNo name="bf_within_one_hour" value={bfWithinOneHour}
                     onChange={v => { setBfWithinOneHour(v); clearError('bf_within_one_hour'); }} />
                 </Field>
+                {showBfReason && (
+                  <Field label={t('child.bfReason')} error={errors.bf_reason}>
+                    <textarea rows={3} value={bfReason} className={inputClasses(false, !!errors.bf_reason)}
+                      onChange={e => { setBfReason(e.target.value); clearError('bf_reason'); }} />
+                  </Field>
+                )}
                 <Field label={t('child.ebfDuringStay')} error={errors.ebf_during_stay}>
                   <YesNo name="ebf_during_stay" value={ebfDuringStay}
                     onChange={v => { setEbfDuringStay(v); clearError('ebf_during_stay'); }} />

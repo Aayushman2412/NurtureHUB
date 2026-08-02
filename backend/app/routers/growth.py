@@ -32,7 +32,7 @@ from app import growth_summary_mock as gsm  # MOCK: summary-table demo values (r
 from app import models
 from app.database import get_db
 from app.dependencies import get_current_admin, get_verified_user
-from app.routers.forms import _serialize_detail
+from app.routers.forms import PROTEIN_HIGH_TOTAL_G, _serialize_detail
 from app.who_growth import percentile_curves, zscore_for_value
 
 router = APIRouter(prefix="/api/growth", tags=["growth"])
@@ -602,6 +602,51 @@ def admin_growth_summary(
         department=department or None, learner_id=learner_id,
     )
     return {"rows": _summary_rows(cases), "mock": bool(gsm.MOCK_ENABLED)}
+
+
+@admin_router.get("/alerts")
+def admin_growth_alerts(
+    limit: int = Query(20, ge=1, le=100),
+    admin: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Submitted protein assessments whose 24-hour total was flagged as
+    implausibly high (see forms.PROTEIN_HIGH_TOTAL_G).
+
+    The learner and every admin also get a notification at submit time; this is
+    the durable list the team can work through, newest first.
+    """
+    responses = (
+        db.query(models.FormResponse)
+        .filter(
+            models.FormResponse.form_key == "mother_protein_intake",
+            models.FormResponse.status == "submitted",
+        )
+        .order_by(models.FormResponse.assessment_date.desc(), models.FormResponse.id.desc())
+        .limit(500)
+        .all()
+    )
+    alerts: List[Dict[str, Any]] = []
+    for r in responses:
+        protein = ((r.summary_json or {}).get("protein") or {})
+        if not protein.get("high24"):
+            continue
+        mother = db.query(models.Mother).filter(models.Mother.id == r.mother_id).first()
+        learner = (
+            db.query(models.User).filter(models.User.id == mother.registered_by_user_id).first()
+            if mother is not None else None
+        )
+        alerts.append({
+            "response_id": r.id,
+            "assessment_date": r.assessment_date.isoformat() if r.assessment_date else None,
+            "mother_id": r.mother_id,
+            "mother_name": mother.mother_name if mother else None,
+            "learner_name": (learner.full_name or learner.email) if learner else None,
+            "total24": protein.get("total24"),
+        })
+        if len(alerts) >= limit:
+            break
+    return {"alerts": alerts, "threshold": PROTEIN_HIGH_TOTAL_G}
 
 
 @admin_router.get("/summary/filters")

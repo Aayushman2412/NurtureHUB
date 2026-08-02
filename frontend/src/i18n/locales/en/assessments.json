@@ -71,7 +71,8 @@
     "emptyTitle": "Nothing to fill yet",
     "emptyBody": "This assessment has no questions yet. Please check back later.",
     "lockedTitle": "Locked for now",
-    "cfLockedBody": "The complementary feeding assessment unlocks once the child is {{min}} days old."
+    "cfLockedBody": "The complementary feeding assessment unlocks once the child is {{min}} days old.",
+    "standardServingUnit": "Standard serving unit"
   },
   "plan": {
     "loading": "Building your plan",
@@ -98,7 +99,9 @@
     "proteinTotal24": "Total protein — last 24 h",
     "proteinHq24": "High-quality protein — last 24 h",
     "proteinDailyAvg": "Average daily protein (habitual)",
-    "proteinHqDailyAvg": "Average daily high-quality protein"
+    "proteinHqDailyAvg": "Average daily high-quality protein",
+    "proteinHighTitle": "Unusually high protein intake",
+    "proteinHighBody": "The recorded 24-hour total of {{grams}}g is above the {{threshold}}g review threshold. Please double-check the portion sizes with the mother — the team has been notified."
   },
   "growth": {
     "optional": "(optional)",

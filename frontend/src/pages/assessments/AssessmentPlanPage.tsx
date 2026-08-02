@@ -18,6 +18,7 @@ import type { FlowSchema, FormResponseDetail, QuestionDisplayOverride } from '..
 import {
   DEFAULT_DISPLAY,
   DEFAULT_VERDICTS,
+  PROTEIN_HIGH_TOTAL_G,
   findVerdict,
   resolveDisplay,
   resolveQuestionDisplay,
@@ -218,15 +219,37 @@ const AssessmentPlanPage: React.FC = () => {
                 ['proteinDailyAvg', summary.protein.dailyAvg],
                 ['proteinHqDailyAvg', summary.protein.hqDailyAvg],
               ] as const
-            ).map(([key, grams]) => (
-              <div key={key} className="rounded-xl border border-border bg-surface-sunken/50 px-3 py-3 text-center">
-                <div className="font-display text-xl font-extrabold text-ink">{grams}g</div>
-                <div className="mt-0.5 text-[11px] font-semibold leading-snug text-ink-muted">
-                  {t(`plan.${key}`)}
+            ).map(([key, grams]) => {
+              // The 24-hour total is the number the review threshold is about.
+              const flagged = key === 'proteinTotal24' && summary.protein?.high24;
+              return (
+                <div
+                  key={key}
+                  className={cn(
+                    'rounded-xl border px-3 py-3 text-center',
+                    flagged
+                      ? 'border-error-500/50 bg-error-50 dark:bg-error-500/10'
+                      : 'border-border bg-surface-sunken/50',
+                  )}
+                >
+                  <div className={cn('font-display text-xl font-extrabold', flagged ? 'text-error-600' : 'text-ink')}>
+                    {grams}g
+                  </div>
+                  <div className="mt-0.5 text-[11px] font-semibold leading-snug text-ink-muted">
+                    {t(`plan.${key}`)}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
+          {summary.protein.high24 && (
+            <Alert variant="error" title={t('plan.proteinHighTitle')} className="mt-4">
+              {t('plan.proteinHighBody', {
+                grams: summary.protein.total24,
+                threshold: PROTEIN_HIGH_TOTAL_G,
+              })}
+            </Alert>
+          )}
         </Card>
       )}
 

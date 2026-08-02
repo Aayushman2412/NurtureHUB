@@ -116,6 +116,7 @@ export type NodePatch = QuestionPatch &
     /** matrix */
     rows?: MatrixRow[];
     columns?: MatrixColumn[];
+    unitLabel?: string | null;
     /** answer-dependent visibility (all node kinds) */
     visibleIf?: VisibleIf | null;
   };

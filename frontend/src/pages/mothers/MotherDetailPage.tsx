@@ -81,7 +81,7 @@ const MotherDetailPage: React.FC = () => {
         <Row label={t('detail.rowWeightHeight')} value={mother.weight && mother.height ? t('detail.weightHeightValue', { weight: mother.weight, height: mother.height }) : null} />
         <Row label={t('detail.rowLmp')} value={mother.lmp} />
         <Row label={t('detail.rowEdd')} value={`${mother.edd_lmp || '—'} / ${mother.edd_records || '—'}`} />
-        <Row label={t('detail.rowGestational')} value={mother.gestational_weeks != null ? t('detail.gestationalValue', { weeks: mother.gestational_weeks, months: mother.gestational_months }) : null} />
+        <Row label={t('detail.rowGestational')} value={mother.gestational_weeks != null ? t('detail.gestationalValue', { weeks: mother.gestational_weeks, days: mother.gestational_days }) : null} />
         <Row label={t('detail.rowMobile')} value={mother.mobile} />
       </Card>
 

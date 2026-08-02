@@ -90,7 +90,30 @@ export const likertQuestions = (t: TFn) =>
 export const sourceRows = (t: TFn) =>
   MATRIX_SOURCES.map(s => ({ key: s.key, label: t(`options.source.${s.key}`) }));
 
+// ── Adoption-window rules ──
+
+/** A mother must be at least 12 weeks pregnant on the day she is adopted. */
+export const MIN_GESTATION_DAYS = 84;
+/** …and no more than 180 days (≈25½ weeks) past her LMP. */
+export const MAX_GESTATION_DAYS = 180;
+/** An adoption may be backdated by at most a fortnight. */
+export const MAX_ADOPTION_AGE_DAYS = 14;
+
 // ── Date helpers ──
+
+/** Today as a LOCAL ISO date. `toISOString()` would give the UTC date, which is
+ *  still yesterday for IST users between midnight and 05:30. */
+export function todayIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** ISO date exactly N days before today (e.g. the earliest backdatable adoption). */
+export function isoDaysAgo(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 /** ISO date exactly N years before today (e.g. the max DOB for a minimum age). */
 export function isoYearsAgo(years: number): string {
@@ -113,12 +136,25 @@ export function eddFromLmp(lmp: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** Gestational age from LMP as { weeks, months }, or null if no/!valid LMP. */
-export function gestationalAge(lmp: string): { weeks: number; months: number } | null {
+/**
+ * Days of gestation elapsed at `asOf` (default today), or null when the LMP is
+ * missing/invalid/in the future. Both ends are compared as ISO dates so the
+ * count never drifts by a day with the clock or the timezone.
+ */
+export function gestationDays(lmp: string, asOf?: string): number | null {
   if (!lmp) return null;
-  const d = new Date(lmp);
-  if (isNaN(d.getTime())) return null;
-  const days = Math.floor((Date.now() - d.getTime()) / 86_400_000);
-  if (days < 0) return null;
-  return { weeks: Math.floor(days / 7), months: Math.floor(days / 30) };
+  const days = isoDaysBetween(asOf || todayIso(), lmp);
+  return Number.isNaN(days) || days < 0 ? null : days;
+}
+
+/**
+ * Gestational age as { weeks, days } — the obstetric convention ("25 weeks
+ * 6 days"), not weeks-and-months. `asOf` defaults to today; the registration
+ * form passes the adoption date so the number shown is the one the 12-week
+ * eligibility rule is judged on.
+ */
+export function gestationalAge(lmp: string, asOf?: string): { weeks: number; days: number } | null {
+  const total = gestationDays(lmp, asOf);
+  if (total == null) return null;
+  return { weeks: Math.floor(total / 7), days: total % 7 };
 }

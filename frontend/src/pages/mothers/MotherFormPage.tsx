@@ -8,8 +8,10 @@ import {
 import { useMotherMetadata } from '../../hooks/useMotherMetadata';
 import { ageFromDob } from '../../lib/learnerFields';
 import {
-  HWC_OTHER, MATRIX_SOURCES, eddFromLmp, gestationalAge, isoDaysBetween, isoYearsAgo,
-  occupationOptions, rationCardOptions, socialCategoryOptions, videoFrequencyOptions, likertQuestions, sourceRows,
+  HWC_OTHER, MATRIX_SOURCES, MAX_ADOPTION_AGE_DAYS, MAX_GESTATION_DAYS, MIN_GESTATION_DAYS,
+  eddFromLmp, gestationalAge, isoDaysAgo, isoDaysBetween, isoYearsAgo, todayIso,
+  occupationOptions, rationCardOptions, socialCategoryOptions, videoFrequencyOptions,
+  likertQuestions, sourceRows,
 } from '../../lib/motherFields';
 import { validateMother, validateMotherStep, MR_STEP_FIELDS, type MotherFormValues } from '../../lib/motherSchema';
 import type { FieldErrors } from '../../lib/validation';
@@ -84,12 +86,23 @@ const MotherFormPage: React.FC = () => {
   const motherAge = ageFromDob(motherDob);
 
   // EDD/gestational age only make sense for an LMP within 180 days before adoption.
+  // The age is measured AT THE ADOPTION DATE, so the number on screen is exactly
+  // the one the 12-week eligibility rule is judged on.
   const lmpDaysBeforeAdoption = lmp && adoptionDate ? isoDaysBetween(adoptionDate, lmp) : null;
-  const lmpUsable = lmpDaysBeforeAdoption != null && lmpDaysBeforeAdoption >= 0 && lmpDaysBeforeAdoption <= 180;
-  const lmpTooOld = lmpDaysBeforeAdoption != null && lmpDaysBeforeAdoption > 180;
+  const lmpUsable = lmpDaysBeforeAdoption != null && lmpDaysBeforeAdoption >= 0
+    && lmpDaysBeforeAdoption <= MAX_GESTATION_DAYS;
+  const lmpTooOld = lmpDaysBeforeAdoption != null && lmpDaysBeforeAdoption > MAX_GESTATION_DAYS;
+  const lmpTooRecent = lmpDaysBeforeAdoption != null && lmpDaysBeforeAdoption >= 0
+    && lmpDaysBeforeAdoption < MIN_GESTATION_DAYS;
   const eddLmp = lmpUsable ? eddFromLmp(lmp) : '';
-  const gest = lmpUsable ? gestationalAge(lmp) : null;
-  const derivedHint = lmpTooOld ? t('form.gestationalInvalidHint') : '';
+  const gest = lmpUsable ? gestationalAge(lmp, adoptionDate) : null;
+  // "Set LMP to calculate" is a lie when the LMP is already there and it is the
+  // adoption date that is missing — name whichever one is actually needed.
+  const derivedHint = lmpTooOld
+    ? t('form.gestationalInvalidHint')
+    : lmp && !adoptionDate
+      ? t('form.gestationalNeedsAdoption')
+      : '';
 
   const selectedEducation = meta.educationLevels.find(l => l.id === Number(educationId));
   const showEducationField = selectedEducation?.requires_field ?? false;
@@ -208,7 +221,7 @@ const MotherFormPage: React.FC = () => {
   };
 
   const isLast = step === STEP_KEYS.length - 1;
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -233,7 +246,7 @@ const MotherFormPage: React.FC = () => {
                       onChange={v => setMotherDob(v)} />
                   </Field>
                   <Field label={t('form.adoptionDate')} error={shown('adoption_date')}>
-                    <DateInput value={adoptionDate} max={todayIso}
+                    <DateInput value={adoptionDate} min={isoDaysAgo(MAX_ADOPTION_AGE_DAYS)} max={today}
                       error={!!shown('adoption_date')} onBlur={() => touch('adoption_date')}
                       onChange={v => setAdoptionDate(v)} />
                   </Field>
@@ -253,14 +266,19 @@ const MotherFormPage: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label={t('form.lmp')} error={shown('lmp')}>
-                    <DateInput value={lmp} min={motherDob || undefined} max={adoptionDate || todayIso}
+                    <DateInput value={lmp} min={motherDob || undefined} max={adoptionDate || today}
                       error={!!shown('lmp')} onBlur={() => touch('lmp')}
                       onChange={v => setLmp(v)} />
                   </Field>
                   <ReadOnly label={t('form.eddLmp')} value={eddLmp} hint={derivedHint || t('form.eddLmpHint')} />
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <ReadOnly label={t('form.gestationalAge')} value={gest ? t('form.gestationalValue', { weeks: gest.weeks, months: gest.months }) : ''} hint={derivedHint || t('form.gestationalHint')} />
+                  {/* The 12-week rule is an LMP-vs-adoption rule, so its error lives on
+                      `lmp` — but repeat it here, on the number it is actually about. */}
+                  <ReadOnly label={t('form.gestationalAge')}
+                    value={gest ? t('form.gestationalValue', { weeks: gest.weeks, days: gest.days }) : ''}
+                    hint={derivedHint || t('form.gestationalHint')}
+                    error={lmpTooRecent ? shown('lmp') : undefined} />
                   <Field label={t('form.eddRecords')} error={shown('edd_records')}>
                     <DateInput value={eddRecords} error={!!shown('edd_records')}
                       onBlur={() => touch('edd_records')}

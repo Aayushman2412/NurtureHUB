@@ -313,6 +313,7 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
                 count={question.options.length}
                 verdictDefs={verdictDefs}
                 allowBranch={branchable}
+                allowExclusive={question.questionType === 'multi'}
                 branchTargets={branchTargets}
                 connecting={connectingOptionId === option.id}
                 expanded={expandedOptionId === option.id}
