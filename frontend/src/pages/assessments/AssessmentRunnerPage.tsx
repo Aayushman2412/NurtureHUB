@@ -21,6 +21,7 @@ import type { FlowSchema, FormDefinition, FormKey, MatrixAnswer } from '../../li
 import {
   CF_MIN_AGE_DAYS,
   findVerdict,
+  isExclusiveOption,
   isFlowFormKey,
   isMotherFormKey,
   parseMatrixAnswer,
@@ -41,6 +42,7 @@ import {
   isMatrixAnswered,
   isStepAnswered,
   pathAssessmentDate,
+  visibleMatrixRows,
   todayIso,
   type AnswersMap,
   type PathStep,
@@ -160,8 +162,12 @@ const AssessmentRunnerPage: React.FC = () => {
           setResponseId(resp.id);
           setEditingSubmitted(resp.status === 'submitted');
           savedRef.current = JSON.stringify(prefill);
-          // Resume at the frontier: the first unanswered step on the derived path.
-          if (def.builder_type === 'flow') {
+          // A DRAFT resumes at the frontier — the first unanswered step — so the
+          // learner carries on where they stopped. An already-SUBMITTED response
+          // has no frontier (every step is answered), and dropping the learner on
+          // the last question to review the whole form is useless: editing starts
+          // at the beginning.
+          if (def.builder_type === 'flow' && resp.status !== 'submitted') {
             const { steps } = derivePath(def.schema_json as FlowSchema, prefill);
             const idx = steps.findIndex(s => !isStepAnswered(s, prefill));
             setStepIndex(Math.max(0, idx < 0 ? steps.length - 1 : idx));
@@ -239,7 +245,16 @@ const AssessmentRunnerPage: React.FC = () => {
     } else {
       setAnswers(prev => {
         const cur = prev[step.id]?.optionIds ?? [];
-        const next = cur.includes(optionId) ? cur.filter(x => x !== optionId) : [...cur, optionId];
+        let next: string[];
+        if (cur.includes(optionId)) {
+          next = cur.filter(x => x !== optionId);
+        } else if (isExclusiveOption(q.options.find(o => o.id === optionId) ?? { label: '', exclusive: null })) {
+          next = [optionId];   // "None" wipes the rest
+        } else {
+          // …and any real answer wipes "None".
+          const exclusiveIds = new Set(q.options.filter(isExclusiveOption).map(o => o.id));
+          next = [...cur.filter(x => !exclusiveIds.has(x)), optionId];
+        }
         return { ...prev, [step.id]: { optionIds: next, value: '' } };
       });
     }
@@ -372,7 +387,7 @@ const AssessmentRunnerPage: React.FC = () => {
     current.kind === 'info'
       ? true
       : current.kind === 'matrix'
-        ? !current.matrix.required || isMatrixAnswered(current.matrix, answer)
+        ? !current.matrix.required || isMatrixAnswered(current.matrix, answer, answers)
         : !current.question.required || isAnswered(current.question, answer);
   const isLast = stepIndex === derived.steps.length - 1;
   const showFinish = isLast && derived.complete;
@@ -451,6 +466,7 @@ const AssessmentRunnerPage: React.FC = () => {
                 <div className="mt-6">
                   <MatrixStepCard
                     node={current.matrix}
+                    rows={visibleMatrixRows(current.matrix, answers)}
                     value={parseMatrixAnswer(answer?.value)}
                     onChange={(rowId, colId, v) => setMatrixCell(current.id, rowId, colId, v)}
                   />

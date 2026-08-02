@@ -172,7 +172,9 @@
     "clearAll": "Clear all",
     "orphanLearner": "(account removed)",
     "noCasesTitle": "Nothing to plot",
-    "noCases": "No cases match the current filters."
+    "noCases": "No cases match the current filters.",
+    "proteinAlertsTitle": "{{count}} unusually high protein total(s)",
+    "proteinAlertsSub": "A recorded 24-hour total above 100g is almost always a portion-size slip. The learner has been notified too."
   },
   "learner": {
     "title": "Growth Charts",

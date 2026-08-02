@@ -648,15 +648,17 @@ class Mother(Base):
         days = (date.today() - self.lmp).days
         return days if 0 <= days <= 315 else None
 
+    # Reported the obstetric way — whole weeks plus the leftover days ("25 weeks
+    # 6 days"), not weeks-and-months.
     @property
     def gestational_weeks(self):
         days = self._gestation_days()
         return days // 7 if days is not None else None
 
     @property
-    def gestational_months(self):
+    def gestational_days(self):
         days = self._gestation_days()
-        return days // 30 if days is not None else None
+        return days % 7 if days is not None else None
 
 
 class MotherSourceRating(Base):
@@ -699,6 +701,7 @@ class Child(Base):
     delivery_place = Column(String, nullable=True)
     delivery_place_other = Column(String, nullable=True)   # when delivery_place == "Other"
     bf_within_one_hour = Column(Boolean, nullable=True)    # breastfeeding within 1h of birth
+    bf_reason = Column(String, nullable=True)              # when bf_within_one_hour is False
     ebf_during_stay = Column(Boolean, nullable=True)       # exclusively breastfed during facility stay
     ebf_reason = Column(String, nullable=True)             # when ebf_during_stay is False
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { DateInput, Select } from '../ui';
 import { inputClasses } from '../ui/Input';
-import type { FlowMatrixNode, MatrixAnswer, MatrixColumn } from '../../lib/flowTypes';
+import type { FlowMatrixNode, MatrixAnswer, MatrixColumn, MatrixRow } from '../../lib/flowTypes';
 import { numberFlagState } from '../../lib/numericField';
 
 /**
@@ -15,9 +15,14 @@ import { numberFlagState } from '../../lib/numericField';
  *  - learnerHidden: the column is not rendered and collects nothing;
  *  - zeroesRow (frequency-style): when its value is 0, the row's other input
  *    columns are auto-filled with "0" and locked (PCA "0 days" skip rule).
+ *
+ * Rows carrying a `unit` get a read-only measure column of their own, and the
+ * caller passes only the rows currently visible (see visibleMatrixRows).
  */
 interface MatrixStepCardProps {
   node: FlowMatrixNode;
+  /** The rows to render — already filtered by their `visibleIf`. */
+  rows: MatrixRow[];
   value: MatrixAnswer;
   onChange: (rowId: string, colId: string, value: string) => void;
 }
@@ -85,9 +90,11 @@ const Cell: React.FC<{
   );
 };
 
-const MatrixStepCard: React.FC<MatrixStepCardProps> = ({ node, value, onChange }) => {
+const MatrixStepCard: React.FC<MatrixStepCardProps> = ({ node, rows, value, onChange }) => {
+  const { t } = useTranslation('assessments');
   const columns = node.columns.filter(c => !c.learnerHidden);
   const zeroCol = columns.find(c => c.zeroesRow);
+  const showUnits = rows.some(r => r.unit);
 
   /** When the frequency-style column is set to 0, zero-fill and lock the row's
    *  other input columns; clearing/raising it unlocks them (values kept). */
@@ -106,6 +113,11 @@ const MatrixStepCard: React.FC<MatrixStepCardProps> = ({ node, value, onChange }
         <thead>
           <tr>
             <th className="border-b border-border bg-surface-sunken px-3 py-2.5 text-left" />
+            {showUnits && (
+              <th className="border-b border-border bg-surface-sunken px-3 py-2.5 text-left align-bottom font-semibold text-ink">
+                {node.unitLabel || t('runner.standardServingUnit')}
+              </th>
+            )}
             {columns.map(col => (
               <th
                 key={col.id}
@@ -118,7 +130,7 @@ const MatrixStepCard: React.FC<MatrixStepCardProps> = ({ node, value, onChange }
           </tr>
         </thead>
         <tbody>
-          {node.rows.map(row => {
+          {rows.map(row => {
             const rowZeroed = zeroCol ? isZero(value[row.id]?.[zeroCol.id]) : false;
             return (
               <tr key={row.id} className="align-top">
@@ -126,6 +138,9 @@ const MatrixStepCard: React.FC<MatrixStepCardProps> = ({ node, value, onChange }
                   {row.label}
                   {row.helpText && <span className="block text-xs font-normal text-ink-muted">{row.helpText}</span>}
                 </td>
+                {showUnits && (
+                  <td className="border-b border-border px-3 py-3 text-left text-ink-muted">{row.unit || '—'}</td>
+                )}
                 {columns.map(col => (
                   <td key={col.id} className="border-b border-border px-3 py-3">
                     <Cell

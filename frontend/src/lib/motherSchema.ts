@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { toFieldErrors, pickErrors, type FieldErrors } from './validation';
-import { HWC_OTHER, MATRIX_SOURCES } from './motherFields';
+import {
+  HWC_OTHER, MATRIX_SOURCES, MAX_ADOPTION_AGE_DAYS, MAX_GESTATION_DAYS, MIN_GESTATION_DAYS,
+} from './motherFields';
 
 // `msg` values are i18n keys (validation:*) resolved in toFieldErrors at validation time.
 const requiredId = (msg: string) =>
@@ -56,6 +58,7 @@ export const motherSchema = z
     showEducationField: z.boolean().optional(),
     showOccupationOther: z.boolean().optional(),
     showNutritionCourseName: z.boolean().optional(),
+    isEdit: z.boolean().optional(),   // editing an existing record → skip registration-time freshness bounds
   })
   .superRefine((v, ctx) => {
     const today = new Date();
@@ -66,13 +69,20 @@ export const motherSchema = z
       if (daysBetween(lmp, today) > 0) ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.lmpFuture' });
       else if (dob && lmp < dob) ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.lmpBeforeDob' });
       else if (adoption && lmp > adoption) ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.lmpAfterAdoption' });
-      else if (adoption && daysBetween(adoption, lmp) > 180) ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.lmp180' });
+      else if (adoption && daysBetween(adoption, lmp) > MAX_GESTATION_DAYS)
+        ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.lmp180' });
+      // A pregnancy under 12 weeks at the adoption date is not eligible for the
+      // programme — judged at adoption, which is the moment the rule is about.
+      else if (adoption && daysBetween(adoption, lmp) < MIN_GESTATION_DAYS)
+        ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.gestationMin12' });
     }
     if (dob && daysBetween(dob, today) > 0) ctx.addIssue({ code: 'custom', path: ['mother_dob'], message: 'validation:common.dobFuture' });
     if (typeof v.mother_age === 'number' && (v.mother_age < 10 || v.mother_age > 50))
       ctx.addIssue({ code: 'custom', path: ['mother_dob'], message: 'validation:mother.ageRange' });
     if (adoption) {
       if (daysBetween(adoption, today) > 0) ctx.addIssue({ code: 'custom', path: ['adoption_date'], message: 'validation:common.adoptionFuture' });
+      else if (!v.isEdit && daysBetween(today, adoption) > MAX_ADOPTION_AGE_DAYS)
+        ctx.addIssue({ code: 'custom', path: ['adoption_date'], message: 'validation:mother.adoption14' });
       if (dob && adoption < dob) ctx.addIssue({ code: 'custom', path: ['adoption_date'], message: 'validation:common.adoptionBeforeDob' });
     }
     if (!(typeof v.hwc_id === 'number' && (v.hwc_id > 0 || v.hwc_id === HWC_OTHER)))

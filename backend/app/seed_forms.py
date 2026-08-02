@@ -885,17 +885,21 @@ _PCA_SUPPLEMENT_OPTS = [
 ]
 
 # Supplement-matrix rows (sheet rows 29-37):
-# (supplement name, standard household measure) — both cells verbatim.
+# (supplement name, standard household measure, the gate option that shows the
+# row) — the first two cells verbatim from the sheet. The measure is its own
+# read-only column rather than part of the label, and the gate narrows the grid
+# to the supplements the mother actually said she takes; the ids line up 1:1
+# with _PCA_SUPPLEMENT_OPTS minus "None".
 _PCA_SUPPLEMENT_ROWS = [
-    ("Protein powder", "Scoop"),
-    ("Medical nutrition supplement", "Scoop/Sachet"),
-    ("Malted health drink", "Tablespoon"),
-    ("Ragi malt", "Tablespoon"),
-    ("Sprouted cereal powder", "Tablespoon"),
-    ("Peanut powder", "Tablespoon"),
-    ("Sattu", "Tablespoon"),
-    ("Homemade nutrition mix", "Tablespoon"),
-    ("Other", "User defined"),
+    ("Protein powder", "Scoop", "pca_supp_protein"),
+    ("Medical nutrition supplement", "Scoop/Sachet", "pca_supp_medical"),
+    ("Malted health drink", "Tablespoon", "pca_supp_malted"),
+    ("Ragi malt", "Tablespoon", "pca_supp_ragi"),
+    ("Sprouted cereal powder", "Tablespoon", "pca_supp_sprouted"),
+    ("Peanut powder", "Tablespoon", "pca_supp_peanut"),
+    ("Sattu", "Tablespoon", "pca_supp_sattu"),
+    ("Homemade nutrition mix", "Tablespoon", "pca_supp_homemade"),
+    ("Other", "User defined", "pca_supp_other"),
 ]
 
 
@@ -958,15 +962,22 @@ def build_mother_protein_intake_schema() -> dict:
             "nodeId": "pca_supplements",
             "anyOf": [oid for oid, _ in _PCA_SUPPLEMENT_OPTS if oid != "pca_supp_none"],
         },
+        "unitLabel": "Standard serving unit",
         "rows": [
             # No proteinPerServing: supplement protein is brand-specific, so
             # these rows never feed the computed protein totals.
-            {"id": f"pca_m_supp_r{i}", "label": f"{name} — {measure}", "highQuality": False}
-            for i, (name, measure) in enumerate(_PCA_SUPPLEMENT_ROWS, start=1)
+            {
+                "id": f"pca_m_supp_r{i}", "label": name, "unit": measure,
+                "highQuality": False,
+                "visibleIf": {"nodeId": "pca_supplements", "anyOf": [gate]},
+            }
+            for i, (name, measure, gate) in enumerate(_PCA_SUPPLEMENT_ROWS, start=1)
         ],
         "columns": [
+            # Optional: the mother often does not know the brand, and the grid
+            # must not be blocked on it.
             {
-                "id": "brand", "label": "Brand / product name", "type": "text",
+                "id": "brand", "label": "Brand / product name (optional)", "type": "text",
                 "required": False, "options": None, "numeric": None,
             },
             *_pca_intake_columns(),
@@ -996,13 +1007,15 @@ def build_mother_protein_intake_schema() -> dict:
 #   pca_m_nuts      1 row    proteinPerServing [3]
 #   pca_m_eggs      1 row    proteinPerServing [7]            highQuality
 #   pca_m_meat      1 row    proteinPerServing [20]           highQuality
-#   pca_m_supp      9 rows   (no proteinPerServing)
+#   pca_m_supp      9 rows   (no proteinPerServing; each row has a `unit` and its
+#                             own visibleIf gate — one supplement option apiece)
 #   visibleIf gates:
 #     pca_m_eggs → {"nodeId": "pca_diet", "anyOf": ["pca_diet_egg", "pca_diet_nonveg"]}
 #     pca_m_meat → {"nodeId": "pca_diet", "anyOf": ["pca_diet_nonveg"]}
 #     (plus pca_m_supp → pca_supplements anyOf = all 9 supplement ids except pca_supp_none)
 #   Columns in every matrix: freq (0–7 days, zeroesRow) / usual (0–10) /
-#   qty24 (0–10); pca_m_supp adds a leading free-text "brand" column.
+#   qty24 (0–10); pca_m_supp adds a leading optional free-text "brand" column
+#   and renders each row's `unit` as a read-only "Standard serving unit" column.
 
 
 # ── Flat form defaults ───────────────────────────────────────────────────────
@@ -1323,6 +1336,52 @@ def build_antenatal_fields() -> dict:
 
 # ── Registry & seeding ───────────────────────────────────────────────────────
 
+# ── "None of the above" options ──────────────────────────────────────────────
+#
+# Multi-select question / checkbox field id → the option that means "none".
+# Picking it clears every other choice, and picking anything else clears it.
+# Listed explicitly rather than matched by label so a stray "None" somewhere is
+# never silently made exclusive; the runners fall back to a label heuristic only
+# for definitions saved before the flag existed.
+_EXCLUSIVE_OPTIONS: dict[str, str] = {
+    "cfa_ingredients": "cfa_ingredients_none",   # "None added"
+    "cfa_limit": "cfa_limit_none",
+    "pca_supplements": "pca_supp_none",
+    "high_risk_conditions": "none",
+    "pregnancy_symptoms": "none",
+    "medications": "none",
+}
+
+
+def _mark_exclusive_options(schema: dict) -> dict:
+    """Stamp `exclusive` on the options named in _EXCLUSIVE_OPTIONS.
+
+    Runs over both dialects — flow nodes keyed by option id, flat fields keyed
+    by option value — so the flag lives in one table instead of being threaded
+    through every question tuple. A listed question that exists but has no such
+    option raises: a silent miss would look exactly like the feature working.
+    """
+    for node in (schema.get("nodes") or {}).values():
+        target = _EXCLUSIVE_OPTIONS.get(node.get("id") or "")
+        if target is None or node.get("questionType") != "multi":
+            continue
+        matches = [o for o in (node.get("options") or []) if o.get("id") == target]
+        if not matches:
+            raise ValueError(f"exclusive option {target!r} not found on question {node['id']!r}")
+        for opt in matches:
+            opt["exclusive"] = True
+    for field in schema.get("fields") or []:
+        target = _EXCLUSIVE_OPTIONS.get(field.get("id") or "")
+        if target is None or field.get("type") != "checkbox":
+            continue
+        matches = [o for o in (field.get("options") or []) if o.get("value") == target]
+        if not matches:
+            raise ValueError(f"exclusive option {target!r} not found on field {field['id']!r}")
+        for opt in matches:
+            opt["exclusive"] = True
+    return schema
+
+
 # form_key → (title, description, builder_type, schema builder)
 FORM_SPECS: dict[str, tuple[str, str, str, callable]] = {
     "learner_registration": (
@@ -1367,11 +1426,18 @@ FORM_SPECS: dict[str, tuple[str, str, str, callable]] = {
 }
 
 
+def build_schema(form_key: str) -> dict:
+    """The canonical schema for a built-in form. Always go through this rather
+    than calling a FORM_SPECS builder directly — it applies the cross-cutting
+    post-passes (currently the "none of the above" flags)."""
+    return _mark_exclusive_options(FORM_SPECS[form_key][3]())
+
+
 def ensure_form_definitions(db: Session) -> None:
     """Insert any missing form definitions (idempotent; never overwrites edits)."""
     existing = {row.form_key for row in db.query(FormDefinition.form_key).all()}
     created = False
-    for form_key, (title, description, builder_type, build) in FORM_SPECS.items():
+    for form_key, (title, description, builder_type, _build) in FORM_SPECS.items():
         if form_key in existing:
             continue
         db.add(FormDefinition(
@@ -1379,7 +1445,7 @@ def ensure_form_definitions(db: Session) -> None:
             title=title,
             description=description,
             builder_type=builder_type,
-            schema_json=build(),
+            schema_json=build_schema(form_key),
             version=1,
         ))
         created = True

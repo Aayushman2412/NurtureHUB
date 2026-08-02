@@ -60,6 +60,10 @@ export const isResponseFormKey = (key: string): key is FormKey =>
 /** CF assessments unlock at this child age (days). */
 export const CF_MIN_AGE_DAYS = 150;
 
+/** 24-hour protein totals above this are flagged for review (mirrors
+ *  routers/forms.py PROTEIN_HIGH_TOTAL_G — the server sets the flag). */
+export const PROTEIN_HIGH_TOTAL_G = 100;
+
 // ── Flow schema (canvas decision tree) ───────────────────────────────────────
 
 export type QuestionType = 'single' | 'multi' | 'text' | 'date' | 'number';
@@ -153,7 +157,29 @@ export interface FlowOption {
   action: FlowAction;
   /** Branch override (single-select questions only). null → follow the node's default `next`. */
   next: string | null;
+  /**
+   * "None of the above" semantics on a MULTI-select: picking this option clears
+   * every other one, and picking any other option clears this. Absent (not
+   * `false`) on definitions saved before the flag existed — those fall back to
+   * the label heuristic in `isExclusiveOption`.
+   */
+  exclusive?: boolean | null;
 }
+
+/** Labels that mean "none of the above" in a definition that predates the flag. */
+const LEGACY_EXCLUSIVE_LABELS = ['none', 'none of the above'];
+
+/**
+ * Does picking this option clear the rest of a multi-select?
+ *
+ * An explicit `exclusive` always wins. When the key is absent the option is
+ * judged by its label, so the forms already live in production behave correctly
+ * without waiting for a definition refresh.
+ */
+export const isExclusiveOption = (option: Pick<FlowOption, 'label' | 'exclusive'>): boolean => {
+  if (option.exclusive != null) return option.exclusive;
+  return LEGACY_EXCLUSIVE_LABELS.includes(option.label.trim().toLowerCase());
+};
 
 /** A question inside a common-section block: same shape, but no position/branching. */
 /**
@@ -305,10 +331,16 @@ export interface MatrixRow {
   id: string;
   label: string;
   helpText?: string;
+  /** The row's standard household measure ("Scoop", "Tablespoon"). Rendered as
+   *  its own read-only column rather than crammed into the label. */
+  unit?: string | null;
   /** Protein grams per standard serving — feeds the computed intake totals. */
   proteinPerServing?: number | null;
   /** Counts toward the high-quality (animal/dairy) protein totals. */
   highQuality?: boolean | null;
+  /** Answer-dependent row visibility, same shape as a node's. Lets a grid show
+   *  only the items picked in an earlier question. Absent = always shown. */
+  visibleIf?: VisibleIf | null;
 }
 
 /**
@@ -325,6 +357,9 @@ export interface FlowMatrixNode {
   required: boolean;
   rows: MatrixRow[];
   columns: MatrixColumn[];
+  /** Header for the read-only unit column; only rendered when some row has a
+   *  `unit`. Absent = the runner's default label. */
+  unitLabel?: string | null;
   position: { x: number; y: number };
   next: string | null;
   /** Answer-dependent visibility; absent = always shown. */
@@ -421,6 +456,8 @@ export const parseMatrixAnswer = (raw: string | null | undefined): MatrixAnswer 
 export interface FlatFieldOption {
   label: string;
   value: string;
+  /** "None of the above" on a `checkbox` field — see isExclusiveOption. */
+  exclusive?: boolean | null;
 }
 
 export type FlatFieldType =
@@ -544,6 +581,9 @@ export interface ResponseSummary {
     hq24: number;
     dailyAvg: number;
     hqDailyAvg: number;
+    /** total24 is above the review threshold — flagged to the learner and the
+     *  admin team. Absent on responses submitted before the check existed. */
+    high24?: boolean;
   };
 }
 

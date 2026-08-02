@@ -61,7 +61,9 @@
     "occupationOther": "Please specify the occupation.",
     "rationCardOther": "Please specify the ration card type.",
     "courseName": "Please specify the course.",
-    "ratings": "Please rate trust and willingness for every source."
+    "ratings": "Please rate trust and willingness for every source.",
+    "adoption14": "Adoption date cannot be more than 14 days ago.",
+    "gestationMin12": "Gestational age at adoption must be at least 12 weeks."
   },
   "child": {
     "babiesBorn": "Please select whether this was a single or twin birth.",
@@ -77,6 +79,7 @@
     "adoption14": "Adoption date cannot be more than 14 days ago.",
     "deliveryPlaceOther": "Please specify the place of delivery.",
     "ebfReason": "Please give the reason exclusive breastfeeding was not done.",
-    "conditionOther": "Please specify the other condition(s)."
+    "conditionOther": "Please specify the other condition(s).",
+    "bfReason": "Please give the reason breastfeeding was not started within one hour."
   }
 }

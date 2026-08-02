@@ -66,7 +66,7 @@ export interface Mother extends MotherPayload {
   created_at: string;
   edd_lmp: string | null;
   gestational_weeks: number | null;
-  gestational_months: number | null;
+  gestational_days: number | null;
 }
 
 export const listMothers = () => client.get<MotherListItem[]>('/api/mothers').then(r => r.data);

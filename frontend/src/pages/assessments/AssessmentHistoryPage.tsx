@@ -21,6 +21,7 @@ import {
   PageHeader,
   PageLoader,
 } from '../../components/ui';
+import { cn } from '../../utils/cn';
 import { useToast } from '../../context/ToastContext';
 import { getChild, type Child } from '../../api/children';
 import { getMother, type Mother } from '../../api/mothers';
@@ -148,7 +149,7 @@ const AssessmentHistoryPage: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+    <div className="mx-auto flex max-w-4xl flex-col gap-6">
       <PageHeader
         title={definition.title}
         backTo={backTo}
@@ -208,101 +209,148 @@ const AssessmentHistoryPage: React.FC = () => {
               }
             />
           ) : (
+            /* One visit per ROW, columns aligned down the page, so a learner can
+               read one variable at a time across visits instead of re-parsing a
+               card each time. Rules only between rows — no full grid. */
             <div className="flex flex-col gap-3">
               <h3 className="font-display text-sm font-bold uppercase tracking-wider text-ink-muted">
                 {t('history.responsesTitle')}
               </h3>
-              {sorted.map(r => {
-                const summary = r.summary_json;
-                const submitted = r.status === 'submitted';
-                return (
-                  <Card key={r.id} className="p-4 sm:p-5">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-coral-50 text-primary-ink dark:bg-coral-500/10">
-                        <CalendarDays className="size-5" aria-hidden />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-bold text-ink">
-                            {formatDisplayDate(r.assessment_date, i18n.language)}
-                          </span>
-                          <Badge variant={submitted ? 'success' : 'warning'}>
-                            {submitted ? t('common.submitted') : t('common.draft')}
-                          </Badge>
-                        </div>
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          {submitted ? (
-                            scored ? (
-                              <>
-                                <span className="inline-flex items-center rounded-full bg-success-50 px-2.5 py-0.5 text-[11px] font-semibold text-success-600 dark:bg-success-500/15 dark:text-success-500">
-                                  {t('history.chipGreen', { n: summary?.green ?? 0 })}
-                                </span>
-                                {(summary?.red ?? 0) > 0 && (
-                                  <span className="inline-flex items-center rounded-full bg-error-50 px-2.5 py-0.5 text-[11px] font-semibold text-error-600 dark:bg-error-500/15 dark:text-error-500">
-                                    {t('history.chipRed', { n: summary?.red ?? 0 })}
+              <Card className="overflow-x-auto p-0">
+                <table className="w-full min-w-[34rem] border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-[11px] uppercase tracking-wide text-ink-muted">
+                      <th className="px-4 py-2.5 text-left font-semibold">{t('history.colDate')}</th>
+                      <th className="px-3 py-2.5 text-left font-semibold">{t('history.colStatus')}</th>
+                      {scored ? (
+                        <>
+                          <th className="px-3 py-2.5 text-right font-semibold">{t('history.colAsPerLap')}</th>
+                          <th className="px-3 py-2.5 text-right font-semibold">{t('history.colNeedsAttention')}</th>
+                        </>
+                      ) : (
+                        <th className="px-3 py-2.5 text-right font-semibold">{t('history.colRecorded')}</th>
+                      )}
+                      <th className="px-4 py-2.5 text-right font-semibold">{t('history.colActions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.map(r => {
+                      const summary = r.summary_json;
+                      const submitted = r.status === 'submitted';
+                      return (
+                        <tr
+                          key={r.id}
+                          className="border-b border-border last:border-0 transition-colors hover:bg-surface-sunken/40"
+                        >
+                          <td className="whitespace-nowrap px-4 py-3">
+                            <span className="flex items-center gap-2 font-semibold text-ink">
+                              <CalendarDays className="size-4 shrink-0 text-ink-faint" aria-hidden />
+                              {formatDisplayDate(r.assessment_date, i18n.language)}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3">
+                            <Badge variant={submitted ? 'success' : 'warning'}>
+                              {submitted ? t('common.submitted') : t('common.draft')}
+                            </Badge>
+                          </td>
+                          {/* A draft has no score yet, so its progress sits under
+                              the first metric column and the rest read "—". */}
+                          {scored ? (
+                            <>
+                              <td className="px-3 py-3 text-right tabular-nums">
+                                {submitted ? (
+                                  <span className="font-semibold text-success-600 dark:text-success-500">
+                                    {summary?.green ?? 0}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-ink-muted">
+                                    {t('history.chipDraftProgress', {
+                                      answered: summary?.answered ?? 0,
+                                      total: summary?.total ?? 0,
+                                    })}
                                   </span>
                                 )}
-                              </>
-                            ) : (
-                              <span className="inline-flex items-center rounded-full bg-surface-sunken px-2.5 py-0.5 text-[11px] font-semibold text-ink-muted">
-                                {t('growth.chipRecorded', { n: summary?.answered ?? 0 })}
-                              </span>
-                            )
+                              </td>
+                              <td className="px-3 py-3 text-right tabular-nums">
+                                {submitted ? (
+                                  <span
+                                    className={cn(
+                                      'font-semibold',
+                                      (summary?.red ?? 0) > 0
+                                        ? 'text-error-600 dark:text-error-500'
+                                        : 'text-ink-faint',
+                                    )}
+                                  >
+                                    {summary?.red ?? 0}
+                                  </span>
+                                ) : (
+                                  <span className="text-ink-faint">—</span>
+                                )}
+                              </td>
+                            </>
                           ) : (
-                            <span className="inline-flex items-center rounded-full bg-surface-sunken px-2.5 py-0.5 text-[11px] font-semibold text-ink-muted">
-                              {t('history.chipDraftProgress', {
-                                answered: summary?.answered ?? 0,
-                                total: summary?.total ?? 0,
-                              })}
-                            </span>
+                            <td className="px-3 py-3 text-right tabular-nums">
+                              {submitted ? (
+                                <span className="font-semibold text-ink">{summary?.answered ?? 0}</span>
+                              ) : (
+                                <span className="text-xs text-ink-muted">
+                                  {t('history.chipDraftProgress', {
+                                    answered: summary?.answered ?? 0,
+                                    total: summary?.total ?? 0,
+                                  })}
+                                </span>
+                              )}
+                            </td>
                           )}
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        {submitted ? (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => navigate(`${runUrl}?responseId=${r.id}`)}
-                              iconLeft={<Pencil className="size-3.5" />}
-                            >
-                              {t('history.edit')}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => navigate(`/assessments/${r.id}/plan`)}
-                              iconRight={<ArrowRight className="size-3.5" />}
-                            >
-                              {t('history.viewPlan')}
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button
-                              size="sm"
-                              onClick={() => navigate(`${runUrl}?responseId=${r.id}`)}
-                              iconLeft={<Play className="size-3.5" />}
-                            >
-                              {t('history.continue')}
-                            </Button>
-                            <button
-                              type="button"
-                              aria-label={t('history.deleteDraft')}
-                              title={t('history.deleteDraft')}
-                              onClick={() => setDeleteTarget(r)}
-                              className="cursor-pointer rounded-md p-2 text-ink-faint transition-colors hover:bg-error-50 hover:text-error-500 dark:hover:bg-error-500/10"
-                            >
-                              <Trash2 className="size-4" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-end gap-2">
+                              {submitted ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => navigate(`${runUrl}?responseId=${r.id}`)}
+                                    iconLeft={<Pencil className="size-3.5" />}
+                                  >
+                                    {t('history.edit')}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => navigate(`/assessments/${r.id}/plan`)}
+                                    iconRight={<ArrowRight className="size-3.5" />}
+                                  >
+                                    {t('history.viewPlan')}
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => navigate(`${runUrl}?responseId=${r.id}`)}
+                                    iconLeft={<Play className="size-3.5" />}
+                                  >
+                                    {t('history.continue')}
+                                  </Button>
+                                  <button
+                                    type="button"
+                                    aria-label={t('history.deleteDraft')}
+                                    title={t('history.deleteDraft')}
+                                    onClick={() => setDeleteTarget(r)}
+                                    className="cursor-pointer rounded-md p-2 text-ink-faint transition-colors hover:bg-error-50 hover:text-error-500 dark:hover:bg-error-500/10"
+                                  >
+                                    <Trash2 className="size-4" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </Card>
             </div>
           )}
         </>

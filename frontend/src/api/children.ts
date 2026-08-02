@@ -18,6 +18,7 @@ export interface ChildPayload {
   delivery_place?: string | null;
   delivery_place_other?: string | null;
   bf_within_one_hour?: boolean | null;
+  bf_reason?: string | null;
   ebf_during_stay?: boolean | null;
   ebf_reason?: string | null;
   pre_existing_other?: string | null;

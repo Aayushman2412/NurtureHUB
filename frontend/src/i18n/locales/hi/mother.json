@@ -47,7 +47,7 @@
     "rowMobile": "मोबाइल",
     "ageValue": "{{n}} वर्ष",
     "weightHeightValue": "{{weight}} किग्रा · {{height}} सेमी",
-    "gestationalValue": "{{weeks}} सप्ताह · {{months}} महीने",
+    "gestationalValue": "{{weeks}} सप्ताह {{days}} दिन",
     "children": "बच्चे",
     "addChild": "बच्चा जोड़ें",
     "childrenEmptyTitle": "कोई बच्चा दर्ज नहीं",
@@ -90,7 +90,8 @@
     "gestationalAge": "गर्भकालीन आयु",
     "gestationalHint": "गणना के लिए एलएमपी सेट करें",
     "gestationalInvalidHint": "एलएमपी अपनाने की तिथि से बहुत पहले है",
-    "gestationalValue": "{{weeks}} सप्ताह · {{months}} महीने",
+    "gestationalValue": "{{weeks}} सप्ताह {{days}} दिन",
+    "gestationalNeedsAdoption": "गणना के लिए गोद लेने की तिथि भरें",
     "eddRecords": "नवीनतम रिकॉर्ड के अनुसार ईडीडी (वैकल्पिक)",
     "mobile": "मोबाइल नंबर",
     "mobilePlaceholder": "10 अंकों का",
@@ -174,6 +175,7 @@
     "deliveryPlace": "प्रसव स्थान",
     "deliveryPlaceOther": "अन्य प्रसव स्थान निर्दिष्ट करें",
     "bfWithinHour": "क्या जन्म के एक घंटे के भीतर स्तनपान शुरू किया गया था?",
+    "bfReason": "यदि नहीं, तो कारण बताएँ",
     "ebfDuringStay": "क्या प्रसव के बाद सुविधा में रहने के दौरान शिशु को केवल स्तनपान कराया गया था?",
     "ebfReason": "यदि नहीं, तो कारण बताएँ",
     "birthConditions": "जन्म के समय पूर्व-मौजूदा अस्वस्थता की स्थितियाँ (सभी लागू चुनें)",
@@ -196,7 +198,10 @@
     "toastSuccessSaved": "{{name}} ({{uid}}) सहेजा गया।",
     "toastSuccessRegistered": "{{name}} ({{uid}}) दर्ज किया गया।",
     "toastFailSave": "सहेजने में असफल। कृपया पुनः प्रयास करें।",
-    "toastFailRegister": "रजिस्ट्रेशन असफल। कृपया पुनः प्रयास करें।"
+    "toastFailRegister": "रजिस्ट्रेशन असफल। कृपया पुनः प्रयास करें।",
+    "twinsNoticeTitle": "दूसरे जुड़वाँ शिशु को भी दर्ज करें",
+    "twinsNoticeBody": "यह फ़ॉर्म एक ही शिशु का रिकॉर्ड रखता है। यदि दूसरा जुड़वाँ शिशु जीवित है और गोद लेने की शर्तें पूरी करता है, तो इसे सहेजने के बाद उसी माँ के अंतर्गत उसे अलग शिशु के रूप में जोड़ें।",
+    "twinsNoticeAck": "समझ गए"
   },
   "options": {
     "yes": "हाँ",

@@ -47,7 +47,7 @@
     "rowMobile": "Mobile",
     "ageValue": "{{n}} years",
     "weightHeightValue": "{{weight}} kg · {{height}} cm",
-    "gestationalValue": "{{weeks}} weeks · {{months}} months",
+    "gestationalValue": "{{weeks}} weeks {{days}} days",
     "children": "Children",
     "addChild": "Add child",
     "childrenEmptyTitle": "No children registered",
@@ -90,7 +90,8 @@
     "gestationalAge": "Gestational age",
     "gestationalHint": "Set LMP to calculate",
     "gestationalInvalidHint": "LMP is too far before the adoption date",
-    "gestationalValue": "{{weeks}} weeks · {{months}} months",
+    "gestationalValue": "{{weeks}} weeks {{days}} days",
+    "gestationalNeedsAdoption": "Set the adoption date to calculate",
     "eddRecords": "EDD as per latest records (optional)",
     "mobile": "Mobile number",
     "mobilePlaceholder": "10-digit",
@@ -174,6 +175,7 @@
     "deliveryPlace": "Place of delivery",
     "deliveryPlaceOther": "Specify other place of delivery",
     "bfWithinHour": "Was breastfeeding initiated within one hour of birth?",
+    "bfReason": "If not, mention the reason",
     "ebfDuringStay": "Was the baby exclusively breastfed during the facility stay after delivery?",
     "ebfReason": "If not, mention the reason",
     "birthConditions": "Pre-existing ill-health conditions at birth (select all that apply)",
@@ -196,7 +198,10 @@
     "toastSuccessSaved": "Saved {{name}} ({{uid}}).",
     "toastSuccessRegistered": "Registered {{name}} ({{uid}}).",
     "toastFailSave": "Failed to save. Please try again.",
-    "toastFailRegister": "Failed to register. Please try again."
+    "toastFailRegister": "Failed to register. Please try again.",
+    "twinsNoticeTitle": "Register the other twin too",
+    "twinsNoticeBody": "This form records one baby. If the other twin is alive and meets the adoption criteria, add them as a separate child under the same mother once you have saved this one.",
+    "twinsNoticeAck": "Got it"
   },
   "options": {
     "yes": "Yes",

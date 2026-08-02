@@ -80,6 +80,10 @@ class FlowOptionModel(BaseModel):
     verdict: Optional[str] = None
     action: FlowActionModel = Field(default_factory=FlowActionModel)
     next: Optional[str] = None
+    # "None of the above" on a multi-select: selecting it clears every other
+    # option (and any other option clears it). None = not set; the runner then
+    # falls back to a label heuristic for pre-existing definitions.
+    exclusive: Optional[bool] = None
 
 
 class QuestionDisplayModel(BaseModel):
@@ -118,14 +122,26 @@ class MatrixColumnModel(BaseModel):
     zeroesRow: Optional[bool] = None
 
 
+class VisibleIfModel(BaseModel):
+    """Answer-dependent node visibility: shown only when the referenced
+    single/multi question's answer includes any of `anyOf` option ids."""
+    nodeId: str
+    anyOf: List[str] = Field(default_factory=list)
+
+
 class MatrixRowModel(BaseModel):
     id: str
     label: str = ""
     helpText: Optional[str] = None
+    # Standard household measure ("Scoop"); rendered as its own read-only column.
+    unit: Optional[str] = None
     # Protein grams per standard serving — feeds the computed intake totals.
     proteinPerServing: Optional[float] = None
     # Row counts toward the high-quality (animal/dairy) protein totals.
     highQuality: Optional[bool] = None
+    # Answer-dependent ROW visibility (same shape as a node's), so a grid can
+    # show only the items picked in an earlier question.
+    visibleIf: Optional["VisibleIfModel"] = None
 
 
 class FlowSectionChildModel(BaseModel):
@@ -146,13 +162,6 @@ class FlowPositionModel(BaseModel):
     y: float = 0
 
 
-class VisibleIfModel(BaseModel):
-    """Answer-dependent node visibility: shown only when the referenced
-    single/multi question's answer includes any of `anyOf` option ids."""
-    nodeId: str
-    anyOf: List[str] = Field(default_factory=list)
-
-
 class FlowNodeModel(BaseModel):
     id: str
     kind: Literal["question", "section", "info", "matrix"] = "question"
@@ -171,6 +180,7 @@ class FlowNodeModel(BaseModel):
     # matrix
     rows: Optional[List[MatrixRowModel]] = None
     columns: Optional[List[MatrixColumnModel]] = None
+    unitLabel: Optional[str] = None
     next: Optional[str] = None
     display: Optional[QuestionDisplayModel] = None
     visibleIf: Optional[VisibleIfModel] = None
@@ -241,6 +251,8 @@ class FlowSchemaModel(BaseModel):
 class FlatFieldOptionModel(BaseModel):
     label: str
     value: str
+    # "None of the above" on a checkbox field — see FlowOptionModel.exclusive.
+    exclusive: Optional[bool] = None
 
 
 class FlatFieldConditionModel(BaseModel):

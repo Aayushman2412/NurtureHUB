@@ -137,6 +137,19 @@ export const getAdminGrowthSummary = (
 export const getGrowthSummaryFilters = (): Promise<GrowthSummaryFilterOptions> =>
   client.get('/api/admin/growth/summary/filters').then(r => r.data);
 
+/** One submitted protein assessment whose 24-hour total was implausibly high. */
+export interface ProteinAlert {
+  response_id: number;
+  assessment_date: string | null;
+  mother_id: number | null;
+  mother_name: string | null;
+  learner_name: string | null;
+  total24: number | null;
+}
+
+export const getGrowthAlerts = (): Promise<{ alerts: ProteinAlert[]; threshold: number }> =>
+  client.get('/api/admin/growth/alerts').then(r => r.data);
+
 /** Download the (filtered) summary table as an .xlsx. Triggers the browser download. */
 export const downloadGrowthSummaryXlsx = async (filters: GrowthFilters = {}): Promise<void> => {
   const res = await client.get('/api/admin/growth/summary/export', {

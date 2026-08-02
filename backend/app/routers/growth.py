@@ -32,7 +32,7 @@ from app import growth_summary_mock as gsm  # MOCK: summary-table demo values (r
 from app import models
 from app.database import get_db
 from app.dependencies import get_current_admin, get_verified_user
-from app.routers.forms import _serialize_detail
+from app.routers.forms import PROTEIN_HIGH_TOTAL_G, _serialize_detail
 from app.who_growth import percentile_curves, zscore_for_value
 
 router = APIRouter(prefix="/api/growth", tags=["growth"])
@@ -289,18 +289,20 @@ def _visit_z(indicator: str, sex: Optional[str], visit: Optional[Dict[str, Any]]
 
 
 def _z_triplet(child_id: int, sex: Optional[str], visits: List[Dict[str, Any]],
-               indicator: str) -> tuple:
-    """WFAz/HFAz/WFHz at Baseline / Assessment / Last visit. Returns (dict, any_mock)."""
+               indicator: str) -> Dict[str, Optional[float]]:
+    """WFAz/HFAz/WFHz at Baseline / Assessment / Last visit.
+
+    A case with no measurement yet gets None, never a stand-in: a z-score reads
+    as a clinical finding, and inventing one made the outcomes chart show bars
+    for a child whose z-trend plots (which only ever plot real visits) correctly
+    said "no measurements yet". Demo fall-backs are fine for programme config
+    like expected counts; they are not fine for anthropometry.
+    """
     bv, av, lv = _pick_bal(visits)
-    out: Dict[str, Optional[float]] = {}
-    any_mock = False
-    for label, visit in (("bv", bv), ("av", av), ("lv", lv)):
-        z = _visit_z(indicator, sex, visit)
-        if z is None and gsm.MOCK_ENABLED:
-            z = gsm.fallback_z(child_id, indicator + label)  # MOCK: z fallback
-            any_mock = True
-        out[label] = z
-    return out, any_mock
+    return {
+        label: _visit_z(indicator, sex, visit)
+        for label, visit in (("bv", bv), ("av", av), ("lv", lv))
+    }
 
 
 def _summary_rows(cases: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -343,13 +345,14 @@ def _summary_rows(cases: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                           if all(v is not None for v in expected.values()) else None)
         total = _activity_block(total_expected, cg_actual + bf_actual + cf_actual)
 
-        # Outcomes — REAL z-scores computed from measurements (mock-filled if none).
+        # Outcomes — REAL z-scores computed from measurements; null when there
+        # are none. Never mock-filled (see _z_triplet).
         w_visits = [v for v in visits if v["weight"] and v["age_days"] is not None]
         l_visits = [v for v in visits if v["length"] and v["age_days"] is not None]
         wl_visits = [v for v in visits if v["weight"] and v["length"]]
-        wfaz, w_mock = _z_triplet(child_id, sex, w_visits, "wfa")
-        hfaz, h_mock = _z_triplet(child_id, sex, l_visits, "lfa")
-        wfhz, wh_mock = _z_triplet(child_id, sex, wl_visits, "wfl")
+        wfaz = _z_triplet(child_id, sex, w_visits, "wfa")
+        hfaz = _z_triplet(child_id, sex, l_visits, "lfa")
+        wfhz = _z_triplet(child_id, sex, wl_visits, "wfl")
 
         rows.append({
             "case_id": child_id,
@@ -374,7 +377,7 @@ def _summary_rows(cases: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 "expected_is_mock": bool(gsm.MOCK_ENABLED),
                 "adoption_type_is_mock": bool(timing_is_mock),
                 "timing_is_mock": bool(timing_is_mock),
-                "z_is_mock": bool(w_mock or h_mock or wh_mock),
+                "z_is_mock": False,   # z-scores are always real or absent
             },
         })
     return rows
@@ -602,6 +605,51 @@ def admin_growth_summary(
         department=department or None, learner_id=learner_id,
     )
     return {"rows": _summary_rows(cases), "mock": bool(gsm.MOCK_ENABLED)}
+
+
+@admin_router.get("/alerts")
+def admin_growth_alerts(
+    limit: int = Query(20, ge=1, le=100),
+    admin: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Submitted protein assessments whose 24-hour total was flagged as
+    implausibly high (see forms.PROTEIN_HIGH_TOTAL_G).
+
+    The learner and every admin also get a notification at submit time; this is
+    the durable list the team can work through, newest first.
+    """
+    responses = (
+        db.query(models.FormResponse)
+        .filter(
+            models.FormResponse.form_key == "mother_protein_intake",
+            models.FormResponse.status == "submitted",
+        )
+        .order_by(models.FormResponse.assessment_date.desc(), models.FormResponse.id.desc())
+        .limit(500)
+        .all()
+    )
+    alerts: List[Dict[str, Any]] = []
+    for r in responses:
+        protein = ((r.summary_json or {}).get("protein") or {})
+        if not protein.get("high24"):
+            continue
+        mother = db.query(models.Mother).filter(models.Mother.id == r.mother_id).first()
+        learner = (
+            db.query(models.User).filter(models.User.id == mother.registered_by_user_id).first()
+            if mother is not None else None
+        )
+        alerts.append({
+            "response_id": r.id,
+            "assessment_date": r.assessment_date.isoformat() if r.assessment_date else None,
+            "mother_id": r.mother_id,
+            "mother_name": mother.mother_name if mother else None,
+            "learner_name": (learner.full_name or learner.email) if learner else None,
+            "total24": protein.get("total24"),
+        })
+        if len(alerts) >= limit:
+            break
+    return {"alerts": alerts, "threshold": PROTEIN_HIGH_TOTAL_G}
 
 
 @admin_router.get("/summary/filters")

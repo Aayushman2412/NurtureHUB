@@ -144,6 +144,12 @@ class EducationDegreeOut(BaseModel):
 
 # ── Mother Registration record ──
 
+# Adoption-window rules, shared by MR and CR (mirrored in lib/motherFields.ts).
+MAX_ADOPTION_AGE_DAYS = 14    # an adoption may be backdated by at most a fortnight
+MIN_GESTATION_DAYS = 84       # ≥12 weeks pregnant on the adoption date
+MAX_GESTATION_DAYS = 180      # …and no more than ~25½ weeks
+
+
 class MotherSourceRatingIn(BaseModel):
     source: str
     trust: Optional[int] = Field(default=None, ge=1, le=5)
@@ -160,6 +166,11 @@ def _digits(v: str) -> str:
 
 
 class MotherBase(BaseModel):
+    # The "adoption ≤14d ago" bound applies at registration only. Updates/reads
+    # set this False so editing (or simply reading) an aged record isn't blocked
+    # by time passing — same pattern as ChildBase.
+    _enforce_freshness: ClassVar[bool] = True
+
     mother_name: str = Field(min_length=2)
     adoption_date: Optional[date] = None
     mother_dob: Optional[date] = None
@@ -207,8 +218,11 @@ class MotherBase(BaseModel):
         today = date.today()
         if self.mother_dob and self.mother_dob > today:
             raise ValueError("Date of birth cannot be in the future.")
-        if self.adoption_date and self.adoption_date > today:
-            raise ValueError("Adoption date cannot be in the future.")
+        if self.adoption_date:
+            if self.adoption_date > today:
+                raise ValueError("Adoption date cannot be in the future.")
+            if self._enforce_freshness and (today - self.adoption_date).days > MAX_ADOPTION_AGE_DAYS:
+                raise ValueError("Adoption date cannot be more than 14 days before today.")
         if self.adoption_date and self.mother_dob and self.adoption_date < self.mother_dob:
             raise ValueError("Adoption date cannot be before the date of birth.")
         if self.lmp:
@@ -219,8 +233,14 @@ class MotherBase(BaseModel):
             if self.adoption_date:
                 if self.lmp > self.adoption_date:
                     raise ValueError("LMP cannot be after the date of adoption.")
-                if (self.adoption_date - self.lmp).days > 180:
+                gestation_days = (self.adoption_date - self.lmp).days
+                if gestation_days > MAX_GESTATION_DAYS:
                     raise ValueError("LMP cannot be more than 180 days before the date of adoption.")
+                # Under 12 weeks pregnant on the adoption date → not eligible.
+                # Unlike the freshness bound this is a property of the record,
+                # not of the clock, so it is enforced on updates too.
+                if gestation_days < MIN_GESTATION_DAYS:
+                    raise ValueError("Gestational age at adoption must be at least 12 weeks.")
         if self.mobile and self.alternate_mobile and _digits(self.mobile) == _digits(self.alternate_mobile):
             raise ValueError("Alternate mobile must be different from the primary mobile.")
         return self
@@ -230,14 +250,20 @@ class MotherCreate(MotherBase):
     pass
 
 
+class MotherUpdate(MotherBase):
+    # Editing an existing mother: don't re-apply the registration-time freshness bound.
+    _enforce_freshness: ClassVar[bool] = False
+
+
 class MotherOut(MotherBase):
+    _enforce_freshness: ClassVar[bool] = False   # reads must never fail on an aged record
     id: int
     mother_uid: str
     registered_by_user_id: Optional[int] = None
     created_at: datetime
     edd_lmp: Optional[date] = None
     gestational_weeks: Optional[int] = None    # derived from LMP
-    gestational_months: Optional[int] = None   # derived from LMP
+    gestational_days: Optional[int] = None     # leftover days past the whole weeks
     source_ratings: List[MotherSourceRatingOut] = []
     hwc: Optional[HWCOut] = None
     phc: Optional[PHCOut] = None
@@ -296,6 +322,7 @@ class ChildBase(BaseModel):
     delivery_place: Optional[str] = None
     delivery_place_other: Optional[str] = None
     bf_within_one_hour: Optional[bool] = None
+    bf_reason: Optional[str] = None
     ebf_during_stay: Optional[bool] = None
     ebf_reason: Optional[str] = None
     pre_existing_other: Optional[str] = None
@@ -319,7 +346,7 @@ class ChildBase(BaseModel):
         if self.adoption_date:
             if self.adoption_date > today:
                 raise ValueError("Adoption date cannot be in the future.")
-            if self._enforce_freshness and (today - self.adoption_date).days > 14:
+            if self._enforce_freshness and (today - self.adoption_date).days > MAX_ADOPTION_AGE_DAYS:
                 raise ValueError("Adoption date cannot be more than 14 days before today.")
             if self.dob and self.adoption_date < self.dob:
                 raise ValueError("Adoption date cannot be before the date of birth.")

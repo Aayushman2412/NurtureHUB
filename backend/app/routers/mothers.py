@@ -99,7 +99,7 @@ def get_mother(
 @router.put("/{mother_id}", response_model=schemas.MotherOut)
 def update_mother(
     mother_id: int,
-    data: schemas.MotherCreate,
+    data: schemas.MotherUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):

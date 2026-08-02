@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
-import type { FlowMatrixNode, MatrixColumn, NumericRange } from '../../lib/flowTypes';
+import { ChevronDown, ChevronUp, Eye, Plus, Trash2 } from 'lucide-react';
+import type { FlowMatrixNode, FlowSchema, MatrixColumn, MatrixRow, NumericRange } from '../../lib/flowTypes';
+import { isQuestionNode } from '../../lib/flowTypes';
 import { Checkbox, FieldLabel, Input, Select } from '../ui';
 import { cn } from '../../utils/cn';
 import { makeMatrixColumn, makeMatrixRow } from './factories';
@@ -13,7 +14,9 @@ import { makeMatrixColumn, makeMatrixRow } from './factories';
  */
 interface MatrixEditorProps {
   node: FlowMatrixNode;
-  onPatch: (patch: Partial<Pick<FlowMatrixNode, 'rows' | 'columns'>>) => void;
+  /** Needed to offer the earlier questions a row can be gated on. */
+  schema: FlowSchema;
+  onPatch: (patch: Partial<Pick<FlowMatrixNode, 'rows' | 'columns' | 'unitLabel'>>) => void;
 }
 
 const COLUMN_TYPES: { value: MatrixColumn['type']; label: string }[] = [
@@ -188,9 +191,27 @@ const ColumnEditor: React.FC<{
   );
 };
 
-const MatrixEditor: React.FC<MatrixEditorProps> = ({ node, onPatch }) => {
+const MatrixEditor: React.FC<MatrixEditorProps> = ({ node, schema, onPatch }) => {
   const setRows = (rows: FlowMatrixNode['rows']) => onPatch({ rows });
   const setColumns = (columns: FlowMatrixNode['columns']) => onPatch({ columns });
+  const patchRow = (i: number, patch: Partial<MatrixRow>) =>
+    setRows(node.rows.map((r, ri) => (ri === i ? { ...r, ...patch } : r)));
+
+  // Rows may be gated on an earlier single/multi question — one option per row,
+  // which is what "show only the supplements she selected" needs. All the rows
+  // of a matrix gate on the same question, so it is picked once here.
+  const gateSources = Object.values(schema.nodes).filter(
+    (n): n is Extract<typeof n, { kind: 'question' }> =>
+      isQuestionNode(n) && (n.questionType === 'single' || n.questionType === 'multi'),
+  );
+  const gateNodeId = node.rows.find(r => r.visibleIf)?.visibleIf?.nodeId ?? '';
+  const gateSource = gateNodeId ? schema.nodes[gateNodeId] : undefined;
+  const gateOptions = gateSource && isQuestionNode(gateSource) ? gateSource.options : [];
+
+  /** Switching (or clearing) the gating question rewrites every row's rule —
+   *  a rule pointing at a different question would never match. */
+  const setGateNode = (nodeId: string) =>
+    setRows(node.rows.map(r => ({ ...r, visibleIf: nodeId ? { nodeId, anyOf: [] } : null })));
 
   const rowsText = node.rows.map(r => r.label).join('\n');
   const setRowsFromText = (text: string) => {
@@ -234,36 +255,102 @@ const MatrixEditor: React.FC<MatrixEditorProps> = ({ node, onPatch }) => {
 
       {node.rows.length > 0 && (
         <div>
-          <FieldLabel size="sm">Protein totals (optional)</FieldLabel>
+          <FieldLabel size="sm">Per-row settings</FieldLabel>
           <p className="mb-1.5 text-[11px] leading-snug text-ink-faint">
-            Grams of protein per standard serving per row — filled in, the learner's summary shows
-            computed intake totals. "HQ" counts the row toward the high-quality (animal/dairy) total.
+            <b>Unit</b> is the row's standard household measure ("Scoop"); any row that has one
+            gives the grid a read-only unit column. <b>g</b> is protein per standard serving —
+            filled in, the learner's summary shows computed intake totals, and <b>HQ</b> counts the
+            row toward the high-quality (animal/dairy) total.
           </p>
           <div className="space-y-1.5">
             {node.rows.map((row, i) => (
               <div key={row.id} className="flex items-center gap-2">
                 <span className="min-w-0 flex-1 truncate text-xs text-ink-muted">{row.label || `Row ${i + 1}`}</span>
                 <Input
+                  className="w-24 py-1.5 text-xs"
+                  value={row.unit ?? ''}
+                  onChange={e => patchRow(i, { unit: e.target.value || null })}
+                  placeholder="Unit"
+                />
+                <Input
                   type="number"
                   min={0}
                   step={0.1}
                   className="w-20 py-1.5 text-xs"
                   value={row.proteinPerServing ?? ''}
-                  onChange={e =>
-                    setRows(node.rows.map((r, ri) => (ri === i ? { ...r, proteinPerServing: numInput(e.target.value) } : r)))
-                  }
+                  onChange={e => patchRow(i, { proteinPerServing: numInput(e.target.value) })}
                   placeholder="g"
                 />
                 <Checkbox
                   label="HQ"
                   checked={!!row.highQuality}
-                  onChange={e =>
-                    setRows(node.rows.map((r, ri) => (ri === i ? { ...r, highQuality: e.target.checked || null } : r)))
-                  }
+                  onChange={e => patchRow(i, { highQuality: e.target.checked || null })}
                 />
               </div>
             ))}
           </div>
+          {node.rows.some(r => r.unit) && (
+            <div className="mt-2.5">
+              <FieldLabel size="sm">Unit column header</FieldLabel>
+              <Input
+                className="py-1.5 text-xs"
+                value={node.unitLabel ?? ''}
+                onChange={e => onPatch({ unitLabel: e.target.value || null })}
+                placeholder="Standard serving unit"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {node.rows.length > 0 && gateSources.length > 0 && (
+        <div className="rounded-lg border border-border p-3">
+          <FieldLabel size="sm" className="mb-1.5 flex items-center gap-1.5">
+            <Eye className="size-3.5" /> Show only the rows the learner picked
+          </FieldLabel>
+          <Select value={gateNodeId} onChange={e => setGateNode(e.target.value)}>
+            <option value="">Always show every row (default)</option>
+            {gateSources.map(q => (
+              <option key={q.id} value={q.id}>
+                Match rows to "{q.title || 'Untitled question'}"
+              </option>
+            ))}
+          </Select>
+          {gateNodeId && (
+            <>
+              <p className="mt-2 text-[11px] leading-snug text-ink-muted">
+                Give each row the option that turns it on. Rows left on "Always" are shown
+                regardless.
+              </p>
+              <div className="mt-1.5 space-y-1.5">
+                {node.rows.map((row, i) => (
+                  <div key={row.id} className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate text-xs text-ink-muted">
+                      {row.label || `Row ${i + 1}`}
+                    </span>
+                    <Select
+                      className="w-48 py-1.5 text-xs"
+                      value={row.visibleIf?.anyOf[0] ?? ''}
+                      onChange={e =>
+                        patchRow(i, {
+                          visibleIf: e.target.value
+                            ? { nodeId: gateNodeId, anyOf: [e.target.value] }
+                            : null,
+                        })
+                      }
+                    >
+                      <option value="">Always</option>
+                      {gateOptions.map(o => (
+                        <option key={o.id} value={o.id}>
+                          {o.label || o.id}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 
