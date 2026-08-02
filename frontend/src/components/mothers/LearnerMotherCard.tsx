@@ -44,28 +44,34 @@ const LearnerMotherCard: React.FC<LearnerMotherCardProps> = ({ mother, showProte
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-(--shadow-card)">
-      {/* Banner: mother identity + registering health worker */}
-      <div className="flex flex-wrap items-center gap-4 bg-gradient-to-br from-coral-50 to-sage-100/60 px-6 py-5 dark:from-coral-500/10 dark:to-sage-500/10">
-        <Avatar name={mother.mother_name} size="lg" />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="font-display text-xl font-extrabold text-ink">{mother.mother_name}</h2>
-            <Badge variant="neutral">{mother.mother_uid}</Badge>
-            {mother.gestational_weeks != null && (
-              <Badge variant="info">{t('detail.weeks', { n: mother.gestational_weeks })}</Badge>
-            )}
+      {/* Banner: mother identity + registering health worker.
+          On a phone this stacks. Kept as one flex row, the avatar and the
+          action squeezed the identity block down to min-content and the
+          worker's name rendered one word per line. */}
+      <div className="flex flex-col gap-4 bg-gradient-to-br from-coral-50 to-sage-100/60 px-5 py-5 dark:from-coral-500/10 dark:to-sage-500/10 sm:flex-row sm:flex-wrap sm:items-center sm:px-6">
+        <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+          <Avatar name={mother.mother_name} size="lg" />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <h2 className="font-display text-lg font-extrabold text-ink sm:text-xl">{mother.mother_name}</h2>
+              <Badge variant="neutral">{mother.mother_uid}</Badge>
+              {mother.gestational_weeks != null && (
+                <Badge variant="info">{t('detail.weeks', { n: mother.gestational_weeks })}</Badge>
+              )}
+            </div>
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-ink-muted">
+              <Stethoscope className="size-3.5 shrink-0" aria-hidden />
+              <span className="font-semibold text-ink">{learnerName}</span>
+              {learnerRole && <span>· {learnerRole}</span>}
+              {district && <span>· {district}</span>}
+            </p>
           </div>
-          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-ink-muted">
-            <Stethoscope className="size-3.5 shrink-0" aria-hidden />
-            <span className="font-semibold text-ink">{learnerName}</span>
-            {learnerRole && <span>· {learnerRole}</span>}
-            {district && <span>· {district}</span>}
-          </p>
         </div>
         {showProteinAction && (
           <Button
             variant="secondary"
             size="sm"
+            className="w-full sm:w-auto"
             iconLeft={<Salad className="size-4" />}
             onClick={() => navigate(`/mothers/${mother.id}/assessments/mother_protein_intake`)}
           >
@@ -75,7 +81,7 @@ const LearnerMotherCard: React.FC<LearnerMotherCardProps> = ({ mother, showProte
       </div>
 
       {/* Mother meta strip */}
-      <div className="grid grid-cols-2 gap-4 px-6 py-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 px-5 py-4 sm:grid-cols-4 sm:px-6">
         <Meta
           icon={<CalendarClock className="size-4" />}
           label={t('card.age')}

@@ -15,9 +15,12 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, description, actions, ba
   <div className={cn('flex flex-wrap items-start justify-between gap-4 mb-6', className)}>
     <div className="min-w-0">
       {backTo && (
+        // A 52x20 text link is the hardest thing on the page to hit with a
+        // thumb; give it a real touch target on a phone without changing how
+        // it looks on a desktop.
         <Link
           to={backTo}
-          className="inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink mb-2 transition-colors"
+          className="-ml-2 mb-1 inline-flex min-h-11 items-center gap-1.5 px-2 text-sm text-ink-muted transition-colors hover:text-ink sm:ml-0 sm:mb-2 sm:min-h-0 sm:px-0"
         >
           <ArrowLeft className="size-4" /> Back
         </Link>

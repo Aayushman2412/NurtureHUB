@@ -18,9 +18,14 @@ const variants: Record<ButtonVariant, string> = {
   danger: 'bg-error-500 text-white hover:bg-error-600 shadow-sm active:translate-y-px',
 };
 
+/**
+ * Every size clears a 44px touch target on a phone and relaxes back to its
+ * designed density from `sm` up. Padding alone gave `sm` a 32px button — fine
+ * for a mouse, a miss-tap for a health worker holding a baby in one hand.
+ */
 const sizes: Record<ButtonSize, string> = {
-  sm: 'text-sm px-3 py-1.5 rounded-md',
-  md: 'text-sm px-4 py-2.5',
+  sm: 'text-sm px-3 py-1.5 rounded-md min-h-11 sm:min-h-0',
+  md: 'text-sm px-4 py-2.5 min-h-11 sm:min-h-0',
   lg: 'text-base px-6 py-3',
 };
 
