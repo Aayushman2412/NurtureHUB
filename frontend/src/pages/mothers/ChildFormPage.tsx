@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../context/ToastContext';
 import {
-  Button, Card, Checkbox, DateInput, Field, Input, PageHeader, PageLoader, Radio, SelectField, Stepper,
+  Alert, Button, Card, Checkbox, DateInput, Field, Input, Modal, PageHeader, PageLoader, Radio,
+  SelectField, Stepper,
 } from '../../components/ui';
 import { inputClasses } from '../../components/ui/Input';
 import {
@@ -60,6 +61,7 @@ const ChildFormPage: React.FC = () => {
 
   // Step 1 — birth
   const [babiesBorn, setBabiesBorn] = useState('');
+  const [twinsNoticeOpen, setTwinsNoticeOpen] = useState(false);
   const [adoptionDate, setAdoptionDate] = useState('');
   const [childName, setChildName] = useState('');
   const [dob, setDob] = useState('');
@@ -112,6 +114,7 @@ const ChildFormPage: React.FC = () => {
 
   const showDeliveryPlaceOther = deliveryPlace === 'Other';
   const showBfReason = bfWithinOneHour === 'No';
+  const isTwins = babiesBorn === 'Twins';
   const today = todayIso();
   // A child is adopted on or after its birthday, and no more than a fortnight
   // ago — bound the picker by whichever of the two is the later date.
@@ -224,13 +227,26 @@ const ChildFormPage: React.FC = () => {
               <div className="flex flex-col gap-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <SelectField label={t('child.babiesBorn')} value={babiesBorn}
-                    onChange={v => { setBabiesBorn(v); clearError('babies_born'); }} error={errors.babies_born}
+                    onChange={v => {
+                      setBabiesBorn(v);
+                      clearError('babies_born');
+                      // Each twin is its own record, so say so at the moment the
+                      // learner commits to "Twins" — not after they have saved one.
+                      if (v === 'Twins' && v !== babiesBorn) setTwinsNoticeOpen(true);
+                    }} error={errors.babies_born}
                     placeholder={t('child.placeholders.select')} options={babiesBornOptions(t)} />
                   <Field label={t('child.childName')} error={errors.child_name}>
                     <Input value={childName} error={!!errors.child_name}
                       onChange={e => { setChildName(e.target.value); clearError('child_name'); }} />
                   </Field>
                 </div>
+                {/* The dialog is easy to dismiss and forget — keep the reminder on
+                    screen for as long as "Twins" is selected. */}
+                {isTwins && (
+                  <Alert variant="info" title={t('child.twinsNoticeTitle')}>
+                    {t('child.twinsNoticeBody')}
+                  </Alert>
+                )}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <Field label={t('child.adoptionDate')} error={errors.adoption_date}>
                     <DateInput value={adoptionDate} min={adoptionMin} max={today} error={!!errors.adoption_date}
@@ -330,6 +346,15 @@ const ChildFormPage: React.FC = () => {
           </div>
         </form>
       </Card>
+
+      {twinsNoticeOpen && (
+        <Modal open onClose={() => setTwinsNoticeOpen(false)} size="sm" title={t('child.twinsNoticeTitle')}>
+          <p className="text-sm text-ink-muted">{t('child.twinsNoticeBody')}</p>
+          <div className="mt-5 flex justify-end">
+            <Button onClick={() => setTwinsNoticeOpen(false)}>{t('child.twinsNoticeAck')}</Button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

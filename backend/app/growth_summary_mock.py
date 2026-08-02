@@ -6,17 +6,21 @@ this file and nowhere else:
   * the adoption **type** label (the DB stores adoption *dates*, not a type),
   * the per-form **expected** activity counts — the programme "rules" that decide
     how many Growth / Breastfeeding / Complementary-Feeding activities a case
-    *should* have, given its adoption type and duration, and
-  * **z-score fallbacks** for cases that have no real measurements yet.
+    *should* have, given its adoption type and duration.
 
 Real data — actual submitted-form counts, adoption dates, and z-scores computed
 from real weight/length — NEVER comes from this module.
 
+**Z-scores are deliberately absent from this list.** A z-score reads as a
+clinical finding, so a case with no measurement shows nothing rather than a
+stand-in; a demo fall-back here once put bars on the outcomes chart for a child
+whose z-trend plots correctly showed no measurements at all.
+
 ──────────────────────────────────────────────────────────────────────────────
 TO REMOVE FOR PRODUCTION — do either:
   1. Set env  GROWTH_SUMMARY_MOCK=false   (or 0/no).  The summary endpoint then
-     returns real data only: expected counts, adoption type and z-fallbacks come
-     back as null and the UI shows "—".
+     returns real data only: expected counts and adoption type come back as null
+     and the UI shows "—".
   2. Delete this file and every reference in app/routers/growth.py — find them all
      (the "# MOCK:" tags plus the `if gsm.MOCK_ENABLED` gates) with:
         grep -n "gsm\.\|growth_summary_mock\|GROWTH_SUMMARY_MOCK" app/routers/growth.py
@@ -106,9 +110,3 @@ def mock_adoption_timing(child_id: int) -> tuple:
     duration = rng.randint(60, 540)
     return age, duration
 
-
-def fallback_z(child_id: int, key: str) -> float:
-    """A plausible z-score in [-2.5, 1.5] for a case with no real measurement,
-    so the outcomes columns aren't all blank in the demo. Flagged as mock in the
-    response so the UI can render it distinctly."""
-    return round(_rng(child_id, sum(ord(c) for c in key)).uniform(-2.5, 1.5), 2)

@@ -162,8 +162,12 @@ const AssessmentRunnerPage: React.FC = () => {
           setResponseId(resp.id);
           setEditingSubmitted(resp.status === 'submitted');
           savedRef.current = JSON.stringify(prefill);
-          // Resume at the frontier: the first unanswered step on the derived path.
-          if (def.builder_type === 'flow') {
+          // A DRAFT resumes at the frontier — the first unanswered step — so the
+          // learner carries on where they stopped. An already-SUBMITTED response
+          // has no frontier (every step is answered), and dropping the learner on
+          // the last question to review the whole form is useless: editing starts
+          // at the beginning.
+          if (def.builder_type === 'flow' && resp.status !== 'submitted') {
             const { steps } = derivePath(def.schema_json as FlowSchema, prefill);
             const idx = steps.findIndex(s => !isStepAnswered(s, prefill));
             setStepIndex(Math.max(0, idx < 0 ? steps.length - 1 : idx));

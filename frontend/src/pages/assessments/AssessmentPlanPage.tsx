@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   Check,
   CheckCircle2,
-  ChevronDown,
   ListChecks,
   Plus,
   Sparkles,
@@ -37,7 +36,6 @@ const AssessmentPlanPage: React.FC = () => {
   const [resp, setResp] = useState<FormResponseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [doingWellOpen, setDoingWellOpen] = useState(false);
   const [display, setDisplay] = useState(DEFAULT_DISPLAY);
   const [verdictDefs, setVerdictDefs] = useState(DEFAULT_VERDICTS);
   /** questionId -> that question's display override (from the definition). */
@@ -145,7 +143,7 @@ const AssessmentPlanPage: React.FC = () => {
   const formTitle = t(`common.formTitle.${resp.form_key}`, { defaultValue: resp.form_key });
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+    <div className="mx-auto flex max-w-6xl flex-col gap-6">
       {allGreen && !isDraft && <ConfettiBurst />}
 
       {isDraft && (
@@ -253,96 +251,91 @@ const AssessmentPlanPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Needs attention — the coaching to-do list */}
-      {actions.length > 0 && (
-        <section>
-          <div className="flex items-center gap-2">
-            <AlertCircle className="size-5 text-error-500" aria-hidden />
-            <h3 className="font-display text-lg font-bold text-ink">
-              {t('plan.needsAttentionTitle')}
-            </h3>
-            <Badge variant="error">{actions.length}</Badge>
-          </div>
-          <p className="mt-1 text-sm text-ink-muted">{t('plan.needsAttentionSub')}</p>
-          <div className="mt-4 flex flex-col gap-4">
-            {actions.map((a, i) => (
-              <ActionCard
-                key={`${a.nodeId}-${a.optionId}-${i}`}
-                item={a}
-                index={i}
-                verdictDef={
-                  displayFor(a.nodeId).verdictTiming !== 'never'
-                    ? findVerdict(verdictDefs, a.verdict)
-                    : null
-                }
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Red answers with no attached action */}
-      {reviewItems.length > 0 && (
-        <Card className="p-5">
-          <div className="flex items-center gap-2">
-            <ListChecks className="size-5 text-error-500" aria-hidden />
-            <h3 className="font-display font-bold text-ink">{t('plan.reviewTitle')}</h3>
-            <Badge variant="error">{reviewItems.length}</Badge>
-          </div>
-          <p className="mt-1 text-sm text-ink-muted">{t('plan.reviewSub')}</p>
-          <ul className="mt-3 flex flex-col gap-2.5">
-            {reviewItems.map(item => (
-              <li key={item.key} className="flex items-start gap-2.5 text-sm">
-                <span
-                  aria-hidden
-                  className="mt-1.5 size-2 shrink-0 rounded-full bg-error-500/70"
-                />
-                <span>
-                  <span className="font-semibold text-ink">{item.question}</span>
-                  <span className="text-ink-muted"> — {item.label}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-
-      {/* Doing well — collapsible */}
-      {doingWell.length > 0 && (
-        <Card>
-          <button
-            type="button"
-            onClick={() => setDoingWellOpen(o => !o)}
-            aria-expanded={doingWellOpen}
-            className="flex w-full cursor-pointer items-center justify-between gap-3 p-5 text-left"
-          >
-            <span className="flex items-center gap-2">
+      {/* What went well vs what needs work, side by side. The two lists are
+          peers — burying the positives behind an expander made every plan read
+          as a list of failures. Left = doing well, right = needs attention. */}
+      {(doingWell.length > 0 || actions.length > 0 || reviewItems.length > 0) && (
+        <div className="grid items-start gap-5 lg:grid-cols-2">
+          {/* Doing well */}
+          <section>
+            <div className="flex items-center gap-2">
               <CheckCircle2 className="size-5 text-success-500" aria-hidden />
-              <span className="font-display font-bold text-ink">{t('plan.doingWellTitle')}</span>
+              <h3 className="font-display text-lg font-bold text-ink">{t('plan.doingWellTitle')}</h3>
               <Badge variant="success">{doingWell.length}</Badge>
-            </span>
-            <ChevronDown
-              aria-hidden
-              className={cn(
-                'size-5 shrink-0 text-ink-faint transition-transform duration-200',
-                doingWellOpen && 'rotate-180',
-              )}
-            />
-          </button>
-          {doingWellOpen && (
-            <div className="animate-fade-in flex flex-col gap-3 border-t border-border px-5 py-4">
-              {doingWell.map(item => (
-                <div key={item.key}>
-                  <div className="text-sm font-semibold text-ink">{item.question}</div>
-                  <div className="mt-0.5 flex items-start gap-1.5 text-sm text-success-600 dark:text-success-500">
-                    <Check className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-                    <span>{item.labels.join(', ')}</span>
-                  </div>
-                </div>
-              ))}
             </div>
-          )}
-        </Card>
+            <p className="mt-1 text-sm text-ink-muted">{t('plan.doingWellSub')}</p>
+            {doingWell.length === 0 ? (
+              <Card className="mt-4 p-5 text-sm text-ink-muted">{t('plan.doingWellEmpty')}</Card>
+            ) : (
+              <Card className="mt-4 flex flex-col gap-3 p-5">
+                {doingWell.map(item => (
+                  <div key={item.key}>
+                    <div className="text-sm font-semibold text-ink">{item.question}</div>
+                    <div className="mt-0.5 flex items-start gap-1.5 text-sm text-success-600 dark:text-success-500">
+                      <Check className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                      <span>{item.labels.join(', ')}</span>
+                    </div>
+                  </div>
+                ))}
+              </Card>
+            )}
+          </section>
+
+          {/* Needs attention — the coaching to-do list, plus any red answer that
+              carries no coaching action of its own. */}
+          <section>
+            <div className="flex items-center gap-2">
+              <AlertCircle className="size-5 text-error-500" aria-hidden />
+              <h3 className="font-display text-lg font-bold text-ink">
+                {t('plan.needsAttentionTitle')}
+              </h3>
+              <Badge variant="error">{actions.length + reviewItems.length}</Badge>
+            </div>
+            <p className="mt-1 text-sm text-ink-muted">{t('plan.needsAttentionSub')}</p>
+            {actions.length === 0 && reviewItems.length === 0 ? (
+              <Card className="mt-4 p-5 text-sm text-ink-muted">{t('plan.needsAttentionEmpty')}</Card>
+            ) : (
+              <div className="mt-4 flex flex-col gap-4">
+                {actions.map((a, i) => (
+                  <ActionCard
+                    key={`${a.nodeId}-${a.optionId}-${i}`}
+                    item={a}
+                    index={i}
+                    verdictDef={
+                      displayFor(a.nodeId).verdictTiming !== 'never'
+                        ? findVerdict(verdictDefs, a.verdict)
+                        : null
+                    }
+                  />
+                ))}
+                {reviewItems.length > 0 && (
+                  <Card className="p-5">
+                    <div className="flex items-center gap-2">
+                      <ListChecks className="size-5 text-error-500" aria-hidden />
+                      <h3 className="font-display font-bold text-ink">{t('plan.reviewTitle')}</h3>
+                      <Badge variant="error">{reviewItems.length}</Badge>
+                    </div>
+                    <p className="mt-1 text-sm text-ink-muted">{t('plan.reviewSub')}</p>
+                    <ul className="mt-3 flex flex-col gap-2.5">
+                      {reviewItems.map(item => (
+                        <li key={item.key} className="flex items-start gap-2.5 text-sm">
+                          <span
+                            aria-hidden
+                            className="mt-1.5 size-2 shrink-0 rounded-full bg-error-500/70"
+                          />
+                          <span>
+                            <span className="font-semibold text-ink">{item.question}</span>
+                            <span className="text-ink-muted"> — {item.label}</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+                )}
+              </div>
+            )}
+          </section>
+        </div>
       )}
 
       {/* Footer navigation */}

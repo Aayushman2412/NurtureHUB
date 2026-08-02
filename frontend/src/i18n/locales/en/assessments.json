@@ -39,7 +39,13 @@
     "lockedTitle": "Not quite time yet",
     "lockedNoDob": "Add this child's date of birth to unlock the complementary feeding assessment. It opens once the child is {{min}} days old.",
     "lockedBody": "Complementary feeding starts once the child is {{min}} days (about 5 months) old.",
-    "lockedRemaining": "{{days}} days to go"
+    "lockedRemaining": "{{days}} days to go",
+    "colDate": "Date",
+    "colStatus": "Status",
+    "colAsPerLap": "As per LAP",
+    "colNeedsAttention": "Needs attention",
+    "colRecorded": "Recorded",
+    "colActions": ""
   },
   "runner": {
     "loading": "Preparing your assessment",
@@ -101,7 +107,10 @@
     "proteinDailyAvg": "Average daily protein (habitual)",
     "proteinHqDailyAvg": "Average daily high-quality protein",
     "proteinHighTitle": "Unusually high protein intake",
-    "proteinHighBody": "The recorded 24-hour total of {{grams}}g is above the {{threshold}}g review threshold. Please double-check the portion sizes with the mother — the team has been notified."
+    "proteinHighBody": "The recorded 24-hour total of {{grams}}g is above the {{threshold}}g review threshold. Please double-check the portion sizes with the mother — the team has been notified.",
+    "doingWellSub": "Steps already being done as per LAP — acknowledge these with the mother.",
+    "doingWellEmpty": "Nothing was recorded as per LAP in this assessment.",
+    "needsAttentionEmpty": "Everything in this assessment was as per LAP — nothing to work on."
   },
   "growth": {
     "optional": "(optional)",

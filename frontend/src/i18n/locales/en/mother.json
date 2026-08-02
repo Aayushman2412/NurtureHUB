@@ -198,7 +198,10 @@
     "toastSuccessSaved": "Saved {{name}} ({{uid}}).",
     "toastSuccessRegistered": "Registered {{name}} ({{uid}}).",
     "toastFailSave": "Failed to save. Please try again.",
-    "toastFailRegister": "Failed to register. Please try again."
+    "toastFailRegister": "Failed to register. Please try again.",
+    "twinsNoticeTitle": "Register the other twin too",
+    "twinsNoticeBody": "This form records one baby. If the other twin is alive and meets the adoption criteria, add them as a separate child under the same mother once you have saved this one.",
+    "twinsNoticeAck": "Got it"
   },
   "options": {
     "yes": "Yes",
