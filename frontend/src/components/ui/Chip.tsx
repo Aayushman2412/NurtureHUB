@@ -12,7 +12,9 @@ const Chip: React.FC<ChipProps> = ({ selected, count, className, children, ...re
     type="button"
     aria-pressed={selected}
     className={cn(
-      'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold cursor-pointer',
+      // Filter chips sit in a scrolling row and get thumbed at speed — clear
+      // 44px on a phone, back to the compact pill from `sm` up.
+      'inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold cursor-pointer sm:min-h-0',
       'border transition-colors duration-150',
       selected
         ? 'bg-primary text-primary-fg border-primary'

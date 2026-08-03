@@ -41,7 +41,48 @@ const MothersListPage: React.FC = () => {
           />
         </Card>
       ) : (
-        <Card className="overflow-hidden p-0">
+        <>
+        {/* Phone: one card per mother. A ten-column table on a 375px screen
+            shows four columns and hides the rest behind a sideways scroll that
+            nobody discovers — so below `md` the same record is stacked, with
+            the whole card as the tap target. */}
+        <div className="flex flex-col gap-3 md:hidden">
+          {mothers.map(m => (
+            <Card
+              key={m.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`/mothers/${m.id}`)}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/mothers/${m.id}`); } }}
+              className="cursor-pointer p-4 transition-colors active:bg-surface-sunken/60"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate font-display font-bold text-ink">{m.mother_name}</div>
+                  <div className="mt-0.5 truncate font-mono text-xs text-ink-muted">{m.mother_uid}</div>
+                </div>
+                {m.children_count > 0
+                  ? <Badge variant="success">{t('list.status.lactating')}</Badge>
+                  : <Badge variant="coral">{t('list.status.pregnant')}</Badge>}
+              </div>
+              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                {([
+                  ['age', m.mother_age != null ? String(m.mother_age) : '—'],
+                  ['mobile', m.mobile || '—'],
+                  ['village', m.village || '—'],
+                  ['gestationalAge', m.gestational_weeks != null ? t('list.weeks', { n: m.gestational_weeks }) : '—'],
+                ] as const).map(([key, value]) => (
+                  <div key={key} className="min-w-0">
+                    <dt className="text-[11px] uppercase tracking-wide text-ink-faint">{t(`list.table.${key}`)}</dt>
+                    <dd className="truncate text-ink">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </Card>
+          ))}
+        </div>
+
+        <Card className="hidden overflow-x-auto p-0 md:block">
           <Table>
             <THead>
               <Tr>
@@ -70,6 +111,7 @@ const MothersListPage: React.FC = () => {
             </TBody>
           </Table>
         </Card>
+        </>
       )}
     </div>
   );

@@ -28,17 +28,19 @@ const MainHeader: React.FC<MainHeaderProps> = ({
   const { user } = useAuth();
 
   return (
-    <header className="sticky top-0 z-(--z-dropdown) flex items-center justify-between gap-4 border-b border-border bg-surface/85 px-5 py-3 backdrop-blur-md print:hidden">
-      {/* Left: hamburger (mobile) + title */}
-      <div className="flex items-center gap-3">
-        <button onClick={onToggleSidebar} className={`${iconBtn} lg:hidden`} aria-label={t('app:header.toggleMenu')}>
+    <header className="sticky top-0 z-(--z-dropdown) flex items-center justify-between gap-2 border-b border-border bg-surface/85 px-4 py-3 backdrop-blur-md sm:gap-4 sm:px-5 print:hidden">
+      {/* Left: hamburger (mobile) + title. `min-w-0` + `truncate` make the TITLE
+          the thing that gives way when space runs out — without them the flex
+          row cannot shrink and it pushes the controls off a phone screen. */}
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+        <button onClick={onToggleSidebar} className={`${iconBtn} shrink-0 lg:hidden`} aria-label={t('app:header.toggleMenu')}>
           <Menu className="size-6" />
         </button>
-        <h1 className="font-display text-xl font-bold text-ink">{title}</h1>
+        <h1 className="truncate font-display text-lg font-bold text-ink sm:text-xl">{title}</h1>
       </div>
 
-      {/* Right: actions + avatar */}
-      <div className="flex items-center gap-2">
+      {/* Right: actions + avatar — never shrinks, they are all tap targets. */}
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <LanguageSwitcher variant="compact" />
 
         <button

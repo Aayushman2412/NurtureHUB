@@ -15,18 +15,25 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ variant = 'pill' })
   const current =
     SUPPORTED_LANGUAGES.find(l => l.code === i18n.resolvedLanguage) ?? SUPPORTED_LANGUAGES[0];
 
+  // Compact collapses to a globe-only circle on a phone: spelled out it costs
+  // 115px of a 375px header, which is what pushed the whole control group
+  // off-screen. The language is still one tap away and the dropdown names it.
   const triggerClass =
     variant === 'compact'
-      ? 'inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-ink-muted hover:text-ink transition-colors cursor-pointer'
+      ? 'inline-flex size-9.5 items-center justify-center rounded-full border border-border bg-surface text-sm font-semibold text-ink-muted hover:text-ink transition-colors cursor-pointer sm:size-auto sm:gap-1.5 sm:px-3 sm:py-1.5'
       : 'inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-ink-muted hover:text-ink transition-colors cursor-pointer';
 
   return (
     <Dropdown
       trigger={open => (
         <button type="button" className={triggerClass} aria-label={t('language.select')}>
-          <Globe className="size-4" />
-          {current.native}
-          <ChevronDown className={`size-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
+          <Globe className="size-4 shrink-0" />
+          <span className={variant === 'compact' ? 'hidden sm:inline' : undefined}>{current.native}</span>
+          <ChevronDown
+            className={`size-3.5 shrink-0 transition-transform ${open ? 'rotate-180' : ''} ${
+              variant === 'compact' ? 'hidden sm:inline' : ''
+            }`}
+          />
         </button>
       )}
       items={SUPPORTED_LANGUAGES.map(lang => ({

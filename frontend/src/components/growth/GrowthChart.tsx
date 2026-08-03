@@ -401,7 +401,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
             onClick={download}
             title={t('chart.download')}
             aria-label={t('chart.download')}
-            className="rounded-lg p-1.5 text-ink-faint transition-colors hover:bg-surface-sunken hover:text-ink"
+            className="flex size-11 items-center justify-center rounded-lg text-ink-faint transition-colors hover:bg-surface-sunken hover:text-ink sm:size-7"
           >
             <Download className="size-4" />
           </button>
@@ -410,7 +410,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
             onClick={() => setExpanded(true)}
             title={t('chart.expand')}
             aria-label={t('chart.expand')}
-            className="rounded-lg p-1.5 text-ink-faint transition-colors hover:bg-surface-sunken hover:text-ink"
+            className="flex size-11 items-center justify-center rounded-lg text-ink-faint transition-colors hover:bg-surface-sunken hover:text-ink sm:size-7"
           >
             <Maximize2 className="size-4" />
           </button>
