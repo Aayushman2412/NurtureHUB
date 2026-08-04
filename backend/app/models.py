@@ -741,7 +741,12 @@ class FormDefinition(Base):
       - 'flat': ordered field list (learner/mother/child/growth/antenatal registration forms)
       - 'flow': canvas decision-tree of question nodes with branching, media options,
         green/red LAP verdicts and per-option actions (breastfeeding, complementary feeding)
-    schema_json is the whole document; saving bumps `version` and is live immediately.
+
+    Versioning: every save from the builder appends an immutable FormVersion
+    row. `schema_json` here is kept in sync with the DEFAULT version (what a
+    learner in an unassigned district sees) so every pre-versioning consumer
+    keeps working; districts pinned to another version via
+    FormDistrictAssignment see that version instead.
     """
     __tablename__ = "form_definitions"
 
@@ -752,9 +757,79 @@ class FormDefinition(Base):
     builder_type = Column(String, nullable=False)      # 'flow' | 'flat'
     schema_json = Column(JSON, nullable=False, default=dict)
     version = Column(Integer, nullable=False, default=1)
+    # The version served to districts without an explicit assignment.
+    default_version_id = Column(
+        Integer,
+        ForeignKey("form_versions.id", ondelete="SET NULL", name="form_definitions_default_version_id_fkey", use_alter=True),
+        nullable=True,
+    )
     updated_by = Column(String, nullable=True)         # admin email (audit)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    default_version = relationship("FormVersion", foreign_keys=[default_version_id], post_update=True)
+
+
+class FormVersion(Base):
+    """One immutable snapshot in a form's history (git-style).
+
+    The first version of a form is its "first creation" entry; every later
+    save appends a new row with an admin-entered creation date and a
+    description of what changed. Versions are never edited in place —
+    districts are pointed at them via FormDistrictAssignment.
+    """
+    __tablename__ = "form_versions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    form_key = Column(String, index=True, nullable=False)
+    version_number = Column(Integer, nullable=False)
+    # Admin-entered creation date (the "commit date"), distinct from created_at.
+    created_on = Column(Date, nullable=False)
+    # Required change summary ("first creation" for the initial version).
+    description = Column(Text, nullable=False)
+    schema_json = Column(JSON, nullable=False, default=dict)
+    created_by = Column(String, nullable=True)         # admin email (audit)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    assignments = relationship(
+        "FormDistrictAssignment", back_populates="version", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("form_key", "version_number", name="uq_form_versions_key_number"),
+    )
+
+
+class FormDistrictAssignment(Base):
+    """Pins one program district to one specific version of a form.
+
+    A district appears at most once per form (unique below), so assigning it
+    to a new version implicitly moves it off the old one. Districts with no
+    row fall back to the form's default version.
+    """
+    __tablename__ = "form_district_assignments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    form_key = Column(String, index=True, nullable=False)
+    program_district_id = Column(
+        Integer,
+        ForeignKey("program_districts.id", ondelete="CASCADE", name="form_district_assignments_program_district_id_fkey"),
+        nullable=False,
+    )
+    version_id = Column(
+        Integer,
+        ForeignKey("form_versions.id", ondelete="CASCADE", name="form_district_assignments_version_id_fkey"),
+        nullable=False,
+    )
+    assigned_by = Column(String, nullable=True)        # admin email (audit)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    version = relationship("FormVersion", back_populates="assignments")
+    program_district = relationship("ProgramDistrict")
+
+    __table_args__ = (
+        UniqueConstraint("form_key", "program_district_id", name="uq_form_district_assignment"),
+    )
 
 
 class FormResponse(Base):

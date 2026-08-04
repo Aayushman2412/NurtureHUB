@@ -92,6 +92,30 @@ def _get_definition(db: Session, form_key: str) -> models.FormDefinition:
     return definition
 
 
+def _resolve_for_user(
+    db: Session, form_key: str, user: models.User,
+) -> tuple[models.FormDefinition, Dict[str, Any], int]:
+    """(definition, schema, version_number) for THIS learner.
+
+    A district pinned to a specific form version (FormDistrictAssignment) gets
+    that version's schema; everyone else gets the definition's live/default
+    schema. version_number is what gets stamped on responses.
+    """
+    definition = _get_definition(db, form_key)
+    if user.program_district_id:
+        assignment = (
+            db.query(models.FormDistrictAssignment)
+            .filter(
+                models.FormDistrictAssignment.form_key == form_key,
+                models.FormDistrictAssignment.program_district_id == user.program_district_id,
+            )
+            .first()
+        )
+        if assignment and assignment.version is not None:
+            return definition, assignment.version.schema_json or {}, assignment.version.version_number
+    return definition, definition.schema_json or {}, definition.version
+
+
 def _get_owned_child(db: Session, child_id: int, user: models.User) -> models.Child:
     child = (
         db.query(models.Child)
@@ -852,21 +876,21 @@ def update_response(
     new_status = "submitted" if was_submitted else data.status
     enforce = new_status == "submitted"
 
-    definition = _get_definition(db, response.form_key)
+    definition, schema, version_number = _resolve_for_user(db, response.form_key, current_user)
     child, mother, subject_name = _response_subject(db, response)
     if child is not None:
         _check_cf_gate(response.form_key, child, data.assessment_date)
 
     if definition.builder_type == "flat":
         answers, summary, actions = _snapshot_flat_answers(
-            definition.schema_json or {}, data.answers, child, data.assessment_date,
+            schema, data.answers, child, data.assessment_date,
             enforce=enforce,
         )
     else:
-        answers, summary, actions = _snapshot_answers(definition.schema_json or {}, data.answers)
+        answers, summary, actions = _snapshot_answers(schema, data.answers)
     response.assessment_date = data.assessment_date
     response.status = new_status
-    response.definition_version = definition.version
+    response.definition_version = version_number
     response.answers_json = answers
     response.summary_json = summary
     response.actions_json = actions
@@ -901,15 +925,15 @@ def get_form_definition(
     current_user: models.User = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ):
-    definition = _get_definition(db, form_key)
+    definition, schema, version_number = _resolve_for_user(db, form_key, current_user)
     return {
         "id": definition.id,
         "form_key": definition.form_key,
         "title": definition.title,
         "description": definition.description,
         "builder_type": definition.builder_type,
-        "version": definition.version,
-        "schema_json": definition.schema_json or {},
+        "version": version_number,
+        "schema_json": schema,
         "updated_at": definition.updated_at.isoformat() if definition.updated_at else None,
         "updated_by": None,  # not exposed to learners
     }
@@ -949,7 +973,7 @@ def create_response(
         raise HTTPException(status_code=400, detail="This form does not accept assessments")
     _validate_status(data.status)
 
-    definition = _get_definition(db, form_key)
+    definition, schema, version_number = _resolve_for_user(db, form_key, current_user)
     is_mother_form = form_key in MOTHER_FORM_KEYS
 
     if is_mother_form:
@@ -966,14 +990,14 @@ def create_response(
         # child may be None for mother-level flat forms (antenatal) — age
         # conditions simply evaluate as unknown there.
         answers, summary, actions = _snapshot_flat_answers(
-            definition.schema_json or {}, data.answers, child, data.assessment_date,
+            schema, data.answers, child, data.assessment_date,
             enforce=data.status == "submitted",
         )
     else:
-        answers, summary, actions = _snapshot_answers(definition.schema_json or {}, data.answers)
+        answers, summary, actions = _snapshot_answers(schema, data.answers)
     response = models.FormResponse(
         form_key=form_key,
-        definition_version=definition.version,
+        definition_version=version_number,
         child_id=child.id if child else None,
         mother_id=mother.id if mother else None,
         submitted_by_user_id=current_user.id,

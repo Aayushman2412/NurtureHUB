@@ -82,6 +82,7 @@ def _build_cases(
     role: Optional[str] = None,
     department: Optional[str] = None,
     learner_id: Optional[int] = None,
+    child_id: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
     """One case per child: identity of the learner-mother-child triple plus the
     chronological visit series. Children without visits are included (they show
@@ -111,6 +112,8 @@ def _build_cases(
         rows = rows.filter(models.Mother.registered_by_user_id == user_id)
     if learner_id is not None:
         rows = rows.filter(models.User.id == learner_id)
+    if child_id is not None:
+        rows = rows.filter(models.Child.id == child_id)
     if role:
         rows = rows.filter(models.User.role == role)
     # department is resolved (mock-fillable) after the query, so it's filtered below.
@@ -580,12 +583,13 @@ def admin_growth_monitor(
     role: str = Query("", description="Learner role/designation; empty = all"),
     department: str = Query("", description="Learner department; empty = all"),
     learner_id: Optional[int] = Query(None, description="Single learner id; null = all"),
+    child_id: Optional[int] = Query(None, description="Single case (child) id; null = all"),
     admin: dict = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     return {"cases": _build_cases(
         db, district_slug=district or None, role=role or None,
-        department=department or None, learner_id=learner_id,
+        department=department or None, learner_id=learner_id, child_id=child_id,
     )}
 
 

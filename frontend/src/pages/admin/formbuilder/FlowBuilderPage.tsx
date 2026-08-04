@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, BoxSelect, ClipboardPaste, Copy, Download, Eye, Info, Layers, Plus, Printer, Redo2, Save, Table, Trash2, Undo2, X } from 'lucide-react';
-import { adminExportForm, adminGetForm, adminSaveForm } from '../../../api/forms';
+import { adminCreateFormVersion, adminExportForm, adminGetForm, adminGetFormVersion } from '../../../api/forms';
+import SaveVersionDialog, { type SaveVersionPayload } from './SaveVersionDialog';
 import {
   moveChildOutOfSection,
   moveIntoSectionImpact,
@@ -90,6 +91,7 @@ const SCORING_OPTIONS: { value: VerdictScoring; label: string }[] = [
 const FlowBuilderPage: React.FC = () => {
   const { formKey } = useParams<{ formKey: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
 
   const [def, setDef] = useState<FormDefinition | null>(null);
@@ -102,8 +104,13 @@ const FlowBuilderPage: React.FC = () => {
   const [connect, setConnect] = useState<ConnectRequest | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [loadedIsDefault, setLoadedIsDefault] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [displayOpen, setDisplayOpen] = useState(false);
+
+  // ?v=N opens that specific version from the history; absent = the live/default schema.
+  const versionParam = Number(searchParams.get('v')) || null;
 
   // The editor panel edits a single node — only when exactly one is selected.
   const selectedId = selectedIds.length === 1 ? selectedIds[0] : null;
@@ -144,14 +151,22 @@ const FlowBuilderPage: React.FC = () => {
     let cancelled = false;
     setLoadState('loading');
     adminGetForm(formKey)
-      .then(d => {
+      .then(async d => {
         if (cancelled) return;
         if (d.builder_type !== 'flow') {
           navigate(`/admin/form-builder/flat/${formKey}`, { replace: true });
           return;
         }
-        const s = d.schema_json as FlowSchema;
+        let s = d.schema_json as FlowSchema;
+        let isDefault = true;
+        if (versionParam) {
+          const versionDetail = await adminGetFormVersion(formKey, versionParam);
+          if (cancelled) return;
+          s = versionDetail.schema_json as FlowSchema;
+          isDefault = versionDetail.is_default;
+        }
         setDef(d);
+        setLoadedIsDefault(isDefault);
         setTitle(d.title);
         setDescription(d.description ?? '');
         setSchema(
@@ -178,7 +193,7 @@ const FlowBuilderPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [formKey, navigate, reloadTick]);
+  }, [formKey, navigate, reloadTick, versionParam]);
 
   // ── Schema mutations (stable callbacks so canvas cards can memo) ──────────
   // Computes against schemaRef (kept hot below) so no-op updaters don't flag
@@ -554,22 +569,28 @@ const FlowBuilderPage: React.FC = () => {
   }, [schema, connect]);
 
   // ── Save / navigation ─────────────────────────────────────────────────────
-  const save = async () => {
+  /** Every save is a new immutable version — the dialog collects date + description. */
+  const save = () => setShowSaveDialog(true);
+
+  const saveVersion = async (payload: SaveVersionPayload) => {
     if (!formKey || !isFlowFormKey(formKey)) return;
     setSaving(true);
     try {
-      const updated = await adminSaveForm(formKey, {
-        title: title.trim() || def?.title || 'Untitled form',
-        description,
+      const created = await adminCreateFormVersion(formKey, {
         schema_json: schemaRef.current,
+        title: title.trim() || def?.title || 'Untitled form',
+        ...payload,
       });
-      setDef(updated);
-      // Sync local state from what the server actually stored — e.g. a blanked
-      // title falls back to the previous one, and the input must show that.
-      setTitle(updated.title);
-      setDescription(updated.description ?? '');
+      setTitle(created.title);
       setDirty(false);
-      showToast(`Saved — version ${updated.version} is live for learners`, 'success');
+      setShowSaveDialog(false);
+      showToast(
+        payload.make_default
+          ? `Saved — version ${created.version_number} is now the default for learners`
+          : `Saved as version ${created.version_number} (assign districts to publish it)`,
+        'success',
+      );
+      setSearchParams({ v: String(created.version_number) }, { replace: true });
     } catch {
       showToast('Could not save the form. Please try again.', 'error');
     } finally {
@@ -1047,6 +1068,16 @@ const FlowBuilderPage: React.FC = () => {
           onAddFirst={addQuestion}
         />
       </div>
+
+      {showSaveDialog && (
+        <SaveVersionDialog
+          open
+          onClose={() => setShowSaveDialog(false)}
+          defaultMakeDefault={loadedIsDefault}
+          saving={saving}
+          onSave={payload => void saveVersion(payload)}
+        />
+      )}
     </div>
   );
 };

@@ -44,7 +44,9 @@
   },
   "charts": {
     "tab": "वृद्धि चार्ट",
-    "downloadAll": "सभी डाउनलोड करें"
+    "downloadAll": "सभी डाउनलोड करें",
+    "pairFilter": "माता–कार्यकर्ता जोड़ी",
+    "allPairs": "सभी जोड़ियाँ"
   },
   "filters": {
     "role": "पद",
@@ -159,7 +161,28 @@
   "forms": {
     "growth_monitoring": "वृद्धि जाँच",
     "breastfeeding": "स्तनपान जाँच",
-    "complementary_feeding": "पूरक आहार जाँच"
+    "complementary_feeding": "पूरक आहार जाँच",
+    "mother_protein_intake": "माता का प्रोटीन सेवन",
+    "antenatal": "प्रसवपूर्व जाँच"
+  },
+  "casePage": {
+    "title": "केस विवरण",
+    "loading": "केस लोड हो रहा है…",
+    "notFound": "केस नहीं मिला",
+    "whoCharts": "WHO वृद्धि चार्ट (यह जोड़ी, सभी भेंटें)",
+    "visitSummary": "भेंट सारांश",
+    "visitDate": "भेंट तिथि",
+    "age": "आयु",
+    "formsFilled": "भरे गए फ़ॉर्म (LAP स्थिति)",
+    "infoForms": "सूचना फ़ॉर्म",
+    "lapMatrices": "LAP मूल्यांकन तालिकाएँ",
+    "question": "प्रश्न",
+    "noResponses": "इस केस के लिए अभी कोई फ़ॉर्म दर्ज नहीं।",
+    "legendGreen": "LAP के अनुसार",
+    "legendRed": "LAP के अनुसार नहीं",
+    "legendNeutral": "उत्तर दिया (LAP निर्णय नहीं)",
+    "matrixCount": "{{count}} भेंटें",
+    "matrixCount_one": "{{count}} भेंट"
   },
   "admin": {
     "title": "वृद्धि मॉनिटर",

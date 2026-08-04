@@ -138,6 +138,12 @@ def refresh(db: Session, apply: bool, only: Optional[List[str]],
     print(f"\nBacked up {len(backup)} form(s) to:\n  {backup_path}")
 
     # 2) Overwrite from code and bump the version so the frontend refetches.
+    #    Also append a FormVersion history entry and point the default at it, so
+    #    the refresh shows up in the version UI like any other save.
+    from datetime import date as _date
+
+    from app.models import FormVersion
+
     for form_key, row, code_schema in targets:
         title, desc, btype, _build = seed_forms.FORM_SPECS[form_key]
         old_v = row.version
@@ -147,7 +153,25 @@ def refresh(db: Session, apply: bool, only: Optional[List[str]],
         row.schema_json = code_schema
         row.version = old_v + 1
         row.updated_by = UPDATED_BY
-        print(f"  refreshed {form_key:<26} v{old_v} -> v{row.version}")
+
+        last = (
+            db.query(FormVersion.version_number)
+            .filter(FormVersion.form_key == form_key)
+            .order_by(FormVersion.version_number.desc())
+            .first()
+        )
+        version = FormVersion(
+            form_key=form_key,
+            version_number=(last[0] if last else 0) + 1,
+            created_on=_date.today(),
+            description="Refreshed from code (refresh_form_definitions)",
+            schema_json=code_schema,
+            created_by=UPDATED_BY,
+        )
+        db.add(version)
+        db.flush()
+        row.default_version_id = version.id
+        print(f"  refreshed {form_key:<26} v{old_v} -> v{row.version} (history v{version.version_number})")
     db.commit()
     print(f"\nDone. Refreshed {len(targets)} form(s).")
     print(f"Roll back with:  python -m app.refresh_form_definitions --restore {backup_path}")

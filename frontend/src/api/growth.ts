@@ -105,12 +105,14 @@ export interface GrowthSummaryFilterOptions {
   departments: string[];
 }
 
-/** The four growth-monitor filters (shared by the table and the charts). */
+/** The growth-monitor filters (shared by the table and the charts). */
 export interface GrowthFilters {
   district?: string;
   role?: string;
   department?: string;
   learnerId?: number | null;
+  /** Narrow to a single case (child) — used by the case-detail page. */
+  childId?: number | null;
 }
 
 const filterParams = (f: GrowthFilters) => ({
@@ -118,6 +120,7 @@ const filterParams = (f: GrowthFilters) => ({
   ...(f.role ? { role: f.role } : {}),
   ...(f.department ? { department: f.department } : {}),
   ...(f.learnerId ? { learner_id: f.learnerId } : {}),
+  ...(f.childId ? { child_id: f.childId } : {}),
 });
 
 export const getGrowthStandards = (): Promise<GrowthStandards> =>

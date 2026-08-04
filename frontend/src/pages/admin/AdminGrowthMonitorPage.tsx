@@ -19,7 +19,6 @@ import {
 } from '../../api/growth';
 import GrowthChartGrid, { GrowthLegend } from '../../components/growth/GrowthChartGrid';
 import GrowthSummaryTable from '../../components/growth/GrowthSummaryTable';
-import CaseDetailModal from '../../components/growth/CaseDetailModal';
 import VisitDetailModal from '../../components/growth/VisitDetailModal';
 import { Button, EmptyState, PageLoader, SearchableSelect, SelectField, Tabs } from '../../components/ui';
 import { downloadChartsCombined } from '../../lib/chartExport';
@@ -60,7 +59,8 @@ const AdminGrowthMonitorPage: React.FC = () => {
 
   const [sexTab, setSexTab] = useState<'boys' | 'girls'>('boys');
   const [detailPoint, setDetailPoint] = useState<GrowthPoint | null>(null);
-  const [detailRow, setDetailRow] = useState<GrowthSummaryRow | null>(null);
+  // Charts-only narrowing to a single mother–learner pair (one case).
+  const [pairChildId, setPairChildId] = useState<number | null>(null);
   const chartsRef = useRef<HTMLDivElement>(null);
 
   const loadStandards = useCallback(() => {
@@ -112,17 +112,40 @@ const AdminGrowthMonitorPage: React.FC = () => {
   const resetFilters = () => setFilters({});
   const hasFilters = !!(filters.district || filters.role || filters.department || filters.learnerId);
 
+  // The optional pair filter narrows the charts to one case before sex-splitting.
+  const pairCases = useMemo(
+    () => (pairChildId ? cases.filter(c => c.child.id === pairChildId) : cases),
+    [cases, pairChildId],
+  );
   const sexCases = useMemo(
-    () => cases.filter(c => sexKeyForGender(c.child.gender) === sexTab),
-    [cases, sexTab],
+    () => pairCases.filter(c => sexKeyForGender(c.child.gender) === sexTab),
+    [pairCases, sexTab],
   );
   const counts = useMemo(
     () => ({
-      boys: cases.filter(c => sexKeyForGender(c.child.gender) === 'boys').length,
-      girls: cases.filter(c => sexKeyForGender(c.child.gender) === 'girls').length,
+      boys: pairCases.filter(c => sexKeyForGender(c.child.gender) === 'boys').length,
+      girls: pairCases.filter(c => sexKeyForGender(c.child.gender) === 'girls').length,
     }),
-    [cases],
+    [pairCases],
   );
+  const pairOptions = useMemo(
+    () =>
+      [...cases]
+        .sort((a, b) => (a.mother.name || '').localeCompare(b.mother.name || ''))
+        .map(c => ({
+          value: c.child.id,
+          label: `${c.mother.name} — ${c.learner?.name ?? t('admin.orphanLearner')} (${c.child.name})`,
+        })),
+    [cases, t],
+  );
+
+  // Auto-jump the sex tab so a picked pair is never hidden behind the wrong tab.
+  useEffect(() => {
+    if (!pairChildId) return;
+    const picked = cases.find(c => c.child.id === pairChildId);
+    const key = picked ? sexKeyForGender(picked.child.gender) : null;
+    if (key) setSexTab(key);
+  }, [pairChildId, cases]);
 
   const fetchResponse = useCallback((id: number) => getAdminGrowthResponse(id), []);
 
@@ -242,12 +265,25 @@ const AdminGrowthMonitorPage: React.FC = () => {
         <GrowthSummaryTable
           rows={rows}
           mock={summaryMock}
-          onRowClick={setDetailRow}
+          // The full drill-down is a page of its own — open it in a new tab.
+          onRowClick={row => window.open(`/admin/growth/cases/${row.case_id}`, '_blank', 'noopener')}
           onDownloadXlsx={() => downloadGrowthSummaryXlsx(filters)}
         />
       ) : (
         <div className="space-y-5">
           <GrowthLegend />
+
+          {/* charts-only: narrow to a single mother–learner pair */}
+          <div className="max-w-md">
+            <SearchableSelect
+              label={t('charts.pairFilter')}
+              value={pairChildId ?? ''}
+              onChange={v => setPairChildId(v ? Number(v) : null)}
+              placeholder={t('charts.allPairs')}
+              emptyMessage={t('admin.noCases')}
+              options={[{ value: '', label: t('charts.allPairs') }, ...pairOptions]}
+            />
+          </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Tabs
@@ -295,8 +331,6 @@ const AdminGrowthMonitorPage: React.FC = () => {
         onClose={() => setDetailPoint(null)}
         fetchResponse={fetchResponse}
       />
-
-      <CaseDetailModal row={detailRow} onClose={() => setDetailRow(null)} />
     </div>
   );
 };
