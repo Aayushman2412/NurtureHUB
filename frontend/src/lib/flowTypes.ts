@@ -492,6 +492,12 @@ export interface FormDefinitionSummary {
   version: number;
   updated_at: string | null;
   node_count: number;
+  /** Git-style history size (≥ 1 once the form has been saved at least once). */
+  version_count?: number;
+  /** Version served to districts without an explicit pin. */
+  default_version_number?: number | null;
+  /** How many districts are pinned to a specific version of this form. */
+  assigned_district_count?: number;
 }
 
 export interface FormDefinition {

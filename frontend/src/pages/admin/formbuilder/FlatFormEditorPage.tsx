@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ChevronDown,
@@ -13,7 +13,8 @@ import {
   Save,
   Trash2,
 } from 'lucide-react';
-import { adminExportForm, adminGetForm, adminSaveForm } from '../../../api/forms';
+import { adminCreateFormVersion, adminExportForm, adminGetForm, adminGetFormVersion } from '../../../api/forms';
+import SaveVersionDialog, { type SaveVersionPayload } from './SaveVersionDialog';
 import { FORM_KEYS } from '../../../lib/flowTypes';
 import type {
   FlatField,
@@ -123,6 +124,7 @@ const OptionsEditor: React.FC<{
 const FlatFormEditorPage: React.FC = () => {
   const { formKey } = useParams<{ formKey: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useTranslation('adminFormBuilder');
   const { showToast } = useToast();
   const fieldTypes = FIELD_TYPE_VALUES.map(value => ({ value, label: t(`fieldTypes.${value}`) }));
@@ -133,6 +135,8 @@ const FlatFormEditorPage: React.FC = () => {
   const [reloadTick, setReloadTick] = useState(0);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [loadedIsDefault, setLoadedIsDefault] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -142,6 +146,8 @@ const FlatFormEditorPage: React.FC = () => {
   const [editOptionLabel, setEditOptionLabel] = useState('');
 
   const validKey = !!formKey && (FORM_KEYS as readonly string[]).includes(formKey);
+  // ?v=N opens that specific version from the history; absent = the live/default schema.
+  const versionParam = Number(searchParams.get('v')) || null;
   useDirtyGuard(dirty);
 
   useEffect(() => {
@@ -149,14 +155,22 @@ const FlatFormEditorPage: React.FC = () => {
     let cancelled = false;
     setLoadState('loading');
     adminGetForm(formKey as FormKey)
-      .then(d => {
+      .then(async d => {
         if (cancelled) return;
         if (d.builder_type !== 'flat') {
           navigate(`/admin/form-builder/flow/${formKey}`, { replace: true });
           return;
         }
-        const schema = d.schema_json as FlatSchema;
+        let schema = d.schema_json as FlatSchema;
+        let isDefault = true;
+        if (versionParam) {
+          const versionDetail = await adminGetFormVersion(formKey as FormKey, versionParam);
+          if (cancelled) return;
+          schema = versionDetail.schema_json as FlatSchema;
+          isDefault = versionDetail.is_default;
+        }
         setDef(d);
+        setLoadedIsDefault(isDefault);
         setFields(schema && Array.isArray(schema.fields) ? schema.fields : []);
         setDirty(false);
         setLoadState('ready');
@@ -167,23 +181,35 @@ const FlatFormEditorPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [formKey, navigate, reloadTick]);
+  }, [formKey, navigate, reloadTick, versionParam]);
 
   const applyFields = (updated: FlatField[]) => {
     setFields(updated);
     setDirty(true);
   };
 
-  const save = async () => {
+  /** Every save is a new immutable version — the dialog collects date + description. */
+  const save = () => setShowSaveDialog(true);
+
+  const saveVersion = async (payload: SaveVersionPayload) => {
     if (!formKey) return;
     setSaving(true);
     try {
-      const updated = await adminSaveForm(formKey as FormKey, { schema_json: { fields } });
-      setDef(updated);
+      const created = await adminCreateFormVersion(formKey as FormKey, {
+        schema_json: { fields },
+        ...payload,
+      });
       setDirty(false);
-      showToast(`Saved — version ${updated.version} is live for learners`, 'success');
+      setShowSaveDialog(false);
+      showToast(
+        payload.make_default
+          ? t('saveVersion.savedDefault', { n: created.version_number })
+          : t('saveVersion.saved', { n: created.version_number }),
+        'success',
+      );
+      setSearchParams({ v: String(created.version_number) }, { replace: true });
     } catch {
-      showToast('Could not save the form. Please try again.', 'error');
+      showToast(t('saveVersion.saveFailed'), 'error');
     } finally {
       setSaving(false);
     }
@@ -620,6 +646,16 @@ const FlatFormEditorPage: React.FC = () => {
           />
         )}
       </Modal>
+
+      {showSaveDialog && (
+        <SaveVersionDialog
+          open
+          onClose={() => setShowSaveDialog(false)}
+          defaultMakeDefault={loadedIsDefault}
+          saving={saving}
+          onSave={payload => void saveVersion(payload)}
+        />
+      )}
     </div>
   );
 };

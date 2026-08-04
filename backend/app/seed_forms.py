@@ -1021,47 +1021,296 @@ def _opts(*labels: str) -> list[dict]:
     return [{"label": l, "value": l.lower().replace(" ", "_")} for l in labels]
 
 
+# Shared "when did you last attend …" options for the five LR training questions.
+_TRAINING_RECENCY = (
+    "Within the last 3 months", "4–6 months ago", "7–12 months ago",
+    "1–2 years ago", "More than 2 years ago", "Never attended", "Don't know",
+)
+
+
 def build_learner_registration_fields() -> dict:
+    """Learner Registration (LR) — all 30 questions transcribed from the
+    'EP HST tools' instrument, in sheet order. Dynamic geography/facility lists
+    keep empty option lists here: each state maintains its own list in the form
+    builder (and pins its districts to that version).
+    """
     return _flat([
-        _field("dob", "Date of Birth", "date"),
-        _field("gender", "Gender", "radio", options=_opts("Female", "Male", "Other")),
-        _field("phone", "Contact Number", "text", "+91 98765 43210"),
-        _field("state", "State", "dropdown", "Select State", options=_opts("Uttar Pradesh", "Bihar", "Madhya Pradesh")),
-        _field("district", "District", "dropdown", "Select District", options=_opts("Gorakhpur", "Lucknow", "Patna")),
-        _field("department", "Department", "dropdown",
-               options=_opts("Women & Child Development (WCD)", "Health & Family Welfare", "National Health Mission (NHM)")),
-        _field("role", "Designation / Role", "dropdown",
-               options=_opts("Anganwadi Worker (AWW)", "Anganwadi Supervisor", "ANM / Health Worker", "CDPO")),
-        _field("qualification", "Highest Educational Qualification", "dropdown",
-               options=_opts("High School (10th)", "Higher Secondary (12th)", "Graduate", "Post Graduate")),
-        _field("experience", "Experience in Current Designation", "dropdown",
-               options=_opts("Under 1 year", "1 - 3 years", "3 - 5 years", "5 - 10 years", "10+ years")),
+        _field("learner_id", "Learner ID", required=False) | {
+            "helpText": "Auto-generated unique ID — read only."},
+        _field("registration_datetime", "Registration date & time", required=False) | {
+            "helpText": "Auto-captured — read only."},
+        _field("learner_name", "Full name of learner") | {
+            "helpText": "Minimum 2 characters."},
+        _field("dob", "Date of birth", "date", required=False) | {
+            "noFuture": True, "helpText": "Preferred. Cannot be a future date."},
+        _field("age", "Age (years)", "number") | {
+            "decimals": 0,
+            "helpText": "Auto-calculated from DOB; enter manually if DOB is unavailable."},
+        _field("sex", "Sex", "radio", options=_cg_opts("Female", "Male", "Other")),
+        _field("mobile", "Mobile number", "text", "10-digit mobile") | {
+            "helpText": "Exactly 10 digits."},
+        _field("email", "Email ID", "text", required=False) | {
+            "helpText": "Optional. Email validation."},
+        _field("department", "Department", "dropdown", options=_cg_opts(
+            "Health & Family Welfare Department (HFW)",
+            "Women & Child Development Department (WCD)",
+            "Other",
+        )) | {"helpText": "Controls the designation and education lists (first question for cascading logic)."},
+        _field("department_other", "Specify other department") | {
+            "showIf": [_if_field("department", "other")]},
+        _field("designation", "Designation", "dropdown", options=_cg_opts(
+            # HFW list (ordered by frequency), then WCD-only entries.
+            "ASHA", "ANM", "CHO (Community Health Officer)", "Staff Nurse",
+            "ASHA Facilitator", "MLHP (Mid-Level Health Provider)", "MPHW (Male)",
+            "Health Assistant (Female)", "Health Assistant (Male)", "Health Inspector",
+            "Lab Technician", "Pharmacist", "Medical Officer", "Specialist Medical Officer",
+            "Block Health Education Officer", "Taluk Health Officer", "District Health Officer",
+            "District Epidemiologist", "District Surveillance Officer", "Programme Manager",
+            "Data Entry Operator", "Nutrition Counsellor", "Counsellor", "Physiotherapist",
+            "Anganwadi Worker (AWW)", "Lady Supervisor",
+            "Child Development Project Officer (CDPO)", "District Programme Officer",
+            "Poshan Coordinator", "Other (Specify)",
+        )) | {"helpText": "Filtered based on Department (cascading dropdown)."},
+        _field("district", "District", "dropdown", options=[]) | {
+            "helpText": "Karnataka district master list — maintain this state's list here in the form builder."},
+        _field("taluk", "Taluk", "dropdown", options=[]) | {
+            "helpText": "Filtered based on District (cascading dropdown)."},
+        _field("village", "Village", "dropdown", options=[]) | {
+            "helpText": "Filtered based on Taluk. Search enabled."},
+        _field("facility_type", "Facility type", "dropdown", options=_cg_opts(
+            "Anganwadi Centre (AWC)", "Sub-centre (SC)", "Health & Wellness Centre (HWC)",
+            "Primary Health Centre (PHC)", "Community Health Centre (CHC)",
+            "Taluk Hospital (TH)", "District Hospital (DH)", "Medical College Hospital",
+            "ICDS Project Office (CDPO Office)", "Taluk Health Office (THO)",
+            "District Health Office (DHO)", "District ICDS Office", "Other (Specify)",
+        )) | {"helpText": "Filtered based on Designation (cascading dropdown)."},
+        _field("facility_name", "Facility name", "dropdown", options=[]) | {
+            "helpText": "Filtered based on District + Taluk + Facility Type. Search enabled."},
+        _field("highest_education", "Highest educational qualification", "dropdown", options=_cg_opts(
+            # HFW list, then WCD-only entries.
+            "No formal education", "Primary (I–IV)", "Upper Primary (V–VII)",
+            "High School (VIII–X)", "PUC (XI–XII)", "ANM", "GNM", "B.Sc. Nursing",
+            "Post Basic B.Sc. Nursing", "M.Sc. Nursing", "MBBS", "BAMS", "BHMS", "BDS",
+            "BPT", "B.Pharm", "M.Pharm", "MPH", "MD/MS", "Diploma", "Graduate",
+            "Postgraduate", "PhD", "Anganwadi Training Certificate", "BSW", "MSW",
+            "Nutrition/Home Science", "Other",
+        )) | {"helpText": "Different lists for HFW and WCD — filtered based on Department."},
+        _field("marital_status", "Marital status", "radio", options=_cg_opts(
+            "Never married", "Married", "Widowed", "Divorced", "Separated")),
+        _field("has_children", "Do you have any children?", "radio", options=_cg_opts("Yes", "No")),
+        _field("number_children", "Number of children", "number") | {
+            "decimals": 0, "showIf": [_if_field("has_children", "yes")]},
+        _field("residence_distance",
+               "Approximate distance between your residence and workplace (km)", "number") | {
+            "min": 0, "max": 100, "decimals": 1, "helpText": "Range 0–100 km, one decimal place."},
+        _field("years_service", "Total years of service", "number") | {
+            "min": 0, "max": 50, "decimals": 1, "helpText": "Range 0–50 years."},
+        _field("years_designation", "Years in current designation", "number") | {
+            "min": 0, "max": 50, "decimals": 1, "helpText": "Cannot exceed total years of service."},
+        _field("years_facility", "Years at current facility", "number") | {
+            "min": 0, "max": 50, "decimals": 1, "helpText": "Cannot exceed total years of service."},
+        _field("internet_workplace", "Is internet connectivity adequate in your work area?",
+               "dropdown", options=_cg_opts("Always", "Often", "Sometimes", "Rarely", "Never")),
+        _field("nutrition_training",
+               "When did you last attend any nutrition-related training?",
+               "dropdown", options=_cg_opts(*_TRAINING_RECENCY)),
+        _field("pregnancy_nutrition_training",
+               "When did you last attend a pregnancy nutrition-related training?",
+               "dropdown", options=_cg_opts(*_TRAINING_RECENCY)),
+        _field("breastfeeding_training",
+               "When did you last attend a breastfeeding-related training?",
+               "dropdown", options=_cg_opts(*_TRAINING_RECENCY)),
+        _field("complementary_feeding_training",
+               "When did you last attend a complementary feeding-related training?",
+               "dropdown", options=_cg_opts(*_TRAINING_RECENCY)),
+        _field("growth_monitoring_training",
+               "When did you last attend a growth monitoring and growth chart interpretation training?",
+               "dropdown", options=_cg_opts(*_TRAINING_RECENCY)),
     ])
 
 
 def build_mother_registration_fields() -> dict:
+    """Mother Registration (MR) — transcribed row-for-row from the 'EP HST
+    tools' instrument, in sheet order (auto/read-only rows included as
+    documented read-only fields)."""
     return _flat([
-        _field("mother_name", "Mother's Name"),
-        _field("mother_dob", "Date of Birth", "date", required=False),
-        _field("mobile", "Mobile Number", "text", "10-digit mobile"),
-        _field("lmp", "Last Menstrual Period (LMP)", "date", required=False),
-        _field("weight", "Weight (kg)", "number", "e.g. 52", required=False),
-        _field("height", "Height (cm)", "number", "e.g. 158", required=False),
-        _field("education", "Education Level", "dropdown", "Select level",
-               options=_opts("No formal education", "Primary", "Secondary", "Graduate and above"), required=False),
-        _field("village", "Village", "text", required=False),
+        _field("submission_datetime", "Form submission date & time", required=False) | {
+            "helpText": "Auto-captured — read only."},
+        _field("mother_uid", "Mother Unique ID", required=False) | {
+            "helpText": "Auto-generated unique ID — read only."},
+        _field("mother_name", "Mother's name") | {"helpText": "Minimum 2 characters."},
+        _field("adoption_date", "Date of adoption of the mother", "date") | {"noFuture": True},
+        _field("mother_dob", "Mother's date of birth", "date", required=False) | {
+            "noFuture": True, "helpText": "Preferred. Cannot be a future date."},
+        _field("mother_age", "Mother's age (years)", "number") | {
+            "min": 10, "max": 50, "decimals": 0,
+            "helpText": "Auto-calculated from DOB; manual editing allowed. Range 10–50 years."},
+        _field("weight", "Mother's weight during adoption (kg)", "number") | {
+            "min": 35.0, "max": 200.0, "decimals": 1, "helpText": "35.0–200.0 kg, one decimal place."},
+        _field("height", "Mother's height during adoption (cm)", "number") | {
+            "min": 100.0, "max": 230.0, "decimals": 1, "helpText": "100.0–230.0 cm, one decimal place."},
+        _field("lmp", "Last menstrual period (LMP)", "date") | {
+            "noFuture": True,
+            "helpText": "Cannot be a future date; cannot be more than 180 days before today."},
+        _field("edd_lmp", "Expected date of delivery as per LMP", "date", required=False) | {
+            "helpText": "Auto-calculated (LMP + 280 days) — read only."},
+        _field("edd_latest", "Expected date of delivery as per latest records", "date"),
+        _field("gestational_weeks", "Gestational age (weeks)", required=False) | {
+            "helpText": "Auto-calculated: floor((Today − LMP) / 7) — read only."},
+        _field("gestational_months", "Gestational age (months)", required=False) | {
+            "helpText": "Auto-calculated: floor((Today − LMP) / 30) — read only."},
+        _field("mobile", "Mobile number", "text", "10-digit mobile") | {
+            "helpText": "Exactly 10 digits."},
+        _field("alternate_mobile", "Alternate mobile number", "text", required=False) | {
+            "helpText": "Exactly 10 digits; should not match the primary mobile."},
+        _field("email", "Email ID", "text", required=False) | {"helpText": "Optional. Email validation."},
+        _field("state", "State", required=False) | {
+            "helpText": "Auto-populated from project settings — read only."},
+        _field("district", "District", "dropdown", options=[]) | {
+            "helpText": "Master district list — filtered by State (cascading dropdown)."},
+        _field("taluk", "Taluk", "dropdown", options=[]) | {
+            "helpText": "Master taluk list — filtered by District (cascading dropdown)."},
+        _field("village", "Village", "text") | {"helpText": "Open-ended."},
+        _field("hwc_name",
+               "Under which Health and Wellness Centre (HWC) you are registered currently?",
+               "dropdown", options=[]) | {
+            "helpText": "Master HWC list — filtered based on State → District → Taluk. Search enabled."},
+        _field("phc_name",
+               "Under which Primary health centre you are registered currently?",
+               "dropdown", options=[]) | {
+            "helpText": "Master PHC list — filtered based on the selected HWC; auto-populated when the HWC maps to a single PHC."},
+        _field("education", "Highest educational qualification", "dropdown", options=_cg_opts(
+            "Illiterate", "No formal education", "Lower Primary (I–IV)", "Higher Primary (V–VII)",
+            "High School (VIII–X)", "PUC (XI–XII)", "Diploma", "Graduate", "Postgraduate")),
+        _field("education_field",
+               "What was the broad field of your highest educational qualification?",
+               "dropdown", options=_cg_opts(
+                   "Health Sciences", "Engineering & Technology", "Science",
+                   "Arts, Commerce & Humanities", "Management", "Law", "Agriculture",
+                   "Education (Teaching)", "Computer Science & Information Technology", "Other",
+               )) | {"showIf": [_if_field("education", "diploma", "graduate", "postgraduate")]},
+        _field("education_degree", "Please specify your highest degree or diploma.",
+               "dropdown", options=_cg_opts(
+                   # Health Sciences (ordered by prevalence per the instrument notes) …
+                   "MBBS", "B.Sc. Nursing", "GNM", "ANM", "BAMS", "BHMS", "BDS", "B.Pharm",
+                   "BPT", "B.Sc. Nutrition", "MPH", "MD", "MS", "M.Sc. Nursing",
+                   "D.Pharm", "DMLT", "Diploma in Nutrition and Dietetics", "DPH",
+                   "Post Basic B.Sc. Nursing", "B.Sc. Home Science", "B.Sc. MLT", "BPH",
+                   "BOT", "B.Optom", "M.Sc. Nutrition", "M.Pharm", "MDS", "MPT", "MHA",
+                   "MOT", "PhD",
+                   # … then the other fields' lists.
+                   "Diploma in Engineering", "BE", "B.Tech", "ME", "M.Tech",
+                   "B.Sc.", "M.Sc.", "BA", "B.Com.", "MA", "M.Com.", "BSW", "MSW",
+                   "BBA", "MBA", "LLB", "LLM", "B.Sc. Agriculture", "M.Sc. Agriculture",
+                   "BVSc & AH", "MVSc", "D.Ed.", "B.Ed.", "M.Ed.", "BCA", "MCA",
+                   "B.Sc. Computer Science", "M.Sc. Computer Science", "Other",
+               )) | {
+            "showIf": [_if_field("education", "diploma", "graduate", "postgraduate")],
+            "helpText": "Filtered based on the selected field. Search enabled."},
+        _field("occupation", "Occupation", "dropdown", options=_cg_opts(
+            "Homemaker", "Agriculture", "Skilled Manual Worker", "Semi-skilled Worker",
+            "Unskilled Worker", "Service Provider", "Semi-professional", "Professional",
+            "Entrepreneur/Small Business", "Other")),
+        _field("occupation_other", "Specify occupation") | {
+            "showIf": [_if_field("occupation", "other")]},
+        _field("ration_card", "Colour/Type of ration card", "radio", options=_cg_opts(
+            "AAY", "Eligible for AAY but not applied", "BPL", "Eligible for BPL but not applied",
+            "APL", "No ration card", "Others")) | {"helpText": "State-specific lookup."},
+        _field("social_category", "Social category", "radio", options=_cg_opts(
+            "ST", "SC", "OBC", "General", "Do not know", "Prefer not to say")),
+        _field("nutrition_course",
+               "Have you completed any certificate course or formal training on nutrition, pregnancy or child care?",
+               "radio", options=_cg_opts("Yes", "No")),
+        _field("nutrition_course_name", "Please specify the course completed.") | {
+            "showIf": [_if_field("nutrition_course", "yes")]},
+        _field("video_frequency",
+               "How often do you watch health-related videos on YouTube, Facebook, Instagram or other digital media platforms?",
+               "dropdown", options=_cg_opts(
+                   "Daily", "Alternate day", "2–3 times per week", "Once a week",
+                   "2–3 times per month", "About once a month", "Less than once a month", "Never")),
+        _field("trusted_source",
+               "Which source do you trust the most for health-related information?",
+               "dropdown", options=_cg_opts(
+                   "Doctor", "Staff Nurse", "ANM", "ASHA", "Anganwadi Worker",
+                   "Nutritionist/Dietitian", "Family members", "Friends", "YouTube", "Facebook",
+                   "Instagram", "Other social media", "Television", "Internet websites",
+                   "Books/Pamphlets", "Other")),
+        _field("trusted_source_other", "Please specify the other trusted source.") | {
+            "showIf": [_if_field("trusted_source", "other")]},
+        _field("implement_video",
+               "How often do you follow the advice you receive from health-related videos?",
+               "radio", options=_cg_opts("Never", "Rarely", "Sometimes", "Often", "Always")) | {
+            "helpText": "Measures behaviour adoption."},
+        _field("confidence_video",
+               "How confident are you in trying a new health practice after watching a reliable educational video?",
+               "radio", options=_cg_opts(
+                   "Not at all confident", "Slightly confident", "Moderately confident",
+                   "Very confident", "Extremely confident")) | {"helpText": "Measures self-efficacy."},
+        _field("willingness_hcw",
+               "If a healthcare worker teaches you a new health practice, how willing are you to try it?",
+               "radio", options=_cg_opts(
+                   "Very unwilling", "Unwilling", "Neutral", "Willing", "Very willing")) | {
+            "helpText": "Measures attitude."},
+        _field("information_seeking",
+               "When you had a question about pregnancy, breastfeeding or feeding your baby, how often did you actively look for information?",
+               "radio", options=_cg_opts("Never", "Rarely", "Sometimes", "Often", "Always")) | {
+            "helpText": "Measures proactive information seeking."},
     ])
 
 
 def build_child_registration_fields() -> dict:
+    """Child Registration (CR) — transcribed row-for-row from the 'EP HST
+    tools' instrument, in sheet order."""
     return _flat([
-        _field("child_name", "Child's Name"),
-        _field("dob", "Date of Birth", "date"),
-        _field("gender", "Gender", "radio", options=_opts("Female", "Male")),
-        _field("birth_weight", "Birth Weight (kg)", "number", "e.g. 2.8"),
-        _field("birth_length", "Birth Length (cm)", "number", "e.g. 48", required=False),
-        _field("delivery_place", "Place of Delivery", "dropdown", "Select place",
-               options=_opts("Home", "PHC", "CHC", "District Hospital", "Private Hospital", "Other")),
+        _field("submission_datetime", "Form submission date & time", required=False) | {
+            "helpText": "Auto-captured — read only."},
+        _field("child_uid", "Child Unique ID", required=False) | {
+            "helpText": "Auto-generated unique ID — read only."},
+        _field("mother_uid", "Mother Unique ID", required=False) | {
+            "helpText": "Linked to the mother registration — read only."},
+        _field("babies_born", "Babies born in this delivery", "radio",
+               options=_cg_opts("Single", "Twins")) | {
+            "helpText": "May be extended to Triplets+."},
+        _field("adoption_date", "Date of adoption of the baby", "date") | {
+            "noFuture": True,
+            "helpText": "Cannot be a future date; cannot be more than 14 days before today."},
+        _field("child_name", "Name of baby") | {
+            "helpText": "Minimum 2 characters. A temporary name is allowed if the baby is unnamed."},
+        _field("dob", "Date of birth", "date") | {
+            "noFuture": True,
+            "helpText": "Cannot be a future date; cannot be more than 365 days before today."},
+        _field("birth_weight", "Birth weight (kg)", "number") | {
+            "min": 1.0, "max": 5.0, "decimals": 3, "helpText": "1.000–5.000 kg, three decimal places."},
+        _field("birth_length", "Birth length (cm)", "number") | {
+            "min": 30.0, "max": 65.0, "decimals": 1, "helpText": "30.0–65.0 cm, one decimal place."},
+        _field("sex", "Sex", "radio", options=_cg_opts("Female", "Male")),
+        _field("delivery_method", "Delivery method", "radio", options=_cg_opts(
+            "Normal vaginal delivery", "Caesarean section", "Assisted vaginal delivery")),
+        _field("delivery_place", "Place of delivery", "dropdown", options=_cg_opts(
+            "District Hospital (DH)", "Rural Hospital (RH)", "Sub-District Hospital (SDH)",
+            "Community Health Centre (CHC)", "Primary Health Centre (PHC)", "Sub-centre (SC)",
+            "Private Hospital/Nursing Home", "Home", "Other")),
+        _field("delivery_place_other", "Specify other place of delivery") | {
+            "showIf": [_if_field("delivery_place", "other")]},
+        _field("bf_within_one_hour", "Was breastfeeding initiated within one hour of birth?",
+               "radio", options=_cg_opts("Yes", "No")),
+        _field("ebf_during_stay",
+               "Was the baby exclusively breastfed during the healthcare facility stay immediately after delivery?",
+               "radio", options=_cg_opts("Yes", "No")),
+        _field("ebf_reason",
+               "If exclusive breastfeeding was not done during the healthcare facility stay, mention the reason.",
+               "textarea") | {"showIf": [_if_field("ebf_during_stay", "no")]},
+        _field("pre_existing_conditions", "Pre-existing ill health conditions at birth",
+               "dropdown", required=False, options=_cg_opts(
+                   "None", "Congenital anomaly/Birth defect",
+                   "Birth asphyxia (difficulty breathing at birth)", "Neonatal jaundice",
+                   "Respiratory distress/Breathing difficulty", "Neonatal infection/Sepsis",
+                   "Hypoglycaemia (low blood sugar)", "Others")),
+        _field("pre_existing_other", "Please specify the other health condition(s).") | {
+            "showIf": [_if_field("pre_existing_conditions", "others")]},
+        _field("previous_living_children",
+               "Apart from the current child, how many previous living children do you have?",
+               "number") | {"min": 0, "max": 10, "decimals": 0, "helpText": "Range 0–10."},
     ])
 
 

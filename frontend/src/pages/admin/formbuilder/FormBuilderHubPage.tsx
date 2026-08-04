@@ -110,11 +110,16 @@ const FormCard: React.FC<{ summary: FormDefinitionSummary; onEdit: () => void }>
 
         <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-3.5">
           <div className="min-w-0 text-[11px] text-ink-faint">
-            <span className="font-bold text-ink-muted">v{summary.version}</span>
+            <span className="font-bold text-ink-muted">
+              {summary.version_count ?? 1} {(summary.version_count ?? 1) === 1 ? 'version' : 'versions'}
+            </span>
             {' · '}
             {summary.node_count} {isFlow ? (summary.node_count === 1 ? 'step' : 'steps') : summary.node_count === 1 ? 'field' : 'fields'}
             {' · updated '}
             {formatDate(summary.updated_at)}
+            {(summary.assigned_district_count ?? 0) > 0 && (
+              <> · {summary.assigned_district_count} district{summary.assigned_district_count === 1 ? '' : 's'} pinned</>
+            )}
           </div>
           <Button
             size="sm"
@@ -125,7 +130,7 @@ const FormCard: React.FC<{ summary: FormDefinitionSummary; onEdit: () => void }>
               onEdit();
             }}
           >
-            Edit
+            Versions
           </Button>
         </div>
       </div>
@@ -162,8 +167,9 @@ const FormBuilderHubPage: React.FC = () => {
     };
   }, [reloadTick]);
 
+  // Cards open the form's version history; the editor is reached from there.
   const openForm = (summary: FormDefinitionSummary) =>
-    navigate(`/admin/form-builder/${summary.builder_type === 'flow' ? 'flow' : 'flat'}/${summary.form_key}`);
+    navigate(`/admin/form-builder/versions/${summary.form_key}`);
 
   return (
     <div>

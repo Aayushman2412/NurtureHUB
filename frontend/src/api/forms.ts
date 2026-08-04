@@ -54,6 +54,74 @@ export const adminUploadFormAsset = (file: File): Promise<{ url: string }> => {
     .then(r => r.data);
 };
 
+// ── Admin: form versions (git-style history + district pinning) ──────────────
+
+export interface FormVersionDistrict {
+  id: number;
+  name: string;
+  slug: string;
+}
+
+export interface FormVersionSummary {
+  id: number;
+  form_key: string;
+  version_number: number;
+  /** Admin-entered "commit" date (ISO date). */
+  created_on: string | null;
+  description: string;
+  created_by: string | null;
+  created_at: string | null;
+  is_default: boolean;
+  districts: FormVersionDistrict[];
+}
+
+export interface FormVersionDetail extends FormVersionSummary {
+  schema_json: FlowSchema | FlatSchema;
+  builder_type: 'flow' | 'flat';
+  title: string;
+}
+
+export interface FormVersionsList {
+  form_key: string;
+  title: string;
+  builder_type: 'flow' | 'flat';
+  description: string | null;
+  versions: FormVersionSummary[];
+}
+
+export const adminListFormVersions = (formKey: FormKey): Promise<FormVersionsList> =>
+  client.get(`/api/admin/forms/${formKey}/versions`).then(r => r.data);
+
+export const adminGetFormVersion = (formKey: FormKey, versionNumber: number): Promise<FormVersionDetail> =>
+  client.get(`/api/admin/forms/${formKey}/versions/${versionNumber}`).then(r => r.data);
+
+export const adminCreateFormVersion = (
+  formKey: FormKey,
+  payload: {
+    schema_json: FlowSchema | FlatSchema;
+    created_on: string;       // ISO date, admin-entered
+    description: string;      // change summary ("first creation" for v1)
+    make_default?: boolean;
+    title?: string;
+  },
+): Promise<FormVersionDetail> =>
+  client.post(`/api/admin/forms/${formKey}/versions`, payload).then(r => r.data);
+
+export const adminSetVersionDistricts = (
+  formKey: FormKey,
+  versionNumber: number,
+  districtIds: number[],
+): Promise<FormVersionSummary> =>
+  client
+    .put(`/api/admin/forms/${formKey}/versions/${versionNumber}/districts`, { district_ids: districtIds })
+    .then(r => r.data);
+
+export const adminMakeVersionDefault = (
+  formKey: FormKey,
+  versionNumber: number,
+): Promise<FormVersionSummary> =>
+  client.post(`/api/admin/forms/${formKey}/versions/${versionNumber}/make-default`).then(r => r.data);
+
 // ── Learner ──────────────────────────────────────────────────────────────────
 
 export const getFormDefinition = (formKey: FormKey): Promise<FormDefinition> =>

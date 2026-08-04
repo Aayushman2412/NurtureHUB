@@ -26,11 +26,14 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
+from sqlalchemy import func
 from sqlalchemy.orm import Session
+
+from datetime import date
 
 from app.database import get_db
 from app.dependencies import get_admin_email, get_current_admin
-from app.models import FormDefinition
+from app.models import FormDefinition, FormDistrictAssignment, FormVersion, ProgramDistrict
 from app.seed_forms import FORM_SPECS, ensure_form_definitions
 
 router = APIRouter(prefix="/api/admin", tags=["admin-forms"], dependencies=[Depends(get_current_admin)])
@@ -285,6 +288,30 @@ class FormDefinitionUpdate(BaseModel):
     schema_data: Dict[str, Any] = Field(alias="schema_json")
 
 
+class FormVersionCreate(BaseModel):
+    """One git-style commit of a form: admin-entered date + change summary."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    schema_data: Dict[str, Any] = Field(alias="schema_json")
+    created_on: date
+    description: str
+    # Make this version the one unassigned districts see.
+    make_default: bool = False
+    title: Optional[str] = None
+
+    @field_validator("description")
+    @classmethod
+    def _description_required(cls, v: str) -> str:
+        if not (v or "").strip():
+            raise ValueError("a change description is required")
+        return v.strip()
+
+
+class VersionDistrictsUpdate(BaseModel):
+    """Replace-set of program-district ids pinned to a version."""
+    district_ids: List[int] = Field(default_factory=list)
+
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _uploads_root() -> str:
@@ -359,6 +386,21 @@ def _validate_schema(builder_type: str, schema_json: Dict[str, Any]) -> Dict[str
 def list_forms(db: Session = Depends(get_db)):
     ensure_form_definitions(db)
     definitions = {d.form_key: d for d in db.query(FormDefinition).all()}
+    version_counts = dict(
+        db.query(FormVersion.form_key, func.count(FormVersion.id))
+        .group_by(FormVersion.form_key)
+        .all()
+    )
+    assigned_counts = dict(
+        db.query(FormDistrictAssignment.form_key, func.count(FormDistrictAssignment.id))
+        .group_by(FormDistrictAssignment.form_key)
+        .all()
+    )
+    default_numbers = {
+        d.form_key: d.default_version.version_number
+        for d in definitions.values()
+        if d.default_version is not None
+    }
     # Return in the canonical FORM_SPECS order.
     out = []
     for form_key in FORM_SPECS:
@@ -372,6 +414,9 @@ def list_forms(db: Session = Depends(get_db)):
             "version": definition.version,
             "updated_at": definition.updated_at.isoformat() if definition.updated_at else None,
             "node_count": _node_count(definition),
+            "version_count": version_counts.get(form_key, 0) or 1,
+            "default_version_number": default_numbers.get(form_key),
+            "assigned_district_count": assigned_counts.get(form_key, 0),
         })
     return out
 
@@ -381,6 +426,109 @@ def get_form(form_key: str, db: Session = Depends(get_db)):
     return _serialize(_get_definition(db, form_key))
 
 
+def _ensure_initial_version(db: Session, definition: FormDefinition) -> None:
+    """A definition seeded after the versioning migration has no history yet —
+    give it its "first creation" version so the version UI always has a root."""
+    exists = db.query(FormVersion.id).filter(FormVersion.form_key == definition.form_key).first()
+    if exists:
+        return
+    version = FormVersion(
+        form_key=definition.form_key,
+        version_number=1,
+        created_on=date.today(),
+        description="First creation",
+        schema_json=definition.schema_json or {},
+        created_by=definition.updated_by,
+    )
+    db.add(version)
+    db.flush()
+    definition.default_version_id = version.id
+    db.commit()
+
+
+def _next_version_number(db: Session, form_key: str) -> int:
+    current = (
+        db.query(FormVersion.version_number)
+        .filter(FormVersion.form_key == form_key)
+        .order_by(FormVersion.version_number.desc())
+        .first()
+    )
+    return (current[0] if current else 0) + 1
+
+
+def _version_or_404(db: Session, form_key: str, version_number: int) -> FormVersion:
+    version = (
+        db.query(FormVersion)
+        .filter(FormVersion.form_key == form_key, FormVersion.version_number == version_number)
+        .first()
+    )
+    if not version:
+        raise HTTPException(status_code=404, detail="Version not found")
+    return version
+
+
+def _serialize_version(
+    version: FormVersion,
+    definition: FormDefinition,
+    include_schema: bool = False,
+) -> Dict[str, Any]:
+    out = {
+        "id": version.id,
+        "form_key": version.form_key,
+        "version_number": version.version_number,
+        "created_on": version.created_on.isoformat() if version.created_on else None,
+        "description": version.description,
+        "created_by": version.created_by,
+        "created_at": version.created_at.isoformat() if version.created_at else None,
+        "is_default": definition.default_version_id == version.id,
+        "districts": [
+            {"id": a.program_district.id, "name": a.program_district.name, "slug": a.program_district.slug}
+            for a in sorted(version.assignments, key=lambda a: (a.program_district.name or "").lower())
+            if a.program_district
+        ],
+    }
+    if include_schema:
+        out["schema_json"] = version.schema_json or {}
+        out["builder_type"] = definition.builder_type
+        out["title"] = definition.title
+    return out
+
+
+def _create_version(
+    db: Session,
+    definition: FormDefinition,
+    schema: Dict[str, Any],
+    created_on: date,
+    description: str,
+    admin_email: str,
+    make_default: bool,
+    title: Optional[str] = None,
+) -> FormVersion:
+    """Append one immutable version; optionally promote it to the default that
+    unassigned districts see (which also syncs the legacy live schema_json)."""
+    _ensure_initial_version(db, definition)
+    version = FormVersion(
+        form_key=definition.form_key,
+        version_number=_next_version_number(db, definition.form_key),
+        created_on=created_on,
+        description=description,
+        schema_json=schema,
+        created_by=admin_email,
+    )
+    db.add(version)
+    db.flush()
+    if title is not None and title.strip():
+        definition.title = title.strip()
+    if make_default:
+        definition.default_version_id = version.id
+        definition.schema_json = schema          # keep legacy consumers in sync
+        definition.version = (definition.version or 0) + 1
+        definition.updated_by = admin_email
+    db.commit()
+    db.refresh(version)
+    return version
+
+
 @router.put("/forms/{form_key}")
 def update_form(
     form_key: str,
@@ -388,17 +536,139 @@ def update_form(
     db: Session = Depends(get_db),
     admin_email: str = Depends(get_admin_email),
 ):
+    """Legacy no-questions-asked save: still works, but now records the edit as
+    a new default version so nothing escapes the history."""
     definition = _get_definition(db, form_key)
-    definition.schema_json = _validate_schema(definition.builder_type, data.schema_data)
-    if data.title is not None and data.title.strip():
-        definition.title = data.title.strip()
+    schema = _validate_schema(definition.builder_type, data.schema_data)
     if data.description is not None:
         definition.description = data.description
+    _create_version(
+        db, definition, schema,
+        created_on=date.today(),
+        description="Edited (quick save)",
+        admin_email=admin_email,
+        make_default=True,
+        title=data.title,
+    )
+    db.refresh(definition)
+    return _serialize(definition)
+
+
+# ── Version endpoints ────────────────────────────────────────────────────────
+
+@router.get("/forms/{form_key}/versions")
+def list_versions(form_key: str, db: Session = Depends(get_db)):
+    definition = _get_definition(db, form_key)
+    _ensure_initial_version(db, definition)
+    versions = (
+        db.query(FormVersion)
+        .filter(FormVersion.form_key == form_key)
+        .order_by(FormVersion.version_number.desc())
+        .all()
+    )
+    return {
+        "form_key": definition.form_key,
+        "title": definition.title,
+        "builder_type": definition.builder_type,
+        "description": definition.description,
+        "versions": [_serialize_version(v, definition) for v in versions],
+    }
+
+
+@router.get("/forms/{form_key}/versions/{version_number}")
+def get_version(form_key: str, version_number: int, db: Session = Depends(get_db)):
+    definition = _get_definition(db, form_key)
+    _ensure_initial_version(db, definition)
+    version = _version_or_404(db, form_key, version_number)
+    return _serialize_version(version, definition, include_schema=True)
+
+
+@router.post("/forms/{form_key}/versions")
+def create_version(
+    form_key: str,
+    data: FormVersionCreate,
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    definition = _get_definition(db, form_key)
+    schema = _validate_schema(definition.builder_type, data.schema_data)
+    version = _create_version(
+        db, definition, schema,
+        created_on=data.created_on,
+        description=data.description,
+        admin_email=admin_email,
+        make_default=data.make_default,
+        title=data.title,
+    )
+    return _serialize_version(version, definition, include_schema=True)
+
+
+@router.put("/forms/{form_key}/versions/{version_number}/districts")
+def set_version_districts(
+    form_key: str,
+    version_number: int,
+    data: VersionDistrictsUpdate,
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Pin the given districts to this version (replace-set).
+
+    Districts named here move to this version (even off another version);
+    districts previously on this version but absent from the list are
+    unpinned and fall back to the form's default version.
+    """
+    definition = _get_definition(db, form_key)
+    version = _version_or_404(db, form_key, version_number)
+
+    wanted = set(data.district_ids)
+    found = {
+        d.id for d in db.query(ProgramDistrict).filter(ProgramDistrict.id.in_(wanted)).all()
+    } if wanted else set()
+    missing = wanted - found
+    if missing:
+        raise HTTPException(status_code=400, detail=f"Unknown district id(s): {sorted(missing)}")
+
+    existing = db.query(FormDistrictAssignment).filter(FormDistrictAssignment.form_key == form_key).all()
+    by_district = {a.program_district_id: a for a in existing}
+
+    for district_id in wanted:
+        assignment = by_district.get(district_id)
+        if assignment:
+            assignment.version_id = version.id
+            assignment.assigned_by = admin_email
+        else:
+            db.add(FormDistrictAssignment(
+                form_key=form_key,
+                program_district_id=district_id,
+                version_id=version.id,
+                assigned_by=admin_email,
+            ))
+    # Unpin districts dropped from this version's list.
+    for assignment in existing:
+        if assignment.version_id == version.id and assignment.program_district_id not in wanted:
+            db.delete(assignment)
+
+    db.commit()
+    db.refresh(version)
+    return _serialize_version(version, definition)
+
+
+@router.post("/forms/{form_key}/versions/{version_number}/make-default")
+def make_version_default(
+    form_key: str,
+    version_number: int,
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    definition = _get_definition(db, form_key)
+    version = _version_or_404(db, form_key, version_number)
+    definition.default_version_id = version.id
+    definition.schema_json = version.schema_json or {}   # keep legacy consumers in sync
     definition.version = (definition.version or 0) + 1
     definition.updated_by = admin_email
     db.commit()
-    db.refresh(definition)
-    return _serialize(definition)
+    db.refresh(version)
+    return _serialize_version(version, definition)
 
 
 def _collect_media_refs(builder_type: str, schema: Dict[str, Any]) -> List[Tuple[str, str, str]]:

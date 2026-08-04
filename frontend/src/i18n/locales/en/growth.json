@@ -44,7 +44,9 @@
   },
   "charts": {
     "tab": "Growth charts",
-    "downloadAll": "Download all"
+    "downloadAll": "Download all",
+    "pairFilter": "Mother–learner pair",
+    "allPairs": "All pairs"
   },
   "filters": {
     "role": "Role",
@@ -159,7 +161,28 @@
   "forms": {
     "growth_monitoring": "Check Growth",
     "breastfeeding": "Breastfeeding Assessment",
-    "complementary_feeding": "Complementary Feeding Assessment"
+    "complementary_feeding": "Complementary Feeding Assessment",
+    "mother_protein_intake": "Mother's Protein Intake",
+    "antenatal": "Antenatal Assessment"
+  },
+  "casePage": {
+    "title": "Case detail",
+    "loading": "Loading case…",
+    "notFound": "Case not found",
+    "whoCharts": "WHO growth charts (this pair, all visits)",
+    "visitSummary": "Visit summary",
+    "visitDate": "Visit date",
+    "age": "Age",
+    "formsFilled": "Forms filled (LAP status)",
+    "infoForms": "Info forms",
+    "lapMatrices": "LAP assessment matrices",
+    "question": "Question",
+    "noResponses": "No submitted forms for this case yet.",
+    "legendGreen": "As per LAP",
+    "legendRed": "Not as per LAP",
+    "legendNeutral": "Answered (no LAP verdict)",
+    "matrixCount": "{{count}} visits",
+    "matrixCount_one": "{{count}} visit"
   },
   "admin": {
     "title": "Growth Monitor",
