@@ -1,0 +1,74 @@
+name: Alembic single head
+
+# Two branches that each add a migration from the same parent produce two
+# Alembic heads. Nothing complains until deploy, where `alembic upgrade head`
+# refuses to run and the backend will not boot — an outage caused by a merge
+# that looked completely clean.
+#
+# On `pull_request` GitHub checks out the MERGE RESULT of the PR into its base,
+# not the branch tip. That is what makes this work: divergence which only
+# appears after merging is visible here, before anyone merges.
+on:
+  pull_request:
+    paths:
+      - 'backend/alembic/**'
+      - '.github/workflows/alembic-heads.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/alembic/**'
+  workflow_dispatch:
+
+jobs:
+  single-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # `alembic heads` only parses the files in versions/ — it never opens a
+      # database connection, and the migrations themselves import nothing but
+      # alembic + sqlalchemy. So no Postgres service and no app requirements.
+      - name: Install Alembic
+        run: pip install --quiet alembic sqlalchemy
+
+      - name: Check for a single head
+        working-directory: backend
+        env:
+          # Never connected to; present only because env.py reads a URL at import.
+          ALEMBIC_DATABASE_URL: postgresql://unused@127.0.0.1:1/unused
+        run: |
+          heads="$(alembic heads)"
+          count="$(printf '%s\n' "$heads" | grep -c . || true)"
+          printf 'Alembic heads found (%s):\n%s\n\n' "$count" "$heads"
+
+          if [ "$count" -eq 1 ]; then
+            echo "OK — single head."
+            exit 0
+          fi
+
+          cat <<'EOF'
+          ---------------------------------------------------------------
+          FAILED: multiple Alembic heads.
+
+          Two branches each added a migration from the same parent revision.
+          Merging both leaves the chain forked, and `alembic upgrade head`
+          will refuse to start the backend on deploy.
+
+          Fix it on your branch BEFORE merging (keeps history linear):
+
+            git fetch origin && git rebase origin/main
+            # then edit your migration so it chains onto the CURRENT head:
+            #   down_revision = "<the head printed above that is not yours>"
+            cd backend && alembic heads     # must print exactly one
+
+          If both migrations are already on main and are genuinely
+          independent, join them with a merge revision instead:
+
+            cd backend && alembic merge -m "merge heads" <head1> <head2>
+          ---------------------------------------------------------------
+          EOF
+          exit 1
