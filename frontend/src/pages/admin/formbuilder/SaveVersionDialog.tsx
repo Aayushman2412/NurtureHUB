@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GitCommitHorizontal } from 'lucide-react';
 import { Button, DateInput, Field, Modal } from '../../../components/ui';
@@ -43,7 +43,19 @@ const SaveVersionDialog: React.FC<Props> = ({
   const [makeDefault, setMakeDefault] = useState(defaultMakeDefault);
   const [touched, setTouched] = useState(false);
 
+  // The dialog stays mounted between opens (so an accidental Esc keeps the
+  // typed text) — but the default-toggle must track the version being edited.
+  useEffect(() => {
+    if (open) {
+      setMakeDefault(defaultMakeDefault);
+      setTouched(false);
+    }
+  }, [open, defaultMakeDefault]);
+
   const descriptionMissing = !description.trim();
+  // The masked text input can commit any typed date — block future ones here
+  // (the backend rejects them too).
+  const dateInFuture = !!createdOn && createdOn > todayIso();
 
   if (!open) return null;
 
@@ -67,7 +79,7 @@ const SaveVersionDialog: React.FC<Props> = ({
           </Button>
           <Button
             variant="primary"
-            disabled={saving || descriptionMissing}
+            disabled={saving || descriptionMissing || dateInFuture}
             onClick={() =>
               onSave({
                 created_on: createdOn || todayIso(),
@@ -84,8 +96,11 @@ const SaveVersionDialog: React.FC<Props> = ({
       <div className="space-y-4">
         <p className="text-sm text-ink-muted">{t('saveVersion.blurb')}</p>
 
-        <Field label={`${t('saveVersion.dateLabel')} *`}>
-          <DateInput value={createdOn} onChange={setCreatedOn} max={todayIso()} />
+        <Field
+          label={`${t('saveVersion.dateLabel')} *`}
+          error={dateInFuture ? t('saveVersion.dateFuture') : undefined}
+        >
+          <DateInput value={createdOn} onChange={setCreatedOn} max={todayIso()} error={dateInFuture} />
         </Field>
 
         <Field

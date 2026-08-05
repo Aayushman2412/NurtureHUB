@@ -113,6 +113,11 @@ def _resolve_for_user(
         )
         if assignment and assignment.version is not None:
             return definition, assignment.version.schema_json or {}, assignment.version.version_number
+    # Default path: stamp the DEFAULT version's history number so
+    # FormResponse.definition_version always means form_versions.version_number
+    # (falling back to the legacy counter only pre-first-version).
+    if definition.default_version is not None:
+        return definition, definition.schema_json or {}, definition.default_version.version_number
     return definition, definition.schema_json or {}, definition.version
 
 

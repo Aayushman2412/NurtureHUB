@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Bell, CornerDownRight, Film, Flag, GitBranch, Info, Link2, OctagonMinus, Printer,
 } from 'lucide-react';
-import { adminGetForm } from '../../../api/forms';
+import { adminGetForm, adminGetFormVersion } from '../../../api/forms';
 import {
   formatTimestamp, reachableNodeIds, resolveAssetUrl,
 } from '../../../lib/flowGraph';
@@ -428,6 +428,9 @@ const FlatPrint: React.FC<{ schema: FlatSchema }> = ({ schema }) => {
 const FormPrintPage: React.FC = () => {
   const { formKey } = useParams<{ formKey: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // ?v=N prints that history version instead of the live/default schema.
+  const versionParam = Number(searchParams.get('v')) || null;
   const [def, setDef] = useState<FormDefinition | null>(null);
   const [loadState, setLoadState] = useState<'loading' | 'error' | 'ready'>('loading');
 
@@ -438,16 +441,22 @@ const FormPrintPage: React.FC = () => {
     }
     let cancelled = false;
     adminGetForm(formKey as FormKey)
-      .then(d => {
+      .then(async d => {
         if (cancelled) return;
-        setDef(d);
+        if (versionParam) {
+          const version = await adminGetFormVersion(formKey as FormKey, versionParam);
+          if (cancelled) return;
+          setDef({ ...d, schema_json: version.schema_json, version: version.version_number });
+        } else {
+          setDef(d);
+        }
         setLoadState('ready');
       })
       .catch(() => !cancelled && setLoadState('error'));
     return () => {
       cancelled = true;
     };
-  }, [formKey, navigate]);
+  }, [formKey, navigate, versionParam]);
 
   if (loadState === 'loading') return <PageLoader label="Preparing the printable form…" />;
   if (loadState === 'error' || !def)

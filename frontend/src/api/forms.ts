@@ -34,7 +34,11 @@ export const adminSaveForm = (
  * with copies of the referenced uploads. Triggers the browser download.
  */
 export const adminExportForm = async (formKey: FormKey, version?: number): Promise<void> => {
-  const res = await client.get(`/api/admin/forms/${formKey}/export`, { responseType: 'blob' });
+  const res = await client.get(`/api/admin/forms/${formKey}/export`, {
+    responseType: 'blob',
+    // With a version, the backend exports THAT history version's schema.
+    params: version ? { version } : undefined,
+  });
   const url = URL.createObjectURL(res.data as Blob);
   const anchor = document.createElement('a');
   anchor.href = url;
@@ -103,6 +107,8 @@ export const adminCreateFormVersion = (
     description: string;      // change summary ("first creation" for v1)
     make_default?: boolean;
     title?: string;
+    /** Form-level description shown to learners (applied on default saves). */
+    definition_description?: string;
   },
 ): Promise<FormVersionDetail> =>
   client.post(`/api/admin/forms/${formKey}/versions`, payload).then(r => r.data);

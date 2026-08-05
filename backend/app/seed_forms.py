@@ -1239,7 +1239,9 @@ def build_mother_registration_fields() -> dict:
         _field("video_frequency",
                "How often do you watch health-related videos on YouTube, Facebook, Instagram or other digital media platforms?",
                "dropdown", options=_cg_opts(
-                   "Daily", "Alternate day", "2–3 times per week", "Once a week",
+                   # 7-point scale: "Alternate day, 2–3 times per week" is ONE
+                   # semicolon-delimited option in the instrument.
+                   "Daily", "Alternate day, 2–3 times per week", "Once a week",
                    "2–3 times per month", "About once a month", "Less than once a month", "Never")),
         _field("trusted_source",
                "Which source do you trust the most for health-related information?",

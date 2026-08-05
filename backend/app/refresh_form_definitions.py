@@ -178,6 +178,10 @@ def refresh(db: Session, apply: bool, only: Optional[List[str]],
 
 
 def restore(db: Session, backup_path: str) -> None:
+    from datetime import date as _date
+
+    from app.models import FormVersion
+
     with open(backup_path, "r", encoding="utf-8") as f:
         backup = json.load(f)
     rows = _rows_by_key(db)
@@ -193,7 +197,27 @@ def restore(db: Session, backup_path: str) -> None:
         row.schema_json = saved["schema_json"]
         row.version = saved["version"]
         row.updated_by = UPDATED_BY + " (restore)"
-        print(f"  restored {form_key:<26} -> v{saved['version']}")
+
+        # Keep the schema_json == default-version invariant: the restore is a
+        # new history entry that becomes the default, like any other save.
+        last = (
+            db.query(FormVersion.version_number)
+            .filter(FormVersion.form_key == form_key)
+            .order_by(FormVersion.version_number.desc())
+            .first()
+        )
+        version = FormVersion(
+            form_key=form_key,
+            version_number=(last[0] if last else 0) + 1,
+            created_on=_date.today(),
+            description=f"Restored from backup {os.path.basename(backup_path)}",
+            schema_json=saved["schema_json"],
+            created_by=UPDATED_BY,
+        )
+        db.add(version)
+        db.flush()
+        row.default_version_id = version.id
+        print(f"  restored {form_key:<26} -> v{saved['version']} (history v{version.version_number})")
         restored += 1
     db.commit()
     print(f"\nDone. Restored {restored} form(s) from {os.path.abspath(backup_path)}.")

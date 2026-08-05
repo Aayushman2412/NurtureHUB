@@ -148,10 +148,17 @@ const FlatFormEditorPage: React.FC = () => {
   const validKey = !!formKey && (FORM_KEYS as readonly string[]).includes(formKey);
   // ?v=N opens that specific version from the history; absent = the live/default schema.
   const versionParam = Number(searchParams.get('v')) || null;
+  // Set right before setSearchParams after a save so the load effect skips the
+  // redundant refetch (which would blank the editor mid-edit).
+  const skipLoadForVersionRef = React.useRef<number | null>(null);
   useDirtyGuard(dirty);
 
   useEffect(() => {
     if (!formKey || !(FORM_KEYS as readonly string[]).includes(formKey)) return;
+    if (versionParam && skipLoadForVersionRef.current === versionParam) {
+      skipLoadForVersionRef.current = null;
+      return;
+    }
     let cancelled = false;
     setLoadState('loading');
     adminGetForm(formKey as FormKey)
@@ -207,6 +214,7 @@ const FlatFormEditorPage: React.FC = () => {
           : t('saveVersion.saved', { n: created.version_number }),
         'success',
       );
+      skipLoadForVersionRef.current = created.version_number;
       setSearchParams({ v: String(created.version_number) }, { replace: true });
     } catch {
       showToast(t('saveVersion.saveFailed'), 'error');
@@ -221,7 +229,9 @@ const FlatFormEditorPage: React.FC = () => {
     if (dirty && !window.confirm(t('exportDirtyConfirm'))) return;
     setExporting(true);
     try {
-      await adminExportForm(formKey as FormKey, def?.version);
+      // Export exactly what is on screen: the viewed history version, or the
+      // live/default schema when no ?v is present.
+      await adminExportForm(formKey as FormKey, versionParam ?? undefined);
       showToast(t('toast.exported'), 'success');
     } catch {
       showToast(t('toast.exportFailed'), 'error');
@@ -364,7 +374,10 @@ const FlatFormEditorPage: React.FC = () => {
               iconLeft={<Printer className="size-4" />}
               onClick={() => {
                 if (dirty && !window.confirm(t('exportDirtyConfirm'))) return;
-                window.open(`/admin/form-builder/print/${formKey}`, '_blank');
+                window.open(
+                  `/admin/form-builder/print/${formKey}${versionParam ? `?v=${versionParam}` : ''}`,
+                  '_blank',
+                );
               }}
               title={t('header.printHint')}
             >
@@ -647,15 +660,14 @@ const FlatFormEditorPage: React.FC = () => {
         )}
       </Modal>
 
-      {showSaveDialog && (
-        <SaveVersionDialog
-          open
-          onClose={() => setShowSaveDialog(false)}
-          defaultMakeDefault={loadedIsDefault}
-          saving={saving}
-          onSave={payload => void saveVersion(payload)}
-        />
-      )}
+      {/* Always mounted so the typed date/description survive an Esc mid-save. */}
+      <SaveVersionDialog
+        open={showSaveDialog}
+        onClose={() => setShowSaveDialog(false)}
+        defaultMakeDefault={loadedIsDefault}
+        saving={saving}
+        onSave={payload => void saveVersion(payload)}
+      />
     </div>
   );
 };

@@ -110,6 +110,12 @@ const AdminGrowthMonitorPage: React.FC = () => {
 
   const patch = (p: Partial<GrowthFilters>) => setFilters(f => ({ ...f, ...p }));
   const resetFilters = () => setFilters({});
+
+  // A stale pair pick would silently blank the charts once the shared filters
+  // exclude that case — changing any filter clears the pair narrowing.
+  useEffect(() => {
+    setPairChildId(null);
+  }, [filters]);
   const hasFilters = !!(filters.district || filters.role || filters.department || filters.learnerId);
 
   // The optional pair filter narrows the charts to one case before sex-splitting.

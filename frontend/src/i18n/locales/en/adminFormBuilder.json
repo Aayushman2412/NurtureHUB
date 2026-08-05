@@ -102,6 +102,7 @@
     "titleN": "Save as version {{n}}",
     "blurb": "Like a commit: record when this change was made and what changed. The version history keeps every save.",
     "dateLabel": "Date of this change",
+    "dateFuture": "The version date cannot be in the future.",
     "descriptionLabel": "What changed?",
     "descriptionPlaceholder": "e.g. First creation · Added Ranchi and Khunti to the district list",
     "descriptionRequired": "Describe the change — it identifies this version in the history.",

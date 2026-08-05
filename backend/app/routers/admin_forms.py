@@ -27,6 +27,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from datetime import date
@@ -310,6 +311,9 @@ class FormVersionCreate(BaseModel):
     # Make this version the one unassigned districts see.
     make_default: bool = False
     title: Optional[str] = None
+    # The FORM-level description (shown to learners) — distinct from
+    # `description`, which is this version's change summary.
+    definition_description: Optional[str] = None
 
     @field_validator("description")
     @classmethod
@@ -317,6 +321,13 @@ class FormVersionCreate(BaseModel):
         if not (v or "").strip():
             raise ValueError("a change description is required")
         return v.strip()
+
+    @field_validator("created_on")
+    @classmethod
+    def _no_future_dates(cls, v: date) -> date:
+        if v > date.today():
+            raise ValueError("the version date cannot be in the future")
+        return v
 
 
 class VersionDistrictsUpdate(BaseModel):
@@ -453,9 +464,14 @@ def _ensure_initial_version(db: Session, definition: FormDefinition) -> None:
         created_by=definition.updated_by,
     )
     db.add(version)
-    db.flush()
-    definition.default_version_id = version.id
-    db.commit()
+    try:
+        db.flush()
+        definition.default_version_id = version.id
+        db.commit()
+    except IntegrityError:
+        # A concurrent request created v1 between our exists-check and the
+        # insert (uq_form_versions_key_number) — theirs is as good as ours.
+        db.rollback()
 
 
 def _next_version_number(db: Session, form_key: str) -> int:
@@ -515,23 +531,46 @@ def _create_version(
     admin_email: str,
     make_default: bool,
     title: Optional[str] = None,
+    definition_description: Optional[str] = None,
 ) -> FormVersion:
     """Append one immutable version; optionally promote it to the default that
-    unassigned districts see (which also syncs the legacy live schema_json)."""
+    unassigned districts see (which also syncs the legacy live schema_json).
+
+    Title/description changes only reach the live definition on a DEFAULT save —
+    a draft version for specific districts must not rename what everyone sees.
+    """
     _ensure_initial_version(db, definition)
-    version = FormVersion(
-        form_key=definition.form_key,
-        version_number=_next_version_number(db, definition.form_key),
-        created_on=created_on,
-        description=description,
-        schema_json=schema,
-        created_by=admin_email,
-    )
-    db.add(version)
-    db.flush()
-    if title is not None and title.strip():
-        definition.title = title.strip()
+
+    def _attempt() -> FormVersion:
+        version = FormVersion(
+            form_key=definition.form_key,
+            version_number=_next_version_number(db, definition.form_key),
+            created_on=created_on,
+            description=description,
+            schema_json=schema,
+            created_by=admin_email,
+        )
+        db.add(version)
+        db.flush()
+        return version
+
+    try:
+        version = _attempt()
+    except IntegrityError:
+        # Concurrent save picked the same version_number — retry once on the
+        # freshly incremented sequence; a second collision surfaces as 409.
+        db.rollback()
+        try:
+            version = _attempt()
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(status_code=409, detail="Another save is in progress — reload and try again")
+
     if make_default:
+        if title is not None and title.strip():
+            definition.title = title.strip()
+        if definition_description is not None:
+            definition.description = definition_description
         definition.default_version_id = version.id
         definition.schema_json = schema          # keep legacy consumers in sync
         definition.version = (definition.version or 0) + 1
@@ -611,6 +650,7 @@ def create_version(
         admin_email=admin_email,
         make_default=data.make_default,
         title=data.title,
+        definition_description=data.definition_description,
     )
     return _serialize_version(version, definition, include_schema=True)
 
@@ -731,7 +771,7 @@ def _collect_media_refs(builder_type: str, schema: Dict[str, Any]) -> List[Tuple
 
 
 @router.get("/forms/{form_key}/export")
-def export_form(form_key: str, db: Session = Depends(get_db)):
+def export_form(form_key: str, version: Optional[int] = None, db: Session = Depends(get_db)):
     """Download a form as a self-contained template zip.
 
     Contains form.json (the full definition envelope, re-importable),
@@ -739,9 +779,13 @@ def export_form(form_key: str, db: Session = Depends(get_db)):
     assets/ with a copy of each referenced /uploads file so the template
     survives moving to another environment. External URLs (YouTube, pasted
     links) are listed in the manifest but not bundled.
+
+    ``?version=N`` exports that history version's schema instead of the
+    live/default one — so exporting while viewing an old version is honest.
     """
     definition = _get_definition(db, form_key)
-    schema = definition.schema_json or {}
+    exported_version = _version_or_404(db, form_key, version) if version is not None else None
+    schema = (exported_version.schema_json if exported_version else definition.schema_json) or {}
     refs = _collect_media_refs(definition.builder_type, schema)
     uploads_root = os.path.realpath(_uploads_root())
 
@@ -771,7 +815,7 @@ def export_form(form_key: str, db: Session = Depends(get_db)):
         "title": definition.title,
         "description": definition.description,
         "builder_type": definition.builder_type,
-        "sourceVersion": definition.version,
+        "sourceVersion": exported_version.version_number if exported_version else definition.version,
         "schema_json": schema,
     }
 
@@ -788,7 +832,8 @@ def export_form(form_key: str, db: Session = Depends(get_db)):
             archive.write(path, arcname)
     buffer.seek(0)
 
-    filename = f"{definition.form_key}-template-v{definition.version}.zip"
+    export_v = exported_version.version_number if exported_version else definition.version
+    filename = f"{definition.form_key}-template-v{export_v}.zip"
     return StreamingResponse(
         buffer,
         media_type="application/zip",

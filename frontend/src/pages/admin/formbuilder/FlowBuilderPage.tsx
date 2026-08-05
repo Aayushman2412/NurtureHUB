@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, BoxSelect, ClipboardPaste, Copy, Download, Eye, Info, Layers, Plus, Printer, Redo2, Save, Table, Trash2, Undo2, X } from 'lucide-react';
 import { adminCreateFormVersion, adminExportForm, adminGetForm, adminGetFormVersion } from '../../../api/forms';
 import SaveVersionDialog, { type SaveVersionPayload } from './SaveVersionDialog';
@@ -92,6 +93,7 @@ const FlowBuilderPage: React.FC = () => {
   const { formKey } = useParams<{ formKey: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { t } = useTranslation('adminFormBuilder');
   const { showToast } = useToast();
 
   const [def, setDef] = useState<FormDefinition | null>(null);
@@ -111,6 +113,9 @@ const FlowBuilderPage: React.FC = () => {
 
   // ?v=N opens that specific version from the history; absent = the live/default schema.
   const versionParam = Number(searchParams.get('v')) || null;
+  // Set right before setSearchParams after a save so the load effect skips the
+  // redundant refetch (which would blank the editor and wipe undo history).
+  const skipLoadForVersionRef = useRef<number | null>(null);
 
   // The editor panel edits a single node — only when exactly one is selected.
   const selectedId = selectedIds.length === 1 ? selectedIds[0] : null;
@@ -148,6 +153,12 @@ const FlowBuilderPage: React.FC = () => {
   // ── Load ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!formKey || !isFlowFormKey(formKey)) return;
+    if (versionParam && skipLoadForVersionRef.current === versionParam) {
+      // The editor already holds exactly what this version stores (we just
+      // saved it) — reloading would only wipe selection/undo history.
+      skipLoadForVersionRef.current = null;
+      return;
+    }
     let cancelled = false;
     setLoadState('loading');
     adminGetForm(formKey)
@@ -579,6 +590,7 @@ const FlowBuilderPage: React.FC = () => {
       const created = await adminCreateFormVersion(formKey, {
         schema_json: schemaRef.current,
         title: title.trim() || def?.title || 'Untitled form',
+        definition_description: description,
         ...payload,
       });
       setTitle(created.title);
@@ -586,13 +598,14 @@ const FlowBuilderPage: React.FC = () => {
       setShowSaveDialog(false);
       showToast(
         payload.make_default
-          ? `Saved — version ${created.version_number} is now the default for learners`
-          : `Saved as version ${created.version_number} (assign districts to publish it)`,
+          ? t('saveVersion.savedDefault', { n: created.version_number })
+          : t('saveVersion.saved', { n: created.version_number }),
         'success',
       );
+      skipLoadForVersionRef.current = created.version_number;
       setSearchParams({ v: String(created.version_number) }, { replace: true });
     } catch {
-      showToast('Could not save the form. Please try again.', 'error');
+      showToast(t('saveVersion.saveFailed'), 'error');
     } finally {
       setSaving(false);
     }
@@ -613,7 +626,9 @@ const FlowBuilderPage: React.FC = () => {
       return;
     setExporting(true);
     try {
-      await adminExportForm(formKey, def?.version);
+      // Export exactly what is on screen: the viewed history version, or the
+      // live/default schema when no ?v is present.
+      await adminExportForm(formKey, versionParam ?? undefined);
       showToast('Template exported — images and links are in the zip', 'success');
     } catch {
       showToast('Could not export the form. Please try again.', 'error');
@@ -821,7 +836,10 @@ const FlowBuilderPage: React.FC = () => {
                 !window.confirm('You have unsaved changes. The preview shows the last SAVED version — continue?')
               )
                 return;
-              window.open(`/admin/form-builder/print/${formKey}`, '_blank');
+              window.open(
+                `/admin/form-builder/print/${formKey}${versionParam ? `?v=${versionParam}` : ''}`,
+                '_blank',
+              );
             }}
             title="Open a learner-view preview of the whole form, ready to save as PDF"
           >
@@ -1069,15 +1087,14 @@ const FlowBuilderPage: React.FC = () => {
         />
       </div>
 
-      {showSaveDialog && (
-        <SaveVersionDialog
-          open
-          onClose={() => setShowSaveDialog(false)}
-          defaultMakeDefault={loadedIsDefault}
-          saving={saving}
-          onSave={payload => void saveVersion(payload)}
-        />
-      )}
+      {/* Always mounted so the typed date/description survive an Esc mid-save. */}
+      <SaveVersionDialog
+        open={showSaveDialog}
+        onClose={() => setShowSaveDialog(false)}
+        defaultMakeDefault={loadedIsDefault}
+        saving={saving}
+        onSave={payload => void saveVersion(payload)}
+      />
     </div>
   );
 };
