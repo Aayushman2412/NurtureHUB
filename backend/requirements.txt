@@ -14,3 +14,6 @@ aiosmtplib>=3.0.0
 slowapi>=0.1.9
 websockets>=12.0
 openpyxl>=3.1.0
+# Data-analytics pipelines (admin "Database" section — backend/pipelines/)
+pandas>=2.2.0
+numpy>=1.26.0

@@ -56,6 +56,16 @@ class Settings(BaseSettings):
     # ever appear in reports/exports.
     SEED_DEMO_DATA: bool = Field(default=True, validation_alias="SEED_DEMO_DATA")
 
+    # Data-analytics pipelines (admin "Database" section). Root directory for
+    # uploaded inputs, per-run workspaces and generated outputs. Empty = the
+    # default backend/pipeline_data/ next to the app package. Must NOT live
+    # under backend/uploads/ (that dir is publicly served).
+    PIPELINE_DATA_DIR: str = Field(default="", validation_alias="PIPELINE_DATA_DIR")
+    # Hard wall-clock cap for one pipeline subprocess, in minutes. A full
+    # crosstabs district run takes ~7-8 min; the cap only exists to reap
+    # hung processes.
+    PIPELINE_RUN_TIMEOUT_MINUTES: int = Field(default=90, validation_alias="PIPELINE_RUN_TIMEOUT_MINUTES")
+
     # SMTP/Email settings for OTP
     SMTP_HOST: str = Field(default="smtp.gmail.com", validation_alias="SMTP_HOST")
     SMTP_PORT: int = Field(default=587, validation_alias="SMTP_PORT")

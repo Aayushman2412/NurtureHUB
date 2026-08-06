@@ -870,3 +870,67 @@ class FormResponse(Base):
         Index("ix_form_responses_child_form", "child_id", "form_key"),
         Index("ix_form_responses_mother_form", "mother_id", "form_key"),
     )
+
+
+class PipelineRun(Base):
+    """One execution of a data-analytics pipeline (admin "Database" section).
+
+    pipeline 'crosstabs' runs are per-project (variant = 'UJ' | 'JL' | 'ML');
+    pipeline 'masd' runs are per-script (variant = 'combined' | 'raw_exclusion').
+    Each run executes in its own working directory under the pipeline data
+    root; run_dir stores that directory relative to the root so the data root
+    can be relocated. Outputs are described by manifest_json
+    ([{path, name, size, section}]) and survive as plain files inside run_dir.
+    """
+    __tablename__ = "pipeline_runs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    pipeline = Column(String, nullable=False, index=True)   # 'crosstabs' | 'masd'
+    variant = Column(String, nullable=False)                # project code or masd script kind
+    # 'queued' | 'running' | 'success' | 'failed' | 'imported'
+    status = Column(String, nullable=False, default="queued")
+    # Optional human label (e.g. "Imported baseline from local run").
+    label = Column(String, nullable=True)
+    run_dir = Column(String, nullable=False)                # relative to the pipeline data root
+    manifest_json = Column(JSON, nullable=False, default=list)
+    # Parsed run report: stage timings, validation verdict (crosstabs),
+    # detected projects (masd), exit code.
+    report_json = Column(JSON, nullable=False, default=dict)
+    error = Column(Text, nullable=True)
+    created_by = Column(String, nullable=True)              # admin email (audit)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    finished_at = Column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index("ix_pipeline_runs_pipeline_variant", "pipeline", "variant"),
+    )
+
+
+class PipelineScript(Base):
+    """One uploaded version of a pipeline script (admin "Database" section).
+
+    Every slot (e.g. crosstabs 'cleaning' / 'derived' / 'crosstabs' / 'master'
+    / 'validation', masd 'combined' / 'raw_exclusion') has a vendored default
+    under backend/pipelines/; uploads create numbered versions stored under
+    the data root. At most one version per slot is active — active scripts are
+    materialized into new run directories under the slot's canonical filename,
+    replacing the default. The 'extra' slot is special: every active upload is
+    copied alongside the pipeline under its original filename.
+    """
+    __tablename__ = "pipeline_scripts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    pipeline = Column(String, nullable=False, index=True)   # 'crosstabs' | 'masd'
+    slot = Column(String, nullable=False)
+    version = Column(Integer, nullable=False)
+    original_name = Column(String, nullable=False)
+    stored_path = Column(String, nullable=False)            # relative to the pipeline data root
+    notes = Column(Text, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=False)
+    created_by = Column(String, nullable=True)              # admin email (audit)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("pipeline", "slot", "version", name="uq_pipeline_scripts_slot_version"),
+    )

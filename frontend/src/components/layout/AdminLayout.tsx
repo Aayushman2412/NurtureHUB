@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, FileText, Video, ClipboardList, LogOut, Shield, MapPin, ChevronDown, Building2, Sun, Moon,
-  MonitorPlay, GraduationCap, Radio, Activity,
+  MonitorPlay, GraduationCap, Radio, Activity, Table2, FileSpreadsheet,
 } from 'lucide-react';
 import client from '../../api/client';
 import { useTheme } from '../../context/ThemeContext';
@@ -32,6 +32,12 @@ const navItems = [
   { to: '/admin/tests', icon: Radio, key: 'liveMonitor', end: false },
   { to: '/admin/results', icon: GraduationCap, key: 'results', end: false },
   { to: '/admin/growth', icon: Activity, key: 'growthMonitor', end: false },
+] as const;
+
+// "Database" section — the data-analytics pipelines (admin-run crosstabs/MASD).
+const databaseNavItems = [
+  { to: '/admin/database/crosstabs', icon: Table2, key: 'crosstabsPipeline', end: false },
+  { to: '/admin/database/masd', icon: FileSpreadsheet, key: 'masdPipeline', end: false },
 ] as const;
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
@@ -146,6 +152,28 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         {/* Nav */}
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
           {navItems.map(item => (
+            <NavLink
+              key={item.key}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold transition-colors',
+                  isActive
+                    ? 'bg-coral-50 text-primary-ink dark:bg-coral-500/10'
+                    : 'text-ink-muted hover:bg-surface-sunken hover:text-ink',
+                )
+              }
+            >
+              <item.icon className="size-[18px]" />
+              <span>{t(`layout.nav.${item.key}`)}</span>
+            </NavLink>
+          ))}
+
+          <div className="px-3.5 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wider text-ink-faint">
+            {t('layout.nav.databaseSection')}
+          </div>
+          {databaseNavItems.map(item => (
             <NavLink
               key={item.key}
               to={item.to}

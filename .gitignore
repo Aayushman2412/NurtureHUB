@@ -47,3 +47,6 @@ backend/uploads/
 
 # Form-definition refresh backups (app.refresh_form_definitions)
 backend/form_backups/
+
+# Data-analytics pipeline runtime data (admin uploads, run workspaces, outputs)
+backend/pipeline_data/

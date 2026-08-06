@@ -16,7 +16,10 @@
       "testManager": "परीक्षा प्रबंधक",
       "liveMonitor": "लाइव मॉनिटर",
       "results": "परिणाम",
-      "growthMonitor": "वृद्धि मॉनिटर"
+      "growthMonitor": "वृद्धि मॉनिटर",
+      "databaseSection": "डेटाबेस",
+      "crosstabsPipeline": "क्रॉसटैब पाइपलाइन",
+      "masdPipeline": "MASD पाइपलाइन"
     }
   },
   "dashboard": {

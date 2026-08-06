@@ -18,7 +18,8 @@ from app.rate_limit import limiter
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.routers import auth, users, tutorials, tests, results, notifications, dashboard, metadata, admin
-from app.routers import ws_routes, mothers, admin_forms, forms, growth
+from app.routers import ws_routes, mothers, admin_forms, forms, growth, admin_pipelines
+from app.pipeline_service import PipelineError, fail_stale_runs
 import app.models_live  # noqa: F401 — registers live monitoring tables with Base
 from app.models_live import LiveSession
 from app.ws_manager import manager
@@ -128,6 +129,16 @@ async def lifespan(app: FastAPI):
     # 1-2. Migrate + seed, serialized across workers via an advisory lock.
     migrate_and_seed_guarded()
 
+    # 2b. Pipeline runs that were queued/running when the previous process
+    # died can never finish (their worker thread is gone) — fail them so the
+    # admin UI doesn't show a phantom in-progress run forever.
+    try:
+        stale_runs = fail_stale_runs()
+        if stale_runs:
+            print(f"Marked {stale_runs} interrupted pipeline run(s) as failed.")
+    except Exception as exc:  # never block boot on housekeeping
+        print(f"WARNING: could not clean up stale pipeline runs: {exc}")
+
     # 3. Start the live-monitoring stale-candidate sweeper
     sweeper_task = asyncio.create_task(_stale_candidate_sweeper())
 
@@ -178,6 +189,13 @@ app.include_router(mothers.router)
 app.include_router(forms.router)       # learner: /api/forms/* (BF/CF assessments)
 app.include_router(growth.router)       # growth charts: /api/growth/* (LAP monitoring)
 app.include_router(growth.admin_router) # admin growth monitor: /api/admin/growth/*
+app.include_router(admin_pipelines.router)  # guarded: /api/admin/pipelines/* (Database section)
+
+
+@app.exception_handler(PipelineError)
+async def _pipeline_error_handler(request, exc: PipelineError):
+    from fastapi.responses import JSONResponse
+    return JSONResponse(status_code=exc.status_code, content={"detail": str(exc)})
 
 # Uploaded form-builder assets (option images/GIFs, action videos) are served
 # statically; files live outside the repo's tracked tree in backend/uploads/.

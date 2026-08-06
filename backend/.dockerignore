@@ -1,5 +1,6 @@
 # Local Python env / caches — never copy into the image
 venv/
+venv-win/
 .venv/
 __pycache__/
 *.pyc
@@ -11,6 +12,11 @@ __pycache__/
 # Secrets & local config (env comes from docker-compose)
 .env
 .env.*
+
+# Runtime data (mounted as volumes, never baked into the image)
+pipeline_data/
+uploads/
+form_backups/
 
 # VCS / editor / docs
 .git/

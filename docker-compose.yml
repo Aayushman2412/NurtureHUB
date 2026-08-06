@@ -33,6 +33,14 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-NurtureHUB <noreply@nurturehub.org>}
+      PIPELINE_DATA_DIR: /data/pipeline_data
+    volumes:
+      # Admin "Database" section: uploaded pipeline inputs, uploaded script
+      # versions and every run's outputs. Must outlive the container — without
+      # this, a redeploy wipes all pipeline data.
+      - pipeline_data:/data/pipeline_data
+      # Admin form-builder media (option images, action videos).
+      - uploads_data:/app/uploads
     # Bound to localhost by default (host-only API/docs access at /docs). In
     # production the SPA reaches the backend via the frontend nginx proxy, not this.
     ports:
@@ -64,3 +72,5 @@ services:
 
 volumes:
   db_data:
+  pipeline_data:
+  uploads_data:

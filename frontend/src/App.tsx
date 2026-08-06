@@ -52,6 +52,8 @@ import AdminDistrictsPage from './pages/admin/AdminDistrictsPage';
 import AdminLiveMonitorPage from './pages/admin/AdminLiveMonitorPage';
 import AdminGrowthMonitorPage from './pages/admin/AdminGrowthMonitorPage';
 import AdminGrowthCasePage from './pages/admin/AdminGrowthCasePage';
+import AdminCrosstabsPipelinePage from './pages/admin/AdminCrosstabsPipelinePage';
+import AdminMasdPipelinePage from './pages/admin/AdminMasdPipelinePage';
 
 // --- Route Guards ---
 
@@ -183,6 +185,8 @@ const AppRoutes: React.FC = () => {
       <Route path="/admin/tests/:testId/monitor" element={<AdminRoute><AdminLiveMonitorPage /></AdminRoute>} />
       <Route path="/admin/growth" element={<AdminRoute><AdminGrowthMonitorPage /></AdminRoute>} />
       <Route path="/admin/growth/cases/:childId" element={<AdminRoute><AdminGrowthCasePage /></AdminRoute>} />
+      <Route path="/admin/database/crosstabs" element={<AdminRoute><AdminCrosstabsPipelinePage /></AdminRoute>} />
+      <Route path="/admin/database/masd" element={<AdminRoute><AdminMasdPipelinePage /></AdminRoute>} />
 
       {/* Dev-only styleguide */}
       {import.meta.env.DEV && <Route path="/dev/styleguide" element={<StyleguidePage />} />}
