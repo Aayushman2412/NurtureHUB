@@ -83,6 +83,11 @@ const InputsPanel: React.FC<InputsPanelProps> = ({
             </Button>
           )}
         </div>
+        {count === 0 && (
+          <p className="rounded-lg border border-dashed border-border px-3 py-2 text-xs text-ink-muted">
+            {t(group === 'dated' ? 'inputs.noDated' : 'inputs.noReference')}
+          </p>
+        )}
         <div className="space-y-3">
           {groupKinds.map(kind => (
             <InputKindCard
