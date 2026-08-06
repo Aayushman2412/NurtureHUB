@@ -34,7 +34,13 @@ from datetime import date
 
 from app.database import get_db
 from app.dependencies import get_admin_email, get_current_admin
-from app.models import FormDefinition, FormDistrictAssignment, FormVersion, ProgramDistrict
+from app.models import (
+    FormDefinition,
+    FormDistrictAssignment,
+    FormResponse,
+    FormVersion,
+    ProgramDistrict,
+)
 from app.seed_forms import FORM_SPECS, ensure_form_definitions
 
 router = APIRouter(prefix="/api/admin", tags=["admin-forms"], dependencies=[Depends(get_current_admin)])
@@ -508,10 +514,26 @@ def _version_or_404(db: Session, form_key: str, version_number: int) -> FormVers
     return version
 
 
+def _response_counts(db: Session, form_key: str) -> Dict[int, int]:
+    """version_number → how many assessments were filed against it.
+
+    Responses snapshot their own answers, so this is audit context for the
+    delete confirmation, not a referential constraint.
+    """
+    rows = (
+        db.query(FormResponse.definition_version, func.count(FormResponse.id))
+        .filter(FormResponse.form_key == form_key)
+        .group_by(FormResponse.definition_version)
+        .all()
+    )
+    return {number: count for number, count in rows if number is not None}
+
+
 def _serialize_version(
     version: FormVersion,
     definition: FormDefinition,
     include_schema: bool = False,
+    response_count: Optional[int] = None,
 ) -> Dict[str, Any]:
     out = {
         "id": version.id,
@@ -524,6 +546,7 @@ def _serialize_version(
         "created_by": version.created_by,
         "created_at": version.created_at.isoformat() if version.created_at else None,
         "is_default": definition.default_version_id == version.id,
+        "response_count": response_count,
         "districts": [
             {"id": a.program_district.id, "name": a.program_district.name, "slug": a.program_district.slug}
             for a in sorted(version.assignments, key=lambda a: (a.program_district.name or "").lower())
@@ -636,12 +659,16 @@ def list_versions(form_key: str, db: Session = Depends(get_db)):
         .order_by(FormVersion.version_number.desc())
         .all()
     )
+    counts = _response_counts(db, form_key)
     return {
         "form_key": definition.form_key,
         "title": definition.title,
         "builder_type": definition.builder_type,
         "description": definition.description,
-        "versions": [_serialize_version(v, definition) for v in versions],
+        "versions": [
+            _serialize_version(v, definition, response_count=counts.get(v.version_number, 0))
+            for v in versions
+        ],
     }
 
 
@@ -724,6 +751,47 @@ def set_version_districts(
     db.commit()
     db.refresh(version)
     return _serialize_version(version, definition)
+
+
+@router.delete("/forms/{form_key}/versions/{version_number}")
+def delete_version(
+    form_key: str,
+    version_number: int,
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Delete one version from a form's history.
+
+    Refused for the default version and for the last remaining version — a form
+    must always resolve to a schema. Projects pinned to the deleted version lose
+    their pin (the assignment rows cascade) and fall back to the default, so the
+    unpinned names are returned for the UI to report. Already-submitted
+    assessments are untouched: they carry their own answer snapshots.
+    """
+    definition = _get_definition(db, form_key)
+    _ensure_initial_version(db, definition)
+    version = _version_or_404(db, form_key, version_number)
+
+    if definition.default_version_id == version.id:
+        raise HTTPException(
+            status_code=400,
+            detail="This is the default version. Make another version the default first.",
+        )
+    remaining = db.query(func.count(FormVersion.id)).filter(FormVersion.form_key == form_key).scalar()
+    if remaining <= 1:
+        raise HTTPException(status_code=400, detail="A form must keep at least one version.")
+
+    unpinned = [
+        a.program_district.name
+        for a in version.assignments
+        if a.program_district is not None
+    ]
+    db.delete(version)   # assignments cascade (FK ondelete=CASCADE)
+    db.commit()
+    return {
+        "deleted_version": version_number,
+        "unpinned_districts": sorted(unpinned),
+    }
 
 
 @router.post("/forms/{form_key}/versions/{version_number}/make-default")

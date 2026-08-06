@@ -11,9 +11,11 @@ import {
   MapPin,
   Plus,
   Star,
+  Trash2,
 } from 'lucide-react';
 import client from '../../../api/client';
 import {
+  adminDeleteFormVersion,
   adminListFormVersions,
   adminMakeVersionDefault,
   adminSetVersionDistricts,
@@ -52,6 +54,10 @@ const FormVersionsPage: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [savingAssign, setSavingAssign] = useState(false);
   const [makingDefault, setMakingDefault] = useState<number | null>(null);
+
+  // delete-confirmation modal
+  const [deleteFor, setDeleteFor] = useState<FormVersionSummary | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const validKey = !!formKey && (FORM_KEYS as readonly string[]).includes(formKey);
 
@@ -118,6 +124,29 @@ const FormVersionsPage: React.FC = () => {
       showToast(t('versions.districtsSaveFailed'), 'error');
     } finally {
       setSavingAssign(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteFor) return;
+    setDeleting(true);
+    try {
+      const result = await adminDeleteFormVersion(formKey as FormKey, deleteFor.version_number);
+      showToast(
+        result.unpinned_districts.length > 0
+          ? t('versions.deletedWithUnpinned', {
+              n: result.deleted_version,
+              projects: result.unpinned_districts.join(', '),
+            })
+          : t('versions.deleted', { n: result.deleted_version }),
+        'success',
+      );
+      setDeleteFor(null);
+      setReloadTick(x => x + 1);
+    } catch {
+      showToast(t('versions.deleteFailed'), 'error');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -252,17 +281,32 @@ const FormVersionsPage: React.FC = () => {
                       {t('versions.assignDistricts')}
                     </Button>
                     {!version.is_default && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        iconLeft={
-                          makingDefault === version.version_number ? <Spinner className="size-3.5" /> : <Star className="size-3.5" />
-                        }
-                        disabled={makingDefault !== null}
-                        onClick={() => void makeDefault(version)}
-                      >
-                        {t('versions.makeDefault')}
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          iconLeft={
+                            makingDefault === version.version_number ? <Spinner className="size-3.5" /> : <Star className="size-3.5" />
+                          }
+                          disabled={makingDefault !== null}
+                          onClick={() => void makeDefault(version)}
+                        >
+                          {t('versions.makeDefault')}
+                        </Button>
+                        {/* The default and the last remaining version cannot be
+                            deleted — a form must always resolve to a schema. */}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          iconLeft={<Trash2 className="size-3.5" />}
+                          disabled={(data?.versions.length ?? 0) <= 1}
+                          title={t('versions.deleteHint')}
+                          className="text-coral-700 hover:bg-coral-50 dark:text-coral-300 dark:hover:bg-coral-500/10"
+                          onClick={() => setDeleteFor(version)}
+                        >
+                          {t('versions.delete')}
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -341,6 +385,54 @@ const FormVersionsPage: React.FC = () => {
               })}
             </ul>
           )}
+        </Modal>
+      )}
+
+      {/* ── delete-version confirmation ────────────────────────────────────── */}
+      {deleteFor && (
+        <Modal
+          open
+          onClose={() => {
+            if (!deleting) setDeleteFor(null);
+          }}
+          size="md"
+          title={t('versions.deleteTitle', { n: deleteFor.version_number })}
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setDeleteFor(null)} disabled={deleting}>
+                {t('versions.cancel')}
+              </Button>
+              <Button variant="danger" onClick={() => void confirmDelete()} disabled={deleting}>
+                {deleting ? t('versions.deleting') : t('versions.deleteConfirm')}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-3">
+            <p className="text-sm text-ink">{t('versions.deleteBlurb')}</p>
+
+            <div className="rounded-lg border border-border bg-surface-sunken/60 p-3 text-sm">
+              <p className="font-semibold text-ink">
+                {t('versions.versionN', { n: deleteFor.version_number })}
+                <span className="ml-2 font-normal text-ink-muted">{deleteFor.created_on}</span>
+              </p>
+              <p className="mt-0.5 text-ink-muted">{deleteFor.description}</p>
+            </div>
+
+            {deleteFor.districts.length > 0 && (
+              <Alert variant="warning" title={t('versions.deleteUnpinTitle')}>
+                {t('versions.deleteUnpinBody', {
+                  projects: deleteFor.districts.map(d => d.name).join(', '),
+                })}
+              </Alert>
+            )}
+
+            {(deleteFor.response_count ?? 0) > 0 && (
+              <p className="text-xs text-ink-muted">
+                {t('versions.deleteResponses', { count: deleteFor.response_count ?? 0 })}
+              </p>
+            )}
+          </div>
         </Modal>
       )}
     </div>

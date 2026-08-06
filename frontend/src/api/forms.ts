@@ -80,6 +80,8 @@ export interface FormVersionSummary {
   created_by: string | null;
   created_at: string | null;
   is_default: boolean;
+  /** Assessments filed against this version (null when not computed). */
+  response_count: number | null;
   districts: FormVersionDistrict[];
 }
 
@@ -135,6 +137,17 @@ export const adminMakeVersionDefault = (
   versionNumber: number,
 ): Promise<FormVersionSummary> =>
   client.post(`/api/admin/forms/${formKey}/versions/${versionNumber}/make-default`).then(r => r.data);
+
+/**
+ * Delete one version. Rejected by the server for the default version and for
+ * the last remaining one; returns the projects that lost their pin and now
+ * follow the default.
+ */
+export const adminDeleteFormVersion = (
+  formKey: FormKey,
+  versionNumber: number,
+): Promise<{ deleted_version: number; unpinned_districts: string[] }> =>
+  client.delete(`/api/admin/forms/${formKey}/versions/${versionNumber}`).then(r => r.data);
 
 // ── Learner ──────────────────────────────────────────────────────────────────
 

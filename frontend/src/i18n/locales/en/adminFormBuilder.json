@@ -96,7 +96,20 @@
     "districtsSaved": "Projects pinned to version {{n}}",
     "districtsSaveFailed": "Could not save the project assignment. Please try again.",
     "defaultSaved": "Version {{n}} is now the default",
-    "defaultSaveFailed": "Could not change the default version. Please try again."
+    "defaultSaveFailed": "Could not change the default version. Please try again.",
+    "delete": "Delete",
+    "deleteHint": "Delete this version from the history",
+    "deleteTitle": "Delete version {{n}}?",
+    "deleteBlurb": "This removes the version from the history permanently. The default version and the last remaining version cannot be deleted.",
+    "deleteUnpinTitle": "Pinned projects will move to the default",
+    "deleteUnpinBody": "{{projects}} currently use this version and will fall back to the form's default version.",
+    "deleteResponses": "{{count}} submitted assessment was filled against this version. Its stored answers are unaffected — every response keeps its own snapshot.",
+    "deleteResponses_other": "{{count}} submitted assessments were filled against this version. Their stored answers are unaffected — every response keeps its own snapshot.",
+    "deleteConfirm": "Delete version",
+    "deleting": "Deleting…",
+    "deleted": "Version {{n}} deleted",
+    "deletedWithUnpinned": "Version {{n}} deleted — {{projects}} now use the default version",
+    "deleteFailed": "Could not delete this version. Please try again."
   },
   "saveVersion": {
     "title": "Save as a new version",
