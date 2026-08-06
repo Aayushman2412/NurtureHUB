@@ -314,6 +314,19 @@ class FormVersionCreate(BaseModel):
     # The FORM-level description (shown to learners) — distinct from
     # `description`, which is this version's change summary.
     definition_description: Optional[str] = None
+    # Auto-detected diff computed by the builder against the version it opened.
+    detected_changes: Optional[List[str]] = None
+    # The version_number that diff was taken against.
+    diffed_from_version: Optional[int] = None
+
+    @field_validator("detected_changes")
+    @classmethod
+    def _bound_detected_changes(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+        """Client-supplied audit text — cap it so a crafted payload can't bloat
+        the row (the builder itself never sends more than ~40 short lines)."""
+        if not v:
+            return v
+        return [entry[:300] for entry in v[:60]]
 
     @field_validator("description")
     @classmethod
@@ -506,6 +519,8 @@ def _serialize_version(
         "version_number": version.version_number,
         "created_on": version.created_on.isoformat() if version.created_on else None,
         "description": version.description,
+        "detected_changes": version.detected_changes or [],
+        "diffed_from_version": version.diffed_from_version,
         "created_by": version.created_by,
         "created_at": version.created_at.isoformat() if version.created_at else None,
         "is_default": definition.default_version_id == version.id,
@@ -532,6 +547,8 @@ def _create_version(
     make_default: bool,
     title: Optional[str] = None,
     definition_description: Optional[str] = None,
+    detected_changes: Optional[List[str]] = None,
+    diffed_from_version: Optional[int] = None,
 ) -> FormVersion:
     """Append one immutable version; optionally promote it to the default that
     unassigned districts see (which also syncs the legacy live schema_json).
@@ -547,6 +564,8 @@ def _create_version(
             version_number=_next_version_number(db, definition.form_key),
             created_on=created_on,
             description=description,
+            detected_changes=detected_changes or None,
+            diffed_from_version=diffed_from_version,
             schema_json=schema,
             created_by=admin_email,
         )
@@ -651,6 +670,8 @@ def create_version(
         make_default=data.make_default,
         title=data.title,
         definition_description=data.definition_description,
+        detected_changes=data.detected_changes,
+        diffed_from_version=data.diffed_from_version,
     )
     return _serialize_version(version, definition, include_schema=True)
 

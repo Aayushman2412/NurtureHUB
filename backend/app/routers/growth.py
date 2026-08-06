@@ -18,7 +18,6 @@ Admin endpoints live under /api/admin/* because the frontend axios client
 attaches the admin JWT only to that prefix.
 """
 
-import colorsys
 from collections import defaultdict
 from datetime import date
 from io import BytesIO
@@ -429,19 +428,34 @@ def _months(days: Optional[int]) -> Optional[int]:
 
 # ── Excel-style spectrum fills (mirror frontend/src/lib/growthDisplay.ts) ────
 
-def _spectrum_hex(t: float, alpha: float = 0.32) -> str:
-    """Hue 0 (red) → 120 (green) at hsl(h, 78%, 44%), blended over white by the
-    same alpha the UI uses — the resulting solid tint matches the on-screen cell."""
+# 7-stop ramp: deep red → red → orange → amber → lime → green → deep green.
+# Keep in sync with SPECTRUM_STOPS in frontend/src/lib/growthDisplay.ts.
+_SPECTRUM_STOPS = [
+    (176, 0, 32), (226, 61, 40), (245, 124, 0), (245, 197, 24),
+    (168, 201, 58), (76, 175, 80), (27, 127, 59),
+]
+_DEFAULT_ALPHA = 0.55
+
+
+def _spectrum_hex(t: float, alpha: float = _DEFAULT_ALPHA) -> str:
+    """Interpolate the ramp and flatten it over white by the same alpha the UI
+    composites with, so the spreadsheet tint matches the on-screen cell."""
     t = max(0.0, min(1.0, t))
-    r, g, b = colorsys.hls_to_rgb(t * 120 / 360, 0.44, 0.78)
-    return "".join(f"{round((alpha * c + (1 - alpha)) * 255):02X}" for c in (r, g, b))
+    scaled = t * (len(_SPECTRUM_STOPS) - 1)
+    i = min(int(scaled), len(_SPECTRUM_STOPS) - 2)
+    f = scaled - i
+    lo, hi = _SPECTRUM_STOPS[i], _SPECTRUM_STOPS[i + 1]
+    channels = (lo[c] + (hi[c] - lo[c]) * f for c in range(3))
+    return "".join(f"{round(alpha * ch + (1 - alpha) * 255):02X}" for ch in channels)
 
 
 def _z_fill(z: Optional[float]) -> Optional[str]:
     """Deep red at ≤ −3, red around −2, through amber, green at 0 and above."""
     if z is None:
         return None
-    return _spectrum_hex((z + 3) / 3, 0.5 if z <= -3 else 0.32)
+    # ±3 SD and beyond is painted near-solid so the flag is unmistakable
+    # (mirrors zAlpha in frontend/src/lib/growthDisplay.ts).
+    return _spectrum_hex((z + 3) / 3, 0.92 if abs(z) >= 3 else _DEFAULT_ALPHA)
 
 
 def _pct_fill(pct: Optional[float], invert: bool = False) -> Optional[str]:

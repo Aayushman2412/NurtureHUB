@@ -211,6 +211,20 @@ const FormVersionsPage: React.FC = () => {
                       )}
                     </div>
                     <p className="mt-1 text-sm text-ink">{version.description}</p>
+                    {version.detected_changes.length > 0 && (
+                      <div className="mt-1.5 border-l-2 border-border pl-2.5">
+                        {version.diffed_from_version != null && (
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
+                            {t('versions.diffedFrom', { n: version.diffed_from_version })}
+                          </p>
+                        )}
+                        <ul className="space-y-0.5 text-xs text-ink-muted">
+                          {version.detected_changes.map((change, i) => (
+                            <li key={`${i}-${change}`}>{change}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       <MapPin className="size-3.5 text-ink-faint" />
                       {version.districts.length === 0 ? (

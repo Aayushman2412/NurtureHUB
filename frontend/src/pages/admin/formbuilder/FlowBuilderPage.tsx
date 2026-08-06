@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, BoxSelect, ClipboardPaste, Copy, Download, Eye, Info, Layers, Plus, Printer, Redo2, Save, Table, Trash2, Undo2, X } from 'lucide-react';
 import { adminCreateFormVersion, adminExportForm, adminGetForm, adminGetFormVersion } from '../../../api/forms';
+import { diffFormSchemas } from '../../../lib/formDiff';
 import SaveVersionDialog, { type SaveVersionPayload } from './SaveVersionDialog';
 import {
   moveChildOutOfSection,
@@ -108,6 +109,8 @@ const FlowBuilderPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [loadedIsDefault, setLoadedIsDefault] = useState(true);
+  // The schema as loaded — the baseline the save dialog diffs against.
+  const [baseline, setBaseline] = useState<FlowSchema | null>(null);
   const [exporting, setExporting] = useState(false);
   const [displayOpen, setDisplayOpen] = useState(false);
 
@@ -176,11 +179,7 @@ const FlowBuilderPage: React.FC = () => {
           s = versionDetail.schema_json as FlowSchema;
           isDefault = versionDetail.is_default;
         }
-        setDef(d);
-        setLoadedIsDefault(isDefault);
-        setTitle(d.title);
-        setDescription(d.description ?? '');
-        setSchema(
+        const loadedSchema: FlowSchema =
           s && typeof s === 'object' && s.nodes
             ? {
                 startNodeId: s.startNodeId ?? null,
@@ -188,8 +187,13 @@ const FlowBuilderPage: React.FC = () => {
                 display: resolveDisplay(s.display),
                 verdicts: resolveVerdicts(s.verdicts),
               }
-            : emptyFlowSchema(),
-        );
+            : emptyFlowSchema();
+        setDef(d);
+        setLoadedIsDefault(isDefault);
+        setTitle(d.title);
+        setDescription(d.description ?? '');
+        setSchema(loadedSchema);
+        setBaseline(loadedSchema);
         setSelectedIds([]);
         setConnect(null);
         setDirty(false);
@@ -591,6 +595,7 @@ const FlowBuilderPage: React.FC = () => {
         schema_json: schemaRef.current,
         title: title.trim() || def?.title || 'Untitled form',
         definition_description: description,
+        diffed_from_version: versionParam ?? undefined,
         ...payload,
       });
       setTitle(created.title);
@@ -602,6 +607,8 @@ const FlowBuilderPage: React.FC = () => {
           : t('saveVersion.saved', { n: created.version_number }),
         'success',
       );
+      // The saved schema is the new baseline for any further edits.
+      setBaseline(schemaRef.current);
       skipLoadForVersionRef.current = created.version_number;
       setSearchParams({ v: String(created.version_number) }, { replace: true });
     } catch {
@@ -1092,6 +1099,7 @@ const FlowBuilderPage: React.FC = () => {
         open={showSaveDialog}
         onClose={() => setShowSaveDialog(false)}
         defaultMakeDefault={loadedIsDefault}
+        detectedChanges={showSaveDialog ? diffFormSchemas('flow', baseline, schema) : []}
         saving={saving}
         onSave={payload => void saveVersion(payload)}
       />

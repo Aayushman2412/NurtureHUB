@@ -22,13 +22,13 @@ import {
   type GrowthCaseDetail,
   type GrowthStandards,
   type GrowthSummaryRow,
-  type GrowthVisitDetail,
 } from '../../api/growth';
 import type { FormKey, FormResponseDetail } from '../../lib/flowTypes';
-import { adoptionCategory, monthsDays, zCellFill } from '../../lib/growthDisplay';
-import { formatAge, sexKeyForGender, type GrowthPoint } from '../../lib/growthChart';
+import { adoptionCategory, lapCellFill, monthsDays } from '../../lib/growthDisplay';
+import { sexKeyForGender, type GrowthPoint } from '../../lib/growthChart';
 import GrowthChartGrid, { GrowthLegend } from '../../components/growth/GrowthChartGrid';
 import VisitDetailModal from '../../components/growth/VisitDetailModal';
+import VisitSummaryTable, { GREEN_INK, RED_INK } from '../../components/growth/VisitSummaryTable';
 import ResponseDetailCard from '../../components/growth/ResponseDetailCard';
 import { ChartCard, ActivityComparisonChart, OutcomeDivergingChart } from '../../components/growth/CaseCharts';
 import { Badge, Button, EmptyState, PageHeader, PageLoader } from '../../components/ui';
@@ -38,8 +38,6 @@ import { cn } from '../../utils/cn';
 const LAP_FORMS: FormKey[] = ['breastfeeding', 'complementary_feeding'];
 /** Informational forms — no as-per-LAP tracker; listed date-wise instead. */
 const INFO_FORMS: FormKey[] = ['growth_monitoring', 'mother_protein_intake', 'antenatal'];
-
-const fmtZ = (z: number | null) => (z == null ? '—' : `${z > 0 ? '+' : ''}${z.toFixed(1)}`);
 
 const Fact: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <div className="flex flex-col">
@@ -65,31 +63,6 @@ const IdentitySection: React.FC<{
     </div>
   </div>
 );
-
-/** LAP-status chip for one form filed on a visit (green/red tallies). */
-const LapChip: React.FC<{ code: string; green: number; red: number }> = ({ code, green, red }) => {
-  const scored = green + red > 0;
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold',
-        !scored
-          ? 'border-border text-ink-muted'
-          : red === 0
-            ? 'border-success-500/40 bg-success-50 text-success-600 dark:bg-success-500/10'
-            : 'border-coral-500/40 bg-coral-50 text-coral-700 dark:bg-coral-500/10',
-      )}
-    >
-      {code}
-      {scored && (
-        <>
-          <span className="text-success-600">✓{green}</span>
-          {red > 0 && <span className="text-coral-600">✕{red}</span>}
-        </>
-      )}
-    </span>
-  );
-};
 
 const FORM_CODES: Record<string, string> = {
   growth_monitoring: 'CG',
@@ -136,36 +109,49 @@ const buildMatrix = (responses: FormResponseDetail[]): MatrixData => {
   return { dates, rows: [...rows.values()] };
 };
 
-const MATRIX_CELL_CLASS: Record<Exclude<MatrixCell, null>, string> = {
-  green: 'bg-success-500/25',
-  red: 'bg-coral-500/30',
-  neutral: 'bg-surface-sunken',
-};
-
+/** Every cell is gridded and carries its own glyph: ✓ as per LAP, ✕ not. */
 const LapMatrix: React.FC<{ matrix: MatrixData }> = ({ matrix }) => {
   const { t } = useTranslation('growth');
+  const cellTitle = (cell: MatrixCell) =>
+    cell === 'green'
+      ? t('casePage.legendGreen')
+      : cell === 'red'
+        ? t('casePage.legendRed')
+        : cell === 'neutral'
+          ? t('casePage.legendNeutral')
+          : t('casePage.legendNotAsked');
+
   return (
-    <div className="max-h-[70vh] overflow-auto rounded-lg border border-border">
-      <table className="border-collapse text-sm" style={{ width: 'max-content', minWidth: '100%' }}>
+    <div className="max-h-[70vh] overflow-auto rounded-lg border border-border-strong">
+      <table
+        className="border-collapse text-sm [&_td]:border [&_td]:border-border-strong [&_th]:border [&_th]:border-border-strong"
+        style={{ width: 'max-content', minWidth: '100%' }}
+      >
         <thead className="sticky top-0 z-20">
           <tr>
-            <th className="sticky left-0 z-10 min-w-72 max-w-96 border-b border-r border-border bg-surface-sunken px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wide text-ink-muted">
+            <th className="sticky left-0 z-10 w-12 bg-surface-sunken px-2 py-2 text-right text-[11px] font-bold uppercase tracking-wide text-ink-muted">
+              #
+            </th>
+            <th className="sticky left-12 z-10 min-w-72 max-w-96 bg-surface-sunken px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wide text-ink-muted">
               {t('casePage.question')}
             </th>
             {matrix.dates.map(date => (
               <th
                 key={date}
-                className="whitespace-nowrap border-b border-border bg-surface-sunken px-3 py-2 text-center text-[11px] font-semibold text-ink-muted"
+                className="whitespace-nowrap bg-surface-sunken px-3 py-2 text-center text-[11px] font-semibold text-ink-muted"
               >
                 {date}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-border">
-          {matrix.rows.map(row => (
+        <tbody>
+          {matrix.rows.map((row, index) => (
             <tr key={row.key}>
-              <td className="sticky left-0 z-10 min-w-72 max-w-96 border-r border-border bg-surface px-3 py-1.5 text-[13px] text-ink">
+              <td className="sticky left-0 z-10 w-12 bg-surface px-2 py-1.5 text-right text-[11px] tabular-nums text-ink-faint">
+                {index + 1}
+              </td>
+              <td className="sticky left-12 z-10 min-w-72 max-w-96 bg-surface px-3 py-1.5 text-[13px] text-ink">
                 {row.question}
               </td>
               {matrix.dates.map(date => {
@@ -173,18 +159,17 @@ const LapMatrix: React.FC<{ matrix: MatrixData }> = ({ matrix }) => {
                 return (
                   <td
                     key={date}
-                    title={
-                      cell === 'green'
-                        ? t('casePage.legendGreen')
-                        : cell === 'red'
-                          ? t('casePage.legendRed')
-                          : cell === 'neutral'
-                            ? t('casePage.legendNeutral')
-                            : undefined
-                    }
-                    className={cn('px-3 py-1.5 text-center', cell && MATRIX_CELL_CLASS[cell])}
+                    title={cellTitle(cell)}
+                    className={cn(
+                      'px-3 py-1.5 text-center text-base font-bold leading-none',
+                      cell === 'green' && GREEN_INK,
+                      cell === 'red' && RED_INK,
+                    )}
+                    // A light wash, not a solid fill: the ✓/✕ glyph has to stay
+                    // readable on top of it in both themes.
+                    style={{ backgroundColor: cell === 'neutral' ? undefined : lapCellFill(cell, true) }}
                   >
-                    {cell === null && <span className="text-ink-faint">—</span>}
+                    {cell === 'green' ? '✓' : cell === 'red' ? '✕' : cell === 'neutral' ? '•' : '—'}
                   </td>
                 );
               })}
@@ -446,96 +431,12 @@ const AdminGrowthCasePage: React.FC = () => {
             {t('caseDetail.noVisits')}
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-border">
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr>
-                  {[
-                    t('casePage.visitDate'),
-                    t('casePage.age'),
-                    t('casePage.formsFilled'),
-                    t('summary.wfaz'),
-                    t('summary.hfaz'),
-                    t('summary.wfhz'),
-                  ].map(h => (
-                    <th
-                      key={h}
-                      className="whitespace-nowrap border-b border-border bg-surface-sunken px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wide text-ink-muted"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {detail.visits.map((v: GrowthVisitDetail) => (
-                  <tr key={v.date}>
-                    <td className="whitespace-nowrap px-3 py-2 font-semibold text-ink">{v.date}</td>
-                    <td className="whitespace-nowrap px-3 py-2 text-ink-muted">
-                      {v.age_days != null ? formatAge(v.age_days) : '—'}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className="flex flex-wrap gap-1">
-                        {v.responses.map(r => (
-                          <LapChip
-                            key={r.id}
-                            code={FORM_CODES[r.form_key] ?? r.form_key.slice(0, 3).toUpperCase()}
-                            green={r.summary_json?.green ?? 0}
-                            red={r.summary_json?.red ?? 0}
-                          />
-                        ))}
-                      </span>
-                    </td>
-                    {([v.z.wfaz, v.z.hfaz, v.z.wfhz] as const).map((z, i) => (
-                      <td
-                        key={i}
-                        className="whitespace-nowrap px-3 py-2 text-center tabular-nums text-ink"
-                        style={{ backgroundColor: zCellFill(z) }}
-                      >
-                        {fmtZ(z)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <VisitSummaryTable visits={detail.visits} />
         )}
       </section>
 
-      {/* ── info forms (no LAP tracker) — date-wise, expandable ──────────── */}
-      <section>
-        <div className="mb-2 flex items-center gap-1.5 text-sm font-bold text-ink">
-          <ClipboardList className="size-4 text-ink-muted" />
-          {t('casePage.infoForms')} ({infoResponses.length})
-        </div>
-        {infoResponses.length === 0 ? (
-          <p className="rounded-lg border border-border px-3 py-4 text-sm text-ink-muted">
-            {t('casePage.noResponses')}
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {infoResponses.map(response => (
-              <Expandable
-                key={response.id}
-                title={
-                  <>
-                    {response.assessment_date}
-                    <span className="ml-2 font-normal text-ink-muted">
-                      {t(`forms.${response.form_key}`, { defaultValue: response.form_key })}
-                    </span>
-                  </>
-                }
-                badge={<Badge variant="neutral">{FORM_CODES[response.form_key] ?? response.form_key}</Badge>}
-              >
-                <ResponseDetailCard detail={response} />
-              </Expandable>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* ── one LAP matrix per assessment form ───────────────────────────── */}
+      {/* ── one LAP matrix per assessment form (sits under the visit table
+             so the per-question detail follows its own summary row) ─────── */}
       <section>
         <div className="mb-2 flex items-center gap-1.5 text-sm font-bold text-ink">
           <BarChart3 className="size-4 text-ink-muted" />
@@ -543,13 +444,16 @@ const AdminGrowthCasePage: React.FC = () => {
         </div>
         <div className="mb-2 flex flex-wrap items-center gap-3 text-[11px] text-ink-muted">
           <span className="flex items-center gap-1">
-            <span className="inline-block size-3 rounded-sm bg-success-500/25" /> {t('casePage.legendGreen')}
+            <span className="font-bold text-success-600">✓</span> {t('casePage.legendGreen')}
           </span>
           <span className="flex items-center gap-1">
-            <span className="inline-block size-3 rounded-sm bg-coral-500/30" /> {t('casePage.legendRed')}
+            <span className="font-bold text-coral-700">✕</span> {t('casePage.legendRed')}
           </span>
           <span className="flex items-center gap-1">
-            <span className="inline-block size-3 rounded-sm bg-surface-sunken" /> {t('casePage.legendNeutral')}
+            <span className="font-bold text-ink-muted">•</span> {t('casePage.legendNeutral')}
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="font-bold text-ink-faint">—</span> {t('casePage.legendNotAsked')}
           </span>
         </div>
         <div className="space-y-2">
@@ -573,6 +477,39 @@ const AdminGrowthCasePage: React.FC = () => {
             </p>
           )}
         </div>
+      </section>
+
+      {/* ── info forms (no LAP tracker) — date-wise, expandable ──────────── */}
+      <section>
+        <div className="mb-2 flex items-center gap-1.5 text-sm font-bold text-ink">
+          <ClipboardList className="size-4 text-ink-muted" />
+          {t('casePage.infoForms')} ({infoResponses.length})
+        </div>
+        {infoResponses.length === 0 ? (
+          <p className="rounded-lg border border-border px-3 py-4 text-sm text-ink-muted">
+            {t('casePage.noResponses')}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {infoResponses.map((response, index) => (
+              <Expandable
+                key={response.id}
+                title={
+                  <>
+                    <span className="mr-2 tabular-nums text-ink-faint">{index + 1}.</span>
+                    {response.assessment_date}
+                    <span className="ml-2 font-normal text-ink-muted">
+                      {t(`forms.${response.form_key}`, { defaultValue: response.form_key })}
+                    </span>
+                  </>
+                }
+                badge={<Badge variant="neutral">{FORM_CODES[response.form_key] ?? response.form_key}</Badge>}
+              >
+                <ResponseDetailCard detail={response} />
+              </Expandable>
+            ))}
+          </div>
+        )}
       </section>
 
       <VisitDetailModal point={detailPoint} onClose={() => setDetailPoint(null)} fetchResponse={fetchResponse} />

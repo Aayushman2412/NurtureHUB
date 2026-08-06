@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GitCommitHorizontal } from 'lucide-react';
+import { GitCommitHorizontal, ListChecks } from 'lucide-react';
 import { Button, DateInput, Field, Modal } from '../../../components/ui';
 
 export interface SaveVersionPayload {
   created_on: string;   // ISO date
   description: string;
   make_default: boolean;
+  /** Auto-detected diff vs the version this edit started from. */
+  detected_changes: string[];
 }
 
 interface Props {
@@ -16,9 +18,14 @@ interface Props {
   nextVersionNumber?: number;
   /** Whether "make default" starts checked (true when editing the live/default version). */
   defaultMakeDefault: boolean;
+  /** What the builder detected changed — shown read-only beside the admin's note. */
+  detectedChanges: string[];
   saving: boolean;
   onSave: (payload: SaveVersionPayload) => void;
 }
+
+/** Show a handful inline; the rest collapse behind a "+N more" line. */
+const VISIBLE_CHANGES = 6;
 
 const todayIso = () => {
   const d = new Date();
@@ -34,6 +41,7 @@ const SaveVersionDialog: React.FC<Props> = ({
   onClose,
   nextVersionNumber,
   defaultMakeDefault,
+  detectedChanges,
   saving,
   onSave,
 }) => {
@@ -85,6 +93,7 @@ const SaveVersionDialog: React.FC<Props> = ({
                 created_on: createdOn || todayIso(),
                 description: description.trim(),
                 make_default: makeDefault,
+                detected_changes: detectedChanges,
               })
             }
           >
@@ -95,6 +104,36 @@ const SaveVersionDialog: React.FC<Props> = ({
     >
       <div className="space-y-4">
         <p className="text-sm text-ink-muted">{t('saveVersion.blurb')}</p>
+
+        {/* What the builder itself detected — recorded with the version. */}
+        <div className="rounded-lg border border-border bg-surface-sunken/60 p-3">
+          <div className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-muted">
+            <ListChecks className="size-3.5" />
+            {t('saveVersion.detected')}
+            {detectedChanges.length > 0 && (
+              <span className="rounded-full bg-primary/10 px-1.5 text-[10px] font-bold text-primary-ink">
+                {detectedChanges.length}
+              </span>
+            )}
+          </div>
+          {detectedChanges.length === 0 ? (
+            <p className="text-xs text-ink-faint">{t('saveVersion.detectedNone')}</p>
+          ) : (
+            <ul className="space-y-0.5 text-xs text-ink">
+              {detectedChanges.slice(0, VISIBLE_CHANGES).map((change, i) => (
+                <li key={`${i}-${change}`} className="flex gap-1.5">
+                  <span className="text-ink-faint">•</span>
+                  <span>{change}</span>
+                </li>
+              ))}
+              {detectedChanges.length > VISIBLE_CHANGES && (
+                <li className="text-ink-faint">
+                  {t('saveVersion.detectedMore', { count: detectedChanges.length - VISIBLE_CHANGES })}
+                </li>
+              )}
+            </ul>
+          )}
+        </div>
 
         <Field
           label={`${t('saveVersion.dateLabel')} *`}

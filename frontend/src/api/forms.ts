@@ -73,6 +73,10 @@ export interface FormVersionSummary {
   /** Admin-entered "commit" date (ISO date). */
   created_on: string | null;
   description: string;
+  /** What the builder detected changed vs the version this one was edited from. */
+  detected_changes: string[];
+  /** The version number that diff was taken against (null for pre-diff rows). */
+  diffed_from_version: number | null;
   created_by: string | null;
   created_at: string | null;
   is_default: boolean;
@@ -109,6 +113,10 @@ export const adminCreateFormVersion = (
     title?: string;
     /** Form-level description shown to learners (applied on default saves). */
     definition_description?: string;
+    /** Auto-detected diff recorded alongside the admin's description. */
+    detected_changes?: string[];
+    /** The version number that diff was taken against. */
+    diffed_from_version?: number;
   },
 ): Promise<FormVersionDetail> =>
   client.post(`/api/admin/forms/${formKey}/versions`, payload).then(r => r.data);

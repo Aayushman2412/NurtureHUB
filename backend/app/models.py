@@ -787,6 +787,12 @@ class FormVersion(Base):
     created_on = Column(Date, nullable=False)
     # Required change summary ("first creation" for the initial version).
     description = Column(Text, nullable=False)
+    # Auto-detected diff vs the version this one was edited from (list of
+    # human-readable strings) — complements the admin's own description.
+    detected_changes = Column(JSON, nullable=True)
+    # The version_number the diff was taken against (the editor may have been
+    # opened on an older version, so this is not always the previous one).
+    diffed_from_version = Column(Integer, nullable=True)
     schema_json = Column(JSON, nullable=False, default=dict)
     created_by = Column(String, nullable=True)         # admin email (audit)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

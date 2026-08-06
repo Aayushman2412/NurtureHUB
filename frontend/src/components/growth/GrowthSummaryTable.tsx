@@ -21,7 +21,7 @@ interface ColDef {
   align?: 'left' | 'right' | 'center';
   /** Excel-style whole-cell spectrum fill. */
   fill?: (row: GrowthSummaryRow) => string | undefined;
-  render: (row: GrowthSummaryRow) => React.ReactNode;
+  render: (row: GrowthSummaryRow, index: number) => React.ReactNode;
 }
 
 interface GroupDef {
@@ -209,6 +209,14 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
         title: t('summary.groups.identity'),
         tone: 'plain',
         cols: [
+          {
+            key: 'serial',
+            code: '#',
+            title: t('summary.serial'),
+            base: 44,
+            align: 'right',
+            render: (_r, index) => <span className="tabular-nums text-ink-faint">{index + 1}</span>,
+          },
           {
             key: 'learner',
             code: t('summary.learner'),
@@ -452,7 +460,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
                   colSpan={g.cols.length}
                   title={g.title}
                   className={cn(
-                    'border-b border-r border-border bg-surface-sunken px-2 py-1.5 text-center text-[11px] font-bold uppercase tracking-wide text-ink-muted',
+                    'border-b border-r border-border-strong bg-surface-sunken px-2 py-1.5 text-center text-[11px] font-bold uppercase tracking-wide text-ink-muted',
                     g.id === 'identity' && 'sticky left-0 z-10',
                   )}
                 >
@@ -463,7 +471,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
             {/* sub-header row */}
             <tr>
               {visibleGroups.map(g =>
-                g.cols.map((c, i) => {
+                g.cols.map(c => {
                   const isId = g.id === 'identity';
                   return (
                     <th
@@ -471,9 +479,8 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
                       title={c.title}
                       style={isId ? { left: idLeft[c.key] } : undefined}
                       className={cn(
-                        'border-b border-border bg-surface-sunken px-2 py-1.5 text-[11px] font-semibold text-ink-muted',
+                        'border-b border-r border-border-strong bg-surface-sunken px-2 py-1.5 text-[11px] font-semibold text-ink-muted',
                         c.align === 'left' ? 'text-left' : 'text-center',
-                        i === g.cols.length - 1 && 'border-r',
                         isId && 'sticky z-10',
                       )}
                     >
@@ -487,7 +494,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
           </thead>
 
           <tbody className="divide-y divide-border">
-            {rows.map(r => (
+            {rows.map((r, rowIndex) => (
               <tr
                 key={r.case_id}
                 onClick={() => onRowClick?.(r)}
@@ -498,7 +505,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
                 )}
               >
                 {visibleGroups.map(g =>
-                  g.cols.map((c, i) => {
+                  g.cols.map(c => {
                     const isId = g.id === 'identity';
                     return (
                       <td
@@ -510,13 +517,12 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
                         }}
                         className={cn(
                           pad,
-                          'truncate',
+                          'truncate border-r border-border-strong',
                           c.align === 'left' ? 'text-left' : c.align === 'right' ? 'text-right' : 'text-center',
-                          i === g.cols.length - 1 && 'border-r border-border',
                           isId && 'sticky z-20 bg-surface [tr:hover>&]:bg-surface-sunken',
                         )}
                       >
-                        {c.render(r)}
+                        {c.render(r, rowIndex)}
                       </td>
                     );
                   }),

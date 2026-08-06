@@ -51,6 +51,24 @@ h4 { font-size: 1.125rem; }
   background: color-mix(in srgb, var(--ink) 32%, transparent);
 }
 
+/* Column separators on every data table.
+   Sits in the base layer so any explicit border utility on a cell still wins,
+   but every table gets a readable column grid by default. --border-strong is
+   the darker of the two border tokens and flips with the theme. */
+table th:not(:last-child),
+table td:not(:last-child) {
+  border-right: 1px solid var(--border-strong);
+}
+
+/* Frozen columns need an inset shadow instead: with `border-collapse` the
+   shared borders are painted in the TABLE layer, which slides out from under a
+   position:sticky cell as soon as the table scrolls sideways — so the divider
+   would disappear exactly where it matters most. */
+table th.sticky,
+table td.sticky {
+  box-shadow: inset -1px 0 0 var(--border-strong);
+}
+
 ::selection {
   background: var(--color-coral-200);
   color: var(--color-coral-950);

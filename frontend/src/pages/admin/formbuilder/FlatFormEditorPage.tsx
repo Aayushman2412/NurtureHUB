@@ -14,6 +14,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { adminCreateFormVersion, adminExportForm, adminGetForm, adminGetFormVersion } from '../../../api/forms';
+import { diffFormSchemas } from '../../../lib/formDiff';
 import SaveVersionDialog, { type SaveVersionPayload } from './SaveVersionDialog';
 import { FORM_KEYS } from '../../../lib/flowTypes';
 import type {
@@ -137,6 +138,8 @@ const FlatFormEditorPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [loadedIsDefault, setLoadedIsDefault] = useState(true);
+  // The schema as loaded — the baseline the save dialog diffs against.
+  const [baseline, setBaseline] = useState<FlatField[]>([]);
   const [exporting, setExporting] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -176,9 +179,11 @@ const FlatFormEditorPage: React.FC = () => {
           schema = versionDetail.schema_json as FlatSchema;
           isDefault = versionDetail.is_default;
         }
+        const loadedFields = schema && Array.isArray(schema.fields) ? schema.fields : [];
         setDef(d);
         setLoadedIsDefault(isDefault);
-        setFields(schema && Array.isArray(schema.fields) ? schema.fields : []);
+        setFields(loadedFields);
+        setBaseline(loadedFields);
         setDirty(false);
         setLoadState('ready');
       })
@@ -204,6 +209,7 @@ const FlatFormEditorPage: React.FC = () => {
     try {
       const created = await adminCreateFormVersion(formKey as FormKey, {
         schema_json: { fields },
+        diffed_from_version: versionParam ?? undefined,
         ...payload,
       });
       setDirty(false);
@@ -214,6 +220,8 @@ const FlatFormEditorPage: React.FC = () => {
           : t('saveVersion.saved', { n: created.version_number }),
         'success',
       );
+      // The saved schema is the new baseline for any further edits.
+      setBaseline(fields);
       skipLoadForVersionRef.current = created.version_number;
       setSearchParams({ v: String(created.version_number) }, { replace: true });
     } catch {
@@ -665,6 +673,9 @@ const FlatFormEditorPage: React.FC = () => {
         open={showSaveDialog}
         onClose={() => setShowSaveDialog(false)}
         defaultMakeDefault={loadedIsDefault}
+        detectedChanges={
+          showSaveDialog ? diffFormSchemas('flat', { fields: baseline }, { fields }) : []
+        }
         saving={saving}
         onSave={payload => void saveVersion(payload)}
       />
