@@ -72,7 +72,9 @@ const AdminMasdPipelinePage: React.FC = () => {
       .finally(() => setUploading(false));
   };
 
-  const handleUploadZip = (file: File, kind?: string) => {
+  // No `kind`: the zip endpoint extracts the archive's own paths and has no
+  // per-kind parameter, unlike the plain-file upload above.
+  const handleUploadZip = (file: File) => {
     setUploading(true);
     uploadPipelineInputsZip('masd', undefined, file)
       .then(res => {
