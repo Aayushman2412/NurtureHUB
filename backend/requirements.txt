@@ -13,10 +13,14 @@ requests>=2.31.0
 aiosmtplib>=3.0.0
 slowapi>=0.1.9
 websockets>=12.0
-openpyxl>=3.1.0
+# Pinned: the crosstabs/MASD pipeline outputs were validated byte-for-byte on
+# exactly these versions, and behaviour drifts across releases (e.g. an empty
+# to_excel sheet_name defaults to "Sheet1" on this stack but raises on newer
+# ones). Bump deliberately, re-running a full pipeline baseline comparison.
+openpyxl==3.1.5
 # Data-analytics pipelines (admin "Database" section — backend/pipelines/)
-pandas>=2.2.0
-numpy>=1.26.0
+pandas==3.0.5
+numpy==2.4.6
 # Web push notifications (PWA)
 pywebpush>=2.0.0
 # Cloudflare R2 media storage (S3-compatible API) - app/storage.py
