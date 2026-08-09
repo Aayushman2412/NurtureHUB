@@ -140,5 +140,36 @@
     "kindRawExclusion": "Raw + Exclusion",
     "detectedTitle": "Data detected:",
     "unrecognized": "{{n}} file(s) don't match the naming pattern and will be ignored"
+  },
+  "rawdata": {
+    "title": "Raw Data",
+    "description": "Generate the pipelines' raw input files straight from the data learners collected in NurtureHUB, then push them into the pipeline inputs with one click.",
+    "tab": {
+      "crosstabs": "Crosstabs raw data",
+      "masd": "MASD raw data"
+    },
+    "project": {
+      "UJ": "Ujjain (UJ)",
+      "JL": "Jalna (JL)",
+      "ML": "Meghalaya (ML)"
+    },
+    "currentSet": "Current generated set",
+    "generate": "Generate raw data",
+    "ingest": "Ingest into pipeline inputs",
+    "generated": "Raw data generated.",
+    "ingested": "Files copied into the pipeline inputs — you can run the pipeline now.",
+    "downloaded": "Downloaded.",
+    "failed": "That did not work — check the backend logs and try again.",
+    "mockBadge": "Mock data mode",
+    "emptyTitle": "Nothing generated yet",
+    "emptyBody": "Press \"Generate raw data\" to build the files from the app's collected data.",
+    "colFile": "File",
+    "colRows": "Rows",
+    "colSize": "Size",
+    "download": "Download",
+    "hint": {
+      "crosstabs": "Generates the 9 raw CSVs (mother, child, BF, CF, growth, antenatal, protein, case measurements, case report) for the selected project. Ingest places them as a dated raw-data folder in the project's Crosstabs inputs — reference sheets (Role sheet, DOCS, report spec) are still uploaded on the pipeline page.",
+      "masd": "Generates one MASD learner CSV per program district. Ingest places them in the MASD input pool — the Role sheet and location masters are still uploaded on the MASD pipeline page."
+    }
   }
 }

@@ -20,7 +20,8 @@
       "growthMonitor": "वृद्धि मॉनिटर",
       "databaseSection": "डेटाबेस",
       "crosstabsPipeline": "क्रॉसटैब पाइपलाइन",
-      "masdPipeline": "MASD पाइपलाइन"
+      "masdPipeline": "MASD पाइपलाइन",
+      "rawData": "रॉ डेटा"
     }
   },
   "dashboard": {

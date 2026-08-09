@@ -20,7 +20,8 @@
       "growthMonitor": "Growth Monitor",
       "databaseSection": "Database",
       "crosstabsPipeline": "Crosstabs Pipeline",
-      "masdPipeline": "MASD Pipeline"
+      "masdPipeline": "MASD Pipeline",
+      "rawData": "Raw Data"
     }
   },
   "dashboard": {

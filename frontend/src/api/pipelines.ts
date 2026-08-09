@@ -214,7 +214,7 @@ export const getPipelineRunLog = (
 export const deletePipelineRun = (runId: number): Promise<void> =>
   client.delete(`/api/admin/pipelines/runs/${runId}`).then(() => undefined);
 
-const triggerBlobDownload = (blob: Blob, filename: string) => {
+export const triggerBlobDownload = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;

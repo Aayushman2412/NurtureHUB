@@ -373,7 +373,7 @@ CROSSTABS_KINDS = [
     },
 ]
 
-MASD_KINDS = [
+MASD_INPUT_KINDS = [
     {
         "key": "masd_csv", "group": GROUP_DATED, "required": True,
         "label": "MASD export CSVs",
@@ -404,7 +404,7 @@ MASD_KINDS = [
     },
 ]
 
-KINDS_BY_PIPELINE = {CROSSTABS: CROSSTABS_KINDS, MASD: MASD_KINDS}
+KINDS_BY_PIPELINE = {CROSSTABS: CROSSTABS_KINDS, MASD: MASD_INPUT_KINDS}
 OTHER_KIND = "other"
 
 

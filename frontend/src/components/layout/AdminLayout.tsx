@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, FileText, Video, ClipboardList, LogOut, Shield, MapPin, ChevronDown, Building2, Sun, Moon,
   MonitorPlay, GraduationCap, Radio, Activity, Table2, FileSpreadsheet, Menu,
+  DatabaseZap,
 } from 'lucide-react';
 import client from '../../api/client';
 import { clearOfflineCaches } from '../../pwa';
@@ -35,8 +36,10 @@ const navItems = [
   { to: '/admin/growth', icon: Activity, key: 'growthMonitor', end: false },
 ] as const;
 
-// "Database" section — the data-analytics pipelines (admin-run crosstabs/MASD).
+// "Database" section — the data-analytics pipelines (admin-run crosstabs/MASD)
+// and the raw-data generator that feeds them from the app's own form data.
 const databaseNavItems = [
+  { to: '/admin/database/rawdata', icon: DatabaseZap, key: 'rawData', end: false },
   { to: '/admin/database/crosstabs', icon: Table2, key: 'crosstabsPipeline', end: false },
   { to: '/admin/database/masd', icon: FileSpreadsheet, key: 'masdPipeline', end: false },
 ] as const;

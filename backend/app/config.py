@@ -66,6 +66,11 @@ class Settings(BaseSettings):
     # hung processes.
     PIPELINE_RUN_TIMEOUT_MINUTES: int = Field(default=90, validation_alias="PIPELINE_RUN_TIMEOUT_MINUTES")
 
+    # Raw-data export (admin Database → Raw Data). When true, the generators
+    # fabricate a large deterministic mock dataset instead of reading real
+    # form data — localhost pipeline testing only. MUST be false in production.
+    RAW_EXPORT_MOCK: bool = Field(default=False, validation_alias="RAW_EXPORT_MOCK")
+
     # Cloudflare R2 media storage/CDN. When ALL five are set, new media
     # uploads (learner photos, form-builder assets) are stored in the R2
     # bucket and served from R2_PUBLIC_BASE_URL (the bucket's r2.dev public
