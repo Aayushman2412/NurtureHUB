@@ -19,7 +19,16 @@ RUN pip install -r requirements.txt
 COPY . .
 
 # Run as an unprivileged user.
-RUN useradd --create-home --uid 10001 appuser && chown -R appuser:appuser /app
+#
+# The two runtime-data directories are created here even though .dockerignore
+# keeps their contents out of the image. Docker seeds a *new* named volume from
+# the image's directory at the mount point, ownership included; if the path is
+# absent from the image it instead creates a root-owned mountpoint that uid
+# 10001 cannot write to. Creating them appuser-owned is what makes the volumes
+# writable — without it, the first pipeline upload dies on PermissionError.
+RUN useradd --create-home --uid 10001 appuser \
+    && mkdir -p /app/uploads /data/pipeline_data \
+    && chown -R appuser:appuser /app /data
 USER appuser
 
 EXPOSE 8000
