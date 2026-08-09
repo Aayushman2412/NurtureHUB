@@ -40,7 +40,9 @@
     "noData": "No visits plotted yet",
     "download": "Download PNG",
     "expand": "Expand",
-    "close": "Close"
+    "close": "Close",
+    "zNegative": "negative",
+    "zPositive": "positive"
   },
   "charts": {
     "tab": "Growth charts",

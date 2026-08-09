@@ -202,11 +202,13 @@ interface OutcomeChartProps {
   /** Metric legend text (full names for the tooltip-less SVG legend). */
   legend: { wfaz: string; hfaz: string; wfhz: string };
   visitLabels: { bv: string; av: string; lv: string };
+  /** Which way the z axis runs, spelled out under the plot. */
+  direction: { negative: string; positive: string };
   svgRef: React.RefObject<SVGSVGElement | null>;
 }
 
 /** Horizontal bars left/right of a central 0 line; one colour per metric. */
-export const OutcomeDivergingChart: React.FC<OutcomeChartProps> = ({ outcomes, legend, visitLabels, svgRef }) => {
+export const OutcomeDivergingChart: React.FC<OutcomeChartProps> = ({ outcomes, legend, visitLabels, direction, svgRef }) => {
   const W = 480;
   const LABEL_W = 58;
   const TOP = 34; // legend + axis labels
@@ -230,7 +232,11 @@ export const OutcomeDivergingChart: React.FC<OutcomeChartProps> = ({ outcomes, l
   const visits: (keyof ZTriplet)[] = ['bv', 'av', 'lv'];
 
   const groupH = visits.length * (BAR_H + BAR_GAP) - BAR_GAP;
-  const H = TOP + metrics.length * (groupH + GROUP_GAP);
+  // Reference lines stop with the bars; the direction key sits below them.
+  const plotBottom = TOP + metrics.length * (groupH + GROUP_GAP) - GROUP_GAP + 4;
+  const AXIS_FOOT = 24;
+  const footY = plotBottom + 13;
+  const H = plotBottom + AXIS_FOOT;
 
   const refLines = [
     { z: 0, cls: 'stroke-border-strong', dash: '' },
@@ -255,7 +261,7 @@ export const OutcomeDivergingChart: React.FC<OutcomeChartProps> = ({ outcomes, l
       {/* reference lines + axis labels */}
       {refLines.map(l => (
         <g key={l.z}>
-          <line x1={sx(l.z)} x2={sx(l.z)} y1={TOP - 4} y2={H - GROUP_GAP + 4} className={l.cls} strokeDasharray={l.dash} />
+          <line x1={sx(l.z)} x2={sx(l.z)} y1={TOP - 4} y2={plotBottom} className={l.cls} strokeDasharray={l.dash} />
           <text x={sx(l.z)} y={TOP - 8} fontSize={8} textAnchor="middle" className="fill-current text-ink-faint">
             {l.z > 0 ? `+${l.z}` : l.z}
           </text>
@@ -315,6 +321,24 @@ export const OutcomeDivergingChart: React.FC<OutcomeChartProps> = ({ outcomes, l
           </g>
         );
       })}
+
+      {/* Direction key: a bar's side is the sign of its z, which is otherwise
+          only inferable from the axis ticks. Arrowheads are drawn as paths
+          rather than <marker> so the exported PNG needs no defs resolution. */}
+      <g>
+        <line x1={x0} x2={x1} y1={footY} y2={footY} className="stroke-border" />
+        <line x1={cx} x2={cx} y1={footY - 3} y2={footY + 3} className="stroke-border" />
+
+        <path d={`M ${x0} ${footY} l 6 -3.5 l 0 7 z`} className="fill-ink-faint" />
+        <text x={x0 + 11} y={footY + 3} fontSize={8} textAnchor="start" className="fill-current text-ink-faint">
+          {direction.negative}
+        </text>
+
+        <path d={`M ${x1} ${footY} l -6 -3.5 l 0 7 z`} className="fill-ink-faint" />
+        <text x={x1 - 11} y={footY + 3} fontSize={8} textAnchor="end" className="fill-current text-ink-faint">
+          {direction.positive}
+        </text>
+      </g>
     </svg>
   );
 };

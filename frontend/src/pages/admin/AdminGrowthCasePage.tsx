@@ -390,6 +390,7 @@ const AdminGrowthCasePage: React.FC = () => {
                   outcomes={row.outcomes}
                   legend={{ wfaz: t('summary.wfaz'), hfaz: t('summary.hfaz'), wfhz: t('summary.wfhz') }}
                   visitLabels={{ bv: 'BV', av: 'AV', lv: 'LV' }}
+                  direction={{ negative: t('chart.zNegative'), positive: t('chart.zPositive') }}
                 />
               )}
             />
