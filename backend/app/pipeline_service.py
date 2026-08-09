@@ -1366,18 +1366,23 @@ def _crosstabs_manifest(run_dir: Path) -> list[dict]:
     entries: list[dict] = []
     outputs = run_dir / "outputs"
     if outputs.exists():
-        for path in sorted(outputs.rglob("*.xlsx")):
-            if path.name.startswith("~$"):
-                continue
-            parent = path.parent.name
-            row_wise = parent in ("output_2", "output_jalna_2")
-            if _is_diag(path.name):
-                section = "Case lists & diagnostics"
-            elif row_wise:
-                section = "Crosstabs — row-wise %"
-            else:
-                section = "Crosstabs — column-wise %"
-            entries.append(_entry(run_dir, path, section))
+        for pattern in ("*.xlsx", "*.csv"):
+            for path in sorted(outputs.rglob(pattern)):
+                if path.name.startswith("~$"):
+                    continue
+                parent = path.parent.name
+                # Row-wise folders: the vendored script writes output_2 /
+                # output_jalna_2; newer analyst script versions use names like
+                # "Requested CTs 2". Any outputs subfolder ending in a
+                # standalone "2" is the row-wise variant of its sibling.
+                row_wise = bool(re.search(r"[_ ]2$", parent.strip()))
+                if _is_diag(path.name):
+                    section = "Case lists & diagnostics"
+                elif row_wise:
+                    section = "Crosstabs — row-wise %"
+                else:
+                    section = "Crosstabs — column-wise %"
+                entries.append(_entry(run_dir, path, section))
     for sub, section, pattern in (
         ("Inputs/derived", "Derived workbook", "*.xlsx"),
         ("Inputs/merged", "Merged master data", "*.csv"),
