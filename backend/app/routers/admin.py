@@ -16,6 +16,7 @@ import io
 import random
 import re
 
+from app import projects
 from app.config import settings
 from app.database import get_db
 from app.models import (
@@ -125,9 +126,31 @@ class ProgramDistrictSchema(BaseModel):
     slug: str
     is_active: bool
     user_count: int = 0
+    # Project level info so pickers (e.g. form-version assignment) can show a
+    # state and its districts as a hierarchy rather than a flat list.
+    level: str = ProgramDistrict.LEVEL_DISTRICT
+    parent_id: Optional[int] = None
+    inherits_content: bool = False
 
 class ProgramDistrictCreate(BaseModel):
     name: str
+
+class ProjectCreate(BaseModel):
+    """A project is a district (analysis by block) or a state (analysis by
+    district, containing child district projects)."""
+    name: str
+    level: str = ProgramDistrict.LEVEL_DISTRICT
+    parent_id: Optional[int] = None          # set to nest a district in a state
+    inherits_content: bool = False           # child districts: serve state content
+    code: Optional[str] = None               # analytics project code (UJ/JL/ML…)
+    state_prefix: Optional[str] = None       # raw-file prefix (MP/MH/ML)
+
+class ProjectUpdate(BaseModel):
+    name: Optional[str] = None
+    is_active: Optional[bool] = None
+    inherits_content: Optional[bool] = None
+    code: Optional[str] = None
+    state_prefix: Optional[str] = None
 
 class UserDistrictAssign(BaseModel):
     program_district_id: Optional[int] = None
@@ -176,19 +199,186 @@ def admin_login(request: Request, credentials: AdminLoginRequest, db: Session = 
 
 
 # ──────────────────────────────────────────────
-# District CRUD
+# Project CRUD (districts + states)
 # ──────────────────────────────────────────────
+# A project is the unit that owns content and that learners belong to. States
+# contain district projects; each child district is a full project in its own
+# right (own phases/tests/form pinning) unless it inherits its state's content.
+# The older /districts endpoints below remain for compatibility.
+
+def _user_counts(db: Session) -> Dict[int, int]:
+    from sqlalchemy import func as _func
+    rows = (
+        db.query(User.program_district_id, _func.count(User.id))
+        .filter(User.program_district_id.isnot(None))
+        .group_by(User.program_district_id)
+        .all()
+    )
+    return {pid: count for pid, count in rows}
+
+
+@router.get("/projects")
+def list_projects(db: Session = Depends(get_db), admin_email: str = Depends(get_admin_email)):
+    """All projects as a tree: state projects carry their child districts,
+    standalone districts come through flat. Ordered states-first by name."""
+    counts = _user_counts(db)
+    all_rows = projects.all_projects(db)
+    children_by_parent: Dict[int, List[ProgramDistrict]] = {}
+    for row in all_rows:
+        if row.parent_id:
+            children_by_parent.setdefault(row.parent_id, []).append(row)
+
+    out = []
+    for row in all_rows:
+        if row.parent_id:
+            continue  # emitted inside its parent
+        data = projects.serialize(
+            db, row,
+            user_count=counts.get(row.id, 0),
+            children=sorted(children_by_parent.get(row.id, []), key=lambda c: (c.name or "").lower()),
+        )
+        for child in data.get("children", []):
+            child["user_count"] = counts.get(child["id"], 0)
+        out.append(data)
+    out.sort(key=lambda p: (p["level"] != ProgramDistrict.LEVEL_STATE, (p["name"] or "").lower()))
+    return out
+
+
+@router.post("/projects")
+def create_project(data: ProjectCreate, db: Session = Depends(get_db), admin_email: str = Depends(get_admin_email)):
+    """Create a state project, a standalone district, or a district inside a state."""
+    level = (data.level or ProgramDistrict.LEVEL_DISTRICT).lower()
+    if level not in (ProgramDistrict.LEVEL_DISTRICT, ProgramDistrict.LEVEL_STATE):
+        raise HTTPException(status_code=400, detail="level must be 'district' or 'state'")
+
+    parent = None
+    if data.parent_id:
+        parent = db.query(ProgramDistrict).filter(ProgramDistrict.id == data.parent_id).first()
+        if not parent:
+            raise HTTPException(status_code=404, detail="Parent project not found")
+        if not parent.is_state:
+            raise HTTPException(status_code=400, detail="Only a state project can contain districts")
+        if level != ProgramDistrict.LEVEL_DISTRICT:
+            raise HTTPException(status_code=400, detail="A project inside a state must be a district")
+
+    name = (data.name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Name is required")
+    slug = _slugify(name)
+    if db.query(ProgramDistrict).filter(
+        (ProgramDistrict.name == name) | (ProgramDistrict.slug == slug)
+    ).first():
+        raise HTTPException(status_code=400, detail="A project with this name already exists")
+
+    code = (data.code or "").strip().upper() or None
+    if code and db.query(ProgramDistrict).filter(ProgramDistrict.code == code).first():
+        raise HTTPException(status_code=400, detail=f"Project code '{code}' is already in use")
+
+    project = ProgramDistrict(
+        name=name,
+        slug=slug,
+        is_active=True,
+        level=level,
+        parent_id=parent.id if parent else None,
+        inherits_content=bool(data.inherits_content) if parent else False,
+        code=code,
+        # A district inside a state inherits the state's file-name prefix.
+        state_prefix=((data.state_prefix or "").strip().upper() or
+                      (parent.state_prefix if parent else None)),
+    )
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+    MOCK_FORM_CONFIG[slug] = _default_form_config()
+    return projects.serialize(db, project, user_count=0)
+
+
+@router.put("/projects/{project_id}")
+def update_project(project_id: int, data: ProjectUpdate, db: Session = Depends(get_db),
+                   admin_email: str = Depends(get_admin_email)):
+    project = db.query(ProgramDistrict).filter(ProgramDistrict.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if data.name is not None:
+        name = data.name.strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Name is required")
+        new_slug = _slugify(name)
+        clash = db.query(ProgramDistrict).filter(
+            ProgramDistrict.id != project.id,
+            (ProgramDistrict.name == name) | (ProgramDistrict.slug == new_slug),
+        ).first()
+        if clash:
+            raise HTTPException(status_code=400, detail="A project with this name already exists")
+        old_slug = project.slug
+        project.name, project.slug = name, new_slug
+        if old_slug != new_slug and old_slug in MOCK_FORM_CONFIG:
+            MOCK_FORM_CONFIG[new_slug] = MOCK_FORM_CONFIG.pop(old_slug)
+
+    if data.is_active is not None:
+        project.is_active = bool(data.is_active)
+    if data.inherits_content is not None:
+        if data.inherits_content and not project.parent_id:
+            raise HTTPException(status_code=400,
+                                detail="Only a district inside a state can inherit content")
+        project.inherits_content = bool(data.inherits_content)
+    if data.code is not None:
+        code = data.code.strip().upper() or None
+        if code and db.query(ProgramDistrict).filter(
+            ProgramDistrict.code == code, ProgramDistrict.id != project.id
+        ).first():
+            raise HTTPException(status_code=400, detail=f"Project code '{code}' is already in use")
+        project.code = code
+    if data.state_prefix is not None:
+        project.state_prefix = data.state_prefix.strip().upper() or None
+
+    db.commit()
+    db.refresh(project)
+    counts = _user_counts(db)
+    return projects.serialize(db, project, user_count=counts.get(project.id, 0))
+
+
+@router.delete("/projects/{project_id}")
+def delete_project(project_id: int, db: Session = Depends(get_db), admin_email: str = Depends(get_admin_email)):
+    """Delete a project. A state with districts must be emptied first — the FK
+    cascade would otherwise silently take every child project's content with it."""
+    project = db.query(ProgramDistrict).filter(ProgramDistrict.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    kids = projects.child_districts(db, project)
+    if kids:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(f"This state still contains {len(kids)} district project(s). "
+                    "Delete or move them first."),
+        )
+    db.query(User).filter(User.program_district_id == project.id).update(
+        {User.program_district_id: None})
+    db.delete(project)
+    db.commit()
+    return {"message": "Project deleted"}
+
+
 @router.get("/districts", response_model=List[ProgramDistrictSchema])
 def list_districts(db: Session = Depends(get_db), admin_email: str = Depends(get_admin_email)):
-    """List all program districts with user counts."""
+    """Every project (states and districts alike), flat, with user counts.
+
+    Kept flat for callers that assign things per project — notably form-version
+    pinning, where a state and each of its districts are independent targets.
+    """
     districts = db.query(ProgramDistrict).order_by(ProgramDistrict.id).all()
-    result = []
-    for d in districts:
-        user_count = db.query(User).filter(User.program_district_id == d.id).count()
-        result.append(ProgramDistrictSchema(
-            id=d.id, name=d.name, slug=d.slug, is_active=d.is_active, user_count=user_count
-        ))
-    return result
+    counts = _user_counts(db)
+    return [
+        ProgramDistrictSchema(
+            id=d.id, name=d.name, slug=d.slug, is_active=d.is_active,
+            user_count=counts.get(d.id, 0),
+            level=d.level or ProgramDistrict.LEVEL_DISTRICT,
+            parent_id=d.parent_id,
+            inherits_content=bool(d.inherits_content),
+        )
+        for d in districts
+    ]
 
 
 @router.post("/districts", response_model=ProgramDistrictSchema)
@@ -455,10 +645,19 @@ def _serialize_admin_stage(db: Session, stage: Stage) -> Dict[str, Any]:
 
 
 def _get_district_or_404(db: Session, slug: str) -> ProgramDistrict:
-    district = db.query(ProgramDistrict).filter(ProgramDistrict.slug == slug).first()
+    district = projects.by_slug(db, slug)
     if not district:
-        raise HTTPException(status_code=404, detail="District not found")
+        raise HTTPException(status_code=404, detail="Project not found")
     return district
+
+
+def _content_project_or_404(db: Session, slug: str) -> ProgramDistrict:
+    """The project new content must be written to: an inheriting child district
+    shows its state's content, so authoring there edits the STATE."""
+    project = _get_district_or_404(db, slug)
+    if project.parent_id and project.inherits_content and project.parent:
+        return project.parent
+    return project
 
 
 TUTORIAL_EDITABLE_FIELDS = [
@@ -483,8 +682,8 @@ def get_admin_stages(district: str = Query("jalna", description="District slug")
 
 @router.post("/stages")
 def create_stage(stage: Dict[str, Any], district: str = Query("jalna", description="District slug"), db: Session = Depends(get_db), admin_email: str = Depends(get_admin_email)):
-    """Create a new stage/phase in a district."""
-    pd = _get_district_or_404(db, district)
+    """Create a new stage/phase in a project."""
+    pd = _content_project_or_404(db, district)
     count = db.query(Stage).filter(Stage.program_district_id == pd.id).count()
     new_stage = Stage(
         program_district_id=pd.id,
@@ -655,7 +854,7 @@ def bulk_upload_tutorials(
     that phase in sheet order. Nothing is ever deleted here. Valid rows are
     applied even when other rows fail — failures come back per-row.
     """
-    pd = _get_district_or_404(db, district)
+    pd = _content_project_or_404(db, district)
     stages = (
         db.query(Stage)
         .filter(Stage.program_district_id == pd.id)
@@ -937,13 +1136,17 @@ def _parse_client_datetime(value: Any) -> Optional[datetime]:
 
 
 def _district_stages(db: Session, slug: str) -> List[Stage]:
-    """Return a district's stages ordered by order_index (empty if unknown district)."""
-    district = db.query(ProgramDistrict).filter(ProgramDistrict.slug == slug).first()
-    if not district:
+    """A project's stages, ordered (empty if the project is unknown).
+
+    Content resolution: a child district that inherits serves its parent
+    state's stages, so this reads the CONTENT project, not the literal one.
+    """
+    project = projects.by_slug(db, slug)
+    if not project:
         return []
     return (
         db.query(Stage)
-        .filter(Stage.program_district_id == district.id)
+        .filter(Stage.program_district_id == projects.content_project_id(project))
         .order_by(Stage.order_index)
         .all()
     )

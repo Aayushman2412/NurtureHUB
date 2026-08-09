@@ -148,11 +148,6 @@
       "crosstabs": "Crosstabs raw data",
       "masd": "MASD raw data"
     },
-    "project": {
-      "UJ": "Ujjain (UJ)",
-      "JL": "Jalna (JL)",
-      "ML": "Meghalaya (ML)"
-    },
     "currentSet": "Current generated set",
     "generate": "Generate raw data",
     "ingest": "Ingest into pipeline inputs",
@@ -170,6 +165,7 @@
     "hint": {
       "crosstabs": "Generates the 9 raw CSVs (mother, child, BF, CF, growth, antenatal, protein, case measurements, case report) for the selected project. Ingest places them as a dated raw-data folder in the project's Crosstabs inputs — reference sheets (Role sheet, DOCS, report spec) are still uploaded on the pipeline page.",
       "masd": "Generates one MASD learner CSV per program district. Ingest places them in the MASD input pool — the Role sheet and location masters are still uploaded on the MASD pipeline page."
-    }
+    },
+    "stateSuffix": "state — one file set per district"
   }
 }

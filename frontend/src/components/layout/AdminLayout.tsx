@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -6,8 +6,9 @@ import {
   MonitorPlay, GraduationCap, Radio, Activity, Table2, FileSpreadsheet, Menu,
   DatabaseZap,
 } from 'lucide-react';
-import client from '../../api/client';
 import { clearOfflineCaches } from '../../pwa';
+import { defaultProject, groupProjects, listProjects, type ProjectGroups } from '../../api/projects';
+import { getProjectSlug, onProjectChanged, setProjectSlug, type AdminProject } from '../../lib/adminProject';
 import { useTheme } from '../../context/ThemeContext';
 import { Avatar, Dropdown } from '../ui';
 import { cn } from '../../utils/cn';
@@ -16,17 +17,9 @@ interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-interface ProgramDistrict {
-  id: number;
-  name: string;
-  slug: string;
-  is_active: boolean;
-  user_count: number;
-}
-
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, key: 'dashboard', end: true },
-  { to: '/admin/districts', icon: Building2, key: 'districts', end: false },
+  { to: '/admin/projects', icon: Building2, key: 'projects', end: false },
   { to: '/admin/form-builder', icon: FileText, key: 'formBuilder', end: false },
   { to: '/admin/tutorials', icon: Video, key: 'tutorials', end: false },
   { to: '/admin/tutorial-tracking', icon: MonitorPlay, key: 'tutorialTracking', end: false },
@@ -52,43 +45,48 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   // Below lg the sidebar is a slide-in drawer (same pattern as the learner
   // Sidebar); on desktop it is pinned open and this state is ignored.
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [districts, setDistricts] = useState<ProgramDistrict[]>([]);
-  const [selectedSlug, setSelectedSlug] = useState<string>(localStorage.getItem('nh_admin_district') || '');
+  const [groups, setGroups] = useState<ProjectGroups>({ states: [], standalone: [], flat: [] });
+  const [selectedSlug, setSelectedSlug] = useState<string>(getProjectSlug() || '');
 
-  const loadDistricts = () => {
-    client
-      .get('/api/admin/districts')
-      .then(res => {
-        setDistricts(res.data);
-        if (!selectedSlug && res.data.length > 0) {
-          const first = res.data[0].slug;
-          setSelectedSlug(first);
-          localStorage.setItem('nh_admin_district', first);
+  const loadProjects = useCallback(() => {
+    listProjects()
+      .then(list => {
+        const next = groupProjects(list);
+        setGroups(next);
+        // Land on a sane project: never auto-select a STATE (that would edit
+        // state-wide content unknowingly), and never keep a slug whose project
+        // was renamed or deleted — that silently empties every content page.
+        const stored = getProjectSlug();
+        const stillExists = stored && next.flat.some(p => p.slug === stored);
+        if (!stillExists) {
+          const fallback = defaultProject(next);
+          if (fallback) {
+            setSelectedSlug(fallback.slug);
+            setProjectSlug(fallback.slug);
+          }
+        } else if (stored !== selectedSlug) {
+          setSelectedSlug(stored);
         }
       })
       .catch(() => {});
-  };
+    // selectedSlug intentionally omitted: this must not refetch on every switch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    loadDistricts();
+    loadProjects();
+  }, [loadProjects]);
 
-    // Keep switcher updated on district changes
-    const handleDistrictChange = () => {
-      const current = localStorage.getItem('nh_admin_district') || '';
-      setSelectedSlug(current);
-      loadDistricts();
-    };
-    window.addEventListener('district-changed', handleDistrictChange);
-
-    return () => {
-      window.removeEventListener('district-changed', handleDistrictChange);
-    };
-  }, [selectedSlug]);
+  useEffect(() => {
+    return onProjectChanged(() => {
+      setSelectedSlug(getProjectSlug() || '');
+      loadProjects();
+    });
+  }, [loadProjects]);
 
   const handleSwitchDistrict = (slug: string) => {
     setSelectedSlug(slug);
-    localStorage.setItem('nh_admin_district', slug);
-    window.dispatchEvent(new Event('district-changed'));
+    setProjectSlug(slug);
   };
 
   const handleLogout = () => {
@@ -101,7 +99,50 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   };
 
   const adminName = localStorage.getItem('nh_admin_name') || t('layout.adminFallback');
-  const selectedDistrict = districts.find(d => d.slug === selectedSlug);
+  const selectedProject = groups.flat.find(p => p.slug === selectedSlug);
+  const parentState = selectedProject?.parent_id
+    ? groups.flat.find(p => p.id === selectedProject.parent_id)
+    : undefined;
+
+  /** Menu rows: each state, then its districts indented under it, then the
+   *  standalone districts. A state row is itself selectable — it is a real
+   *  project with its own content. */
+  const projectRow = (project: AdminProject, nested: boolean) => ({
+    key: project.slug,
+    selected: project.slug === selectedSlug,
+    onSelect: () => handleSwitchDistrict(project.slug),
+    label: (
+      <span className={cn('flex w-full items-center justify-between gap-2', nested && 'pl-5')}>
+        <span className="flex min-w-0 items-center gap-2">
+          {project.level === 'state'
+            ? <Building2 className="size-3.5 shrink-0" />
+            : <MapPin className="size-3.5 shrink-0" />}
+          <span className={cn('truncate', project.level === 'state' && 'font-semibold')}>
+            {project.name}
+          </span>
+          {project.level === 'state' && (
+            <span className="shrink-0 rounded bg-surface-sunken px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink-muted">
+              {t('layout.stateBadge')}
+            </span>
+          )}
+          {project.inherits_content && (
+            <span className="shrink-0 text-[10px] text-ink-faint">{t('layout.inheritsBadge')}</span>
+          )}
+        </span>
+        <span className="shrink-0 text-[11px] opacity-60">
+          {t('layout.usersCount', { n: project.user_count ?? 0 })}
+        </span>
+      </span>
+    ),
+  });
+
+  const projectMenuItems = [
+    ...groups.states.flatMap(({ state, children }) => [
+      projectRow(state, false),
+      ...children.map(child => projectRow(child, true)),
+    ]),
+    ...groups.standalone.map(project => projectRow(project, false)),
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -143,33 +184,31 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           </button>
         </div>
 
-        {/* District switcher */}
+        {/* Project switcher — states carry their district projects nested. */}
         <div className="px-3 pt-3">
           <Dropdown
             className="w-full"
             trigger={open => (
               <button
-                className="flex w-full items-center gap-2.5 rounded-lg border border-border bg-surface-sunken px-3.5 py-2.5 text-[13px] font-semibold text-ink hover:border-border-strong cursor-pointer"
+                className="flex w-full items-center gap-2.5 rounded-lg border border-border bg-surface-sunken px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong cursor-pointer"
               >
-                <MapPin className="size-4 shrink-0 text-primary-ink" />
-                <span className="flex-1 truncate text-left">{selectedDistrict?.name || t('layout.selectDistrict')}</span>
+                {selectedProject?.level === 'state'
+                  ? <Building2 className="size-4 shrink-0 text-primary-ink" />
+                  : <MapPin className="size-4 shrink-0 text-primary-ink" />}
+                <span className="min-w-0 flex-1 text-left">
+                  {parentState && (
+                    <span className="block truncate text-[11px] font-medium text-ink-faint">
+                      {parentState.name}
+                    </span>
+                  )}
+                  <span className="block truncate">
+                    {selectedProject?.name || t('layout.selectProject')}
+                  </span>
+                </span>
                 <ChevronDown className={cn('size-3.5 shrink-0 opacity-60 transition-transform', open && 'rotate-180')} />
               </button>
             )}
-            items={districts.map(d => ({
-              key: d.slug,
-              selected: d.slug === selectedSlug,
-              onSelect: () => handleSwitchDistrict(d.slug),
-              label: (
-                <span className="flex w-full items-center justify-between gap-2">
-                  <span className="flex items-center gap-2">
-                    <MapPin className="size-3.5" />
-                    {d.name}
-                  </span>
-                  <span className="text-[11px] opacity-60">{t('layout.usersCount', { n: d.user_count })}</span>
-                </span>
-              ),
-            }))}
+            items={projectMenuItems}
           />
         </div>
 

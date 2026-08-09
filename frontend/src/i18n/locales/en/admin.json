@@ -10,7 +10,7 @@
     "logout": "Logout",
     "nav": {
       "dashboard": "Dashboard",
-      "districts": "Districts",
+      "projects": "Projects",
       "formBuilder": "Form Builder",
       "tutorials": "Tutorials",
       "tutorialTracking": "Tutorial Tracking",
@@ -22,7 +22,10 @@
       "crosstabsPipeline": "Crosstabs Pipeline",
       "masdPipeline": "MASD Pipeline",
       "rawData": "Raw Data"
-    }
+    },
+    "selectProject": "Select project",
+    "stateBadge": "State",
+    "inheritsBadge": "follows state"
   },
   "dashboard": {
     "eyebrow": "Welcome back",
@@ -118,5 +121,50 @@
       "quizAccuracy": "Quiz Accuracy %",
       "performanceScore": "Performance Score"
     }
+  },
+  "projects": {
+    "title": "Projects",
+    "description": "The districts and states your program runs in. A state project contains district projects — each of those keeps its own phases, tests and form versions unless you set it to follow the state's.",
+    "loading": "Loading projects…",
+    "addState": "Add state",
+    "addDistrict": "Add district",
+    "addStateTitle": "Add a state project",
+    "addDistrictTitle": "Add a district project",
+    "addDistrictTo": "Add a district to {{name}}",
+    "standaloneHeading": "District projects",
+    "noDistrictsYet": "No districts in this state yet.",
+    "levelState": "State",
+    "levelDistrict": "District",
+    "inherits": "Follows state",
+    "users": "{{n}} learners",
+    "analysisBy": "Crosstabs by {{unit}}",
+    "byDistrict": "district",
+    "byBlock": "block",
+    "active": "Active",
+    "rename": "Rename",
+    "delete": "Delete project",
+    "save": "Save",
+    "cancel": "Cancel",
+    "create": "Create project",
+    "useStateContent": "Follow the state's content",
+    "useOwnContent": "Use this district's own content",
+    "fieldName": "Name *",
+    "fieldParent": "Inside state",
+    "noParent": "None — standalone district",
+    "fieldInherits": "Use the state's content",
+    "hintInherits": "Serve the state's phases, tutorials, tests and form versions instead of keeping its own.",
+    "fieldCode": "Project code",
+    "hintCode": "Used by the pipelines — e.g. UJ, JL, ML.",
+    "fieldPrefix": "File prefix",
+    "hintPrefix": "Raw-file naming — e.g. MP, MH, ML.",
+    "phState": "e.g. Meghalaya",
+    "phDistrict": "e.g. East Khasi Hills",
+    "emptyTitle": "No projects yet",
+    "emptyBody": "Add a district project, or a state project that contains districts.",
+    "confirmDelete": "Delete \"{{name}}\"? Its learners are unassigned and its content is removed. This cannot be undone.",
+    "errNameRequired": "Name is required.",
+    "errCreate": "Could not create the project.",
+    "errUpdate": "Could not update the project.",
+    "errDelete": "Could not delete the project."
   }
 }

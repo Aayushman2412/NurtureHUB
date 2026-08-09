@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app import models, storage
+from app import models, storage, projects
 from app.dependencies import get_verified_user
 from app.notify import create_notification
 
@@ -108,11 +108,15 @@ def _resolve_for_user(
     """
     definition = _get_definition(db, form_key)
     if user.program_district_id:
+        # Version pinning is per PROJECT: a state and each of its districts can
+        # be pinned independently, and a district that inherits content follows
+        # whatever its state is pinned to.
+        pinned_project_id = projects.content_project_id_for(db, user.program_district_id)
         assignment = (
             db.query(models.FormDistrictAssignment)
             .filter(
                 models.FormDistrictAssignment.form_key == form_key,
-                models.FormDistrictAssignment.program_district_id == user.program_district_id,
+                models.FormDistrictAssignment.program_district_id == pinned_project_id,
             )
             .first()
         )

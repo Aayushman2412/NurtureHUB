@@ -56,7 +56,40 @@ class PipelineError(Exception):
 CROSSTABS = "crosstabs"
 MASD = "masd"
 
+# Crosstabs projects: code -> display name. Seeded with the original three so
+# the pipelines work before any DB read, then kept in sync with the admin's
+# projects by refresh_projects() (which every DB-aware entry point calls).
 CROSSTABS_PROJECTS = {"UJ": "Ujjain", "JL": "Jalna", "ML": "Meghalaya"}
+# code -> 'state' | 'district'. A state project crosstabs BY DISTRICT, a
+# district project BY BLOCK — this is what PIPELINE_ANALYSIS_LEVEL carries.
+PROJECT_LEVELS = {"UJ": "district", "JL": "district", "ML": "state"}
+
+
+def refresh_projects(db) -> None:
+    """Sync the project registry from the DB.
+
+    Admin-created projects (including districts nested inside a state) must be
+    runnable without a code change. Projects with no code are skipped: a code
+    is what isolates their workspace on disk.
+    """
+    from app.models import ProgramDistrict
+    rows = db.query(ProgramDistrict).filter(ProgramDistrict.code.isnot(None)).all()
+    if not rows:
+        return
+    CROSSTABS_PROJECTS.clear()
+    PROJECT_LEVELS.clear()
+    for row in rows:
+        code = (row.code or "").upper()
+        if not code:
+            continue
+        CROSSTABS_PROJECTS[code] = row.name
+        PROJECT_LEVELS[code] = row.level or "district"
+
+
+def analysis_level_for(project_code: str) -> str:
+    """'state' (crosstab by district) or 'district' (crosstab by block)."""
+    return PROJECT_LEVELS.get((project_code or "").upper(), "district")
+
 
 MASD_KINDS = ("combined", "raw_exclusion")
 
@@ -1146,6 +1179,7 @@ def materialize_masd_run(db: Session, kind: str, run_dir: Path) -> dict:
 # ==============================================================================
 
 def start_run(db: Session, pipeline: str, variant: str, admin_email: Optional[str]) -> PipelineRun:
+    refresh_projects(db)   # admin-created projects are runnable immediately
     if pipeline == CROSSTABS:
         variant = variant.upper()
         if variant not in CROSSTABS_PROJECTS:
@@ -1237,8 +1271,10 @@ def _execute_run(run_id: int) -> None:
                     # Pin the raw folder explicitly instead of leaving the
                     # pipeline's newest-mtime heuristic to re-derive it.
                     "PIPELINE_RAW_INPUT_DIR": str(_pick_raw_input_dir(run_dir)),
-                    # Meghalaya is analysed state-wide; the others by district.
-                    "PIPELINE_ANALYSIS_LEVEL": "state" if variant == "ML" else "district",
+                    # State projects are analysed by DISTRICT, district projects
+                    # by BLOCK — driven by the project's level, not a hardcoded
+                    # code, so admin-created states behave correctly too.
+                    "PIPELINE_ANALYSIS_LEVEL": analysis_level_for(variant),
                 }
             else:
                 materialization = materialize_masd_run(db, variant, run_dir)

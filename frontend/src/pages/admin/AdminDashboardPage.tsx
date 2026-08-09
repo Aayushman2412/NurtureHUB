@@ -7,6 +7,7 @@ import {
   Landmark, FilePenLine, Clapperboard, ClipboardCheck,
 } from 'lucide-react';
 import { Card, StatCard, WelcomeBanner } from '../../components/ui';
+import { getProjectSlug, PROJECT_EVENT } from '../../lib/adminProject';
 
 interface Stats {
   total_users: number;
@@ -26,7 +27,7 @@ const AdminDashboardPage: React.FC = () => {
   const { t } = useTranslation('admin');
 
   const loadStats = useCallback(() => {
-    const district = localStorage.getItem('nh_admin_district') || '';
+    const district = (getProjectSlug() ?? '');
     client
       .get(`/api/admin/dashboard-stats?district=${district}`)
       .then(res => setStats(res.data))
@@ -46,8 +47,8 @@ const AdminDashboardPage: React.FC = () => {
   useEffect(() => {
     loadStats();
     const handleDistrictChange = () => loadStats();
-    window.addEventListener('district-changed', handleDistrictChange);
-    return () => window.removeEventListener('district-changed', handleDistrictChange);
+    window.addEventListener(PROJECT_EVENT, handleDistrictChange);
+    return () => window.removeEventListener(PROJECT_EVENT, handleDistrictChange);
   }, [loadStats]);
 
   const cards: { icon: React.ReactNode; label: string; value: number; tone: Tone }[] = [

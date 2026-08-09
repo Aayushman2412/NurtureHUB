@@ -47,5 +47,5 @@ def download(pipeline: str, path: str = Query(...), project: Optional[str] = Que
 
 
 @router.post("/{pipeline}/ingest")
-def ingest(pipeline: str, project: Optional[str] = Query(None)):
-    return service.ingest_set(_pipeline(pipeline), project)
+def ingest(pipeline: str, project: Optional[str] = Query(None), db: Session = Depends(get_db)):
+    return service.ingest_set(_pipeline(pipeline), project, db)

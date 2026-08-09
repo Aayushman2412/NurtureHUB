@@ -16,6 +16,7 @@ from typing import Optional, Set, Tuple
 
 from sqlalchemy.orm import Session
 
+from app import projects
 from app.notify import create_notification
 from app.models import (
     Notification, Stage, Test, TestAttempt, Tutorial, User, UserTutorialProgress,
@@ -106,7 +107,8 @@ def test_lock_state(db: Session, user: User, test: Test) -> Tuple[bool, Optional
 
 def is_awaiting_results(db: Session, user: User) -> bool:
     """True when the user finished every tutorial and submitted every test in their district."""
-    district_id = user.program_district_id
+    # Content project: a district that inherits serves its state's phases.
+    district_id = projects.content_project_id_for(db, user.program_district_id)
     if not district_id:
         return False
     stage_ids = [

@@ -6,6 +6,7 @@ import {
   GraduationCap, AlertCircle, Trash2, Search, Bell,
 } from 'lucide-react';
 import client from '../../api/client';
+import { getProjectSlug, PROJECT_EVENT } from '../../lib/adminProject';
 import * as XLSX from 'xlsx';
 import {
   Badge, Button, Card, EmptyState, Input, PageHeader, PageLoader,
@@ -96,7 +97,6 @@ const testLabel = (test: TestMeta, t: TFunction) =>
       ? t('testType.screening')
       : test.title;
 
-const getDistrict = () => localStorage.getItem('nh_admin_district') || 'jalna';
 
 const scoreColor = (score: number) =>
   score >= 75 ? 'text-success-600' : score >= 45 ? 'text-amber-600' : 'text-error-600';
@@ -115,8 +115,8 @@ const AdminResultsPage: React.FC = () => {
   const fetchData = () => {
     setLoading(true);
     Promise.all([
-      client.get(`/api/admin/results?district=${getDistrict()}`),
-      client.get(`/api/admin/results/face-to-face?district=${getDistrict()}`),
+      client.get(`/api/admin/results?district=${(getProjectSlug() ?? '')}`),
+      client.get(`/api/admin/results/face-to-face?district=${(getProjectSlug() ?? '')}`),
     ])
       .then(([resultsRes, f2fRes]) => {
         setData(resultsRes.data);
@@ -132,8 +132,8 @@ const AdminResultsPage: React.FC = () => {
   useEffect(() => {
     fetchData();
     const handleDistrictChange = () => fetchData();
-    window.addEventListener('district-changed', handleDistrictChange);
-    return () => window.removeEventListener('district-changed', handleDistrictChange);
+    window.addEventListener(PROJECT_EVENT, handleDistrictChange);
+    return () => window.removeEventListener(PROJECT_EVENT, handleDistrictChange);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -218,7 +218,7 @@ const AdminResultsPage: React.FC = () => {
         }
 
         const res = await client.post(
-          `/api/admin/results/face-to-face/upload?district=${getDistrict()}`,
+          `/api/admin/results/face-to-face/upload?district=${(getProjectSlug() ?? '')}`,
           { emails, notify: true }
         );
         setUploadSummary(res.data);

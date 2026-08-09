@@ -4,6 +4,7 @@ import type { TFunction } from 'i18next';
 import * as XLSX from 'xlsx';
 import { Download, RefreshCw, MonitorPlay, SkipForward, CheckCircle2, Search } from 'lucide-react';
 import client from '../../api/client';
+import { getProjectSlug, PROJECT_EVENT } from '../../lib/adminProject';
 import {
   Button,
   EmptyState,
@@ -97,12 +98,11 @@ const AdminTutorialTrackingPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
-  const getDistrict = () => localStorage.getItem('nh_admin_district') || 'jalna';
 
   const fetchData = () => {
     setLoading(true);
     client
-      .get(`/api/admin/tutorial-tracking?district=${getDistrict()}`)
+      .get(`/api/admin/tutorial-tracking?district=${(getProjectSlug() ?? '')}`)
       .then((res) => {
         setData(res.data);
         setLoading(false);
@@ -113,8 +113,8 @@ const AdminTutorialTrackingPage: React.FC = () => {
   useEffect(() => {
     fetchData();
     const handleDistrictChange = () => fetchData();
-    window.addEventListener('district-changed', handleDistrictChange);
-    return () => window.removeEventListener('district-changed', handleDistrictChange);
+    window.addEventListener(PROJECT_EVENT, handleDistrictChange);
+    return () => window.removeEventListener(PROJECT_EVENT, handleDistrictChange);
   }, []);
 
   const filteredUsers = (data?.users || []).filter(

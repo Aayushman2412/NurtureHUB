@@ -3,6 +3,7 @@ from sqlalchemy import update
 from sqlalchemy.orm import Session, selectinload
 from typing import List, Optional, Set
 from datetime import datetime, timezone
+from app import projects
 from app.database import get_db
 from app.models import Stage, Test, Question, QuestionOption, TestAttempt, TestAnswer, Tutorial, UserTutorialProgress, Notification
 from app.schemas import TestOut, StartAttemptResponse, TestSubmitRequest, TestSubmitResponse, QuestionOut, QuestionOptionOut
@@ -60,7 +61,9 @@ def get_tests(current_user: User = Depends(get_verified_user), db: Session = Dep
     # Batched: compute eligibility once for the whole district instead of the
     # old ~4-queries-per-test path (this endpoint loads on every tests-page view).
     stages = db.query(Stage).filter(
-        Stage.program_district_id == current_user.program_district_id
+        # Content project: a district that inherits serves its state's phases.
+        Stage.program_district_id == projects.content_project_id_for(
+            db, current_user.program_district_id)
     ).order_by(Stage.order_index).all()
     if not stages:
         return []

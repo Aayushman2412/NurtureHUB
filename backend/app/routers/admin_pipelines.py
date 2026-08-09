@@ -30,10 +30,15 @@ router = APIRouter(
 # ------------------------------------------------------------------ overview
 
 @router.get("/overview")
-def overview():
+def overview(db: Session = Depends(get_db)):
+    # Pick up admin-created projects (incl. districts inside a state).
+    svc.refresh_projects(db)
     return {
         "crosstabs": {
-            "projects": [{"code": code, "name": name} for code, name in svc.CROSSTABS_PROJECTS.items()],
+            "projects": [
+                {"code": code, "name": name, "analysis_level": svc.analysis_level_for(code)}
+                for code, name in svc.CROSSTABS_PROJECTS.items()
+            ],
         },
         "masd": {
             "kinds": [

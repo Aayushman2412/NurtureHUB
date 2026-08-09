@@ -10,9 +10,12 @@ import {
   downloadRawFile, generateRawSet, getRawSet, ingestRawSet,
   type RawPipeline, type RawSet,
 } from '../../api/rawdata';
+import { getPipelineOverview } from '../../api/pipelines';
 import { formatBytes } from '../../components/pipelines/helpers';
 
-const PROJECTS = ['UJ', 'JL', 'ML'] as const;
+/** Projects come from the admin's project list, so a newly added state or
+ *  district is immediately selectable here. */
+interface PipelineProject { code: string; name: string; analysis_level?: string }
 
 /** Database → Raw Data: generate the pipelines' raw input files from the data
  *  learners collected in NurtureHUB, then ingest them into the pipeline
@@ -22,6 +25,7 @@ const AdminRawDataPage: React.FC = () => {
   const { showToast } = useToast();
   const [tab, setTab] = useState<RawPipeline>('crosstabs');
   const [project, setProject] = useState<string>('UJ');
+  const [projectList, setProjectList] = useState<PipelineProject[]>([]);
   const [set, setSet] = useState<RawSet | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -38,6 +42,20 @@ const AdminRawDataPage: React.FC = () => {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(refresh, [tab, project]);
+
+  useEffect(() => {
+    getPipelineOverview()
+      .then(data => {
+        const list: PipelineProject[] = data.crosstabs?.projects ?? [];
+        setProjectList(list);
+        // Keep the selection valid when projects change underneath us.
+        if (list.length > 0 && !list.some(p => p.code === project)) {
+          setProject(list[0].code);
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const run = async (key: string, action: () => Promise<unknown>, successMsg: string) => {
     setBusy(key);
@@ -74,8 +92,10 @@ const AdminRawDataPage: React.FC = () => {
         {tab === 'crosstabs' && (
           <div className="ml-2 w-40">
             <Select value={project} onChange={e => setProject(e.target.value)}>
-              {PROJECTS.map(p => (
-                <option key={p} value={p}>{t(`rawdata.project.${p}`)}</option>
+              {projectList.map(p => (
+                <option key={p.code} value={p.code}>
+                  {p.name}{p.analysis_level === 'state' ? ` — ${t('rawdata.stateSuffix')}` : ''}
+                </option>
               ))}
             </Select>
           </div>

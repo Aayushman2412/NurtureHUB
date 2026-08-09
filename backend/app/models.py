@@ -1,13 +1,31 @@
 from datetime import date
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Float, Text, Table, UniqueConstraint, Index, JSON
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import backref, relationship
 from sqlalchemy.sql import func
 from app.database import Base
 
 
 class ProgramDistrict(Base):
-    """Represents a program district — each district gets its own content (stages, tutorials, tests, forms)."""
+    """A program PROJECT — the unit that owns content (stages, tutorials, tests,
+    form-version pinning) and that learners belong to.
+
+    Two levels:
+      * ``district`` — a standalone district project. Crosstabs analysis runs at
+        BLOCK level inside it.
+      * ``state``    — a state project (e.g. Meghalaya) that CONTAINS district
+        projects as children. Crosstabs analysis runs at DISTRICT level.
+
+    A child district is a full project row in its own right: it has its own
+    stages/tutorials/tests/form assignments exactly like a standalone district.
+    When ``inherits_content`` is set, it instead serves its parent state's
+    content — the admin's choice of "separate" vs "same" per district.
+
+    (Table name kept as program_districts: every FK in the schema points here.)
+    """
     __tablename__ = "program_districts"
+
+    LEVEL_DISTRICT = "district"
+    LEVEL_STATE = "state"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False)
@@ -15,9 +33,44 @@ class ProgramDistrict(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    # 'district' | 'state' — drives the crosstabs analysis level and whether
+    # this project can contain child districts.
+    level = Column(String, nullable=False, default=LEVEL_DISTRICT)
+    # Set on district projects that live inside a state project.
+    parent_id = Column(
+        Integer,
+        ForeignKey("program_districts.id", ondelete="CASCADE", name="program_districts_parent_id_fkey"),
+        nullable=True,
+        index=True,
+    )
+    # Child districts only: serve the parent state's content instead of own.
+    inherits_content = Column(Boolean, nullable=False, default=False)
+    # Analytics identity: short project code (UJ/JL/ML…) used for pipeline
+    # workspace isolation, and the state prefix used in raw-file names
+    # ("MP Ujjain_…", "ML East Khasi Hills_…").
+    code = Column(String, nullable=True, unique=True)
+    state_prefix = Column(String, nullable=True)
+
     # Relationships
     users = relationship("User", back_populates="program_district")
     stages = relationship("Stage", back_populates="program_district", cascade="all, delete-orphan")
+    children = relationship(
+        "ProgramDistrict",
+        backref=backref("parent", remote_side=[id]),
+        cascade="all, delete-orphan",
+        order_by="ProgramDistrict.name",
+    )
+
+    @property
+    def is_state(self) -> bool:
+        return (self.level or self.LEVEL_DISTRICT) == self.LEVEL_STATE
+
+    @property
+    def content_source_id(self) -> int:
+        """Which project's stages/tutorials/tests/forms this project serves."""
+        if self.parent_id and self.inherits_content:
+            return self.parent_id
+        return self.id
 
 
 class User(Base):

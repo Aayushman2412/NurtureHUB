@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation, Trans } from 'react-i18next';
 import client from '../../api/client';
+import { getProjectSlug, PROJECT_EVENT } from '../../lib/adminProject';
 import * as XLSX from 'xlsx';
 import {
   Trash2, Save, Upload, Play, Square, Download, ChevronDown, ChevronUp, FileSpreadsheet, ClipboardList,
@@ -92,11 +93,10 @@ const AdminTestsPage: React.FC = () => {
   const [scheduleTest, setScheduleTest] = useState<Test | null>(null);
   const [scheduleValue, setScheduleValue] = useState('');
 
-  const getDistrict = () => localStorage.getItem('nh_admin_district') || 'jalna';
 
   const fetchTests = () => {
     client
-      .get(`/api/admin/tests?district=${getDistrict()}`)
+      .get(`/api/admin/tests?district=${(getProjectSlug() ?? '')}`)
       .then(res => {
         setTests(res.data);
         setLoading(false);
@@ -107,14 +107,14 @@ const AdminTestsPage: React.FC = () => {
   useEffect(() => {
     fetchTests();
     const handleDistrictChange = () => fetchTests();
-    window.addEventListener('district-changed', handleDistrictChange);
-    return () => window.removeEventListener('district-changed', handleDistrictChange);
+    window.addEventListener(PROJECT_EVENT, handleDistrictChange);
+    return () => window.removeEventListener(PROJECT_EVENT, handleDistrictChange);
   }, []);
 
   const createTest = () => {
     if (!newTest.title.trim()) return;
     client
-      .post(`/api/admin/tests?district=${getDistrict()}`, {
+      .post(`/api/admin/tests?district=${(getProjectSlug() ?? '')}`, {
         ...newTest,
         test_type: newTest.test_type || null,
         questions: [],
@@ -127,22 +127,22 @@ const AdminTestsPage: React.FC = () => {
   };
 
   const updateTest = (id: number, updates: Partial<Test>) => {
-    client.put(`/api/admin/tests/${id}?district=${getDistrict()}`, updates).then(fetchTests);
+    client.put(`/api/admin/tests/${id}?district=${(getProjectSlug() ?? '')}`, updates).then(fetchTests);
   };
 
   const deleteTest = (id: number) => {
     if (!confirm(t('confirm.delete'))) return;
-    client.delete(`/api/admin/tests/${id}?district=${getDistrict()}`).then(fetchTests);
+    client.delete(`/api/admin/tests/${id}?district=${(getProjectSlug() ?? '')}`).then(fetchTests);
   };
 
   const startTest = (id: number) => {
     if (!confirm(t('confirm.start'))) return;
-    client.post(`/api/admin/tests/${id}/start?district=${getDistrict()}`).then(fetchTests);
+    client.post(`/api/admin/tests/${id}/start?district=${(getProjectSlug() ?? '')}`).then(fetchTests);
   };
 
   const endTest = (id: number) => {
     if (!confirm(t('confirm.end'))) return;
-    client.post(`/api/admin/tests/${id}/end?district=${getDistrict()}`).then(fetchTests);
+    client.post(`/api/admin/tests/${id}/end?district=${(getProjectSlug() ?? '')}`).then(fetchTests);
   };
 
   const openSchedule = (test: Test) => {
@@ -154,7 +154,7 @@ const AdminTestsPage: React.FC = () => {
     if (!scheduleTest) return;
     const iso = scheduleValue ? new Date(scheduleValue).toISOString() : null;
     client
-      .put(`/api/admin/tests/${scheduleTest.id}/schedule?district=${getDistrict()}`, { scheduled_at: iso })
+      .put(`/api/admin/tests/${scheduleTest.id}/schedule?district=${(getProjectSlug() ?? '')}`, { scheduled_at: iso })
       .then(() => {
         setScheduleTest(null);
         fetchTests();
@@ -165,7 +165,7 @@ const AdminTestsPage: React.FC = () => {
     setShowResults(testId);
     setResultLoading(true);
     client
-      .get(`/api/admin/tests/${testId}/results?district=${getDistrict()}`)
+      .get(`/api/admin/tests/${testId}/results?district=${(getProjectSlug() ?? '')}`)
       .then(res => {
         setResultData(res.data);
         setResultLoading(false);
@@ -243,7 +243,7 @@ const AdminTestsPage: React.FC = () => {
 
         if (questions.length > 0) {
           client
-            .post(`/api/admin/tests/${uploadTargetTest}/upload-questions?district=${getDistrict()}`, questions)
+            .post(`/api/admin/tests/${uploadTargetTest}/upload-questions?district=${(getProjectSlug() ?? '')}`, questions)
             .then(fetchTests);
         }
       } catch (err) {

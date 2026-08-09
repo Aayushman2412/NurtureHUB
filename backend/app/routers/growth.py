@@ -28,7 +28,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app import growth_summary_mock as gsm  # MOCK: summary-table demo values (removable)
-from app import models
+from app import models, projects
 from app.database import get_db
 from app.dependencies import get_current_admin, get_verified_user
 from app.routers.forms import PROTEIN_HIGH_TOTAL_G, _serialize_detail
@@ -124,7 +124,8 @@ def _build_cases(
         )
         if not pd:
             return []
-        rows = rows.filter(models.User.program_district_id == pd.id)
+        # A state project covers its district projects' learners too.
+        rows = rows.filter(models.User.program_district_id.in_(projects.member_project_ids(db, pd)))
     rows = rows.order_by(models.User.full_name, models.Mother.mother_name, models.Child.id).all()
 
     cases: Dict[int, Dict[str, Any]] = {}

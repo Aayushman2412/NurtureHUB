@@ -15,6 +15,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from app import pipeline_service, projects
 from app.config import settings
 from app.pipeline_service import (
     CROSSTABS, CROSSTABS_PROJECTS, MASD, PipelineError, data_root, ensure_inputs,
@@ -81,20 +82,38 @@ def generate_set(db: Session, pipeline: str, project: Optional[str]) -> dict:
     manifest = []
     if pipeline == CROSSTABS:
         code = (project or "UJ").upper()
-        district = CROSSTABS_PROJECTS.get(code)
+        pipeline_service.refresh_projects(db)
+        proj = projects.by_code(db, code)
+        district = proj.name if proj else CROSSTABS_PROJECTS.get(code)
         if not district:
             raise PipelineError(f"Unknown crosstabs project '{project}'", 404)
-        ds = _dataset(db, district, code)
-        prefix = _STATE_PREFIX.get(code, "MP")
+
         stamp_time = now.strftime("%Y-%m-%d-%H%M%S")
         stamp_date = now.strftime("%Y-%m-%d")
         ddmm = now.strftime("%d%m")
-        folder = target / f"input_folder_{ddmm}(CUD)_{ddmm}(DD)_{district}"
-        for mod, with_time in _CROSSTABS_GENS:
-            stamp = stamp_time if with_time else stamp_date
-            name = f"{prefix}_{district}_{mod.FILE_STEM}_{stamp}.csv"
-            count = _write_csv(folder / name, mod.HEADER, mod.generate(ds))
-            manifest.append({"name": name, "rows": count})
+
+        # A STATE project produces a full 9-file set PER CHILD DISTRICT (each
+        # district is its own project for analysis); a district project
+        # produces one set for itself.
+        if proj is not None:
+            units = projects.analysis_units(db, proj)
+        else:
+            units = []
+        if not units:
+            units = [proj] if proj else []
+
+        for unit in units or [None]:
+            unit_name = unit.name if unit is not None else district
+            unit_code = projects.project_code(unit) if unit is not None else code
+            prefix = (projects.state_prefix(unit, db) if unit is not None
+                      else _STATE_PREFIX.get(code, "MP"))
+            ds = _dataset(db, unit_name, unit_code)
+            folder = target / f"input_folder_{ddmm}(CUD)_{ddmm}(DD)_{unit_name}"
+            for mod, with_time in _CROSSTABS_GENS:
+                stamp = stamp_time if with_time else stamp_date
+                name = f"{prefix}_{unit_name}_{mod.FILE_STEM}_{stamp}.csv"
+                count = _write_csv(folder / name, mod.HEADER, mod.generate(ds))
+                manifest.append({"name": name, "rows": count})
     else:
         stamp = now.strftime("%b-%d-%Y")
         for program, code in _MASD_CODES.items():
@@ -154,9 +173,16 @@ def set_file_path(pipeline: str, project: Optional[str], rel: str) -> Path:
     return path
 
 
-def ingest_set(pipeline: str, project: Optional[str]) -> dict:
+def ingest_set(pipeline: str, project: Optional[str], db: Optional[Session] = None) -> dict:
     """Copy the current set into the pipeline input store (what a manual
-    upload would have produced); returns what landed where."""
+    upload would have produced); returns what landed where.
+
+    State projects land TWICE, because a state's districts are projects too:
+      * each district's folder goes into that district project's own store, so
+        it can run its own district-level (by-block) crosstabs, and
+      * every district's files also go into ONE dated folder in the state's
+        store, which is what a state-level (by-district) run analyses.
+    """
     target = _set_dir(pipeline, project)
     if not target.exists() or not any(target.rglob("*.csv")):
         raise PipelineError("Generate the raw data first — there is no current set", 400)
@@ -164,13 +190,43 @@ def ingest_set(pipeline: str, project: Optional[str]) -> dict:
     ingested = []
     if pipeline == CROSSTABS:
         store = ensure_inputs(CROSSTABS, project)
-        for folder in sorted(p for p in target.iterdir() if p.is_dir()):
-            dest = store / "input_folder" / folder.name
-            if dest.exists():
-                shutil.rmtree(dest)
-            shutil.copytree(folder, dest)
-            for f in sorted(dest.glob("*.csv")):
-                ingested.append(f"input_folder/{folder.name}/{f.name}")
+        proj = projects.by_code(db, (project or "").upper()) if db is not None else None
+        folders = sorted(p for p in target.iterdir() if p.is_dir())
+
+        # Per-district stores (only meaningful for a state project's children).
+        if proj is not None and proj.is_state:
+            by_name = {c.name: c for c in projects.child_districts(db, proj)}
+            for folder in folders:
+                # folder name ends with the unit's display name
+                child = next((c for name, c in by_name.items() if folder.name.endswith(name)), None)
+                if child is None or not child.code:
+                    continue
+                child_store = ensure_inputs(CROSSTABS, projects.project_code(child))
+                dest = child_store / "input_folder" / folder.name
+                if dest.exists():
+                    shutil.rmtree(dest)
+                shutil.copytree(folder, dest)
+                for f in sorted(dest.glob("*.csv")):
+                    ingested.append(f"{child.name}: input_folder/{folder.name}/{f.name}")
+
+            # …and the state's own combined folder (all districts together).
+            ddmm = datetime.now().strftime("%d%m")
+            combined = store / "input_folder" / f"input_folder_{ddmm}(CUD)_{ddmm}(DD)_{proj.name}"
+            if combined.exists():
+                shutil.rmtree(combined)
+            combined.mkdir(parents=True)
+            for folder in folders:
+                for f in sorted(folder.glob("*.csv")):
+                    shutil.copy2(f, combined / f.name)
+                    ingested.append(f"{proj.name}: input_folder/{combined.name}/{f.name}")
+        else:
+            for folder in folders:
+                dest = store / "input_folder" / folder.name
+                if dest.exists():
+                    shutil.rmtree(dest)
+                shutil.copytree(folder, dest)
+                for f in sorted(dest.glob("*.csv")):
+                    ingested.append(f"input_folder/{folder.name}/{f.name}")
     else:
         store = ensure_inputs(MASD, None)
         dest_dir = store / "Inputs"

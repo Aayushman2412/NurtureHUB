@@ -24,6 +24,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { Button, Card, FieldLabel, Input, Modal, PageHeader, PageLoader, Select } from '../../components/ui';
+import { getProjectSlug, PROJECT_EVENT } from '../../lib/adminProject';
 import { inputClasses } from '../../components/ui/Input';
 import { cn } from '../../utils/cn';
 
@@ -147,11 +148,10 @@ const AdminTutorialsPage: React.FC = () => {
   const [bulkResult, setBulkResult] = useState<BulkResult | null>(null);
   const bulkFileRef = useRef<HTMLInputElement>(null);
 
-  const getDistrict = () => localStorage.getItem('nh_admin_district') || 'jalna';
 
   const fetchStages = () => {
     client
-      .get(`/api/admin/stages?district=${getDistrict()}`)
+      .get(`/api/admin/stages?district=${(getProjectSlug() ?? '')}`)
       .then(res => {
         setStages(res.data);
         setLoading(false);
@@ -162,14 +162,14 @@ const AdminTutorialsPage: React.FC = () => {
   useEffect(() => {
     fetchStages();
     const handleDistrictChange = () => fetchStages();
-    window.addEventListener('district-changed', handleDistrictChange);
-    return () => window.removeEventListener('district-changed', handleDistrictChange);
+    window.addEventListener(PROJECT_EVENT, handleDistrictChange);
+    return () => window.removeEventListener(PROJECT_EVENT, handleDistrictChange);
   }, []);
 
   const addStage = () => {
     if (!newStageTitle.trim()) return;
     client
-      .post(`/api/admin/stages?district=${getDistrict()}`, {
+      .post(`/api/admin/stages?district=${(getProjectSlug() ?? '')}`, {
         title: newStageTitle,
         description: newStageDesc,
         stage_type: 'tutorials',
@@ -184,12 +184,12 @@ const AdminTutorialsPage: React.FC = () => {
 
   const deleteStage = (id: number) => {
     if (!confirm(t('stage.confirmDelete'))) return;
-    client.delete(`/api/admin/stages/${id}?district=${getDistrict()}`).then(fetchStages);
+    client.delete(`/api/admin/stages/${id}?district=${(getProjectSlug() ?? '')}`).then(fetchStages);
   };
 
   const toggleStageQuiz = (stage: Stage) => {
     client
-      .put(`/api/admin/stages/${stage.id}/quiz-enabled?district=${getDistrict()}`, {
+      .put(`/api/admin/stages/${stage.id}/quiz-enabled?district=${(getProjectSlug() ?? '')}`, {
         enabled: !stage.quiz_enabled,
         apply_to_tutorials: true,
       })
@@ -198,7 +198,7 @@ const AdminTutorialsPage: React.FC = () => {
 
   const addTutorial = (stageId: number) => {
     if (!newTut.title?.trim()) return;
-    client.post(`/api/admin/stages/${stageId}/tutorials?district=${getDistrict()}`, newTut).then(() => {
+    client.post(`/api/admin/stages/${stageId}/tutorials?district=${(getProjectSlug() ?? '')}`, newTut).then(() => {
       fetchStages();
       setShowAddTutorial(null);
       setNewTut({
@@ -215,17 +215,17 @@ const AdminTutorialsPage: React.FC = () => {
   };
 
   const updateTutorial = (id: number, updates: Partial<Tutorial>) => {
-    client.put(`/api/admin/tutorials/${id}?district=${getDistrict()}`, updates).then(fetchStages);
+    client.put(`/api/admin/tutorials/${id}?district=${(getProjectSlug() ?? '')}`, updates).then(fetchStages);
   };
 
   const deleteTutorial = (id: number) => {
     if (!confirm(t('tutorial.confirmDelete'))) return;
-    client.delete(`/api/admin/tutorials/${id}?district=${getDistrict()}`).then(fetchStages);
+    client.delete(`/api/admin/tutorials/${id}?district=${(getProjectSlug() ?? '')}`).then(fetchStages);
   };
 
   const toggleTutorialQuiz = (tut: Tutorial) => {
     client
-      .put(`/api/admin/tutorials/${tut.id}/quiz-enabled?district=${getDistrict()}`, {
+      .put(`/api/admin/tutorials/${tut.id}/quiz-enabled?district=${(getProjectSlug() ?? '')}`, {
         enabled: !tut.quiz_enabled,
       })
       .then(fetchStages);
@@ -329,7 +329,7 @@ const AdminTutorialsPage: React.FC = () => {
         }
         setBulkBusy(true);
         client
-          .post(`/api/admin/tutorials/bulk-upload?district=${getDistrict()}`, { rows })
+          .post(`/api/admin/tutorials/bulk-upload?district=${(getProjectSlug() ?? '')}`, { rows })
           .then(res => {
             setBulkResult(res.data);
             if (res.data.stages) setStages(res.data.stages);

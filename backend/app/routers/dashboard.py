@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+from app import projects
 from app.database import get_db
 from app.models import Stage, Tutorial, UserTutorialProgress, Test, TestAttempt, UserAchievement, Achievement
 from app.schemas import DashboardData, DashboardActivity, AchievementOut
@@ -14,7 +15,8 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 @router.get("", response_model=DashboardData)
 def get_dashboard_data(current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
     # Scope all queries to the user's program district
-    district_id = current_user.program_district_id
+    # Content project: a district that inherits serves its state's phases.
+    district_id = projects.content_project_id_for(db, current_user.program_district_id)
 
     # Get stage IDs for this district
     if district_id:

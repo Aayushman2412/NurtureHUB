@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
 
+from app import projects
 from app.database import get_db
 from app.models import (
     Stage, Tutorial, TutorialQuestion, TutorialQuestionOption, TutorialQuizResponse,
@@ -88,8 +89,11 @@ def _get_district_tutorial_or_404(db: Session, user: User, tutorial_id: int) -> 
     if not tutorial:
         raise HTTPException(status_code=404, detail="Tutorial not found")
     stage = db.query(Stage).filter(Stage.id == tutorial.stage_id).first()
-    if not stage or stage.program_district_id != user.program_district_id:
-        # Don't leak other districts' content or accept cross-district writes.
+    # Compare against the CONTENT project: a district that inherits legitimately
+    # watches its parent state's tutorials. Other projects stay invisible.
+    allowed_id = projects.content_project_id_for(db, user.program_district_id)
+    if not stage or stage.program_district_id != allowed_id:
+        # Don't leak other projects' content or accept cross-project writes.
         raise HTTPException(status_code=404, detail="Tutorial not found")
     return tutorial
 
@@ -120,7 +124,9 @@ def get_stages(current_user: User = Depends(get_verified_user), db: Session = De
     # for the district are pulled in a fixed handful of queries, then assembled
     # in memory (previously ~30-40 queries per call for the seeded 4-stage flow).
     stages = db.query(Stage).filter(
-        Stage.program_district_id == current_user.program_district_id
+        # Content project: a district that inherits serves its state's phases.
+        Stage.program_district_id == projects.content_project_id_for(
+            db, current_user.program_district_id)
     ).order_by(Stage.order_index).all()
     if not stages:
         return []
