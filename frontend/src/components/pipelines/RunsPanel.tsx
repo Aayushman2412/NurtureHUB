@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Archive, Download, FileText, PlayCircle, ScrollText, Trash2,
+  Archive, Download, Eye, EyeOff, FileText, PlayCircle, ScrollText, Trash2,
 } from 'lucide-react';
 import type { ManifestEntry, PipelineRun } from '../../api/pipelines';
 import {
@@ -39,9 +39,15 @@ const RunsPanel: React.FC<RunsPanelProps> = ({
   const [logLoading, setLogLoading] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
 
+  // The "Requested CTs" sections hold ~100 individual table workbooks; by
+  // default only the custom_report_tables summary shows, the rest sit behind
+  // an explicit unhide. Always collapsed again on run switch.
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+
   // Reset file selection when switching runs.
   useEffect(() => {
     setSelectedPaths(new Set());
+    setExpandedSections(new Set());
   }, [selectedRun?.id]);
 
   // Load (and refresh while running) the log when the modal is open.
@@ -277,7 +283,19 @@ const RunsPanel: React.FC<RunsPanelProps> = ({
                 </div>
               )}
 
-              {sections.map(({ section, files }) => (
+              {sections.map(({ section, files }) => {
+                // Requested-CTs sections: only the summary workbook shows until
+                // the admin unhides the individual tables.
+                const collapsible = section.startsWith('Requested CTs');
+                const expanded = expandedSections.has(section);
+                let shownFiles = files;
+                if (collapsible && !expanded) {
+                  const summary = files.filter(f =>
+                    f.name.toLowerCase().startsWith('custom_report_tables'));
+                  if (summary.length > 0) shownFiles = summary;
+                }
+                const hiddenCount = files.length - shownFiles.length;
+                return (
                 <Card key={section}>
                   <CardBody className="space-y-2 p-4">
                     <div className="flex items-center gap-2">
@@ -308,7 +326,7 @@ const RunsPanel: React.FC<RunsPanelProps> = ({
                         </Tr>
                       </THead>
                       <TBody>
-                        {files.map(file => (
+                        {shownFiles.map(file => (
                           <Tr key={file.path}>
                             <Td>
                               <Checkbox
@@ -343,9 +361,30 @@ const RunsPanel: React.FC<RunsPanelProps> = ({
                         ))}
                       </TBody>
                     </Table>
+                    {collapsible && (hiddenCount > 0 || expanded) && (
+                      <button
+                        type="button"
+                        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border py-2 text-xs font-semibold text-ink-muted hover:border-coral-500 hover:text-coral-600 dark:hover:text-coral-300"
+                        onClick={() =>
+                          setExpandedSections(prev => {
+                            const next = new Set(prev);
+                            if (expanded) next.delete(section);
+                            else next.add(section);
+                            return next;
+                          })
+                        }
+                      >
+                        {expanded ? (
+                          <><EyeOff className="size-3.5" /> {t('runs.hideIndividual')}</>
+                        ) : (
+                          <><Eye className="size-3.5" /> {t('runs.showHidden', { n: hiddenCount })}</>
+                        )}
+                      </button>
+                    )}
                   </CardBody>
                 </Card>
-              ))}
+                );
+              })}
             </>
           )}
         </div>

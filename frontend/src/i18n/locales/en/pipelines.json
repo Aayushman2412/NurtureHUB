@@ -103,6 +103,8 @@
     "downloadSelected": "Download selected (zip)",
     "clearSelection": "Clear",
     "downloadSection": "Download section",
+    "showHidden": "Show {{n}} individual tables",
+    "hideIndividual": "Hide individual tables",
     "colFile": "File",
     "colSize": "Size",
     "downloadFile": "Download file",

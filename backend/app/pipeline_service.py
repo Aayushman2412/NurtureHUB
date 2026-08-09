@@ -78,6 +78,7 @@ CROSSTABS_SLOTS = {
     "cleaning": {"label": "Stage 1 — Cleaning, Combining and Merging", "canonical": "Cleaning, Combining and Merging.ipynb", "dest": "All scripts"},
     "derived": {"label": "Stage 2 — Derived columns (ML pipeline)", "canonical": "ML_Pipeline(streamlined draft).ipynb", "dest": "All scripts"},
     "crosstabs": {"label": "Stage 3 — CrossTab pipeline", "canonical": "CrossTab_streamlined pipeline.ipynb", "dest": "All scripts"},
+    "requested": {"label": "Stage 4 — Requested individual CTs", "canonical": "CrossTab_requested_individual_CTs.ipynb", "dest": "All scripts"},
     "extra": {"label": "Extra scripts", "canonical": None, "dest": ""},
 }
 MASD_SLOTS = {
@@ -239,6 +240,12 @@ def ensure_inputs(pipeline: str, project: Optional[str] = None) -> Path:
             docs = root / "DOCS_onetime_fill_Ujjain.xlsx"
             if not docs.exists() and (ref / docs.name).exists():
                 shutil.copy2(ref / docs.name, docs)
+            # Report spec sheet — Stage 3's report_crosstabs add-on discovers it
+            # by the "Input sheet*.xlsx" glob; without one the report is skipped.
+            if not list(root.glob("Input sheet*.xlsx")):
+                for spec in sorted(ref.glob("Input sheet*.xlsx")):
+                    shutil.copy2(spec, root / spec.name)
+                    break
     else:
         (root / "Inputs").mkdir(exist_ok=True)
         ref = vendored_dir(MASD) / "reference_inputs"
@@ -302,6 +309,8 @@ def classify_input_group(pipeline: str, rel_path: str) -> str:
         return GROUP_REFERENCE
     if name.startswith("docs_onetime_fill_"):
         return GROUP_REFERENCE
+    if name.startswith("input sheet") and name.endswith(".xlsx"):
+        return GROUP_REFERENCE
     if pipeline == MASD and parts[0].lower() == "expected":
         return GROUP_REFERENCE
     return GROUP_DATED
@@ -346,6 +355,14 @@ CROSSTABS_KINDS = [
         "description": "Role → short role / department / role group mapping. Stored under its exact expected name.",
         "accept": ".xlsx", "multiple": False, "allows_zip": False,
         "hint": "Role and department sheet.xlsx",
+    },
+    {
+        "key": "report_spec", "group": GROUP_REFERENCE, "required": False,
+        "label": "Requested-report spec sheet",
+        "description": "Table list for Stage 3's report_crosstabs summary (and the requested CTs). "
+                       "Discovered by the name pattern 'Input sheet*.xlsx'; without one the report is skipped.",
+        "accept": ".xlsx", "multiple": False, "allows_zip": False,
+        "hint": "Input sheet fro report HST Ujjian to aayushman.xlsx",
     },
     {
         "key": "docs_fill", "group": GROUP_REFERENCE, "required": False,
@@ -417,6 +434,8 @@ def classify_input_kind(pipeline: str, rel_path: str) -> str:
             return "role_sheet"
         if low.startswith("docs_onetime_fill_"):
             return "docs_fill"
+        if low.startswith("input sheet") and low.endswith(".xlsx"):
+            return "report_spec"
         if re.match(r"^MASD_.+_combined\.xlsx$", name, re.I):
             return "masd_combined"
         if re.match(r"^[A-Za-z]{2}_raw_combined_.+_MASD\.xlsx$", name, re.I):
@@ -453,6 +472,14 @@ def _destination_for_kind(pipeline: str, kind: str, filename: str,
             return "Role and department sheet.xlsx"
         if kind == "docs_fill":
             return f"DOCS_onetime_fill_{district}.xlsx"
+        if kind == "report_spec":
+            if not (low.startswith("input sheet") and low.endswith(".xlsx")):
+                raise PipelineError(
+                    f"'{name}' is not a report spec sheet. Stage 3 discovers it by "
+                    "the name pattern \"Input sheet*.xlsx\" — rename the file so it "
+                    "starts with 'Input sheet'.", 400)
+            # Normalise the prefix casing to match the notebook's glob exactly.
+            return "Input sheet" + name[len("input sheet"):]
         if kind == "masd_combined":
             if not re.match(r"^MASD_.+_combined\.xlsx$", name, re.I):
                 raise PipelineError(

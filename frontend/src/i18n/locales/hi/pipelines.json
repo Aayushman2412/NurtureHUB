@@ -103,6 +103,8 @@
     "downloadSelected": "चयनित डाउनलोड करें (ज़िप)",
     "clearSelection": "साफ़ करें",
     "downloadSection": "अनुभाग डाउनलोड करें",
+    "showHidden": "{{n}} व्यक्तिगत तालिकाएँ दिखाएँ",
+    "hideIndividual": "व्यक्तिगत तालिकाएँ छिपाएँ",
     "colFile": "फ़ाइल",
     "colSize": "आकार",
     "downloadFile": "फ़ाइल डाउनलोड करें",

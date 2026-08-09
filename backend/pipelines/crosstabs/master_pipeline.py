@@ -10,6 +10,7 @@ from pathlib import Path
 # ==============================================================================
 # PIPELINE CONFIGURATION & PATH SETUP
 # ==============================================================================
+# ==============================================================================
 # ADD-ON (NurtureHUB server): workspace root comes from the environment so each
 # run executes in its own isolated working directory; the original Desktop path
 # is kept as the fallback for local use. Revert by restoring the literal Path.
@@ -54,6 +55,10 @@ SUMMARIES_DIR = INPUTS_DIR / "summaries"
 MASTER_DIR = INPUTS_DIR / "merged"
 DERIVED_DIR = INPUTS_DIR / "derived"
 OUTPUTS_DIR = WORKSPACE_DIR / "outputs"
+# Stage 4 (requested / custom crosstabs) writes INSIDE outputs/ so every
+# deliverable of a run lives under one folder tree.
+REQUESTED_CT_DIR = OUTPUTS_DIR / "requested_CTs"        # column-wise %
+REQUESTED_CT_DIR_2 = OUTPUTS_DIR / "requested_CTs_2"    # row-wise %
 
 # File Dependency Paths
 ROLE_SHEET_FILE = INPUTS_DIR / "Role and department sheet.xlsx"
@@ -85,6 +90,7 @@ SCRIPTS_DIR = WORKSPACE_DIR / "All scripts"
 CLEANING_NOTEBOOK = SCRIPTS_DIR / "Cleaning, Combining and Merging.ipynb"
 ML_NOTEBOOK = SCRIPTS_DIR / "ML_Pipeline(streamlined draft).ipynb"
 CROSSTAB_NOTEBOOK = SCRIPTS_DIR / "CrossTab_streamlined pipeline.ipynb"
+REQUESTED_CT_NOTEBOOK = SCRIPTS_DIR / "CrossTab_requested_individual_CTs.ipynb"
 
 # Date Suffix (used in stage 1 cleaning file names)
 # ADD-ON (NurtureHUB server): overridable per run so cleaned files carry the
@@ -263,13 +269,15 @@ def main():
         sys.exit(1)
 
     # Check that notebook scripts exist
-    for nb_path in [CLEANING_NOTEBOOK, ML_NOTEBOOK, CROSSTAB_NOTEBOOK]:
+    for nb_path in [CLEANING_NOTEBOOK, ML_NOTEBOOK, CROSSTAB_NOTEBOOK,
+                    REQUESTED_CT_NOTEBOOK]:
         if not nb_path.exists():
             print(f"ERROR: Required notebook '{nb_path}' is missing!", file=sys.stderr)
             sys.exit(1)
 
     # Timing records
-    times = {"cleaning": None, "ml": None, "crosstab": None, "validation": None}
+    times = {"cleaning": None, "ml": None, "crosstab": None,
+             "requested": None, "validation": None}
     validation = None
     pipeline_start_time = time.time()
     pipeline_status = "FAILED"
@@ -492,6 +500,23 @@ DERIVED_OUTPUT_DIR = r'{DERIVED_DIR}'
 
         # Extract CrossTab notebook code and do regex replacements
         crosstab_nb_code = extract_nb_code(CROSSTAB_NOTEBOOK)
+        # ADD-ON (NurtureHUB server): ANALYSIS_LEVEL must be "state" for a
+        # Meghalaya run and "district" elsewhere. The notebook hardcodes
+        # "district"; when PIPELINE_ANALYSIS_LEVEL is set we rewrite it, so the
+        # caller never has to edit the notebook per district. Unset = untouched.
+        _analysis_level = os.environ.get("PIPELINE_ANALYSIS_LEVEL", "").strip()
+        if _analysis_level:
+            crosstab_nb_code, _n_lvl = re.subn(
+                r"ANALYSIS_LEVEL\s*=\s*[\"'](?:district|state)[\"']",
+                f'ANALYSIS_LEVEL = "{_analysis_level}"',
+                crosstab_nb_code,
+            )
+            if _n_lvl:
+                print(f"CrossTab Pipeline: ANALYSIS_LEVEL -> {_analysis_level}")
+            else:
+                print("WARNING: PIPELINE_ANALYSIS_LEVEL set but the ANALYSIS_LEVEL "
+                      "assignment was not found in the notebook - left unchanged.")
+
 
         # Replace INPUT_FILE = "..." (config line) with our derived path
         crosstab_nb_code = re.sub(
@@ -520,22 +545,6 @@ DERIVED_OUTPUT_DIR = r'{DERIVED_DIR}'
             f'OUTPUT_DIR_JALNA_2 = "{outputs_fwd}/output_jalna_2"',
             crosstab_nb_code
         )
-        # ADD-ON (NurtureHUB server): ANALYSIS_LEVEL must be "state" for a
-        # Meghalaya run and "district" elsewhere. The notebook hardcodes
-        # "district"; when PIPELINE_ANALYSIS_LEVEL is set we rewrite it, so the
-        # caller never has to edit the notebook per district. Unset = untouched.
-        _analysis_level = os.environ.get("PIPELINE_ANALYSIS_LEVEL", "").strip()
-        if _analysis_level:
-            crosstab_nb_code, _n_lvl = re.subn(
-                r'ANALYSIS_LEVEL\s*=\s*["\'](?:district|state)["\']',
-                f'ANALYSIS_LEVEL = "{_analysis_level}"',
-                crosstab_nb_code
-            )
-            if _n_lvl:
-                print(f"CrossTab Pipeline: ANALYSIS_LEVEL -> {_analysis_level}")
-            else:
-                print("WARNING: PIPELINE_ANALYSIS_LEVEL set but the ANALYSIS_LEVEL "
-                      "assignment was not found in the notebook — left unchanged.")
 
         # Hand the crosstab notebook the district's MASD combined sheet; it fills
         # BLOCK_COL for the cases whose 'Phc Taluka_CR' is blank (ADD-ON STEP 2b).
@@ -604,14 +613,109 @@ MASD_BLOCK_SHEET = r'{MASD_SHEET_FILE}'
         print(f"Validation success: {len(crosstab_files)} Crosstab Excel files generated in {OUTPUTS_DIR}")
 
         # ==================================================================
-        # STAGE 4: CrossTab total validation
+        # STAGE 4: Requested / Custom CrossTabs
+        # ==================================================================
+        # The standalone notebook that exports each crosstab from sir's
+        # requested list as its OWN Excel file, plus the custom summary /
+        # retention tables the combined pipeline does not produce.
+        # It used to be run by hand from Desktop\Crosstables individual\ and
+        # wrote next to itself; it now runs here and writes into
+        # outputs/requested_CTs (column-wise %) and outputs/requested_CTs_2
+        # (row-wise %), so one run leaves everything under outputs/.
+        # Its own config lines are overridden the same way stage 3's are.
+        REQUESTED_CT_DIR.mkdir(parents=True, exist_ok=True)
+        REQUESTED_CT_DIR_2.mkdir(parents=True, exist_ok=True)
+
+        requested_nb_code = extract_nb_code(REQUESTED_CT_NOTEBOOK)
+        # ADD-ON (NurtureHUB server): ANALYSIS_LEVEL must be "state" for a
+        # Meghalaya run and "district" elsewhere. The notebook hardcodes
+        # "district"; when PIPELINE_ANALYSIS_LEVEL is set we rewrite it, so the
+        # caller never has to edit the notebook per district. Unset = untouched.
+        _analysis_level = os.environ.get("PIPELINE_ANALYSIS_LEVEL", "").strip()
+        if _analysis_level:
+            requested_nb_code, _n_lvl = re.subn(
+                r"ANALYSIS_LEVEL\s*=\s*[\"'](?:district|state)[\"']",
+                f'ANALYSIS_LEVEL = "{_analysis_level}"',
+                requested_nb_code,
+            )
+            if _n_lvl:
+                print(f"Requested CTs: ANALYSIS_LEVEL -> {_analysis_level}")
+            else:
+                print("WARNING: PIPELINE_ANALYSIS_LEVEL set but the ANALYSIS_LEVEL "
+                      "assignment was not found in the notebook - left unchanged.")
+
+
+        # INPUT_FILE = "<anything>"  ->  this run's derived extract
+        requested_nb_code = re.sub(
+            r'INPUT_FILE\s*=\s*(?:r)?["\'][^"\']*["\']',
+            f'INPUT_FILE = "{ml_output_fwd2}"',
+            requested_nb_code, count=1
+        )
+        # the two output folders -> inside outputs/
+        requested_nb_code = re.sub(
+            r'OUTPUT_DIR_REQ\s*=\s*(?:r)?["\'][^"\']*["\']',
+            f'OUTPUT_DIR_REQ = "{str(REQUESTED_CT_DIR).replace(chr(92), "/")}"',
+            requested_nb_code, count=1
+        )
+        requested_nb_code = re.sub(
+            r'OUTPUT_DIR_REQ2\s*=\s*(?:r)?["\'][^"\']*["\']',
+            f'OUTPUT_DIR_REQ2 = "{str(REQUESTED_CT_DIR_2).replace(chr(92), "/")}"',
+            requested_nb_code, count=1
+        )
+
+        print(f"\n==================================================")
+        print(f"STARTING STAGE: Requested / Custom CrossTabs")
+        print(f"Notebook: {REQUESTED_CT_NOTEBOOK.name}")
+        print(f"==================================================")
+        print(f"Requested CTs: INPUT_FILE  -> {ml_output_fwd2}")
+        print(f"Requested CTs: OUTPUT_DIR  -> {REQUESTED_CT_DIR}")
+        print(f"Requested CTs: OUTPUT_DIR2 -> {REQUESTED_CT_DIR_2}")
+
+        start_time = time.time()
+        original_stdout = sys.stdout
+        original_stderr = sys.stderr
+        dual_stdout = DualStream(original_stdout, log_file_path)
+        dual_stderr = DualStream(original_stderr, log_file_path)
+        sys.stdout = dual_stdout
+        sys.stderr = dual_stderr
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(str(WORKSPACE_DIR))
+            print(f"Working directory set to: {os.getcwd()}")
+            globals_dict = {"__name__": "__main__", "__builtins__": __builtins__}
+            exec(requested_nb_code, globals_dict)
+            times["requested"] = time.time() - start_time
+            print(f"\n=== Completed Stage: Requested / Custom CrossTabs in "
+                  f"{times['requested']:.2f} seconds ===\n")
+        except Exception as e:
+            print(f"\n!!! Error executing stage [Requested / Custom CrossTabs]: "
+                  f"{str(e)} !!!", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+            raise
+        finally:
+            os.chdir(original_cwd)
+            sys.stdout = original_stdout
+            sys.stderr = original_stderr
+            dual_stdout.close()
+            dual_stderr.close()
+
+        requested_files = [f for f in REQUESTED_CT_DIR.glob("*.xlsx")
+                           if not f.name.startswith("~$")]
+        if not requested_files:
+            raise FileNotFoundError(
+                f"No requested-CT Excel files were generated in: {REQUESTED_CT_DIR}")
+        print(f"Validation success: {len(requested_files)} requested-CT files "
+              f"generated in {REQUESTED_CT_DIR}")
+
+        # ==================================================================
+        # STAGE 5: CrossTab total validation
         # ==================================================================
         # Re-open every exported workbook and check that the printed counts
         # actually add up to the printed Total, column-wise AND row-wise, for
         # every table. Writes a report workbook next to pipeline_report.txt.
         # Read-only: it can never change a crosstab result.
         print(f"\n==================================================")
-        print(f"STARTING STAGE: CrossTab Total Validation")
+        print(f"STARTING STAGE: CrossTab Total Validation (all of outputs/)")
         print(f"==================================================")
         start_time = time.time()
         original_stdout = sys.stdout
@@ -658,8 +762,10 @@ MASD_BLOCK_SHEET = r'{MASD_SHEET_FILE}'
             failed_stage = "Cleaning & Combining"
         elif times["ml"] is None:
             failed_stage = "ML Pipeline"
-        else:
+        elif times["crosstab"] is None:
             failed_stage = "CrossTab Pipeline"
+        else:
+            failed_stage = "Requested / Custom CrossTabs"
 
     total_runtime = time.time() - pipeline_start_time
 
@@ -667,6 +773,7 @@ MASD_BLOCK_SHEET = r'{MASD_SHEET_FILE}'
     cleaning_time_str = f"{times['cleaning']:.2f} sec" if times["cleaning"] is not None else "FAILED"
     ml_time_str = f"{times['ml']:.2f} sec" if times["ml"] is not None else "FAILED"
     crosstab_time_str = f"{times['crosstab']:.2f} sec" if times["crosstab"] is not None else "FAILED"
+    requested_time_str = f"{times['requested']:.2f} sec" if times["requested"] is not None else "FAILED"
     validation_time_str = f"{times['validation']:.2f} sec" if times["validation"] is not None else "NOT RUN"
 
     # ==============================================================================
@@ -678,6 +785,7 @@ MASD_BLOCK_SHEET = r'{MASD_SHEET_FILE}'
     print(f"Cleaning & Combining     : {cleaning_time_str}")
     print(f"ML Pipeline              : {ml_time_str}")
     print(f"CrossTab Pipeline        : {crosstab_time_str}")
+    print(f"Requested / Custom CTs   : {requested_time_str}")
     print(f"Total Validation         : {validation_time_str}")
     print()
     print(f"Total Runtime            : {total_runtime:.2f} sec")
@@ -696,6 +804,7 @@ MASD_BLOCK_SHEET = r'{MASD_SHEET_FILE}'
         f.write(f"Cleaning & Combining     : {cleaning_time_str}\n")
         f.write(f"ML Pipeline              : {ml_time_str}\n")
         f.write(f"CrossTab Pipeline        : {crosstab_time_str}\n")
+        f.write(f"Requested / Custom CTs   : {requested_time_str}\n")
         f.write(f"Total Validation         : {validation_time_str}\n\n")
         f.write(f"Total Runtime            : {total_runtime:.2f} sec\n\n")
         f.write(f"Status                   : {pipeline_status}\n")
