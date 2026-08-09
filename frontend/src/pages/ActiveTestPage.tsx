@@ -291,46 +291,50 @@ const ActiveTestPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-5 py-4">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-primary-ink">{t('active.eyebrow')}</span>
-          <h3 className="font-display text-lg font-bold text-ink">{testTitle}</h3>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Live monitoring connection indicator */}
-          <div
-            className={cn(
-              'flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-bold',
-              wsConnected
-                ? 'border-success-500/40 bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-500'
-                : 'border-amber-500/40 bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-500',
-            )}
-            title={wsConnected ? t('active.monitorConnected') : t('active.monitorReconnecting')}
-          >
-            {wsConnected ? <Wifi className="size-3.5" /> : <WifiOff className="size-3.5" />}
-            <span>{wsConnected ? t('active.live') : t('active.reconnecting')}</span>
+      {/* Header — sticky so the countdown and Finish stay visible while the
+          learner scrolls questions on a phone. Bleeds over AppLayout's main
+          padding (keep the -mx/-mt values in sync with p-5 sm:p-6). */}
+      <div className="sticky top-0 z-20 -mx-5 -mt-5 border-b border-border bg-surface px-5 py-3 sm:-mx-6 sm:-mt-6 sm:px-6 sm:py-4 lg:static lg:z-auto lg:mx-0 lg:mt-0 lg:rounded-xl lg:border lg:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <div className="min-w-0 flex-1 basis-40">
+            <span className="hidden text-xs font-bold uppercase tracking-wider text-primary-ink sm:block">{t('active.eyebrow')}</span>
+            <h3 className="truncate font-display text-base font-bold text-ink sm:text-lg">{testTitle}</h3>
           </div>
 
-          <div
-            className={cn(
-              'flex items-center gap-2 rounded-lg border px-3.5 py-2 font-bold',
-              timerClasses[getTimerClass()],
-            )}
-          >
-            <Clock className="size-4" />
-            <span className="font-mono text-lg">{formatTime(timeRemaining)}</span>
-          </div>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            {/* Live monitoring connection indicator (icon-only on phones) */}
+            <div
+              className={cn(
+                'flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-bold',
+                wsConnected
+                  ? 'border-success-500/40 bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-500'
+                  : 'border-amber-500/40 bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-500',
+              )}
+              title={wsConnected ? t('active.monitorConnected') : t('active.monitorReconnecting')}
+            >
+              {wsConnected ? <Wifi className="size-3.5" /> : <WifiOff className="size-3.5" />}
+              <span className="hidden sm:inline">{wsConnected ? t('active.live') : t('active.reconnecting')}</span>
+            </div>
 
-          <Button
-            onClick={() => {
-              emitEvent('TEST_SUBMITTED');
-              setShowConfirm(true);
-            }}
-          >
-            {t('active.finishTest')}
-          </Button>
+            <div
+              className={cn(
+                'flex items-center gap-2 rounded-lg border px-2.5 py-2 font-bold sm:px-3.5',
+                timerClasses[getTimerClass()],
+              )}
+            >
+              <Clock className="size-4" />
+              <span className="font-mono text-base sm:text-lg">{formatTime(timeRemaining)}</span>
+            </div>
+
+            <Button
+              onClick={() => {
+                emitEvent('TEST_SUBMITTED');
+                setShowConfirm(true);
+              }}
+            >
+              {t('active.finishTest')}
+            </Button>
+          </div>
         </div>
       </div>
 

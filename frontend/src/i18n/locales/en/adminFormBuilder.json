@@ -1,5 +1,8 @@
 {
   "loading": "Loading form configuration…",
+  "flow": {
+    "desktopOnly": "The flow builder is designed for a larger screen. You can view the flow here, but editing works best on a laptop or desktop."
+  },
   "header": {
     "title": "Registration Form Builder",
     "description": "Add, remove, and reorder fields in the user registration form. Changes are saved automatically.",

@@ -126,8 +126,8 @@ const GrowthChartsPage: React.FC = () => {
     <>
       <PageHeader title={t('learner.title')} description={t('learner.description')} />
 
-      {/* case selector */}
-      <div className="mb-4 flex flex-wrap gap-2">
+      {/* case selector — one scrollable row on phones, wrapping grid from sm */}
+      <div className="-mx-5 mb-4 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0 [&>button]:shrink-0">
         <Chip selected={selectedCase == null} onClick={() => selectCase(null)}>
           {t('learner.allCases')}
         </Chip>

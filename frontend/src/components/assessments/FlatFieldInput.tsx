@@ -6,12 +6,14 @@
  * *values*; `checkbox` holds `string[]`, everything else a `string`.
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ImagePlus, Loader2, X } from 'lucide-react';
 import { Checkbox, DateInput, Field, Input, Radio, Select } from '../ui';
 import { inputClasses } from '../ui/Input';
 import { uploadLearnerMedia } from '../../api/forms';
+import { isNetworkError } from '../../offline/submit';
+import { discardQueuedMedia, enqueue, getMedia, storeMedia, OFFLINE_MEDIA_PREFIX } from '../../offline/queue';
 import { cn } from '../../utils/cn';
 import { resolveAssetUrl } from '../../lib/flowGraph';
 import type { FlatField } from '../../lib/flowTypes';
@@ -83,8 +85,23 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
     try {
       const { url } = await uploadLearnerMedia(file);
       onChange(url);
-    } catch {
-      showToast(t('growth.uploadFailed'), 'error');
+    } catch (err) {
+      // Offline: keep the photo on the device. The answer stores an
+      // offline-media marker; the sync queue uploads the blob first and
+      // rewrites the marker to the real /uploads/ URL before submitting.
+      if (isNetworkError(err)) {
+        const mediaId = await storeMedia(file);
+        await enqueue({
+          kind: 'media',
+          label: file.name,
+          payload: {},
+          tempId: mediaId,
+        });
+        onChange(`${OFFLINE_MEDIA_PREFIX}${mediaId}`);
+        showToast(t('photoQueued', { ns: 'offline' }), 'success');
+      } else {
+        showToast(t('growth.uploadFailed'), 'error');
+      }
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
@@ -198,16 +215,27 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
             />
             {url ? (
               <div className="relative w-fit">
+                {url.startsWith(OFFLINE_MEDIA_PREFIX) ? (
+                  <OfflineMediaPreview mediaId={url.slice(OFFLINE_MEDIA_PREFIX.length)} alt={field.label} />
+                ) : (
                 <img
                   src={resolveAssetUrl(url)}
                   alt={field.label}
                   className="max-h-48 rounded-xl border border-border object-contain"
                 />
+                )}
                 <button
                   type="button"
                   aria-label={t('growth.removePhoto')}
                   disabled={disabled}
-                  onClick={() => onChange('')}
+                  onClick={() => {
+                    // Removing a queued offline photo also drops its queue
+                    // item + blob — an orphaned upload would sync uselessly.
+                    if (url.startsWith(OFFLINE_MEDIA_PREFIX)) {
+                      void discardQueuedMedia(url.slice(OFFLINE_MEDIA_PREFIX.length));
+                    }
+                    onChange('');
+                  }}
                   className="absolute -right-2 -top-2 flex size-7 cursor-pointer items-center justify-center rounded-full border border-border bg-surface text-ink-muted shadow-sm hover:text-error-500"
                 >
                   <X className="size-4" />
@@ -251,6 +279,27 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
       {control()}
     </Field>
   );
+};
+
+/** Preview for a photo captured offline: streams the blob out of IndexedDB. */
+const OfflineMediaPreview: React.FC<{ mediaId: string; alt: string }> = ({ mediaId, alt }) => {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let active = true;
+    void getMedia(mediaId).then(media => {
+      if (media && active) {
+        objectUrl = URL.createObjectURL(media.blob);
+        setSrc(objectUrl);
+      }
+    });
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [mediaId]);
+  if (!src) return <div className="h-24 w-32 animate-pulse rounded-xl bg-surface-sunken" />;
+  return <img src={src} alt={alt} className="max-h-48 rounded-xl border border-dashed border-amber-500/60 object-contain" />;
 };
 
 export default FlatFieldInput;

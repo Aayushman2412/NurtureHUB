@@ -32,6 +32,7 @@ from sqlalchemy.orm import Session
 
 from datetime import date
 
+from app import storage
 from app.database import get_db
 from app.dependencies import get_admin_email, get_current_admin
 from app.models import (
@@ -954,10 +955,7 @@ async def upload_form_asset(file: UploadFile = File(...)):
             raise HTTPException(status_code=400, detail="File is larger than the 25 MB limit")
         chunks.append(chunk)
 
-    target_dir = os.path.join(_uploads_root(), UPLOADS_SUBDIR)
-    os.makedirs(target_dir, exist_ok=True)
+    # Cloudflare R2 (CDN) when configured, backend/uploads/ otherwise.
     filename = f"{uuid.uuid4().hex}{ext}"
-    with open(os.path.join(target_dir, filename), "wb") as fh:
-        for chunk in chunks:
-            fh.write(chunk)
-    return {"url": f"/uploads/{UPLOADS_SUBDIR}/{filename}"}
+    url = storage.save_media(UPLOADS_SUBDIR, filename, b"".join(chunks), file.content_type)
+    return {"url": url}

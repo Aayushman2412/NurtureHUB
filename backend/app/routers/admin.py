@@ -25,6 +25,7 @@ from app.models import (
 )
 from app.auth import verify_password, create_access_token
 from app.dependencies import get_current_admin, get_admin_email, invalidate_user_cache
+from app.notify import create_notification
 from app.rate_limit import limiter
 from app.timeutils import iso_utc, utcnow
 
@@ -592,6 +593,189 @@ def delete_tutorial(tutorial_id: int, district: str = Query("jalna", description
     db.delete(db_tut)
     db.commit()
     return {"message": "Tutorial deleted"}
+
+
+# ──────────────────────────────────────────────
+# Bulk tutorial upload (Excel sheet, parsed client-side like test questions)
+# ──────────────────────────────────────────────
+# Fixed sheet columns (header row 1): Phase | Title | Description | Module |
+# Video Link | Start Time | End Time | Duration (min) | Quiz
+# The frontend parses the sheet with SheetJS and POSTs normalized rows here.
+
+_YOUTUBE_LINK_RE = re.compile(
+    r"(?:youtube\.com/(?:watch\?v=|embed/|shorts/)|youtu\.be/)([a-zA-Z0-9_-]{11})"
+)
+
+
+def _parse_sheet_time(raw: str) -> int:
+    """'90' -> 90, '1:30' -> 90, '0:01:30' / '1:01:05' -> seconds. '' -> 0."""
+    text = (raw or "").strip()
+    if not text:
+        return 0
+    if re.fullmatch(r"\d+", text):
+        return int(text)
+    parts = text.split(":")
+    if not (2 <= len(parts) <= 3) or not all(re.fullmatch(r"\d+", p) for p in parts):
+        raise ValueError(f"'{raw}' is not a valid time (use seconds, m:ss or h:mm:ss)")
+    parts = [int(p) for p in parts]
+    if len(parts) == 2:
+        return parts[0] * 60 + parts[1]
+    return parts[0] * 3600 + parts[1] * 60 + parts[2]
+
+
+class TutorialSheetRow(BaseModel):
+    """One data row of the tutorial upload sheet (all cells as raw strings)."""
+    row: int                      # Excel row number, for error messages
+    phase: str = ""               # phase number as shown in the manager (1-based)
+    title: str = ""
+    description: str = ""
+    module: str = ""
+    link: str = ""                # YouTube URL or direct video file URL
+    start: str = ""               # clip start (YouTube only)
+    end: str = ""                 # clip end (YouTube only)
+    duration: str = ""            # minutes badge
+    quiz: str = ""                # yes/no (default yes)
+
+
+class TutorialBulkUpload(BaseModel):
+    rows: List[TutorialSheetRow]
+
+
+@router.post("/tutorials/bulk-upload")
+def bulk_upload_tutorials(
+    payload: TutorialBulkUpload,
+    district: str = Query("jalna", description="District slug"),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Create/update tutorials from an uploaded sheet.
+
+    Upsert semantics: a row matches an existing tutorial by (phase, title,
+    case-insensitive) and updates it; otherwise a new tutorial is appended to
+    that phase in sheet order. Nothing is ever deleted here. Valid rows are
+    applied even when other rows fail — failures come back per-row.
+    """
+    pd = _get_district_or_404(db, district)
+    stages = (
+        db.query(Stage)
+        .filter(Stage.program_district_id == pd.id)
+        .order_by(Stage.order_index)
+        .all()
+    )
+    # "Phase N" in the manager is order_index + 1 (test phases keep their slot).
+    video_stage_by_phase = {
+        s.order_index + 1: s for s in stages if (s.stage_type or "tutorials") != "test"
+    }
+    test_phase_numbers = {
+        s.order_index + 1 for s in stages if (s.stage_type or "tutorials") == "test"
+    }
+
+    created = 0
+    updated = 0
+    errors: List[Dict[str, Any]] = []
+    # Next order_index per stage, advanced as new tutorials are appended.
+    next_order: Dict[int, int] = {}
+
+    for row in payload.rows:
+        try:
+            title = row.title.strip()
+            if not title:
+                raise ValueError("Title is required")
+
+            phase_text = row.phase.strip()
+            if not re.fullmatch(r"\d+", phase_text):
+                raise ValueError("Phase must be a number (as shown in the Tutorial Manager)")
+            phase_no = int(phase_text)
+            stage = video_stage_by_phase.get(phase_no)
+            if stage is None:
+                if phase_no in test_phase_numbers:
+                    raise ValueError(f"Phase {phase_no} is a test phase — tutorials go in video phases")
+                raise ValueError(
+                    f"Phase {phase_no} does not exist. Video phases: "
+                    f"{', '.join(str(n) for n in sorted(video_stage_by_phase)) or 'none'}"
+                )
+
+            link = row.link.strip()
+            if not link:
+                raise ValueError("Video Link is required")
+            yt_match = _YOUTUBE_LINK_RE.search(link)
+            if yt_match:
+                youtube_url, video_url = link, None
+            elif link.lower().startswith(("http://", "https://")):
+                youtube_url, video_url = None, link
+            else:
+                raise ValueError("Video Link must be a YouTube link or an http(s) video URL")
+
+            start_seconds = _parse_sheet_time(row.start)
+            end_seconds = _parse_sheet_time(row.end)
+            if end_seconds and end_seconds <= start_seconds:
+                raise ValueError("End Time must be after Start Time")
+            if (row.start.strip() or row.end.strip()) and not yt_match:
+                raise ValueError("Start/End Time clipping only works with YouTube links")
+
+            duration_text = row.duration.strip()
+            if duration_text and not re.fullmatch(r"\d+", duration_text):
+                raise ValueError("Duration (min) must be a whole number of minutes")
+            duration_minutes = int(duration_text) if duration_text else 5
+
+            quiz_text = row.quiz.strip().lower()
+            if quiz_text and quiz_text not in ("yes", "no", "y", "n", "true", "false", "1", "0"):
+                raise ValueError("Quiz must be yes or no")
+            quiz_enabled = quiz_text not in ("no", "n", "false", "0")
+
+            existing = next(
+                (
+                    t for t in db.query(Tutorial).filter(Tutorial.stage_id == stage.id).all()
+                    if (t.title or "").strip().lower() == title.lower()
+                ),
+                None,
+            )
+            if existing:
+                existing.description = row.description.strip() or existing.description
+                if row.module.strip():
+                    existing.module_number = row.module.strip()
+                existing.duration_minutes = duration_minutes
+                existing.youtube_url = youtube_url
+                existing.video_url = video_url
+                existing.start_seconds = start_seconds
+                existing.end_seconds = end_seconds
+                existing.quiz_enabled = quiz_enabled
+                updated += 1
+            else:
+                if stage.id not in next_order:
+                    next_order[stage.id] = db.query(Tutorial).filter(
+                        Tutorial.stage_id == stage.id
+                    ).count()
+                order_index = next_order[stage.id]
+                next_order[stage.id] += 1
+                db.add(Tutorial(
+                    stage_id=stage.id,
+                    title=title,
+                    description=row.description.strip(),
+                    module_number=row.module.strip() or f"Module {phase_no}.{order_index + 1}",
+                    duration_minutes=duration_minutes,
+                    video_url=video_url,
+                    youtube_url=youtube_url,
+                    start_seconds=start_seconds,
+                    end_seconds=end_seconds,
+                    order_index=order_index,
+                    quiz_enabled=quiz_enabled,
+                ))
+                created += 1
+        except ValueError as exc:
+            errors.append({"row": row.row, "message": str(exc)})
+
+    db.commit()
+    return {
+        "created": created,
+        "updated": updated,
+        "errors": errors,
+        "stages": [
+            _serialize_admin_stage(db, s)
+            for s in _district_stages(db, district)
+            if (s.stage_type or "tutorials") != "test"
+        ],
+    }
 
 
 # ──────────────────────────────────────────────
@@ -1911,14 +2095,16 @@ def upload_face_to_face_selection(
                 existing.uploaded_by = admin_email
                 if payload.notify and not existing.notified:
                     existing.notified = True
-                    db.add(Notification(
-                        user_id=user.id,
-                        title=FACE_TO_FACE_NOTIFICATION_TITLE,
-                        message=(
+                    create_notification(
+                        db,
+                        user.id,
+                        FACE_TO_FACE_NOTIFICATION_TITLE,
+                        (
                             "Congratulations! You have been selected for the face-to-face "
                             "training. Please await further instructions."
                         ),
-                    ))
+                        link="/dashboard",
+                    )
                     matched.append(email)
                     continue
             already_selected.append(email)
@@ -1930,14 +2116,16 @@ def upload_face_to_face_selection(
             notified=payload.notify,
         ))
         if payload.notify:
-            db.add(Notification(
-                user_id=user.id,
-                title=FACE_TO_FACE_NOTIFICATION_TITLE,
-                message=(
+            create_notification(
+                db,
+                user.id,
+                FACE_TO_FACE_NOTIFICATION_TITLE,
+                (
                     "Congratulations! You have been selected for the face-to-face "
                     "training. Please await further instructions."
                 ),
-            ))
+                link="/dashboard",
+            )
         matched.append(email)
     db.commit()
 

@@ -12,7 +12,8 @@ import {
 } from '../../lib/childFields';
 import { validateChild, validateChildStep, CR_STEP_FIELDS, type ChildFormValues } from '../../lib/childSchema';
 import type { FieldErrors } from '../../lib/validation';
-import { createChild, getChild, updateChild, type ChildPayload } from '../../api/children';
+import { getChild, updateChild, type ChildPayload } from '../../api/children';
+import { createChildResilient, isQueuedResult } from '../../offline/submit';
 import { getMother } from '../../api/mothers';
 import { MAX_ADOPTION_AGE_DAYS, isoDaysAgo, todayIso } from '../../lib/motherFields';
 
@@ -188,16 +189,20 @@ const ChildFormPage: React.FC = () => {
     setLoading(true);
     const toastId = showToast(isEdit ? t('child.toastSaving') : t('child.toastRegistering'), 'loading');
     try {
-      const saved = isEdit
-        ? await updateChild(motherId, childId, buildPayload())
-        : await createChild(motherId, buildPayload());
-      updateToast(
-        toastId,
-        isEdit
-          ? t('child.toastSuccessSaved', { name: saved.child_name, uid: saved.child_uid })
-          : t('child.toastSuccessRegistered', { name: saved.child_name, uid: saved.child_uid }),
-        'success',
-      );
+      if (isEdit) {
+        const saved = await updateChild(motherId, childId, buildPayload());
+        updateToast(toastId, t('child.toastSuccessSaved', { name: saved.child_name, uid: saved.child_uid }), 'success');
+      } else {
+        const payload = buildPayload();
+        const saved = await createChildResilient(motherId, payload, `${payload.child_name ?? ''}`.trim());
+        updateToast(
+          toastId,
+          isQueuedResult(saved)
+            ? t('registrationQueued', { ns: 'offline' })
+            : t('child.toastSuccessRegistered', { name: saved.child_name, uid: saved.child_uid }),
+          'success',
+        );
+      }
       navigate(backTo);
     } catch {
       updateToast(toastId, isEdit ? t('child.toastFailSave') : t('child.toastFailRegister'), 'error');
@@ -217,7 +222,7 @@ const ChildFormPage: React.FC = () => {
         description={motherName ? t('child.descLinked', { name: motherName }) : t('child.descLinkedFallback')}
         backTo={backTo}
       />
-      <Card className="p-8">
+      <Card className="p-5 sm:p-8">
         <form onSubmit={handleSubmit} className="flex flex-col gap-7" noValidate>
           <Stepper steps={steps} current={step} />
 

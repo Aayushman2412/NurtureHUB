@@ -16,7 +16,11 @@ import { inputClasses } from '../../components/ui/Input';
 import { useToast } from '../../context/ToastContext';
 import { getChild, type Child } from '../../api/children';
 import { getMother, type Mother } from '../../api/mothers';
-import { createResponse, getFormDefinition, getResponse, updateResponse } from '../../api/forms';
+import { getFormDefinition, getResponse } from '../../api/forms';
+import {
+  findQueuedResponseCreate, findQueuedResponseUpdate, isQueuedResult, persistResponseResilient,
+} from '../../offline/submit';
+import { vaultClear, vaultKey, vaultLoad, vaultSave } from '../../offline/answerVault';
 import type { FlowSchema, FormDefinition, FormKey, MatrixAnswer } from '../../lib/flowTypes';
 import {
   CF_MIN_AGE_DAYS,
@@ -87,7 +91,8 @@ const AssessmentRunnerPage: React.FC = () => {
   const [answers, setAnswers] = useState<AnswersMap>({});
   const [stepIndex, setStepIndex] = useState(0);
   const [direction, setDirection] = useState<'fwd' | 'back'>('fwd');
-  const [responseId, setResponseId] = useState<number | null>(null);
+  /** Server row id, or a queued offline creation's `tmp-` id (coalesced on save). */
+  const [responseId, setResponseId] = useState<number | string | null>(null);
   /** True when editing an already-submitted response — it can't be saved as a
    *  draft (the backend keeps it submitted), so the Save-draft control is hidden. */
   const [editingSubmitted, setEditingSubmitted] = useState(false);
@@ -118,17 +123,28 @@ const AssessmentRunnerPage: React.FC = () => {
       isMother ? getMother(motherId) : getChild(motherId, childId),
       resumeId != null ? getResponse(resumeId) : Promise.resolve(null),
     ])
-      .then(([def, subject, resp]) => {
+      .then(async ([def, subject, resp]) => {
         if (cancelled) return;
         setDefinition(def);
         if (isMother) setMother(subject as Mother);
         else setChild(subject as Child);
-        if (resp) {
+
+        /**
+         * Rehydrate saved answers, validating against the CURRENT definition —
+         * the admin may have edited the form since. Deleted questions are
+         * dropped; a choice question whose selected options no longer exist is
+         * omitted entirely so it becomes the frontier and gets re-asked.
+         * Accepts both the server snapshot shape (`selected`) and the queued
+         * POST payload shape (`optionIds`).
+         */
+        type SavedAnswer = {
+          nodeId: string;
+          value?: string | null;
+          selected?: { optionId: string }[];
+          optionIds?: string[];
+        };
+        const buildPrefill = (answersJson: SavedAnswer[]): AnswersMap => {
           const prefill: AnswersMap = {};
-          // Validate the draft against the CURRENT definition — the admin may
-          // have edited the form since it was saved. Deleted questions are
-          // dropped; a choice question whose selected options no longer exist
-          // is omitted entirely so it becomes the frontier and gets re-asked.
           const currentQuestions = new Map<string, { questionType: string; optionIds: Set<string> }>();
           if (def.builder_type === 'flow') {
             for (const { question } of flattenAnswerable(def.schema_json as FlowSchema)) {
@@ -146,34 +162,84 @@ const AssessmentRunnerPage: React.FC = () => {
               if (node.kind === 'matrix') matrixIds.add(node.id);
             }
           }
-          for (const a of resp.answers_json) {
+          for (const a of answersJson) {
             if (matrixIds.has(a.nodeId)) {
               prefill[a.nodeId] = { optionIds: [], value: a.value ?? '' };
               continue;
             }
             const q = currentQuestions.get(a.nodeId);
             if (!q) continue;
-            const optionIds = a.selected.map(s => s.optionId).filter(id => q.optionIds.has(id));
+            const rawIds = a.selected ? a.selected.map(s => s.optionId) : (a.optionIds ?? []);
+            const optionIds = rawIds.filter(id => q.optionIds.has(id));
             const isChoice = q.questionType === 'single' || q.questionType === 'multi';
             if (isChoice && optionIds.length === 0) continue;
             prefill[a.nodeId] = { optionIds: isChoice ? optionIds : [], value: a.value ?? '' };
           }
-          setAnswers(prefill);
-          setResponseId(resp.id);
-          setEditingSubmitted(resp.status === 'submitted');
-          savedRef.current = JSON.stringify(prefill);
+          return prefill;
+        };
+
+        const resumeAtFrontier = (prefill: AnswersMap) => {
           // A DRAFT resumes at the frontier — the first unanswered step — so the
           // learner carries on where they stopped. An already-SUBMITTED response
           // has no frontier (every step is answered), and dropping the learner on
           // the last question to review the whole form is useless: editing starts
           // at the beginning.
-          if (def.builder_type === 'flow' && resp.status !== 'submitted') {
-            const { steps } = derivePath(def.schema_json as FlowSchema, prefill);
-            const idx = steps.findIndex(s => !isStepAnswered(s, prefill));
-            setStepIndex(Math.max(0, idx < 0 ? steps.length - 1 : idx));
-          }
+          if (def.builder_type !== 'flow') return;
+          const { steps } = derivePath(def.schema_json as FlowSchema, prefill);
+          const idx = steps.findIndex(s => !isStepAnswered(s, prefill));
+          setStepIndex(Math.max(0, idx < 0 ? steps.length - 1 : idx));
+        };
+
+        // The vault/coalescing identity of this visit: server row, queued
+        // offline creation's temp id, or null for a brand-new visit.
+        let effectiveId: number | string | null = null;
+
+        if (resp) {
+          // A queued offline EDIT of this row is newer than the (possibly
+          // stale-cached) server copy — its answers win, and saving again
+          // coalesces into the same queue item instead of stacking edits.
+          const queuedUpdate = await findQueuedResponseUpdate(resp.id);
+          const source = queuedUpdate
+            ? ((queuedUpdate.answers as SavedAnswer[] | undefined) ?? [])
+            : resp.answers_json;
+          const prefill = buildPrefill(source);
+          setAnswers(prefill);
+          setResponseId(resp.id);
+          effectiveId = resp.id;
+          setEditingSubmitted(resp.status === 'submitted');
+          savedRef.current = JSON.stringify(prefill);
+          if (resp.status !== 'submitted') resumeAtFrontier(prefill);
         } else {
-          savedRef.current = JSON.stringify({});
+          // A visit already captured offline for this subject+form: adopt its
+          // queue item — otherwise this session would enqueue a SECOND
+          // creation and sync would produce duplicate rows.
+          const queuedCreate = await findQueuedResponseCreate(
+            formKey,
+            isMother ? { mother_id: motherId } : { child_id: childId },
+          );
+          if (queuedCreate) {
+            const prefill = buildPrefill(
+              (queuedCreate.payload.answers as SavedAnswer[] | undefined) ?? [],
+            );
+            setAnswers(prefill);
+            setResponseId(queuedCreate.tempId);
+            effectiveId = queuedCreate.tempId;
+            savedRef.current = JSON.stringify(prefill);
+            resumeAtFrontier(prefill);
+          } else {
+            savedRef.current = JSON.stringify({});
+          }
+        }
+        if (cancelled) return;
+        // Crash/offline protection: unsaved answers mirrored to the vault
+        // (see effect below) win over whatever the server returned — they are
+        // by definition newer than the last successful save.
+        const wip = vaultLoad<AnswersMap>(
+          vaultKey(formKey, isMother ? `m${motherId}` : `c${childId}`, effectiveId ?? resumeId),
+        );
+        if (wip && Object.keys(wip).length > 0) {
+          setAnswers(prev => ({ ...prev, ...wip }));
+          showToast(t('restoredAnswers', { ns: 'offline' }), 'info');
         }
       })
       .catch(() => {
@@ -185,7 +251,21 @@ const AssessmentRunnerPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [motherId, childId, formKey, resumeId, validKey, isMother]);
+
+  // Mirror every answer change to the vault; cleared on save/queue/discard.
+  // Keyed by the live visit identity (server id / queued tmp-id) so edits
+  // after the first save keep one continuous vault slot.
+  const wipKey = vaultKey(formKey, isMother ? `m${motherId}` : `c${childId}`, responseId ?? resumeId);
+  useEffect(() => {
+    if (loading) return;
+    if (JSON.stringify(answers) === savedRef.current) {
+      vaultClear(wipKey);
+      return;
+    }
+    vaultSave(wipKey, answers);
+  }, [answers, loading, wipKey]);
 
   // ── Derived path (replayed from answers — no manual step stack) ────────────
   const schema = useMemo<FlowSchema | null>(
@@ -272,25 +352,45 @@ const AssessmentRunnerPage: React.FC = () => {
   };
 
   // ── Persistence ────────────────────────────────────────────────────────────
+  // Offline-resilient: when the network is gone the submission is captured in
+  // the IndexedDB queue (synced automatically later) instead of erroring out.
+  const subjectLabel =
+    `${t(`forms.${formKey}`, { ns: 'assessments', defaultValue: formKey })}` +
+    ` — ${child?.child_name ?? mother?.mother_name ?? ''}`;
+
   const persist = async (status: 'draft' | 'submitted') => {
     const payload = {
       assessment_date: pathAssessmentDate(derived.steps, answers),
       status,
       answers: buildAnswersPayload(derived.steps, answers),
     };
-    const saved = responseId
-      ? await updateResponse(responseId, payload)
-      : await createResponse(formKey, isMother ? { mother_id: motherId, ...payload } : { child_id: childId, ...payload });
-    setResponseId(saved.id);
+    const saved = await persistResponseResilient({
+      formKey,
+      responseId,
+      subject: isMother ? { mother_id: motherId } : { child_id: childId },
+      payload,
+      label: subjectLabel,
+    });
+    // Bind the visit's identity so later saves UPDATE/COALESCE — never a
+    // second creation (offline draft-then-submit must stay ONE row).
+    if (isQueuedResult(saved)) {
+      if (saved.tempId) setResponseId(saved.tempId);
+    } else {
+      setResponseId(saved.id);
+    }
     savedRef.current = JSON.stringify(answers);
+    vaultClear(wipKey);
     return saved;
   };
 
   const saveDraft = async (thenExit: boolean) => {
     setSaving(true);
     try {
-      await persist('draft');
-      showToast(t('runner.draftSaved'), 'success');
+      const saved = await persist('draft');
+      showToast(
+        isQueuedResult(saved) ? t('runner.savedOffline', { ns: 'offline' }) : t('runner.draftSaved'),
+        'success',
+      );
       if (thenExit) navigate(historyUrl);
     } catch (err) {
       showToast(apiErrorMessage(err) ?? t('runner.saveFailed'), 'error');
@@ -303,7 +403,14 @@ const AssessmentRunnerPage: React.FC = () => {
     setFinishing(true);
     try {
       const saved = await persist('submitted');
-      navigate(`/assessments/${saved.id}/plan`, { replace: true });
+      if (isQueuedResult(saved)) {
+        // No server id yet, so the plan page can't open — back to history with
+        // a clear "will sync automatically" message instead.
+        showToast(t('runner.submittedOffline', { ns: 'offline' }), 'success');
+        navigate(historyUrl, { replace: true });
+      } else {
+        navigate(`/assessments/${saved.id}/plan`, { replace: true });
+      }
     } catch (err) {
       showToast(apiErrorMessage(err) ?? t('runner.submitFailed'), 'error');
     } finally {
@@ -554,7 +661,7 @@ const AssessmentRunnerPage: React.FC = () => {
                               {t('runner.multiHint')}
                             </p>
                           )}
-                          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                          <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3">
                             {q.options.map(o => (
                               <OptionCard
                                 key={o.id}
@@ -636,6 +743,7 @@ const AssessmentRunnerPage: React.FC = () => {
               variant="ghost"
               disabled={saving}
               onClick={() => {
+                vaultClear(wipKey);
                 setExitOpen(false);
                 navigate(historyUrl);
               }}

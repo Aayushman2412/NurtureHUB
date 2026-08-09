@@ -17,6 +17,7 @@ from app.schemas import (
 )
 from app.dependencies import get_verified_user
 from app.flow import test_eligibility, test_lock_state, test_lock_state_precomputed
+from app.notify import create_notification
 from app.timeutils import to_utc
 
 router = APIRouter(prefix="/api", tags=["tutorials"])
@@ -99,11 +100,13 @@ def _mark_completed(db: Session, user: User, tutorial: Tutorial, progress: UserT
         return False
     progress.is_completed = True
     progress.completed_at = datetime.utcnow()
-    db.add(Notification(
-        user_id=user.id,
-        title="Tutorial Completed",
-        message=f"You have successfully completed the tutorial: '{tutorial.title}'.",
-    ))
+    create_notification(
+        db,
+        user.id,
+        "Tutorial Completed",
+        f"You have successfully completed the tutorial: '{tutorial.title}'.",
+        link="/tutorials",
+    )
     return True
 
 

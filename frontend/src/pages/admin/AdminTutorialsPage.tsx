@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import client from '../../api/client';
+import * as XLSX from 'xlsx';
 import {
   Plus,
   Trash2,
@@ -16,6 +17,11 @@ import {
   ToggleLeft,
   ToggleRight,
   FileText,
+  FileSpreadsheet,
+  Download,
+  Upload,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import { Button, Card, FieldLabel, Input, Modal, PageHeader, PageLoader, Select } from '../../components/ui';
 import { inputClasses } from '../../components/ui/Input';
@@ -75,6 +81,34 @@ const formatTime = (secs: number): string => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
+// ── Bulk sheet upload (fixed schema; parsed client-side like test questions) ──
+
+/** The FIXED header row — the backend contract. Shown to the admin verbatim. */
+const SHEET_HEADERS = [
+  'Phase', 'Title', 'Description', 'Module', 'Video Link',
+  'Start Time', 'End Time', 'Duration (min)', 'Quiz',
+] as const;
+
+/** i18n key (schema notes / required flags) for each fixed column. */
+const SHEET_COLUMN_KEYS = [
+  'phase', 'title', 'description', 'module', 'link', 'start', 'end', 'duration', 'quiz',
+] as const;
+const SHEET_REQUIRED = new Set(['phase', 'title', 'link']);
+
+/** Header cells are matched ignoring case/spaces/punctuation. */
+const normalizeHeader = (h: string) => h.toLowerCase().replace(/[^a-z]/g, '');
+
+interface BulkRowError {
+  row: number;
+  message: string;
+}
+
+interface BulkResult {
+  created: number;
+  updated: number;
+  errors: BulkRowError[];
+}
+
 const AdminTutorialsPage: React.FC = () => {
   const { t } = useTranslation('adminTutorials');
   const [stages, setStages] = useState<Stage[]>([]);
@@ -106,6 +140,12 @@ const AdminTutorialsPage: React.FC = () => {
   const [quizTutorial, setQuizTutorial] = useState<Tutorial | null>(null);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestionForm[]>([]);
   const [quizSaving, setQuizSaving] = useState(false);
+
+  // Bulk sheet upload state
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkResult, setBulkResult] = useState<BulkResult | null>(null);
+  const bulkFileRef = useRef<HTMLInputElement>(null);
 
   const getDistrict = () => localStorage.getItem('nh_admin_district') || 'jalna';
 
@@ -231,6 +271,78 @@ const AdminTutorialsPage: React.FC = () => {
     }
   };
 
+  // ── Bulk sheet upload ──────────────────────────────────────────────────────
+
+  const downloadTemplate = () => {
+    const ws = XLSX.utils.aoa_to_sheet([
+      [...SHEET_HEADERS],
+      ['1', 'Introduction to Breastfeeding', 'Why early initiation matters', 'Module 1.1',
+        'https://www.youtube.com/watch?v=aqz-KE-bpKQ', '0:10', '1:30', '5', 'yes'],
+      ['1', 'Correct Latching', '', '',
+        'https://youtu.be/aqz-KE-bpKQ', '90', '210', '4', 'yes'],
+      ['3', 'Measuring Length Correctly', 'Board placement and reading', 'Module 2.1',
+        'https://example.com/videos/length-measurement.mp4', '', '', '8', 'no'],
+    ]);
+    ws['!cols'] = SHEET_HEADERS.map(h => ({ wch: Math.max(h.length + 4, 16) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Tutorials');
+    XLSX.writeFile(wb, 'nurturehub_tutorials_template.xlsx');
+  };
+
+  const handleBulkFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setBulkResult(null);
+    const reader = new FileReader();
+    reader.onload = evt => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        // raw:false => every cell arrives as its DISPLAYED string ("1:30" stays
+        // "1:30" instead of Excel's internal time number); backend parses.
+        const json: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, { raw: false, defval: '' });
+        const rows = json
+          .map((r, i) => {
+            const cell = (want: string) => {
+              const key = Object.keys(r).find(h => normalizeHeader(h) === want);
+              return key ? String(r[key] ?? '').trim() : '';
+            };
+            return {
+              row: i + 2, // +2: sheet row numbers, header occupies row 1
+              phase: cell('phase'),
+              title: cell('title'),
+              description: cell('description'),
+              module: cell('module'),
+              link: cell('videolink'),
+              start: cell('starttime'),
+              end: cell('endtime'),
+              duration: cell('durationmin') || cell('duration'),
+              quiz: cell('quiz'),
+            };
+          })
+          .filter(r => r.phase || r.title || r.link); // ignore fully blank rows
+        if (rows.length === 0) {
+          setBulkResult({ created: 0, updated: 0, errors: [{ row: 0, message: t('bulk.empty') }] });
+          return;
+        }
+        setBulkBusy(true);
+        client
+          .post(`/api/admin/tutorials/bulk-upload?district=${getDistrict()}`, { rows })
+          .then(res => {
+            setBulkResult(res.data);
+            if (res.data.stages) setStages(res.data.stages);
+          })
+          .catch(() => setBulkResult({ created: 0, updated: 0, errors: [{ row: 0, message: t('bulk.failed') }] }))
+          .finally(() => setBulkBusy(false));
+      } catch {
+        setBulkResult({ created: 0, updated: 0, errors: [{ row: 0, message: t('bulk.parseError') }] });
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
   if (loading) return <PageLoader label={t('loading')} />;
 
   const iconBtn =
@@ -248,11 +360,25 @@ const AdminTutorialsPage: React.FC = () => {
         title={t('header.title')}
         description={t('header.description')}
         actions={
-          <Button iconLeft={<Layers className="size-4" />} onClick={() => setShowAddStage(true)}>
-            {t('header.addPhase')}
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              iconLeft={<FileSpreadsheet className="size-4" />}
+              onClick={() => {
+                setBulkResult(null);
+                setShowBulkUpload(true);
+              }}
+            >
+              {t('bulk.button')}
+            </Button>
+            <Button iconLeft={<Layers className="size-4" />} onClick={() => setShowAddStage(true)}>
+              {t('header.addPhase')}
+            </Button>
+          </>
         }
       />
+
+      <input ref={bulkFileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleBulkFile} />
 
       {/* Video preview */}
       {previewVideoId && (
@@ -643,6 +769,111 @@ const AdminTutorialsPage: React.FC = () => {
             <Trans t={t} i18nKey="addPhaseModal.note" components={{ strong: <strong className="text-ink-muted" /> }} />
           </p>
         </div>
+      </Modal>
+
+      {/* Bulk sheet upload modal */}
+      <Modal
+        open={showBulkUpload}
+        onClose={() => setShowBulkUpload(false)}
+        size="lg"
+        title={
+          <span className="flex items-center gap-2">
+            <FileSpreadsheet className="size-4" /> {t('bulk.modalTitle')}
+          </span>
+        }
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setShowBulkUpload(false)}>
+              {t('bulk.close')}
+            </Button>
+            <Button
+              variant="secondary"
+              iconLeft={<Download className="size-4" />}
+              onClick={downloadTemplate}
+            >
+              {t('bulk.downloadTemplate')}
+            </Button>
+            <Button
+              iconLeft={<Upload className="size-4" />}
+              loading={bulkBusy}
+              disabled={bulkBusy}
+              onClick={() => bulkFileRef.current?.click()}
+            >
+              {bulkBusy ? t('bulk.processing') : t('bulk.chooseFile')}
+            </Button>
+          </>
+        }
+      >
+        <p className="mt-0 text-[13px] text-ink-muted">{t('bulk.intro')}</p>
+
+        {/* Upload result */}
+        {bulkResult && (
+          <div
+            className={cn(
+              'mt-3 rounded-xl border p-3.5 text-sm',
+              bulkResult.errors.length === 0
+                ? 'border-success-500/30 bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-300'
+                : 'border-warning-500/30 bg-warning-50 text-ink dark:bg-warning-500/10',
+            )}
+          >
+            <span className="flex items-center gap-2 font-semibold">
+              {bulkResult.errors.length === 0 ? (
+                <CheckCircle2 className="size-4" />
+              ) : (
+                <AlertCircle className="size-4" />
+              )}
+              {t('bulk.resultSummary', { created: bulkResult.created, updated: bulkResult.updated })}
+            </span>
+            {bulkResult.errors.length > 0 && (
+              <div className="mt-2">
+                <span className="text-xs font-bold uppercase tracking-wide text-ink-muted">
+                  {t('bulk.errorsTitle', { n: bulkResult.errors.length })}
+                </span>
+                <ul className="mt-1 max-h-40 space-y-1 overflow-y-auto text-[13px] text-ink-muted">
+                  {bulkResult.errors.map((err, i) => (
+                    <li key={i}>
+                      {err.row > 0 ? t('bulk.rowError', { row: err.row, message: err.message }) : err.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Fixed schema, so the admin knows exactly what to prepare */}
+        <h4 className="mt-4 mb-2 text-sm font-bold text-ink">{t('bulk.schemaTitle')}</h4>
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full min-w-[560px] text-left text-[13px]">
+            <thead className="bg-surface-sunken text-xs uppercase tracking-wide text-ink-muted">
+              <tr>
+                <th className="px-3 py-2">{t('bulk.colColumn')}</th>
+                <th className="px-3 py-2">{t('bulk.colRequired')}</th>
+                <th className="px-3 py-2">{t('bulk.colNotes')}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {SHEET_COLUMN_KEYS.map((key, i) => (
+                <tr key={key}>
+                  <td className="whitespace-nowrap px-3 py-2 font-mono font-semibold text-ink">
+                    {SHEET_HEADERS[i]}
+                  </td>
+                  <td className="px-3 py-2">
+                    {SHEET_REQUIRED.has(key) ? (
+                      <span className="font-semibold text-coral-600 dark:text-coral-300">{t('bulk.required')}</span>
+                    ) : (
+                      <span className="text-ink-faint">{t('bulk.optional')}</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-ink-muted">{t(`bulk.schema.${key}`)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-3 text-[13px] text-ink-faint">
+          <Trans t={t} i18nKey="bulk.note" components={{ strong: <strong className="text-ink-muted" /> }} />
+        </p>
       </Modal>
 
       {/* Quiz editor modal */}

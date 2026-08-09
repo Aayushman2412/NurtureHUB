@@ -21,6 +21,7 @@ import enAdminLiveMonitor from './locales/en/adminLiveMonitor.json';
 import enValidation from './locales/en/validation.json';
 import enGrowth from './locales/en/growth.json';
 import enPipelines from './locales/en/pipelines.json';
+import enOffline from './locales/en/offline.json';
 import hiCommon from './locales/hi/common.json';
 import hiAuth from './locales/hi/auth.json';
 import hiApp from './locales/hi/app.json';
@@ -40,6 +41,7 @@ import hiAdminLiveMonitor from './locales/hi/adminLiveMonitor.json';
 import hiValidation from './locales/hi/validation.json';
 import hiGrowth from './locales/hi/growth.json';
 import hiPipelines from './locales/hi/pipelines.json';
+import hiOffline from './locales/hi/offline.json';
 
 /**
  * Languages the UI actually ships translations for. The switcher only offers
@@ -55,7 +57,7 @@ export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 export const NAMESPACES = [
   'common', 'auth', 'app', 'tutorials', 'dashboard', 'tests', 'learner', 'mother', 'assessments', 'landing',
   'admin', 'adminResults', 'adminTests', 'adminTutorials', 'adminFormBuilder', 'adminLiveMonitor', 'validation',
-  'growth', 'pipelines',
+  'growth', 'pipelines', 'offline',
 ] as const;
 
 const resources = {
@@ -64,12 +66,14 @@ const resources = {
     learner: enLearner, mother: enMother, assessments: enAssessments, landing: enLanding, admin: enAdmin, adminResults: enAdminResults,
     adminTests: enAdminTests, adminTutorials: enAdminTutorials, adminFormBuilder: enAdminFormBuilder,
     adminLiveMonitor: enAdminLiveMonitor, validation: enValidation, growth: enGrowth, pipelines: enPipelines,
+    offline: enOffline,
   },
   hi: {
     common: hiCommon, auth: hiAuth, app: hiApp, tutorials: hiTutorials, dashboard: hiDashboard, tests: hiTests,
     learner: hiLearner, mother: hiMother, assessments: hiAssessments, landing: hiLanding, admin: hiAdmin, adminResults: hiAdminResults,
     adminTests: hiAdminTests, adminTutorials: hiAdminTutorials, adminFormBuilder: hiAdminFormBuilder,
     adminLiveMonitor: hiAdminLiveMonitor, validation: hiValidation, growth: hiGrowth, pipelines: hiPipelines,
+    offline: hiOffline,
   },
 } as const;
 

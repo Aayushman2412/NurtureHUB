@@ -1,6 +1,7 @@
 {
   "layout": {
     "panel": "Admin Panel",
+    "openMenu": "Open menu",
     "toggleTheme": "Toggle theme mode",
     "selectDistrict": "Select District",
     "usersCount": "{{n}} users",

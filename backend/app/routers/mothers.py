@@ -43,9 +43,23 @@ def create_mother(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # Idempotent replay for the offline sync queue: same client_ref -> the
+    # already-created mother, never a duplicate registration.
+    if data.client_ref:
+        existing = (
+            db.query(models.Mother)
+            .filter(models.Mother.client_ref == data.client_ref)
+            .first()
+        )
+        if existing:
+            if existing.registered_by_user_id != current_user.id:
+                raise HTTPException(status_code=409, detail="client_ref already used")
+            return existing
+
     mother = models.Mother(
         mother_uid=f"MR-{uuid.uuid4().hex[:10].upper()}",
         registered_by_user_id=current_user.id,
+        client_ref=data.client_ref,
     )
     _apply(mother, data)
     db.add(mother)
@@ -148,7 +162,23 @@ def create_child(
     db: Session = Depends(get_db),
 ):
     mother = _get_owned(mother_id, current_user, db)
-    child = models.Child(child_uid=f"CR-{uuid.uuid4().hex[:10].upper()}", mother_id=mother.id)
+    # Idempotent replay for the offline sync queue (see create_mother).
+    if data.client_ref:
+        existing = (
+            db.query(models.Child)
+            .filter(models.Child.client_ref == data.client_ref)
+            .first()
+        )
+        if existing:
+            if existing.mother_id != mother.id:
+                raise HTTPException(status_code=409, detail="client_ref already used")
+            return existing
+
+    child = models.Child(
+        child_uid=f"CR-{uuid.uuid4().hex[:10].upper()}",
+        mother_id=mother.id,
+        client_ref=data.client_ref,
+    )
     _apply_child(child, data)
     db.add(child)
     db.flush()

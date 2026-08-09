@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import MainHeader from './MainHeader';
 import NotificationPanel from './NotificationPanel';
+import PushPromptBanner from './PushPromptBanner';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -16,6 +17,19 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // ?notifications=1 — set by the /notifications push deep-link — opens the
+  // panel, then drops the marker from the URL.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('notifications') === '1') {
+      setNotifOpen(true);
+      params.delete('notifications');
+      navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   const getHeaderTitle = () => {
     const path = location.pathname;
@@ -39,6 +53,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           onToggleNotifs={() => setNotifOpen(prev => !prev)}
           unreadNotifsCount={unreadCount}
         />
+
+        <PushPromptBanner />
 
         <main className="flex-1 animate-fade-in overflow-x-hidden p-5 sm:p-6">{children}</main>
       </div>

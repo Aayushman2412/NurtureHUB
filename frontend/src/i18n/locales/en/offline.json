@@ -1,0 +1,40 @@
+{
+  "badgeTitle": "Records waiting to sync",
+  "sheetTitle": "Waiting to sync",
+  "sheetHint": "Records saved on this device while offline. They upload automatically when you are back online.",
+  "online": "Online",
+  "offline": "Offline",
+  "syncNow": "Sync now",
+  "emptyTitle": "Nothing waiting",
+  "emptyDescription": "All records saved on this device have been uploaded.",
+  "failed": "Needs attention",
+  "retry": "Retry",
+  "discard": "Discard",
+  "discardConfirm": "Discard \"{{label}}\"? This record was never uploaded and will be lost permanently.",
+  "discardCascadeConfirm": "Discard \"{{label}}\"? {{n}} record(s) captured under it will be discarded too — none of them were ever uploaded and all will be lost permanently.",
+  "blockedBy": "Waiting on a failed record: {{label}}. Fix or discard it first.",
+  "mediaLost": "The photo is no longer on this device. Discard this item to send the record without it.",
+  "kind": {
+    "media": "Photo",
+    "mother": "Mother registration",
+    "child": "Child registration",
+    "response": "Assessment"
+  },
+  "runner": {
+    "savedOffline": "No internet — saved on this device. It will upload automatically.",
+    "submittedOffline": "No internet — the assessment is saved on this device and will submit automatically when you are back online."
+  },
+  "registrationQueued": "No internet — the registration is saved on this device and will complete automatically when you are back online.",
+  "restoredAnswers": "Restored unsaved answers from this device.",
+  "photoQueued": "No internet — the photo is saved on this device and will upload with the assessment.",
+  "pendingBadge": "Waiting to sync",
+  "pendingSyncHint": "Saved on this device — uploads when you are back online. Assessments unlock after it syncs.",
+  "syncedToast": "{{n}} offline record(s) uploaded",
+  "syncFailedToast": "{{n}} offline record(s) need attention — open the sync panel",
+  "authRequired": "Please log in again to upload the records saved on this device.",
+  "pushPrompt": "Get notified about your results, coaching actions and selections — even when the app is closed.",
+  "pushEnable": "Enable notifications",
+  "pushDismiss": "Not now",
+  "pushEnabled": "Notifications are on — you'll be notified on this device.",
+  "pushNotEnabled": "Notifications were not enabled. You can still see everything in the notifications tab."
+}

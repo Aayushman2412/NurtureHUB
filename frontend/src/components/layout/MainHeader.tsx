@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Menu, Sun, Moon, Bell } from 'lucide-react';
+import { Menu, Sun, Moon, Bell, CloudOff, CloudUpload } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../ui';
 import LanguageSwitcher from '../LanguageSwitcher';
+import PendingSyncSheet from './PendingSyncSheet';
+import { usePendingSync } from '../../offline/usePendingSync';
 
 interface MainHeaderProps {
   title: string;
@@ -23,9 +25,11 @@ const MainHeader: React.FC<MainHeaderProps> = ({
   onToggleNotifs,
   unreadNotifsCount,
 }) => {
-  const { t } = useTranslation(['app', 'common']);
+  const { t } = useTranslation(['app', 'common', 'offline']);
   const { darkMode, toggleDarkMode } = useTheme();
   const { user } = useAuth();
+  const { count: pendingCount, online } = usePendingSync();
+  const [syncSheetOpen, setSyncSheetOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-(--z-dropdown) flex items-center justify-between gap-2 border-b border-border bg-surface/85 px-4 py-3 backdrop-blur-md sm:gap-4 sm:px-5 print:hidden">
@@ -41,6 +45,25 @@ const MainHeader: React.FC<MainHeaderProps> = ({
 
       {/* Right: actions + avatar — never shrinks, they are all tap targets. */}
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        {/* Offline / pending-sync indicator: only visible when it has news. */}
+        {(pendingCount > 0 || !online) && (
+          <button
+            onClick={() => setSyncSheetOpen(true)}
+            className={`${iconBtn} relative`}
+            title={t('offline:badgeTitle')}
+          >
+            {online ? (
+              <CloudUpload className="size-5 text-amber-600" />
+            ) : (
+              <CloudOff className="size-5 text-amber-600" />
+            )}
+            {pendingCount > 0 && (
+              <span className="absolute right-0.5 top-0.5 flex size-4.5 items-center justify-center rounded-full bg-amber-500 text-[11px] font-bold text-white ring-2 ring-surface">
+                {pendingCount > 9 ? '9+' : pendingCount}
+              </span>
+            )}
+          </button>
+        )}
         <LanguageSwitcher variant="compact" />
 
         <button
@@ -68,6 +91,8 @@ const MainHeader: React.FC<MainHeaderProps> = ({
           />
         )}
       </div>
+
+      <PendingSyncSheet open={syncSheetOpen} onClose={() => setSyncSheetOpen(false)} />
     </header>
   );
 };

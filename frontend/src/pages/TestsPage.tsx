@@ -144,7 +144,7 @@ const TestsPage: React.FC = () => {
                     <h4 className="mb-2 font-display text-lg font-bold leading-tight text-ink">{test.title}</h4>
                     <p className="mb-5 text-[13px] leading-snug text-ink-muted">{test.description}</p>
 
-                    <div className="mb-5 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-border pt-4 text-[13px]">
+                    <div className="mb-5 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border pt-4 text-[13px] sm:gap-x-6">
                       <InfoItem icon={<HelpCircle className="size-4" />}>
                         {t('list.questionsCount', { total: test.total_questions })}
                       </InfoItem>
@@ -225,6 +225,39 @@ const TestsPage: React.FC = () => {
             description={t('list.historyEmptyBody')}
           />
         ) : (
+          <>
+          {/* Mobile: attempt cards (the 7-column table below is hidden < md) */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {attempts.map(att => (
+              <button
+                key={att.id}
+                onClick={() => navigate(`/results/${att.id}`)}
+                className="rounded-xl border border-border bg-surface p-4 text-left transition-colors hover:border-border-strong cursor-pointer"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="min-w-0 flex-1 truncate font-display text-sm font-bold text-ink">
+                    {getTestTitle(att.test_id)}
+                  </span>
+                  <Badge variant={att.is_passed ? 'success' : 'error'} size="sm">
+                    {att.is_passed ? t('list.pass') : t('list.fail')}
+                  </Badge>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
+                  <span className={`font-bold ${att.is_passed ? 'text-success-600' : 'text-error-600'}`}>
+                    {att.score.toFixed(1)}%
+                  </span>
+                  <span>{t('list.attemptNumber', { n: att.attempt_number })}</span>
+                  <span>{new Date(att.submitted_at).toLocaleDateString('en-GB')}</span>
+                  <span className="ml-auto inline-flex items-center gap-1 font-semibold text-primary-ink">
+                    <Eye className="size-3.5" />
+                    {t('list.review')}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="hidden md:block">
           <Table>
             <THead>
               <Tr>
@@ -274,6 +307,8 @@ const TestsPage: React.FC = () => {
               ))}
             </TBody>
           </Table>
+          </div>
+          </>
         )}
       </div>
     </div>

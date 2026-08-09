@@ -17,3 +17,7 @@ openpyxl>=3.1.0
 # Data-analytics pipelines (admin "Database" section — backend/pipelines/)
 pandas>=2.2.0
 numpy>=1.26.0
+# Web push notifications (PWA)
+pywebpush>=2.0.0
+# Cloudflare R2 media storage (S3-compatible API) - app/storage.py
+boto3>=1.34.0

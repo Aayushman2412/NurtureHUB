@@ -328,7 +328,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
           const ty = nearTop ? '14px' : 'calc(-100% - 12px)';
           return (
           <div
-            className="pointer-events-none absolute z-10 w-56 rounded-lg border border-border
+            className="pointer-events-none absolute z-10 w-56 max-w-[calc(100vw-3rem)] rounded-lg border border-border
                        bg-surface-raised p-3 text-xs shadow-(--shadow-hover)"
             style={{
               left: `${(hover.cx / VIEW_W) * 100}%`,

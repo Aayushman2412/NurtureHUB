@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
+import OfflineSyncManager from './offline/OfflineSyncManager';
 
 // Pages
 
@@ -141,6 +142,9 @@ const AppRoutes: React.FC = () => {
 
       {/* Main Core Platform Pages (Require full completion) */}
       <Route path="/dashboard" element={<CompleteRoute><DashboardPage /></CompleteRoute>} />
+      {/* Push notifications deep-link here (digest / link-less payloads):
+          land on the dashboard with the notification panel opened. */}
+      <Route path="/notifications" element={<Navigate to="/dashboard?notifications=1" replace />} />
       <Route path="/tutorials" element={<CompleteRoute><TutorialsPage /></CompleteRoute>} />
       <Route path="/tutorials/:id" element={<CompleteRoute><TutorialPlayerPage /></CompleteRoute>} />
       <Route path="/tests" element={<CompleteRoute><TestsPage /></CompleteRoute>} />
@@ -203,6 +207,7 @@ function App() {
       <ThemeProvider>
         <ToastProvider>
           <AuthProvider>
+            <OfflineSyncManager />
             <AppRoutes />
           </AuthProvider>
         </ToastProvider>

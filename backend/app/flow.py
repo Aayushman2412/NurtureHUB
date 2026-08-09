@@ -16,6 +16,7 @@ from typing import Optional, Set, Tuple
 
 from sqlalchemy.orm import Session
 
+from app.notify import create_notification
 from app.models import (
     Notification, Stage, Test, TestAttempt, Tutorial, User, UserTutorialProgress,
 )
@@ -147,11 +148,13 @@ def ensure_awaiting_results_notification(db: Session, user: User) -> None:
     ).first()
     if exists:
         return
-    db.add(Notification(
-        user_id=user.id,
-        title=AWAITING_RESULTS_TITLE,
-        message=(
+    create_notification(
+        db,
+        user.id,
+        AWAITING_RESULTS_TITLE,
+        (
             "Congratulations! You have completed all tutorials and tests. "
             "Please wait for your results — you will be notified once they are announced."
         ),
-    ))
+        link="/dashboard",
+    )

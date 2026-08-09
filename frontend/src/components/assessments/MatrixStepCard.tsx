@@ -109,7 +109,9 @@ const MatrixStepCard: React.FC<MatrixStepCardProps> = ({ node, rows, value, onCh
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[32rem] border-collapse text-sm">
+      {/* Below md the row-label column sticks so food names stay visible while
+          the serving/quantity columns scroll horizontally on a phone. */}
+      <table className="w-full min-w-[32rem] border-collapse text-sm [&_td:first-child]:max-md:sticky [&_td:first-child]:max-md:left-0 [&_td:first-child]:max-md:z-[1] [&_td:first-child]:max-md:bg-surface [&_th:first-child]:max-md:sticky [&_th:first-child]:max-md:left-0 [&_th:first-child]:max-md:z-[1]">
         <thead>
           <tr>
             <th className="border-b border-border bg-surface-sunken px-3 py-2.5 text-left" />

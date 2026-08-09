@@ -1,6 +1,7 @@
 {
   "layout": {
     "panel": "एडमिन पैनल",
+    "openMenu": "मेनू खोलें",
     "toggleTheme": "थीम मोड टॉगल करें",
     "selectDistrict": "ज़िला चुनें",
     "usersCount": "{{n}} उपयोगकर्ता",

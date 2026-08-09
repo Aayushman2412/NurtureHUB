@@ -1,5 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import client from '../api/client';
+import { clearOfflineCaches } from '../pwa';
+import { detachPushSubscription, resyncPushSubscription } from '../pushClient';
 
 export interface User {
   id: number;
@@ -78,6 +80,33 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/** JWT `sub` (the user's email), or null when undecodable. */
+const emailFromToken = (token: string | null): string | null => {
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]!.replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof payload.sub === 'string' ? payload.sub : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Shared-device hygiene: when a DIFFERENT account logs in, the previous
+ * user's cached API data must go (an in-flight request can even repopulate
+ * the cache after logout's clear — this closes that race). Same-user
+ * re-logins keep their offline cache warm.
+ */
+const clearCachesOnIdentityChange = async (email: string | null): Promise<void> => {
+  if (!email) return;
+  const previous = localStorage.getItem('nh_last_user_email');
+  if (previous && previous !== email) {
+    await clearOfflineCaches();
+    localStorage.removeItem('nh_user_cache');
+  }
+  localStorage.setItem('nh_last_user_email', email);
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -97,9 +126,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(response.data);
       setIsVerified(response.data.is_verified);
       setIsProfileComplete(!!response.data.role); // Role being set indicates registration completes
+      // Snapshot for offline app starts (below) — keyed to this account.
+      try {
+        localStorage.setItem('nh_user_cache', JSON.stringify(response.data));
+      } catch { /* quota — snapshot is best-effort */ }
     } catch (error) {
-      console.error('Failed to fetch user:', error);
-      logout();
+      const hasResponse = (error as { response?: unknown }).response !== undefined;
+      if (hasResponse) {
+        // The server rejected the session — a real logout.
+        console.error('Failed to fetch user:', error);
+        logout();
+      } else {
+        // NETWORK failure (offline app start, backend down): logging the user
+        // out here would lock field workers out of the offline app and wipe
+        // their caches. Keep the session; hydrate from the last snapshot.
+        const raw = localStorage.getItem('nh_user_cache');
+        try {
+          const cached = raw ? (JSON.parse(raw) as User) : null;
+          if (cached && cached.email === emailFromToken(token)) {
+            setUser(cached);
+            setIsVerified(cached.is_verified);
+            setIsProfileComplete(!!cached.role);
+          }
+        } catch { /* corrupt snapshot — stay logged out visually until online */ }
+      }
     } finally {
       setLoading(false);
     }
@@ -109,16 +159,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshUser();
   }, []);
 
+  // Keep this device's push endpoint attached to whoever is logged in (a
+  // shared phone re-homes the subscription to the new account on login).
+  useEffect(() => {
+    if (user) void resyncPushSubscription();
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const login = async (email: string, password: string) => {
     const response = await client.post('/api/auth/login', { email, password });
     const { access_token, is_verified, is_profile_complete } = response.data;
-    
+
     localStorage.setItem('nh_token', access_token);
     localStorage.setItem('nh_user_email', email);
-    
+    await clearCachesOnIdentityChange(emailFromToken(access_token) ?? email);
+
     setIsVerified(is_verified);
     setIsProfileComplete(is_profile_complete);
-    
+
     await refreshUser();
     return response.data;
   };
@@ -133,10 +190,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     localStorage.setItem('nh_token', access_token);
     localStorage.setItem('nh_user_email', email);
-    
+    await clearCachesOnIdentityChange(emailFromToken(access_token) ?? email);
+
     setIsVerified(is_verified);
     setIsProfileComplete(is_profile_complete);
-    
+
     await refreshUser();
     return response.data;
   };
@@ -144,11 +202,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const verifyOtp = async (email: string, code: string) => {
     const response = await client.post('/api/auth/verify-otp', { email, code });
     const { access_token, is_verified, is_profile_complete } = response.data;
-    
+
     localStorage.setItem('nh_token', access_token);
+    await clearCachesOnIdentityChange(emailFromToken(access_token) ?? email);
     setIsVerified(is_verified);
     setIsProfileComplete(is_profile_complete);
-    
+
     await refreshUser();
     return response.data;
   };
@@ -166,18 +225,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const googleLogin = async (idToken: string) => {
     const response = await client.post('/api/auth/google', { id_token: idToken });
     const { access_token, is_verified, is_profile_complete } = response.data;
-    
+
     localStorage.setItem('nh_token', access_token);
+    await clearCachesOnIdentityChange(emailFromToken(access_token));
     setIsVerified(is_verified);
     setIsProfileComplete(is_profile_complete);
-    
+
     await refreshUser();
     return response.data;
   };
 
   const logout = () => {
+    // Detach this device's push endpoint from the account (token snapshot —
+    // the async call outlives the localStorage clear below).
+    void detachPushSubscription(localStorage.getItem('nh_token'));
     localStorage.removeItem('nh_token');
     localStorage.removeItem('nh_user_email');
+    localStorage.removeItem('nh_user_cache');
+    // Cached API data must not survive into the next user's session. (The
+    // offline queue stays — it is owner-scoped and only ever syncs under the
+    // capturing account's own token.)
+    void clearOfflineCaches();
     setUser(null);
     setIsVerified(false);
     setIsProfileComplete(false);

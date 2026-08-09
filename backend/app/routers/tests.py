@@ -11,6 +11,7 @@ from app.flow import (
     ensure_awaiting_results_notification, test_lock_state, test_lock_state_precomputed,
 )
 from app.models import User
+from app.notify import create_notification
 from app.timeutils import to_utc
 
 router = APIRouter(prefix="/api/tests", tags=["tests"])
@@ -266,12 +267,13 @@ def submit_test_attempt(
     
     # Send notification
     status_str = "Passed" if is_passed else "Failed"
-    notif = Notification(
-        user_id=current_user.id,
-        title=f"Test Attempt Completed: {status_str}",
-        message=f"You completed the test '{test.title}' with a score of {pct_score:.1f}% ({correct_count}/{len(questions)} correct)."
+    create_notification(
+        db,
+        current_user.id,
+        f"Test Attempt Completed: {status_str}",
+        f"You completed the test '{test.title}' with a score of {pct_score:.1f}% ({correct_count}/{len(questions)} correct).",
+        link=f"/results/{attempt.id}",
     )
-    db.add(notif)
 
     # If this was the last outstanding item, tell the user to wait for results.
     ensure_awaiting_results_notification(db, current_user)

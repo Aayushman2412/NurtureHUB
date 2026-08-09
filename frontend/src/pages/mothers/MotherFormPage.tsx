@@ -15,7 +15,8 @@ import {
 } from '../../lib/motherFields';
 import { validateMother, validateMotherStep, MR_STEP_FIELDS, type MotherFormValues } from '../../lib/motherSchema';
 import type { FieldErrors } from '../../lib/validation';
-import { createMother, type MotherPayload } from '../../api/mothers';
+import { type MotherPayload } from '../../api/mothers';
+import { createMotherResilient, isQueuedResult } from '../../offline/submit';
 
 const STEP_KEYS = ['identity', 'location', 'knowledge'] as const;
 
@@ -210,8 +211,14 @@ const MotherFormPage: React.FC = () => {
     setLoading(true);
     const toastId = showToast(t('form.toastRegistering'), 'loading');
     try {
-      const created = await createMother(buildPayload());
-      updateToast(toastId, t('form.toastSuccess', { name: created.mother_name, uid: created.mother_uid }), 'success');
+      const payload = buildPayload();
+      const created = await createMotherResilient(payload, `${payload.mother_name ?? ''}`.trim());
+      if (isQueuedResult(created)) {
+        // Captured offline — it will register itself when connectivity returns.
+        updateToast(toastId, t('registrationQueued', { ns: 'offline' }), 'success');
+      } else {
+        updateToast(toastId, t('form.toastSuccess', { name: created.mother_name, uid: created.mother_uid }), 'success');
+      }
       navigate('/mothers');
     } catch {
       updateToast(toastId, t('form.toastFail'), 'error');
@@ -226,7 +233,7 @@ const MotherFormPage: React.FC = () => {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <PageHeader title={t('form.title')} description={t('form.description')} />
-      <Card className="p-8">
+      <Card className="p-5 sm:p-8">
         <form onSubmit={handleSubmit} className="flex flex-col gap-7" noValidate>
           <Stepper steps={steps} current={step} />
 

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, BoxSelect, ClipboardPaste, Copy, Download, Eye, Info, Layers, Plus, Printer, Redo2, Save, Table, Trash2, Undo2, X } from 'lucide-react';
+import { ArrowLeft, BoxSelect, ClipboardPaste, Copy, Download, Eye, Info, Layers, Monitor, Plus, Printer, Redo2, Save, Table, Trash2, Undo2, X } from 'lucide-react';
 import { adminCreateFormVersion, adminExportForm, adminGetForm, adminGetFormVersion } from '../../../api/forms';
 import { diffFormSchemas } from '../../../lib/formDiff';
 import SaveVersionDialog, { type SaveVersionPayload } from './SaveVersionDialog';
@@ -749,7 +749,13 @@ const FlowBuilderPage: React.FC = () => {
   }
 
   return (
-    <div className="-m-6 flex h-screen flex-col overflow-hidden bg-background lg:-m-8">
+    <div className="-m-4 flex h-dvh flex-col overflow-hidden bg-background sm:-m-6 lg:-m-8">
+      {/* The canvas builder is a desktop authoring tool — below lg, say so
+          instead of rendering an unusable 360px editor panel. */}
+      <div className="flex items-start gap-2 border-b border-amber-500/40 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-500 lg:hidden">
+        <Monitor className="mt-0.5 size-3.5 shrink-0" />
+        {t('flow.desktopOnly')}
+      </div>
       {/* Toolbar */}
       <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-surface px-4 py-2.5">
         <button

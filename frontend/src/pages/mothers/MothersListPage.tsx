@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Users } from 'lucide-react';
+import { CloudUpload, Plus, Users } from 'lucide-react';
 import { Badge, Button, Card, EmptyState, PageHeader, PageLoader, Table, TBody, Td, Th, THead, Tr } from '../../components/ui';
 import { useToast } from '../../context/ToastContext';
 import { listMothers, type MotherListItem } from '../../api/mothers';
+import { usePendingSync } from '../../offline/usePendingSync';
+import { SYNC_DONE_EVENT } from '../../offline/sync';
 
 const MothersListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -12,12 +14,22 @@ const MothersListPage: React.FC = () => {
   const { showToast } = useToast();
   const [mothers, setMothers] = useState<MotherListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  // Registrations captured offline appear as "waiting to sync" cards until the
+  // queue drains — otherwise a just-registered mother would silently vanish.
+  const { items: pendingItems } = usePendingSync();
+  const pendingMothers = pendingItems.filter(i => i.kind === 'mother');
 
   useEffect(() => {
-    listMothers()
-      .then(setMothers)
-      .catch(() => showToast(t('list.loadFailed'), 'error'))
-      .finally(() => setLoading(false));
+    const load = () =>
+      listMothers()
+        .then(setMothers)
+        .catch(() => showToast(t('list.loadFailed'), 'error'))
+        .finally(() => setLoading(false));
+    load();
+    // Re-fetch when a sync run finishes so freshly synced mothers appear.
+    const onSync = () => void listMothers().then(setMothers).catch(() => {});
+    window.addEventListener(SYNC_DONE_EVENT, onSync);
+    return () => window.removeEventListener(SYNC_DONE_EVENT, onSync);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -28,6 +40,23 @@ const MothersListPage: React.FC = () => {
         description={t('list.description')}
         actions={<Button onClick={() => navigate('/mothers/new')}><Plus className="size-4" /> {t('list.register')}</Button>}
       />
+
+      {pendingMothers.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {pendingMothers.map(item => (
+            <Card key={item.id} className="flex items-center gap-3 border-dashed p-4">
+              <CloudUpload className="size-5 shrink-0 text-amber-600" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-display font-bold text-ink">
+                  {item.label || t('list.pendingUnnamed', { defaultValue: 'New registration' })}
+                </div>
+                <div className="text-xs text-ink-muted">{t('pendingSyncHint', { ns: 'offline' })}</div>
+              </div>
+              <Badge variant="warning">{t('pendingBadge', { ns: 'offline' })}</Badge>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <PageLoader label={t('list.loading')} className="min-h-40" />

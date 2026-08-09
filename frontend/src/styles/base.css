@@ -94,3 +94,13 @@ table td.sticky {
   animation-timing-function: linear;
   animation-fill-mode: forwards;
 }
+
+/* Sonner toast stack: at phone widths (<600px) sonner 2.x applies width:100%
+   while keeping its 16px left offset, pushing the stack — and every toast in
+   it — 16px past the right edge of the screen. Cap it to the viewport. */
+[data-sonner-toaster] {
+  max-width: calc(100vw - 32px);
+}
+[data-sonner-toast] {
+  max-width: 100%;
+}

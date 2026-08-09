@@ -247,7 +247,8 @@ class MotherBase(BaseModel):
 
 
 class MotherCreate(MotherBase):
-    pass
+    # Client idempotency key for offline-queue replays (see routers/mothers.py).
+    client_ref: Optional[str] = Field(default=None, max_length=64)
 
 
 class MotherUpdate(MotherBase):
@@ -354,7 +355,8 @@ class ChildBase(BaseModel):
 
 
 class ChildCreate(ChildBase):
-    pass
+    # Client idempotency key for offline-queue replays (see routers/mothers.py).
+    client_ref: Optional[str] = Field(default=None, max_length=64)
 
 
 class ChildUpdate(ChildBase):
@@ -811,6 +813,7 @@ class NotificationOut(BaseModel):
     id: int
     title: str
     message: str
+    link: Optional[str] = None
     is_read: bool
     created_at: datetime
 

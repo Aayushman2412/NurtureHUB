@@ -331,6 +331,9 @@ class Notification(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String, nullable=False)
     message = Column(Text, nullable=False)
+    # In-app route this notification points at (e.g. "/assessments/12/plan");
+    # used by the panel for tap-through and by web push for deep-linking.
+    link = Column(String, nullable=True)
     is_read = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -578,6 +581,9 @@ class Mother(Base):
     id = Column(Integer, primary_key=True, index=True)
     mother_uid = Column(String, unique=True, index=True, nullable=False)  # human-facing ID
     registered_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    # Client idempotency key: offline-queue replays of the same registration
+    # return the existing row instead of creating a duplicate.
+    client_ref = Column(String, unique=True, index=True, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -683,6 +689,8 @@ class Child(Base):
     id = Column(Integer, primary_key=True, index=True)
     child_uid = Column(String, unique=True, index=True, nullable=False)  # human-facing ID
     mother_id = Column(Integer, ForeignKey("mothers.id", ondelete="CASCADE"), nullable=False)
+    # Client idempotency key for offline-queue replays (see Mother.client_ref).
+    client_ref = Column(String, unique=True, index=True, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -859,6 +867,8 @@ class FormResponse(Base):
     answers_json = Column(JSON, nullable=False, default=list)
     summary_json = Column(JSON, nullable=False, default=dict)  # {green, red, neutral, answered, total}
     actions_json = Column(JSON, nullable=False, default=list)  # triggered coaching actions
+    # Client idempotency key for offline-queue replays (see Mother.client_ref).
+    client_ref = Column(String, unique=True, index=True, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -870,6 +880,29 @@ class FormResponse(Base):
         Index("ix_form_responses_child_form", "child_id", "form_key"),
         Index("ix_form_responses_mother_form", "mother_id", "form_key"),
     )
+
+
+class PushSubscription(Base):
+    """One browser/device push endpoint for a user (web push / PWA).
+
+    A user may have several (phone + tablet). Subscriptions outlive the JWT —
+    they are keyed to the user and pruned when the push service reports them
+    gone (404/410) or on explicit unsubscribe.
+    """
+    __tablename__ = "push_subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE", name="push_subscriptions_user_id_fkey"),
+        nullable=False,
+        index=True,
+    )
+    endpoint = Column(Text, nullable=False, unique=True)
+    p256dh = Column(String, nullable=False)
+    auth = Column(String, nullable=False)
+    user_agent = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 class PipelineRun(Base):

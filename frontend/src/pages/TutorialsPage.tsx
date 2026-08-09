@@ -110,7 +110,7 @@ const TutorialsPage: React.FC = () => {
           {visibleStages.map(({ stage, filtered }) => (
             <div key={stage.id} className="flex flex-col gap-5">
               {/* Stage header */}
-              <div className="flex items-start justify-between gap-4 border-b border-border pb-3">
+              <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 border-b border-border pb-3">
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-display text-xl font-extrabold text-ink">{stage.title}</h3>

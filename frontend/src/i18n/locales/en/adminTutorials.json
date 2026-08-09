@@ -85,5 +85,38 @@
     "correctAnswer": "Correct Answer",
     "addQuestion": "Add Question",
     "maxSuffix": "(max 5)"
+  },
+  "bulk": {
+    "button": "Upload Sheet",
+    "modalTitle": "Bulk Upload Tutorials from Excel",
+    "intro": "Upload one .xlsx sheet listing all your videos. A row whose Phase + Title matches an existing tutorial UPDATES it; a new title is ADDED at the end of that phase. Nothing is ever deleted by an upload.",
+    "downloadTemplate": "Download Template",
+    "chooseFile": "Choose Excel File",
+    "processing": "Uploading…",
+    "close": "Close",
+    "schemaTitle": "Fixed sheet format — header row 1 must use these exact columns",
+    "colColumn": "Column",
+    "colRequired": "Required",
+    "colNotes": "What goes in it",
+    "required": "Yes",
+    "optional": "—",
+    "schema": {
+      "phase": "Phase number exactly as shown on this page (e.g. 1 or 3). Must be a video phase, not a test phase.",
+      "title": "Tutorial title. Also the match key — a row with an existing title in that phase updates it.",
+      "description": "Short description shown under the title. Optional.",
+      "module": "Label like \"Module 1.2\". Auto-numbered when left empty.",
+      "link": "A YouTube link (watch / youtu.be / shorts / embed) OR a direct http(s) video file URL (.mp4/.webm). Detected automatically.",
+      "start": "Clip start — YouTube links only. Seconds or m:ss (e.g. 90 or 1:30). Empty = from the beginning.",
+      "end": "Clip end — must be after Start Time. Leave both empty to play the full video.",
+      "duration": "Minutes badge shown on the tutorial card. Whole number; default 5.",
+      "quiz": "yes / no — whether the post-tutorial quiz popup shows. Default yes."
+    },
+    "note": "Rows with problems are skipped and reported below — the valid rows still go through. Quiz questions themselves are managed per tutorial with the <strong>?</strong> button after upload.",
+    "resultSummary": "{{created}} added • {{updated}} updated",
+    "errorsTitle": "{{n}} row(s) skipped",
+    "rowError": "Row {{row}}: {{message}}",
+    "empty": "The sheet has no data rows.",
+    "parseError": "Could not read that file — is it a valid .xlsx sheet?",
+    "failed": "Upload failed — check your connection and try again."
   }
 }

@@ -3,9 +3,10 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, FileText, Video, ClipboardList, LogOut, Shield, MapPin, ChevronDown, Building2, Sun, Moon,
-  MonitorPlay, GraduationCap, Radio, Activity, Table2, FileSpreadsheet,
+  MonitorPlay, GraduationCap, Radio, Activity, Table2, FileSpreadsheet, Menu,
 } from 'lucide-react';
 import client from '../../api/client';
+import { clearOfflineCaches } from '../../pwa';
 import { useTheme } from '../../context/ThemeContext';
 import { Avatar, Dropdown } from '../ui';
 import { cn } from '../../utils/cn';
@@ -45,6 +46,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const { t } = useTranslation('admin');
   const { darkMode, toggleDarkMode } = useTheme();
 
+  // Below lg the sidebar is a slide-in drawer (same pattern as the learner
+  // Sidebar); on desktop it is pinned open and this state is ignored.
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [districts, setDistricts] = useState<ProgramDistrict[]>([]);
   const [selectedSlug, setSelectedSlug] = useState<string>(localStorage.getItem('nh_admin_district') || '');
 
@@ -89,6 +93,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     localStorage.removeItem('nh_admin_token');
     localStorage.removeItem('nh_admin_name');
     localStorage.removeItem('nh_admin_district');
+    void clearOfflineCaches();
     navigate('/login');
   };
 
@@ -97,8 +102,24 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Sidebar — same coral identity as the member app */}
-      <aside className="fixed inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-surface">
+      {/* Mobile overlay */}
+      <div
+        onClick={() => setSidebarOpen(false)}
+        className={cn(
+          'fixed inset-0 z-(--z-sidebar) bg-cream-950/40 backdrop-blur-xs transition-opacity lg:hidden print:hidden',
+          sidebarOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
+        )}
+        aria-hidden
+      />
+
+      {/* Sidebar — same coral identity as the member app; drawer below lg */}
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-(--z-sidebar) flex w-64 flex-col border-r border-border bg-surface',
+          'transition-transform duration-300 lg:translate-x-0 print:hidden',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
+      >
         {/* Header */}
         <div className="flex items-center gap-3 border-b border-border px-5 py-5">
           <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-coral-400 to-coral-600 text-white">
@@ -156,6 +177,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               key={item.key}
               to={item.to}
               end={item.end}
+              onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold transition-colors',
@@ -178,6 +200,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               key={item.key}
               to={item.to}
               end={item.end}
+              onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold transition-colors',
@@ -210,8 +233,33 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         </div>
       </aside>
 
-      <main className="min-h-screen pl-64">
-        <div className="p-6 lg:p-8">{children}</div>
+      <main className="min-h-screen lg:pl-64">
+        {/* Mobile top bar: hamburger + brand (the sidebar is a drawer here) */}
+        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-surface px-4 py-3 lg:hidden print:hidden">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            aria-label={t('layout.openMenu')}
+            className="flex size-10 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer"
+          >
+            <Menu className="size-5" />
+          </button>
+          <span className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-coral-400 to-coral-600 text-white">
+            <Shield className="size-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <span className="block truncate font-display text-sm font-extrabold text-ink">
+              NurtureHUB <span className="text-primary-ink">{t('layout.panel')}</span>
+            </span>
+          </div>
+          <button
+            onClick={toggleDarkMode}
+            title={t('layout.toggleTheme')}
+            className="flex size-10 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer"
+          >
+            {darkMode ? <Sun className="size-4.5" /> : <Moon className="size-4.5" />}
+          </button>
+        </header>
+        <div className="p-4 sm:p-6 lg:p-8">{children}</div>
       </main>
     </div>
   );

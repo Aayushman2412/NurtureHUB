@@ -254,7 +254,7 @@ const ProfilePage: React.FC = () => {
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
       {/* Header */}
-      <Card className="flex flex-wrap items-center gap-6 bg-gradient-to-br from-surface to-surface-sunken p-8">
+      <Card className="flex flex-wrap items-center gap-6 bg-gradient-to-br from-surface to-surface-sunken p-5 sm:p-8">
         <Avatar name={user?.full_name || 'U'} size="xl" className="ring-4 ring-coral-100 dark:ring-coral-500/20" />
         <div className="min-w-0 flex-1">
           <h2 className="mb-1 font-display text-2xl font-extrabold text-ink">
@@ -290,7 +290,7 @@ const ProfilePage: React.FC = () => {
           />
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8">
+        <form onSubmit={handleSubmit} className="p-5 sm:p-8">
           {activeTab === 'personal' ? (
             <PersonalInfoTab {...personal} errors={errors} onChange={onPersonal} />
           ) : (
@@ -313,7 +313,7 @@ const ProfilePage: React.FC = () => {
           )}
 
           <div className="mt-8 flex justify-end border-t border-border pt-5">
-            <Button type="submit" size="lg" loading={loading}>
+            <Button type="submit" size="lg" loading={loading} className="w-full sm:w-auto">
               {loading ? t('profile.saving') : t('profile.saveChanges')}
             </Button>
           </div>

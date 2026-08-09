@@ -66,6 +66,24 @@ class Settings(BaseSettings):
     # hung processes.
     PIPELINE_RUN_TIMEOUT_MINUTES: int = Field(default=90, validation_alias="PIPELINE_RUN_TIMEOUT_MINUTES")
 
+    # Cloudflare R2 media storage/CDN. When ALL five are set, new media
+    # uploads (learner photos, form-builder assets) are stored in the R2
+    # bucket and served from R2_PUBLIC_BASE_URL (the bucket's r2.dev public
+    # URL or a custom domain proxied by Cloudflare). Empty = local disk under
+    # backend/uploads/ as before. See app/storage.py.
+    R2_ACCOUNT_ID: str = Field(default="", validation_alias="R2_ACCOUNT_ID")
+    R2_ACCESS_KEY_ID: str = Field(default="", validation_alias="R2_ACCESS_KEY_ID")
+    R2_SECRET_ACCESS_KEY: str = Field(default="", validation_alias="R2_SECRET_ACCESS_KEY")
+    R2_BUCKET: str = Field(default="", validation_alias="R2_BUCKET")
+    R2_PUBLIC_BASE_URL: str = Field(default="", validation_alias="R2_PUBLIC_BASE_URL")
+
+    # Web push (PWA notifications). Empty keys disable push silently — the
+    # in-app notification list keeps working. Generate once with:
+    #   python -c "from py_vapid import Vapid01; from py_vapid.utils import b64urlencode; from cryptography.hazmat.primitives import serialization; v=Vapid01(); v.generate_keys(); print('VAPID_PRIVATE_KEY='+b64urlencode(v.private_key.private_numbers().private_value.to_bytes(32,'big'))); pk=v.public_key.public_bytes(serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint); print('VAPID_PUBLIC_KEY='+b64urlencode(pk))"
+    VAPID_PUBLIC_KEY: str = Field(default="", validation_alias="VAPID_PUBLIC_KEY")
+    VAPID_PRIVATE_KEY: str = Field(default="", validation_alias="VAPID_PRIVATE_KEY")
+    VAPID_SUBJECT: str = Field(default="mailto:admin@nurturehub.org", validation_alias="VAPID_SUBJECT")
+
     # SMTP/Email settings for OTP
     SMTP_HOST: str = Field(default="smtp.gmail.com", validation_alias="SMTP_HOST")
     SMTP_PORT: int = Field(default=587, validation_alias="SMTP_PORT")

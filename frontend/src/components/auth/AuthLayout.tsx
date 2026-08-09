@@ -18,7 +18,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle, onSi
   const { t } = useTranslation(['auth', 'common']);
 
   return (
-    <div className="relative h-screen overflow-hidden bg-background text-ink">
+    <div className="relative h-dvh overflow-hidden bg-background text-ink">
       {/* Sign-out escape hatch + theme toggle, absolute top-right */}
       <div className="absolute top-5 right-5 z-10 flex items-center gap-2">
         {onSignOut && (

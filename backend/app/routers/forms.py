@@ -25,8 +25,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app import models
+from app import models, storage
 from app.dependencies import get_verified_user
+from app.notify import create_notification
 
 router = APIRouter(prefix="/api/forms", tags=["forms"])
 
@@ -71,6 +72,10 @@ class ResponseCreate(BaseModel):
     assessment_date: date
     status: str = "draft"  # 'draft' | 'submitted'
     answers: List[AnswerIn] = Field(default_factory=list)
+    # Client-generated idempotency key (uuid). The offline sync queue may
+    # replay a request whose response was lost — the same key returns the
+    # already-created row instead of inserting a duplicate.
+    client_ref: Optional[str] = Field(default=None, max_length=64)
 
 
 class ResponseUpdate(BaseModel):
@@ -676,6 +681,7 @@ def _notify_high_protein(
     user: models.User,
     subject_name: str,
     summary: Dict[str, Any],
+    link: Optional[str] = None,
 ) -> None:
     """Raise the "unusually high protein" flag on both sides.
 
@@ -688,29 +694,32 @@ def _notify_high_protein(
         return
     grams = protein.get("total24")
     title = f"Unusually high protein — {subject_name}"
-    db.add(models.Notification(
-        user_id=user.id,
-        title=title,
-        message=(
+    create_notification(
+        db,
+        user.id,
+        title,
+        (
             f"The recorded 24-hour protein total is {grams}g, above the "
             f"{PROTEIN_HIGH_TOTAL_G:g}g review threshold. Please re-check the portion "
             "sizes with the mother."
         ),
-    ))
+        link=link,
+    )
     admin_ids = [
         row.id for row in db.query(models.User.id).filter(models.User.is_admin.is_(True)).all()
         if row.id != user.id
     ]
     for admin_id in admin_ids:
-        db.add(models.Notification(
-            user_id=admin_id,
-            title=title,
-            message=(
+        create_notification(
+            db,
+            admin_id,
+            title,
+            (
                 f"{user.full_name or user.email} recorded a 24-hour protein total of "
                 f"{grams}g for {subject_name}, above the {PROTEIN_HIGH_TOTAL_G:g}g review "
                 "threshold. Worth confirming the portion sizes."
             ),
-        ))
+        )
 
 
 def _notify_on_submit(
@@ -720,6 +729,7 @@ def _notify_on_submit(
     subject_name: str,
     summary: Dict[str, Any],
     actions: List[Dict[str, Any]],
+    link: Optional[str] = None,
 ) -> None:
     """One summary notification + one per coaching action (capped).
 
@@ -742,15 +752,17 @@ def _notify_on_submit(
             override = (q.get("display") or {}).get("actions")
             actions_visible[q["id"]] = default_actions if override is None else bool(override)
 
-    db.add(models.Notification(
-        user_id=user.id,
-        title=f"{definition.title} — {subject_name}",
-        message=(
+    create_notification(
+        db,
+        user.id,
+        f"{definition.title} — {subject_name}",
+        (
             f"{summary['green']} step(s) as per LAP, {summary['red']} need attention. "
             "Open the assessment plan to see the recommended actions."
         ),
-    ))
-    _notify_high_protein(db, user, subject_name, summary)
+        link=link,
+    )
+    _notify_high_protein(db, user, subject_name, summary, link=link)
 
     visible = [a for a in actions if actions_visible.get(a.get("nodeId"), default_actions)]
     for item in visible[:MAX_ACTION_NOTIFICATIONS]:
@@ -761,11 +773,13 @@ def _notify_on_submit(
         else:  # youtube / video
             caption = action.get("message")
             message = f"Watch the tutorial: {caption or item.get('question') or ''}"
-        db.add(models.Notification(
-            user_id=user.id,
-            title=f"{subject_name}: {item.get('question') or definition.title}",
-            message=message[:500],
-        ))
+        create_notification(
+            db,
+            user.id,
+            f"{subject_name}: {item.get('question') or definition.title}",
+            message[:500],
+            link=link,
+        )
 
 
 def _serialize_list_item(r: models.FormResponse) -> Dict[str, Any]:
@@ -829,13 +843,10 @@ async def upload_learner_media(
             raise HTTPException(status_code=400, detail="Photo is larger than the 10 MB limit")
         chunks.append(chunk)
 
-    backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    target_dir = os.path.join(backend_dir, "uploads", "learner_media")
-    os.makedirs(target_dir, exist_ok=True)
+    # Cloudflare R2 (CDN) when configured, backend/uploads/ otherwise.
     filename = f"{uuid.uuid4().hex}{ext}"
-    with open(os.path.join(target_dir, filename), "wb") as fh:
-        fh.write(b"".join(chunks))
-    return {"url": f"/uploads/learner_media/{filename}"}
+    url = storage.save_media("learner_media", filename, b"".join(chunks), file.content_type)
+    return {"url": url}
 
 
 def _response_subject(db: Session, response: models.FormResponse):
@@ -903,7 +914,8 @@ def update_response(
     # Notify only on the FIRST submit (fresh draft→submitted), never on an edit
     # of an already-submitted response.
     if new_status == "submitted" and not was_submitted and definition.builder_type == "flow":
-        _notify_on_submit(db, current_user, definition, subject_name, summary, actions)
+        _notify_on_submit(db, current_user, definition, subject_name, summary, actions,
+                          link=f"/assessments/{response.id}/plan")
 
     db.commit()
     db.refresh(response)
@@ -978,6 +990,23 @@ def create_response(
         raise HTTPException(status_code=400, detail="This form does not accept assessments")
     _validate_status(data.status)
 
+    # Idempotent replay: a queued offline submission may be sent twice (e.g.
+    # the first response was lost on a flaky connection). Same key -> same row.
+    if data.client_ref:
+        existing = (
+            db.query(models.FormResponse)
+            .filter(models.FormResponse.client_ref == data.client_ref)
+            .first()
+        )
+        if existing:
+            if existing.submitted_by_user_id != current_user.id:
+                raise HTTPException(status_code=409, detail="client_ref already used")
+            return _serialize_detail(
+                existing,
+                existing.child if existing.child_id else None,
+                existing.mother if existing.mother_id else None,
+            )
+
     definition, schema, version_number = _resolve_for_user(db, form_key, current_user)
     is_mother_form = form_key in MOTHER_FORM_KEYS
 
@@ -1011,11 +1040,16 @@ def create_response(
         answers_json=answers,
         summary_json=summary,
         actions_json=actions,
+        client_ref=data.client_ref,
     )
     db.add(response)
 
     if data.status == "submitted" and definition.builder_type == "flow":
-        _notify_on_submit(db, current_user, definition, subject_name, summary, actions)
+        # Flush so the new row has its id — the notifications deep-link to
+        # the assessment plan page. Same transaction; commit happens below.
+        db.flush()
+        _notify_on_submit(db, current_user, definition, subject_name, summary, actions,
+                          link=f"/assessments/{response.id}/plan")
 
     db.commit()
     db.refresh(response)

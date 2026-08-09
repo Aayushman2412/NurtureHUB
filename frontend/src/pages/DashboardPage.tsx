@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -94,7 +94,7 @@ const formatScheduled = (iso: string | null, t: TFunction): string => {
 const testStatusBadge = (status: StageTest['status'], t: TFunction) => {
   switch (status) {
     case 'active':
-      return <Badge variant="success">● {t('test.status.live')}</Badge>;
+      return <Badge variant="success">â— {t('test.status.live')}</Badge>;
     case 'scheduled':
       return <Badge variant="info">{t('test.status.scheduled')}</Badge>;
     case 'ended':
@@ -142,7 +142,7 @@ const DashboardPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Welcome Banner — shared component, styled once (adapts light/dark) */}
+      {/* Welcome Banner â€” shared component, styled once (adapts light/dark) */}
       <WelcomeBanner
         eyebrow={
           user?.program_district?.name
@@ -151,7 +151,7 @@ const DashboardPage: React.FC = () => {
         }
         title={
           <>
-            {user?.full_name || t('welcome.nameFallback')} <span className="align-middle">🌱</span>
+            {user?.full_name || t('welcome.nameFallback')} <span className="align-middle">ðŸŒ±</span>
           </>
         }
         subtitle={t('welcome.subtitle', {
@@ -167,7 +167,7 @@ const DashboardPage: React.FC = () => {
         </span>
       </WelcomeBanner>
 
-      {/* Awaiting results banner — everything is done */}
+      {/* Awaiting results banner â€” everything is done */}
       {data.awaiting_results && (
         <Card accent="amber" className="flex items-center gap-4 p-6">
           <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600">
@@ -225,17 +225,17 @@ const DashboardPage: React.FC = () => {
             {data.stages.map((stg, i) => {
               const isTestPhase = stg.stage_type === 'test' || (!!stg.test && stg.tutorials.length === 0);
 
-              // ── Test phase card (formative / screening) ──
+              // â”€â”€ Test phase card (formative / screening) â”€â”€
               if (isTestPhase && stg.test) {
                 const test = stg.test;
                 const canTake = test.status === 'active' && !stg.is_locked && !test.is_submitted;
                 const accent = test.is_submitted || canTake ? 'sage' : 'amber';
                 return (
-                  <Card key={stg.id} accent={accent} className="p-6">
+                  <Card key={stg.id} accent={accent} className="p-4 sm:p-6">
                     <div className="mb-2 flex items-start justify-between gap-4">
                       <div>
                         <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-600">
-                          <FileText className="size-3" /> {t('phase', { n: i + 1 })} •{' '}
+                          <FileText className="size-3" /> {t('phase', { n: i + 1 })} â€¢{' '}
                           {test.test_type === 'screening' ? t('test.screeningLabel') : t('test.formativeLabel')}
                         </span>
                         <h4 className="mt-0.5 mb-1.5 font-display text-lg font-bold text-ink">{test.title}</h4>
@@ -260,13 +260,13 @@ const DashboardPage: React.FC = () => {
                         <strong className="text-ink">
                           {test.status === 'active' ? t('test.takeNow') : formatScheduled(test.scheduled_at, t)}
                         </strong>
-                        <span className="text-ink-faint"> • {t('test.durationMins', { minutes: test.duration_minutes })}</span>
+                        <span className="text-ink-faint"> â€¢ {t('test.durationMins', { minutes: test.duration_minutes })}</span>
                       </div>
                     </div>
 
                     {/* Guidance + action */}
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-4">
-                      <span className="min-w-[220px] flex-1 text-[13px] text-ink-faint">{testPhaseMessage(stg, t)}</span>
+                      <span className="min-w-0 flex-1 basis-full sm:basis-52 text-[13px] text-ink-faint">{testPhaseMessage(stg, t)}</span>
                       {canTake ? (
                         <Button
                           size="sm"
@@ -286,17 +286,17 @@ const DashboardPage: React.FC = () => {
                 );
               }
 
-              // ── Tutorial phase card (basic / add-on videos) ──
+              // â”€â”€ Tutorial phase card (basic / add-on videos) â”€â”€
               const pct = stg.total_tutorials
                 ? Math.round((stg.tutorials_completed / stg.total_tutorials) * 100)
                 : 0;
               const completed = stg.total_tutorials > 0 && stg.tutorials_completed >= stg.total_tutorials;
               return (
-                <Card key={stg.id} accent="coral" className="p-6">
+                <Card key={stg.id} accent="coral" className="p-4 sm:p-6">
                   <div className="mb-2 flex items-start justify-between gap-4">
                     <div>
                       <span className="text-xs font-bold uppercase tracking-wider text-primary-ink">
-                        {t('phase', { n: i + 1 })} • {t('videos.label')}
+                        {t('phase', { n: i + 1 })} â€¢ {t('videos.label')}
                       </span>
                       <h4 className="mt-0.5 mb-1.5 font-display text-lg font-bold text-ink">{stg.title}</h4>
                       <p className="text-sm leading-snug text-ink-muted">{stg.description}</p>
@@ -344,7 +344,7 @@ const DashboardPage: React.FC = () => {
         {/* Right column */}
         <div className="flex flex-col gap-6">
           {/* Achievements */}
-          <Card className="p-6">
+          <Card className="p-4 sm:p-6">
             <h3 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink">
               <Trophy className="size-[18px] text-amber-500" />
               <span>{t('badges.title')}</span>
@@ -368,7 +368,7 @@ const DashboardPage: React.FC = () => {
           </Card>
 
           {/* Activity feed */}
-          <Card className="p-6">
+          <Card className="p-4 sm:p-6">
             <h3 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink">
               <CheckCircle2 className="size-[18px] text-primary-ink" />
               <span>{t('activity.title')}</span>

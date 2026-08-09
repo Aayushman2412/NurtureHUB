@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Baby, ChevronRight, Heart, Ruler, Salad, Stethoscope, Utensils, Activity } from 'lucide-react';
+import { Plus, Baby, ChevronRight, CloudUpload, Heart, Ruler, Salad, Stethoscope, Utensils, Activity } from 'lucide-react';
 import { Button, Card, EmptyState, PageHeader, PageLoader } from '../../components/ui';
 import LearnerMotherCard from '../../components/mothers/LearnerMotherCard';
 import { useToast } from '../../context/ToastContext';
 import { getMother, type Mother } from '../../api/mothers';
 import { listChildren, type ChildListItem } from '../../api/children';
 import { CF_MIN_AGE_DAYS } from '../../lib/flowTypes';
+import { usePendingSync } from '../../offline/usePendingSync';
+import { SYNC_DONE_EVENT } from '../../offline/sync';
 
 /** Whole days since an ISO date of birth; null when unknown/invalid. */
 const ageInDays = (dob: string | null): number | null => {
@@ -33,12 +35,24 @@ const MotherDetailPage: React.FC = () => {
   const [mother, setMother] = useState<Mother | null>(null);
   const [children, setChildren] = useState<ChildListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  // Children registered offline under THIS mother show as "waiting to sync"
+  // cards — hiding them here invited duplicate registrations.
+  const { items: pendingItems } = usePendingSync();
+  const pendingChildren = pendingItems.filter(
+    i => i.kind === 'child' && Number(i.route.motherId) === motherId,
+  );
 
   useEffect(() => {
-    Promise.all([getMother(motherId), listChildren(motherId)])
-      .then(([m, kids]) => { setMother(m); setChildren(kids); })
-      .catch(() => showToast(t('detail.loadFailed'), 'error'))
-      .finally(() => setLoading(false));
+    const load = () =>
+      Promise.all([getMother(motherId), listChildren(motherId)])
+        .then(([m, kids]) => { setMother(m); setChildren(kids); })
+        .catch(() => showToast(t('detail.loadFailed'), 'error'))
+        .finally(() => setLoading(false));
+    void load();
+    // A queued child that just synced should appear in the real list.
+    const onSync = () => void load();
+    window.addEventListener(SYNC_DONE_EVENT, onSync);
+    return () => window.removeEventListener(SYNC_DONE_EVENT, onSync);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [motherId]);
 
@@ -95,7 +109,24 @@ const MotherDetailPage: React.FC = () => {
           </Button>
         </div>
 
-        {children.length === 0 ? (
+        {pendingChildren.length > 0 && (
+          <div className="mb-3 flex flex-col gap-2">
+            {pendingChildren.map(item => (
+              <div
+                key={item.id}
+                className="flex items-center gap-3 rounded-xl border border-dashed border-border p-3"
+              >
+                <CloudUpload className="size-5 shrink-0 text-amber-600" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold text-ink">{item.label}</div>
+                  <div className="text-xs text-ink-muted">{t('pendingSyncHint', { ns: 'offline' })}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {children.length === 0 && pendingChildren.length === 0 ? (
           <EmptyState
             icon={<Baby />}
             title={t('detail.childrenEmptyTitle')}
@@ -137,7 +168,12 @@ const MotherDetailPage: React.FC = () => {
                       {c.birth_weight != null ? ` · ${c.birth_weight} kg` : ''}
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                  {/* On phones the 4 actions form a 2x2 grid on their own row;
+                      from sm they sit inline to the right as before. */}
+                  <div
+                    className="grid basis-full grid-cols-2 gap-1.5 sm:flex sm:basis-auto sm:shrink-0 sm:items-center"
+                    onClick={e => e.stopPropagation()}
+                  >
                     <Button
                       size="sm"
                       variant="outline"
@@ -149,8 +185,15 @@ const MotherDetailPage: React.FC = () => {
                     >
                       <Heart className="size-3.5" /> {t('detail.assessBf')}
                     </Button>
-                    {/* wrapper span carries the tooltip — a disabled Button swallows pointer events */}
-                    <span title={cfTooltip}>
+                    {/* wrapper span carries the tooltip — a disabled Button swallows pointer
+                        events; tapping the locked button area toasts the reason (no hover on touch) */}
+                    <span
+                      title={cfTooltip}
+                      className="[&>button]:w-full sm:[&>button]:w-auto"
+                      onClick={() => {
+                        if (cfLocked) showToast(cfTooltip, 'info');
+                      }}
+                    >
                       <Button
                         size="sm"
                         variant="outline"

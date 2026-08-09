@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bell, CheckCheck, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, CheckCheck, ChevronRight, X } from 'lucide-react';
 import { getNotifications, markAsRead, markAllAsRead } from '../../api/notifications';
 import { Button, EmptyState, Spinner } from '../ui';
 import { cn } from '../../utils/cn';
@@ -9,6 +10,7 @@ interface Notification {
   id: number;
   title: string;
   message: string;
+  link?: string | null;
   is_read: boolean;
   created_at: string;
 }
@@ -21,6 +23,7 @@ interface NotificationPanelProps {
 
 const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, onUpdateCount }) => {
   const { t } = useTranslation('app');
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -61,10 +64,14 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
   const handleMarkAsRead = async (id: number) => {
     try {
       await markAsRead(id);
-      setNotifications(prev => prev.map(n => (n.id === id ? { ...n, is_read: true } : n)));
-      const updated = notifications.map(n => (n.id === id ? { ...n, is_read: true } : n));
-      const unread = updated.filter(n => !n.is_read).length;
-      onUpdateCount(unread);
+      // Derive the badge count from the UPDATED list (a closure over the old
+      // `notifications` under-counts on rapid clicks).
+      setNotifications(prev => {
+        const updated = prev.map(n => (n.id === id ? { ...n, is_read: true } : n));
+        const unread = updated.filter(n => !n.is_read).length;
+        queueMicrotask(() => onUpdateCount(unread));
+        return updated;
+      });
     } catch (err) {
       console.error('Failed to read notification:', err);
     }
@@ -146,17 +153,28 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
                 <button
                   key={n.id}
                   type="button"
-                  onClick={() => !n.is_read && handleMarkAsRead(n.id)}
+                  onClick={() => {
+                    if (!n.is_read) handleMarkAsRead(n.id);
+                    // Deep-link: notifications carrying a route open it.
+                    if (n.link) {
+                      onClose();
+                      navigate(n.link);
+                    }
+                  }}
                   className={cn(
                     'w-full rounded-xl border p-3.5 text-left transition-colors',
                     n.is_read
                       ? 'border-border bg-surface'
                       : 'cursor-pointer border-primary/30 bg-coral-50 hover:bg-coral-100 dark:bg-coral-500/10 dark:hover:bg-coral-500/15',
+                    n.link && 'cursor-pointer',
                   )}
                 >
                   <div className="flex items-start justify-between gap-2.5">
                     <span className="font-semibold text-ink">{n.title}</span>
-                    {!n.is_read && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />}
+                    <span className="mt-1.5 flex shrink-0 items-center gap-1.5">
+                      {n.link && <ChevronRight className="size-3.5 text-ink-faint" />}
+                      {!n.is_read && <span className="size-2 rounded-full bg-primary" />}
+                    </span>
                   </div>
                   <p className="mt-1 text-sm text-ink-muted">{n.message}</p>
                   <span className="mt-2 block text-xs text-ink-faint">

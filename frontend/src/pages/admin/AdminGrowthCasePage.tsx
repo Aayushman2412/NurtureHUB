@@ -132,7 +132,7 @@ const LapMatrix: React.FC<{ matrix: MatrixData }> = ({ matrix }) => {
             <th className="sticky left-0 z-10 w-12 bg-surface-sunken px-2 py-2 text-right text-[11px] font-bold uppercase tracking-wide text-ink-muted">
               #
             </th>
-            <th className="sticky left-12 z-10 min-w-72 max-w-96 bg-surface-sunken px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wide text-ink-muted">
+            <th className="sticky left-12 z-10 min-w-44 max-w-60 md:min-w-72 md:max-w-96 bg-surface-sunken px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wide text-ink-muted">
               {t('casePage.question')}
             </th>
             {matrix.dates.map(date => (
@@ -151,7 +151,7 @@ const LapMatrix: React.FC<{ matrix: MatrixData }> = ({ matrix }) => {
               <td className="sticky left-0 z-10 w-12 bg-surface px-2 py-1.5 text-right text-[11px] tabular-nums text-ink-faint">
                 {index + 1}
               </td>
-              <td className="sticky left-12 z-10 min-w-72 max-w-96 bg-surface px-3 py-1.5 text-[13px] text-ink">
+              <td className="sticky left-12 z-10 min-w-44 max-w-60 md:min-w-72 md:max-w-96 bg-surface px-3 py-1.5 text-[13px] text-ink">
                 {row.question}
               </td>
               {matrix.dates.map(date => {
