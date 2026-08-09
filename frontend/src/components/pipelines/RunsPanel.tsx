@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Archive, Download, Eye, EyeOff, FileText, PlayCircle, ScrollText, Trash2,
@@ -37,6 +37,11 @@ const RunsPanel: React.FC<RunsPanelProps> = ({
   const [logFile, setLogFile] = useState<'console' | 'pipeline' | 'report'>('console');
   const [logText, setLogText] = useState('');
   const [logLoading, setLogLoading] = useState(false);
+  const logRef = useRef<HTMLPreElement>(null);
+  // A running pipeline re-fetches its log every 5s. Follow the tail only while
+  // the reader is already at the bottom, so scrolling up to read something
+  // isn't yanked away by the next poll.
+  const followTail = useRef(true);
   const [downloading, setDownloading] = useState<string | null>(null);
 
   // The "Requested CTs" sections hold ~100 individual table workbooks; by
@@ -68,6 +73,28 @@ const RunsPanel: React.FC<RunsPanelProps> = ({
       if (interval) window.clearInterval(interval);
     };
   }, [logOpen, logFile, selectedRun?.id, selectedRun?.status]);
+
+  // Opening the modal or switching log file starts at the tail again — the
+  // interesting part of a pipeline log is always the end.
+  useEffect(() => {
+    if (logOpen) followTail.current = true;
+  }, [logOpen, logFile, selectedRun?.id]);
+
+  // Pin to the bottom after each render that changed the text. Layout effect
+  // isn't needed: <pre> content is already measured by the time this runs.
+  useEffect(() => {
+    const el = logRef.current;
+    if (!el || !followTail.current) return;
+    el.scrollTop = el.scrollHeight;
+  }, [logText, logOpen]);
+
+  const handleLogScroll = useCallback(() => {
+    const el = logRef.current;
+    if (!el) return;
+    // 24px of slack so a near-bottom position still counts as following —
+    // fractional scroll heights never land exactly on the boundary.
+    followTail.current = el.scrollHeight - el.scrollTop - el.clientHeight <= 24;
+  }, []);
 
   const sections = useMemo(() => {
     if (!selectedRun?.manifest) return [];
@@ -410,7 +437,11 @@ const RunsPanel: React.FC<RunsPanelProps> = ({
             ))}
             {logLoading && <Spinner className="size-4" />}
           </div>
-          <pre className="max-h-[55vh] overflow-auto whitespace-pre-wrap rounded-xl bg-surface-sunken p-4 font-mono text-xs leading-relaxed text-ink">
+          <pre
+            ref={logRef}
+            onScroll={handleLogScroll}
+            className="max-h-[55vh] overflow-auto whitespace-pre-wrap rounded-xl bg-surface-sunken p-4 font-mono text-xs leading-relaxed text-ink"
+          >
             {logText}
           </pre>
         </div>

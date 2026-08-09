@@ -40,7 +40,9 @@
     "noData": "No visits plotted yet",
     "download": "Download PNG",
     "expand": "Expand",
-    "close": "Close"
+    "close": "Close",
+    "zNegative": "negative",
+    "zPositive": "positive"
   },
   "charts": {
     "tab": "Growth charts",
@@ -186,7 +188,7 @@
     "deltaHint": "Change since the previous measured visit",
     "breastfed": "Breastmilk given",
     "breastfedFull": "Was the child breastfed during the past 24 hours?",
-    "otherFoods": "If not, what else was given",
+    "otherFoods": "What else was given",
     "otherFoodsFull": "What was the child given during the past 24 hours other than breastmilk?",
     "nothingElse": "Nothing else",
     "yes": "Yes",
