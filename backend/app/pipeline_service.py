@@ -134,6 +134,8 @@ SECTION_ORDER = {
     CROSSTABS: [
         "Crosstabs — column-wise %",
         "Crosstabs — row-wise %",
+        "Requested CTs — column-wise %",
+        "Requested CTs — row-wise %",
         "Case lists & diagnostics",
         "Derived workbook",
         "Merged master data",
@@ -1371,12 +1373,19 @@ def _crosstabs_manifest(run_dir: Path) -> list[dict]:
                 if path.name.startswith("~$"):
                     continue
                 parent = path.parent.name
-                # Row-wise folders: the vendored script writes output_2 /
-                # output_jalna_2; newer analyst script versions use names like
-                # "Requested CTs 2". Any outputs subfolder ending in a
-                # standalone "2" is the row-wise variant of its sibling.
+                # Row-wise folders end in a standalone "2": output_2 /
+                # output_jalna_2 from the vendored script, requested_CTs_2
+                # from the newer analyst versions.
                 row_wise = bool(re.search(r"[_ ]2$", parent.strip()))
-                if _is_diag(path.name):
+                if "requested" in parent.lower():
+                    # The ~100-workbook requested_CTs(_2) folders get their own
+                    # sections — folder identity beats filename heuristics here
+                    # so each folder's custom_report_tables stays with it.
+                    section = (
+                        "Requested CTs — row-wise %" if row_wise
+                        else "Requested CTs — column-wise %"
+                    )
+                elif _is_diag(path.name):
                     section = "Case lists & diagnostics"
                 elif row_wise:
                     section = "Crosstabs — row-wise %"
