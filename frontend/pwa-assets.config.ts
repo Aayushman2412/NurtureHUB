@@ -1,9 +1,9 @@
 import { defineConfig, minimal2023Preset } from '@vite-pwa/assets-generator/config'
 
-// Derives the PWA icon set from the app logo. The source SVG is slightly
-// non-square (48x46 viewBox) with a transparent background, so maskable/apple
-// variants get generous padding and the brand cream background to survive the
-// Android launcher mask.
+// Derives the PWA icon set from the app logo (brand/logo-source.png — the
+// mother-and-child mark cropped square out of the brand lockup, on the brand
+// cream). Maskable/apple variants get generous padding and the same cream so
+// the Android launcher mask and iOS rounding never clip the artwork.
 export default defineConfig({
   headLinkOptions: { preset: '2023' },
   preset: {
@@ -19,5 +19,5 @@ export default defineConfig({
       resizeOptions: { background: '#F8F5EF', fit: 'contain' },
     },
   },
-  images: ['public/favicon.svg'],
+  images: ['brand/logo-source.png'],
 })
