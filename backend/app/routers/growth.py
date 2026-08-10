@@ -80,6 +80,7 @@ def _build_cases(
     district_slug: Optional[str] = None,
     role: Optional[str] = None,
     department: Optional[str] = None,
+    learner_category: Optional[str] = None,
     learner_id: Optional[int] = None,
     child_id: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
@@ -113,6 +114,9 @@ def _build_cases(
         rows = rows.filter(models.User.id == learner_id)
     if child_id is not None:
         rows = rows.filter(models.Child.id == child_id)
+    if learner_category:
+        # Many learners share a category, so this narrows to that whole group.
+        rows = rows.filter(models.User.learner_category == learner_category)
     if role:
         rows = rows.filter(models.User.role == role)
     # department is resolved (mock-fillable) after the query, so it's filtered below.
@@ -387,12 +391,14 @@ def _summary_rows(cases: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 def _summary_filter_options(db: Session) -> Dict[str, Any]:
-    """Distinct roles / departments / learners present among cases — feeds the
-    growth-monitor filter dropdowns so they only offer values that return rows."""
+    """Distinct roles / departments / learner categories present among cases —
+    feeds the growth-monitor filter dropdowns so they only offer values that
+    return rows. `learners` is still returned for the case-drill lookups."""
     query = (
         db.query(
             models.User.id, models.User.full_name, models.User.email,
             models.User.role, models.User.department, models.ProgramDistrict.name,
+            models.User.learner_category,
         )
         .join(models.Mother, models.Mother.registered_by_user_id == models.User.id)
         .join(models.Child, models.Child.mother_id == models.Mother.id)
@@ -400,21 +406,25 @@ def _summary_filter_options(db: Session) -> Dict[str, Any]:
         .distinct()
     )
     learners: Dict[int, Dict[str, Any]] = {}
-    roles, departments = set(), set()
-    for uid, full_name, email, role, department, district in query:
+    roles, departments, categories = set(), set(), set()
+    for uid, full_name, email, role, department, district, category in query:
         department = gsm.resolved_department(uid, department)  # MOCK: department fill
         learners[uid] = {
             "id": uid, "name": full_name or email,
             "role": role, "department": department, "district": district,
+            "learner_category": category,
         }
         if role:
             roles.add(role)
         if department:
             departments.add(department)
+        if category:
+            categories.add(category)
     return {
         "learners": sorted(learners.values(), key=lambda x: (x["name"] or "").lower()),
         "roles": sorted(roles),
         "departments": sorted(departments),
+        "learner_categories": sorted(categories),
     }
 
 
@@ -597,6 +607,7 @@ def admin_growth_monitor(
     district: str = Query("", description="Program-district slug; empty = all districts"),
     role: str = Query("", description="Learner role/designation; empty = all"),
     department: str = Query("", description="Learner department; empty = all"),
+    learner_category: str = Query("", description="Learner category (a group of learners); empty = all"),
     learner_id: Optional[int] = Query(None, description="Single learner id; null = all"),
     child_id: Optional[int] = Query(None, description="Single case (child) id; null = all"),
     admin: dict = Depends(get_current_admin),
@@ -604,7 +615,7 @@ def admin_growth_monitor(
 ):
     return {"cases": _build_cases(
         db, district_slug=district or None, role=role or None,
-        department=department or None, learner_id=learner_id, child_id=child_id,
+        department=department or None, learner_category=learner_category or None, learner_id=learner_id, child_id=child_id,
     )}
 
 
@@ -613,6 +624,7 @@ def admin_growth_summary(
     district: str = Query(""),
     role: str = Query(""),
     department: str = Query(""),
+    learner_category: str = Query(""),
     learner_id: Optional[int] = Query(None),
     admin: dict = Depends(get_current_admin),
     db: Session = Depends(get_db),
@@ -621,7 +633,7 @@ def admin_growth_summary(
     one row per learner-mother-child case, honouring the four filters."""
     cases = _build_cases(
         db, district_slug=district or None, role=role or None,
-        department=department or None, learner_id=learner_id,
+        department=department or None, learner_category=learner_category or None, learner_id=learner_id,
     )
     return {"rows": _summary_rows(cases), "mock": bool(gsm.MOCK_ENABLED)}
 
@@ -684,6 +696,7 @@ def admin_growth_summary_export(
     district: str = Query(""),
     role: str = Query(""),
     department: str = Query(""),
+    learner_category: str = Query(""),
     learner_id: Optional[int] = Query(None),
     admin: dict = Depends(get_current_admin),
     db: Session = Depends(get_db),
@@ -691,7 +704,7 @@ def admin_growth_summary_export(
     """The (filtered) summary table as an .xlsx download."""
     cases = _build_cases(
         db, district_slug=district or None, role=role or None,
-        department=department or None, learner_id=learner_id,
+        department=department or None, learner_category=learner_category or None, learner_id=learner_id,
     )
     buffer = _summary_xlsx(_summary_rows(cases))
     return StreamingResponse(

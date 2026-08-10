@@ -55,10 +55,10 @@
     "allRoles": "सभी पद",
     "department": "विभाग",
     "allDepartments": "सभी विभाग",
-    "learner": "कार्यकर्ता",
-    "allLearners": "सभी कार्यकर्ता",
-    "noLearners": "कोई कार्यकर्ता नहीं मिला",
-    "clear": "फ़िल्टर हटाएँ"
+    "clear": "फ़िल्टर हटाएँ",
+    "learnerCategory": "लर्नर श्रेणी",
+    "allCategories": "सभी लर्नर श्रेणियाँ",
+    "noCategories": "अभी कोई लर्नर श्रेणी नहीं"
   },
   "summary": {
     "tab": "सारांश तालिका",

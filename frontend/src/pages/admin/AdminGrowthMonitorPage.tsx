@@ -30,7 +30,9 @@ interface ProgramDistrict {
   slug: string;
 }
 
-const EMPTY_OPTIONS: GrowthSummaryFilterOptions = { learners: [], roles: [], departments: [] };
+const EMPTY_OPTIONS: GrowthSummaryFilterOptions = {
+  learners: [], roles: [], departments: [], learner_categories: [],
+};
 
 /**
  * Admin Growth Monitor. Two views over the same filtered case set:
@@ -116,7 +118,7 @@ const AdminGrowthMonitorPage: React.FC = () => {
   useEffect(() => {
     setPairChildId(null);
   }, [filters]);
-  const hasFilters = !!(filters.district || filters.role || filters.department || filters.learnerId);
+  const hasFilters = !!(filters.district || filters.role || filters.department || filters.learnerCategory);
 
   // The optional pair filter narrows the charts to one case before sex-splitting.
   const pairCases = useMemo(
@@ -234,18 +236,16 @@ const AdminGrowthMonitorPage: React.FC = () => {
             placeholder={t('filters.allDepartments')}
             options={options.departments.map(d => ({ value: d, label: d }))}
           />
+          {/* Learner CATEGORY — a programme grouping that many learners share. */}
           <SearchableSelect
-            label={t('filters.learner')}
-            value={filters.learnerId ?? ''}
-            onChange={v => patch({ learnerId: v ? Number(v) : null })}
-            placeholder={t('filters.allLearners')}
-            emptyMessage={t('filters.noLearners')}
+            label={t('filters.learnerCategory')}
+            value={filters.learnerCategory ?? ''}
+            onChange={v => patch({ learnerCategory: v ? String(v) : '' })}
+            placeholder={t('filters.allCategories')}
+            emptyMessage={t('filters.noCategories')}
             options={[
-              { value: '', label: t('filters.allLearners') },
-              ...options.learners.map(l => ({
-                value: l.id,
-                label: l.district ? `${l.name} · ${l.district}` : l.name,
-              })),
+              { value: '', label: t('filters.allCategories') },
+              ...options.learner_categories.map(c => ({ value: c, label: c })),
             ]}
           />
         </div>

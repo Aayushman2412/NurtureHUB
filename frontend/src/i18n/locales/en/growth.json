@@ -55,10 +55,10 @@
     "allRoles": "All roles",
     "department": "Department",
     "allDepartments": "All departments",
-    "learner": "Learner",
-    "allLearners": "All learners",
-    "noLearners": "No learners found",
-    "clear": "Clear filters"
+    "clear": "Clear filters",
+    "learnerCategory": "Learner category",
+    "allCategories": "All learner categories",
+    "noCategories": "No learner categories yet"
   },
   "summary": {
     "tab": "Summary table",

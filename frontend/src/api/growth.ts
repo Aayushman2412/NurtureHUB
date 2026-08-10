@@ -99,12 +99,15 @@ export interface GrowthSummaryLearner {
   role: string | null;
   department: string | null;
   district: string | null;
+  learner_category: string | null;
 }
 
 export interface GrowthSummaryFilterOptions {
   learners: GrowthSummaryLearner[];
   roles: string[];
   departments: string[];
+  /** Programme groupings; each contains many learners. */
+  learner_categories: string[];
 }
 
 /** The growth-monitor filters (shared by the table and the charts). */
@@ -112,6 +115,9 @@ export interface GrowthFilters {
   district?: string;
   role?: string;
   department?: string;
+  /** A learner category groups many learners — the user-facing filter. */
+  learnerCategory?: string;
+  /** Narrow to one learner — kept for programmatic drill-downs, not a UI filter. */
   learnerId?: number | null;
   /** Narrow to a single case (child) — used by the case-detail page. */
   childId?: number | null;
@@ -121,6 +127,7 @@ const filterParams = (f: GrowthFilters) => ({
   ...(f.district ? { district: f.district } : {}),
   ...(f.role ? { role: f.role } : {}),
   ...(f.department ? { department: f.department } : {}),
+  ...(f.learnerCategory ? { learner_category: f.learnerCategory } : {}),
   ...(f.learnerId ? { learner_id: f.learnerId } : {}),
   ...(f.childId ? { child_id: f.childId } : {}),
 });

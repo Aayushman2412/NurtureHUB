@@ -96,6 +96,10 @@ class User(Base):
     qualification_other_detail = Column(String, nullable=True)
     department = Column(String, nullable=True)          # legacy string, kept for back-compat display
     role = Column(String, nullable=True)                # legacy string (designation name)
+    # Programme grouping used to filter reports: many learners share one
+    # category (the analysts' "Learner Category"). Free-text for now — the
+    # allowed list is supplied by the programme, not derived from designation.
+    learner_category = Column(String, nullable=True, index=True)
     work_center_type = Column(String, nullable=True)    # legacy string (facility type name)
     work_center_name = Column(String, nullable=True)
     district = Column(String, nullable=True)
