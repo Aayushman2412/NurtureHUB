@@ -109,6 +109,31 @@ CASES = [
          {"name": "Advait", "gender": "Male", "age": 620, "zw": (-0.8, -0.3), "zl": (-0.5, -0.2),
           "bf_quality": 0.14, "cf_quality": 0.18},
      ]},
+
+    # ── Late enrolment: adopted at/after 150 days ────────────────────────────
+    # These populate the older growth-chart cohort. Their first visit is their
+    # enrolment visit, so the series starts mid-infancy rather than at birth —
+    # exactly the shape of a case picked up after the breastfeeding phase.
+    {"learner": "aayushman@edupyramids.org", "mother": "Sunanda Bhosale", "village": "Nagda",
+     "children": [
+         # Enrolled at ~5.5 months, already below the median; improves with CF.
+         {"name": "Vihaan", "gender": "Male", "age": 330, "adopt_age": 167,
+          "zw": (-1.2, -0.7), "zl": (-0.9, -0.6), "cf_quality": 0.16},
+     ]},
+    {"learner": "demo.sunita@nurturehub.demo", "mother": "Rekha Nikam", "village": "Ambad",
+     "children": [
+         # Enrolled at ~7 months and faltering — the escalation case for the
+         # older cohort (the young cohort's faltering baby is Shem).
+         {"name": "Anaya", "gender": "Female", "age": 430, "adopt_age": 213,
+          "zw": (-1.4, -2.5), "zl": (-1.0, -1.8), "cf_quality": 0.45,
+          "illness_prone": True},
+     ]},
+    {"learner": "demo.priya@nurturehub.demo", "mother": "Banri Kharkongor", "village": "Smit",
+     "children": [
+         # Enrolled late in the second year, tracking healthily.
+         {"name": "Wanhun", "gender": "Female", "age": 600, "adopt_age": 335,
+          "zw": (0.3, 0.5), "zl": (0.2, 0.4), "cf_quality": 0.12},
+     ]},
 ]
 
 # Newborns lose a little weight before day 7 and regain it — the dip the LAP
@@ -361,11 +386,17 @@ def seed_growth_demo(db: Session) -> None:
             zw0, zw1 = spec["zw"]
             zl0, zl1 = spec["zl"]
 
+            # Age at adoption decides the child's growth-chart cohort for
+            # life: adopted before 150 days -> the young charts, at/after 150
+            # -> the older charts. Default is enrolment at birth.
+            adopt_age = spec.get("adopt_age", 3)
+
             child = models.Child(
                 child_uid=f"DEMO-CR-{child_seq:03d}",
                 mother_id=mother.id,
                 child_name=f"{spec['name']} {case['mother'].split()[-1]}",
                 dob=dob,
+                adoption_date=dob + timedelta(days=adopt_age),
                 gender=spec["gender"],
                 birth_weight=round(value_for_z("wfa", sex, 0, zw0), 3),
                 birth_length=round(value_for_z("lfa", sex, 0, zl0), 1),
@@ -381,6 +412,9 @@ def seed_growth_demo(db: Session) -> None:
             for visit_day in LAP_VISIT_DAYS:
                 if visit_day > age:
                     break
+                # A case cannot have visits before it was enrolled.
+                if visit_day < adopt_age:
+                    continue
                 visit_date = dob + timedelta(days=visit_day)
                 progress = visit_day / max(age, 1)
                 zw = _lerp(zw0, zw1, progress) + rng.gauss(0, 0.07)
