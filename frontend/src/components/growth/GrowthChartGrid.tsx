@@ -4,7 +4,8 @@ import type { GrowthCase, GrowthIndicator, GrowthStandards } from '../../api/gro
 import {
   ageTicks,
   buildSeries,
-  COHORT_SPECS,
+  caseInCohort,
+  cohortDomains,
   lengthTicks,
   percentileColor,
   PERCENTILE_KEYS,
@@ -69,7 +70,12 @@ const GrowthChartGrid: React.FC<GrowthChartGridProps> = ({
   return (
     <div className="space-y-6">
       {cohorts.map(cohort => {
-        const spec = COHORT_SPECS[cohort];
+        // Only the cases whose ADOPTION age puts them in this cohort, and a
+        // domain widened to fit them (a young-cohort child followed past six
+        // months stretches the axis rather than moving charts).
+        const cohortCases = cases.filter(c => caseInCohort(c, cohort));
+        if (cohortCases.length === 0) return null;
+        const domains = cohortDomains(cohort, cohortCases);
         return (
           <section key={cohort}>
             <h2 className="mb-3 font-display text-base font-bold text-ink">
@@ -78,7 +84,7 @@ const GrowthChartGrid: React.FC<GrowthChartGridProps> = ({
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-3">
               {INDICATORS.map(indicator => {
                 const isWfl = indicator === 'wfl';
-                const series = cases
+                const series = cohortCases
                   .map(c => buildSeries(c, indicator, cohort))
                   .filter(s => s.points.length > 0);
                 return (
@@ -89,14 +95,16 @@ const GrowthChartGrid: React.FC<GrowthChartGridProps> = ({
                     xLabel={
                       isWfl
                         ? t('axis.lengthCm')
-                        : cohort === 'young'
+                        : cohort === 'young' && domains.ageDomain[1] <= 200
                           ? t('axis.ageWeeks')
                           : t('axis.ageMonths')
                     }
                     yLabel={indicator === 'lfa' ? t('axis.lengthCm') : t('axis.weightKg')}
                     standards={standards[indicator][sex]}
-                    xDomain={isWfl ? spec.lengthDomain : spec.ageDomain}
-                    xTicks={isWfl ? lengthTicks(cohort) : ageTicks(cohort)}
+                    xDomain={isWfl ? domains.lengthDomain : domains.ageDomain}
+                    xTicks={isWfl
+                      ? lengthTicks(cohort, domains.lengthDomain)
+                      : ageTicks(cohort, domains.ageDomain)}
                     xKind={isWfl ? 'length' : 'age'}
                     series={series}
                     onPointClick={onPointClick}

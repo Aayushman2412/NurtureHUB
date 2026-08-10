@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { User, Briefcase } from 'lucide-react';
 import { Avatar, Button, Card, Tabs } from '../components/ui';
+import InstallAppButton from '../components/layout/InstallAppButton';
 import { useLearnerMetadata } from '../hooks/useLearnerMetadata';
 import { TRAINING_KEYS, ageFromDob } from '../lib/learnerFields';
 import { validateLearner, LR_STEP_FIELDS, type LearnerFormValues } from '../lib/learnerSchema';
@@ -275,6 +276,8 @@ const ProfilePage: React.FC = () => {
             </span>
           </div>
         </div>
+        {/* Install NurtureHUB on this device (hidden once installed). */}
+        <InstallAppButton className="shrink-0" />
       </Card>
 
       {/* Tabs + form */}

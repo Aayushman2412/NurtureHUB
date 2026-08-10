@@ -31,5 +31,18 @@
     "close": "Close",
     "emptyTitle": "No notifications yet",
     "emptyBody": "Updates about your training and assessments will appear here."
+  },
+  "install": {
+    "button": "Download the app",
+    "helpTitle": "Install NurtureHUB on this device",
+    "helpIntro": "NurtureHUB installs straight from your browser — there is no app store download.",
+    "iosStep1": "Tap the Share button in Safari's toolbar.",
+    "iosStep2": "Scroll down and choose \"Add to Home Screen\".",
+    "iosStep3": "Tap Add — NurtureHUB now opens like any other app.",
+    "otherStep1": "Open the browser menu (⋮ in Chrome, ··· in Edge).",
+    "otherStep2": "Choose \"Install app\" or \"Add to Home screen\".",
+    "otherStep3": "Confirm — NurtureHUB opens in its own window.",
+    "benefits": "Installed, NurtureHUB opens instantly, works without internet, and can send you notifications.",
+    "gotIt": "Got it"
   }
 }

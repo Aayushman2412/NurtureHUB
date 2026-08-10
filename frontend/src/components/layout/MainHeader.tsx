@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../ui';
 import LanguageSwitcher from '../LanguageSwitcher';
 import PendingSyncSheet from './PendingSyncSheet';
+import InstallAppButton from './InstallAppButton';
 import { usePendingSync } from '../../offline/usePendingSync';
 
 interface MainHeaderProps {
@@ -64,6 +65,9 @@ const MainHeader: React.FC<MainHeaderProps> = ({
             )}
           </button>
         )}
+        {/* Install the app (hidden once installed) */}
+        <InstallAppButton variant="icon" />
+
         <LanguageSwitcher variant="compact" />
 
         <button

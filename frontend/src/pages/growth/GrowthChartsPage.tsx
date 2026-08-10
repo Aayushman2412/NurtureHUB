@@ -115,8 +115,9 @@ const GrowthChartsPage: React.FC = () => {
     );
   }
 
-  // Single-case view: only the charts that apply to this child (its sex, and
-  // the age cohorts it actually has data for — all 6 when applicable).
+  // Single-case view: only the charts that apply to this child — its sex, and
+  // its ONE adoption cohort (a child adopted before 150 days stays on the
+  // young charts for their whole follow-up), so 3 charts, never 6.
   const selectedSex = selectedCase ? sexKeyForGender(selectedCase.child.gender) : null;
   const selectedCohorts: GrowthCohort[] = selectedCase
     ? (['young', 'old'] as const).filter(cohort => caseHasCohortData(selectedCase, cohort))

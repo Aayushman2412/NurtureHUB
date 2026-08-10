@@ -31,5 +31,18 @@
     "close": "बंद करें",
     "emptyTitle": "अभी तक कोई सूचना नहीं",
     "emptyBody": "आपके प्रशिक्षण और जाँच के बारे में अपडेट यहाँ दिखाई देंगे।"
+  },
+  "install": {
+    "button": "ऐप डाउनलोड करें",
+    "helpTitle": "इस डिवाइस पर NurtureHUB इंस्टॉल करें",
+    "helpIntro": "NurtureHUB सीधे ब्राउज़र से इंस्टॉल होता है — ऐप स्टोर से डाउनलोड करने की ज़रूरत नहीं।",
+    "iosStep1": "Safari की टूलबार में Share बटन दबाएँ।",
+    "iosStep2": "नीचे स्क्रॉल करके \"Add to Home Screen\" चुनें।",
+    "iosStep3": "Add दबाएँ — अब NurtureHUB किसी भी ऐप की तरह खुलेगा।",
+    "otherStep1": "ब्राउज़र मेन्यू खोलें (Chrome में ⋮, Edge में ···)।",
+    "otherStep2": "\"Install app\" या \"Add to Home screen\" चुनें।",
+    "otherStep3": "पुष्टि करें — NurtureHUB अपनी अलग विंडो में खुलेगा।",
+    "benefits": "इंस्टॉल करने पर NurtureHUB तुरंत खुलता है, बिना इंटरनेट भी चलता है, और सूचनाएँ भेज सकता है।",
+    "gotIt": "समझ गए"
   }
 }

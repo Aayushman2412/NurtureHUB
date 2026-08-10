@@ -37,6 +37,8 @@ export interface GrowthCase {
     dob: string | null;
     birth_weight: number | null;
     birth_length: number | null;
+    /** Drives the chart cohort: adopted <150 days old → young charts. */
+    adoption_date: string | null;
   };
   mother: { id: number; uid: string; name: string };
   /** learner is null for an orphaned case (registering account removed). */

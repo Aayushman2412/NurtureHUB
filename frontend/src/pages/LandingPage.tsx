@@ -7,6 +7,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { Button } from '../components/ui';
+import InstallAppButton from '../components/layout/InstallAppButton';
 
 const features = [
   {
@@ -112,6 +113,8 @@ const LandingPage: React.FC = () => {
                 {t('landing:hero.haveAccount')}
               </Button>
             )}
+            {/* Install as an app — phone, laptop or desktop. */}
+            <InstallAppButton className="w-full sm:w-auto" />
           </div>
         </div>
       </section>

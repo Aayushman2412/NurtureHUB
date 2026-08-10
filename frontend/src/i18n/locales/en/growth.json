@@ -19,8 +19,8 @@
     "wfl": "Weight for length"
   },
   "cohorts": {
-    "young": "Birth to 5 months (under 150 days)",
-    "old": "5 to 24 months (150 days and older)"
+    "young": "Adopted before 150 days (birth to 5 months)",
+    "old": "Adopted at 150 days or later (5 to 24 months)"
   },
   "sexTabs": {
     "boys": "Boys",
