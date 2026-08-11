@@ -20,6 +20,24 @@ map $http_upgrade $connection_upgrade {
     ''      close;
 }
 
+# ── Verifying WebSockets end-to-end ──────────────────────────────────────────
+# Live test monitoring (/ws/*) DEPENDS on the three proxy_* upgrade lines in
+# the location{} below. nginx proxies with HTTP/1.0 semantics by default and
+# drops the hop-by-hop Upgrade/Connection headers — the app then sees a plain
+# GET on a WebSocket-only path and answers 404, and the admin Live Monitor
+# shows "Unable to reach the live feed" while candidates stream nothing.
+#
+# After any change here, verify from anywhere:
+#
+#   curl -s -o /dev/null -w '%{http_code}\n' --http1.1 \
+#     -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
+#     -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: x3JJHMbDL1EzLkh9GBhXDw==' \
+#     'https://YOUR_DOMAIN/ws/admin/monitor/1?token=bogus'
+#
+#   403 → upgrade headers reached the app (it rejected the bogus token): WORKING
+#   404 → upgrade headers were stripped en route: this config is missing/broken
+# ─────────────────────────────────────────────────────────────────────────────
+
 # HTTP -> HTTPS redirect (+ ACME challenge for cert issuance/renewal)
 server {
     listen 80;
