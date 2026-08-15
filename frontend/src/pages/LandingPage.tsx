@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation, Trans } from 'react-i18next';
 import {
   Award, BookOpen, ChartLine, MapPin, ShieldCheck, Sprout, Users, ArrowRight, Sun, Moon,

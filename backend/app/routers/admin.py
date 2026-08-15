@@ -8,6 +8,7 @@ All content endpoints are scoped per program district.
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -173,8 +174,9 @@ def admin_login(request: Request, credentials: AdminLoginRequest, db: Session = 
     Authenticate admin user.
     Supports both hardcoded credentials for testing and DB-validated admin auth.
     """
+    norm_email = credentials.email.strip().lower()
     # 1. Check hardcoded credentials first (for quick testing)
-    if (credentials.email == HARDCODED_ADMIN_EMAIL and
+    if (norm_email == HARDCODED_ADMIN_EMAIL.lower() and
             credentials.password == HARDCODED_ADMIN_PASSWORD):
         access_token = create_access_token(data={"sub": HARDCODED_ADMIN_EMAIL, "is_admin": True})
         return AdminLoginResponse(
@@ -183,7 +185,7 @@ def admin_login(request: Request, credentials: AdminLoginRequest, db: Session = 
         )
 
     # 2. Check DB for admin users
-    user = db.query(User).filter(User.email == credentials.email).first()
+    user = db.query(User).filter(func.lower(User.email) == norm_email).first()
     if user and user.is_admin and user.password_hash:
         if verify_password(credentials.password, user.password_hash):
             access_token = create_access_token(data={"sub": user.email, "is_admin": True})

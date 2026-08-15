@@ -61,9 +61,12 @@ import AdminMasdPipelinePage from './pages/admin/AdminMasdPipelinePage';
 
 // Public Only Route: Redirects to dashboard if logged in and completely registered
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isVerified, isProfileComplete } = useAuth();
+  const { isAuthenticated, isVerified, isProfileComplete, user } = useAuth();
   
   if (isAuthenticated) {
+    if (user?.is_admin || localStorage.getItem('nh_admin') === 'true') {
+      return <Navigate to="/admin" replace />;
+    }
     if (!isVerified) return <Navigate to="/verify" replace />;
     if (!isProfileComplete) return <Navigate to="/register" replace />;
     return <Navigate to="/dashboard" replace />;
@@ -97,16 +100,18 @@ const CompleteRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   return <AppLayout>{children}</AppLayout>;
 };
 
-// Admin Route: Check localStorage for admin access
+// Admin Route: Check localStorage or user for admin access
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const isAdmin = localStorage.getItem('nh_admin') === 'true';
+  const { user } = useAuth();
+  const isAdmin = localStorage.getItem('nh_admin') === 'true' || !!user?.is_admin;
   if (!isAdmin) return <Navigate to="/login" replace />;
   return <AdminLayout>{children}</AdminLayout>;
 };
 
 /** Admin-gated but without the sidebar layout — for full-page/print views. */
 const AdminBareRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const isAdmin = localStorage.getItem('nh_admin') === 'true';
+  const { user } = useAuth();
+  const isAdmin = localStorage.getItem('nh_admin') === 'true' || !!user?.is_admin;
   if (!isAdmin) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };

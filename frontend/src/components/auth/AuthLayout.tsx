@@ -2,7 +2,6 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { Sun, Moon, BookOpen, Award, Sprout, LogOut } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import LanguageSwitcher from '../LanguageSwitcher';
 import { Button } from '../ui';
 

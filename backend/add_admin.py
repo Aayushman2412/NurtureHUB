@@ -12,7 +12,7 @@ def main():
 
     args = parser.parse_args()
 
-    email = args.email or input("Enter admin email: ").strip()
+    email = (args.email or input("Enter admin email: ")).strip().lower()
     if not email:
         print("Error: Email is required.")
         return
@@ -22,13 +22,14 @@ def main():
         print("Error: Password is required.")
         return
 
-    full_name = args.name or input("Enter full name (optional, press Enter to skip): ").strip()
+    full_name = (args.name or input("Enter full name (optional, press Enter to skip): ")).strip()
     if not full_name:
         full_name = email.split("@")[0].capitalize()
 
     db = SessionLocal()
     try:
-        user = db.query(User).filter(User.email == email).first()
+        from sqlalchemy import func
+        user = db.query(User).filter(func.lower(User.email) == email).first()
         if user:
             user.is_admin = True
             user.password_hash = get_password_hash(password)
