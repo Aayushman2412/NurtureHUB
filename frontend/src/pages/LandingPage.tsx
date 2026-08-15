@@ -152,20 +152,6 @@ const LandingPage: React.FC = () => {
           ))}
         </div>
       </section>
-
-      {/* ── Footer ──────────────────────────────────────── */}
-      <footer className="border-t border-border bg-surface px-[max(24px,6%)] py-8">
-        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-ink-faint">
-          <div className="flex items-center gap-2">
-            <Sprout className="size-4 text-sage-600 dark:text-sage-300" />
-            <span>{t('common:footer.rights')}</span>
-          </div>
-          <div className="flex gap-6">
-            <Link to="#" className="transition-colors hover:text-ink-muted">{t('common:footer.privacy')}</Link>
-            <Link to="#" className="transition-colors hover:text-ink-muted">{t('common:footer.terms')}</Link>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

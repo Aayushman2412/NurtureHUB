@@ -64,15 +64,6 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle, onSi
 
             {children}
           </div>
-
-          {/* Footer-lite */}
-          <div className="mt-6 flex w-full items-center justify-between text-[13px] text-ink-faint">
-            <p>{t('common:footer.rights')}</p>
-            <div className="flex gap-4">
-              <Link to="#" className="hover:text-ink-muted transition-colors">{t('common:footer.privacy')}</Link>
-              <Link to="#" className="hover:text-ink-muted transition-colors">{t('common:footer.terms')}</Link>
-            </div>
-          </div>
         </div>
 
         {/* Right: brand panel */}
