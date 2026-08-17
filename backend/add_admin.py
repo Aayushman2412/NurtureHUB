@@ -30,13 +30,13 @@ def main():
     try:
         from sqlalchemy import func
         user = db.query(User).filter(func.lower(User.email) == email).first()
+        existed = user is not None
         if user:
             user.is_admin = True
             user.password_hash = get_password_hash(password)
             user.is_verified = True
             if full_name:
                 user.full_name = full_name
-            print(f"✅ Updated existing user: {email} -> is_admin=True")
         else:
             user = User(
                 email=email,
@@ -46,10 +46,16 @@ def main():
                 is_verified=True,
             )
             db.add(user)
-            print(f"✅ Created new admin user: {email}")
 
+        # Commit BEFORE reporting. These messages used to print first, and on a
+        # console that is not UTF-8 (Windows cp1252, or a redirected/piped stdout
+        # under a C locale) the emoji raised UnicodeEncodeError — which aborted
+        # main() before the commit and silently rolled the whole thing back,
+        # while the operator saw a half-written success line. Plain ASCII below
+        # for the same reason.
         db.commit()
-        print("🎉 Done! Admin user can now log in.")
+        print(f"[ok] {'Updated existing user' if existed else 'Created new admin user'}: {email} -> is_admin=True")
+        print("Done. Admin user can now log in.")
     finally:
         db.close()
 
