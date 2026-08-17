@@ -6,7 +6,7 @@ import {
   MonitorPlay, GraduationCap, Radio, Activity, Table2, FileSpreadsheet, Menu,
   DatabaseZap, Users,
 } from 'lucide-react';
-import { clearOfflineCaches } from '../../pwa';
+import { useAuth } from '../../context/AuthContext';
 import { defaultProject, groupProjects, listProjects, type ProjectGroups } from '../../api/projects';
 import { getProjectSlug, onProjectChanged, setProjectSlug, type AdminProject } from '../../lib/adminProject';
 import { useTheme } from '../../context/ThemeContext';
@@ -42,6 +42,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const { t } = useTranslation('admin');
   const { darkMode, toggleDarkMode } = useTheme();
+  const { logout } = useAuth();
 
   // Below lg the sidebar is a slide-in drawer (same pattern as the learner
   // Sidebar); on desktop it is pinned open and this state is ignored.
@@ -91,11 +92,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('nh_admin');
-    localStorage.removeItem('nh_admin_token');
-    localStorage.removeItem('nh_admin_name');
-    localStorage.removeItem('nh_admin_district');
-    void clearOfflineCaches();
+    // End the WHOLE session, not just the admin half. This used to remove only
+    // the nh_admin* keys, which left nh_token in localStorage and the
+    // AuthContext user object populated — so isAuthenticated stayed true after
+    // "Log out": the landing page kept offering "Continue your journey",
+    // PublicRoute bounced /login away so there was no way back to the login
+    // form, and one click dropped you into the learner app still signed in as
+    // the account you had just logged out of.
+    logout();
     navigate('/login');
   };
 
