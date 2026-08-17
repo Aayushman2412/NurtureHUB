@@ -690,6 +690,7 @@ class QuestionOptionOut(BaseModel):
     id: int
     label: str
     text: str
+    image_url: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -699,6 +700,7 @@ class QuestionOut(BaseModel):
     text: str
     marks: int
     order_index: int
+    image_url: Optional[str] = None
     options: List[QuestionOptionOut]
 
     class Config:

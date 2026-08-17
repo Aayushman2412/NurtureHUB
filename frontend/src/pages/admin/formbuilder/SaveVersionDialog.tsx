@@ -9,13 +9,21 @@ export interface SaveVersionPayload {
   make_default: boolean;
   /** Auto-detected diff vs the version this edit started from. */
   detected_changes: string[];
+  /**
+   * 'new'   — cut vN+1 (a deliberate new version of the questionnaire)
+   * 'amend' — keep the current version number and log this change in its
+   *           history of modifications (the default for small corrections)
+   */
+  mode: 'new' | 'amend';
 }
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  /** vN this save will create. */
+  /** vN this save will create when mode is 'new'. */
   nextVersionNumber?: number;
+  /** The version currently open in the builder — the one 'amend' writes into. */
+  currentVersionNumber?: number;
   /** Whether "make default" starts checked (true when editing the live/default version). */
   defaultMakeDefault: boolean;
   /** What the builder detected changed — shown read-only beside the admin's note. */
@@ -40,6 +48,7 @@ const SaveVersionDialog: React.FC<Props> = ({
   open,
   onClose,
   nextVersionNumber,
+  currentVersionNumber,
   defaultMakeDefault,
   detectedChanges,
   saving,
@@ -50,6 +59,9 @@ const SaveVersionDialog: React.FC<Props> = ({
   const [description, setDescription] = useState('');
   const [makeDefault, setMakeDefault] = useState(defaultMakeDefault);
   const [touched, setTouched] = useState(false);
+  // Small corrections are the common case mid-project, so amending the version
+  // in place is the default; a new version number is the deliberate choice.
+  const [mode, setMode] = useState<'new' | 'amend'>('amend');
 
   // The dialog stays mounted between opens (so an accidental Esc keeps the
   // typed text) — but the default-toggle must track the version being edited.
@@ -57,8 +69,9 @@ const SaveVersionDialog: React.FC<Props> = ({
     if (open) {
       setMakeDefault(defaultMakeDefault);
       setTouched(false);
+      setMode(currentVersionNumber ? 'amend' : 'new');
     }
-  }, [open, defaultMakeDefault]);
+  }, [open, defaultMakeDefault, currentVersionNumber]);
 
   const descriptionMissing = !description.trim();
   // The masked text input can commit any typed date — block future ones here
@@ -75,9 +88,11 @@ const SaveVersionDialog: React.FC<Props> = ({
       title={
         <span className="flex items-center gap-2">
           <GitCommitHorizontal className="size-5 text-primary-ink" />
-          {nextVersionNumber
+          {mode === 'new' && nextVersionNumber
             ? t('saveVersion.titleN', { n: nextVersionNumber })
-            : t('saveVersion.title')}
+            : mode === 'amend' && currentVersionNumber
+              ? t('saveVersion.titleAmend', { n: currentVersionNumber })
+              : t('saveVersion.title')}
         </span>
       }
       footer={
@@ -94,6 +109,7 @@ const SaveVersionDialog: React.FC<Props> = ({
                 description: description.trim(),
                 make_default: makeDefault,
                 detected_changes: detectedChanges,
+                mode,
               })
             }
           >
@@ -104,6 +120,39 @@ const SaveVersionDialog: React.FC<Props> = ({
     >
       <div className="space-y-4">
         <p className="text-sm text-ink-muted">{t('saveVersion.blurb')}</p>
+
+        {/* Amend vs new version — a new version number is opt-in, so routine
+            mid-project corrections do not fragment the history. */}
+        {currentVersionNumber ? (
+          <div className="space-y-2 rounded-lg border border-border p-3">
+            <label className="flex items-start gap-2.5 text-sm text-ink">
+              <input
+                type="radio" name="save-mode" className="mt-0.5 accent-primary"
+                checked={mode === 'amend'} onChange={() => setMode('amend')}
+              />
+              <span>
+                <span className="font-medium">
+                  {t('saveVersion.modeAmend', { n: currentVersionNumber })}
+                </span>
+                <span className="block text-xs text-ink-muted">{t('saveVersion.modeAmendHint')}</span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2.5 text-sm text-ink">
+              <input
+                type="radio" name="save-mode" className="mt-0.5 accent-primary"
+                checked={mode === 'new'} onChange={() => setMode('new')}
+              />
+              <span>
+                <span className="font-medium">
+                  {nextVersionNumber
+                    ? t('saveVersion.modeNewN', { n: nextVersionNumber })
+                    : t('saveVersion.modeNew')}
+                </span>
+                <span className="block text-xs text-ink-muted">{t('saveVersion.modeNewHint')}</span>
+              </span>
+            </label>
+          </div>
+        ) : null}
 
         {/* What the builder itself detected — recorded with the version. */}
         <div className="rounded-lg border border-border bg-surface-sunken/60 p-3">
@@ -157,18 +206,20 @@ const SaveVersionDialog: React.FC<Props> = ({
           />
         </Field>
 
-        <label className="flex items-start gap-2.5 text-sm text-ink">
-          <input
-            type="checkbox"
-            checked={makeDefault}
-            onChange={e => setMakeDefault(e.target.checked)}
-            className="mt-0.5 accent-primary"
-          />
-          <span>
-            <span className="font-medium">{t('saveVersion.makeDefault')}</span>
-            <span className="block text-xs text-ink-muted">{t('saveVersion.makeDefaultHint')}</span>
-          </span>
-        </label>
+        {mode === 'new' && (
+          <label className="flex items-start gap-2.5 text-sm text-ink">
+            <input
+              type="checkbox"
+              checked={makeDefault}
+              onChange={e => setMakeDefault(e.target.checked)}
+              className="mt-0.5 accent-primary"
+            />
+            <span>
+              <span className="font-medium">{t('saveVersion.makeDefault')}</span>
+              <span className="block text-xs text-ink-muted">{t('saveVersion.makeDefaultHint')}</span>
+            </span>
+          </label>
+        )}
       </div>
     </Modal>
   );

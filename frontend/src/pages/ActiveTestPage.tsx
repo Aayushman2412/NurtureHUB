@@ -7,11 +7,13 @@ import { useTestEventEmitter } from '../hooks/useTestEventEmitter';
 import { AlertCircle, Clock, Eye, ChevronLeft, ChevronRight, Wifi, WifiOff, AlertTriangle } from 'lucide-react';
 import { Button, Card, Modal } from '../components/ui';
 import { cn } from '../utils/cn';
+import { resolveAssetUrl } from '../lib/flowGraph';
 
 interface Option {
   id: number;
   label: string;
   text: string;
+  image_url?: string | null;
 }
 
 interface Question {
@@ -19,6 +21,7 @@ interface Question {
   text: string;
   marks: number;
   order_index: number;
+  image_url?: string | null;
   options: Option[];
 }
 
@@ -355,9 +358,18 @@ const ActiveTestPage: React.FC = () => {
               </span>
             </div>
 
-            <h3 className="mb-5 text-lg font-semibold leading-relaxed text-ink">{currentQuestion.text}</h3>
+            <h3 className="mb-4 text-lg font-semibold leading-relaxed text-ink">{currentQuestion.text}</h3>
 
-            {/* Options */}
+            {/* Picture questions: the image sits between the wording and the options */}
+            {currentQuestion.image_url && (
+              <img
+                src={resolveAssetUrl(currentQuestion.image_url)}
+                alt=""
+                className="mb-5 max-h-72 w-full rounded-xl border border-border object-contain"
+              />
+            )}
+
+            {/* Options — an option may be a picture, a text answer, or both */}
             <div className="flex flex-col gap-3">
               {currentQuestion.options.map(opt => {
                 const isSelected = answers[currentQuestion.id]?.selected_option_id === opt.id;
@@ -380,7 +392,14 @@ const ActiveTestPage: React.FC = () => {
                     >
                       {opt.label}
                     </span>
-                    <span className="text-sm text-ink">{opt.text}</span>
+                    {opt.image_url && (
+                      <img
+                        src={resolveAssetUrl(opt.image_url)}
+                        alt=""
+                        className="h-20 w-28 shrink-0 rounded-lg border border-border object-cover"
+                      />
+                    )}
+                    {opt.text && <span className="text-sm text-ink">{opt.text}</span>}
                   </button>
                 );
               })}

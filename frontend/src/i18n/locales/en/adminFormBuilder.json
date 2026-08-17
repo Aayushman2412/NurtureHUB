@@ -112,7 +112,8 @@
     "deleting": "Deleting…",
     "deleted": "Version {{n}} deleted",
     "deletedWithUnpinned": "Version {{n}} deleted — {{projects}} now use the default version",
-    "deleteFailed": "Could not delete this version. Please try again."
+    "deleteFailed": "Could not delete this version. Please try again.",
+    "changeLogTitle": "History of modifications ({{n}})"
   },
   "saveVersion": {
     "title": "Save as a new version",
@@ -133,6 +134,13 @@
     "detectedNone": "No structural changes detected — only the description will be recorded.",
     "detectedMore": "+{{count}} more",
     "savedDefault": "Saved — version {{n}} is now the default for learners",
-    "saveFailed": "Could not save the form. Please try again."
+    "saveFailed": "Could not save the form. Please try again.",
+    "titleAmend": "Update version {{n}}",
+    "modeAmend": "Update version {{n}} and log the change",
+    "modeAmendHint": "Keeps the same version number. The change is added to this version's history of modifications with its date and your note. Use this for the small corrections that arrive during a project.",
+    "modeNew": "Save as a new version",
+    "modeNewN": "Save as a new version (v{{n}})",
+    "modeNewHint": "Cuts a new version number, so projects can be pinned to the old one or the new one. Use this for a deliberate revision of the questionnaire.",
+    "amended": "Version {{n}} updated — the change is recorded in its history."
   }
 }

@@ -13,7 +13,9 @@ import {
   Save,
   Trash2,
 } from 'lucide-react';
-import { adminCreateFormVersion, adminExportForm, adminGetForm, adminGetFormVersion } from '../../../api/forms';
+import {
+  adminAmendFormVersion, adminCreateFormVersion, adminExportForm, adminGetForm, adminGetFormVersion,
+} from '../../../api/forms';
 import { diffFormSchemas } from '../../../lib/formDiff';
 import SaveVersionDialog, { type SaveVersionPayload } from './SaveVersionDialog';
 import { FORM_KEYS } from '../../../lib/flowTypes';
@@ -151,6 +153,9 @@ const FlatFormEditorPage: React.FC = () => {
   const validKey = !!formKey && (FORM_KEYS as readonly string[]).includes(formKey);
   // ?v=N opens that specific version from the history; absent = the live/default schema.
   const versionParam = Number(searchParams.get('v')) || null;
+  // Which version the editor is actually showing: the one named in ?v=, or the
+  // form's default when opened plain. This is what an "amend" save writes into.
+  const loadedVersionNumber = versionParam ?? def?.default_version_number ?? null;
   // Set right before setSearchParams after a save so the load effect skips the
   // redundant refetch (which would blank the editor mid-edit).
   const skipLoadForVersionRef = React.useRef<number | null>(null);
@@ -207,17 +212,29 @@ const FlatFormEditorPage: React.FC = () => {
     if (!formKey) return;
     setSaving(true);
     try {
-      const created = await adminCreateFormVersion(formKey as FormKey, {
-        schema_json: { fields },
-        diffed_from_version: versionParam ?? undefined,
-        ...payload,
-      });
+      const { mode, ...rest } = payload;
+      // 'amend' keeps the version number and logs the edit in its history;
+      // 'new' cuts vN+1. See SaveVersionDialog.
+      const created = mode === 'amend' && loadedVersionNumber
+        ? await adminAmendFormVersion(formKey as FormKey, loadedVersionNumber, {
+            schema_json: { fields },
+            created_on: rest.created_on,
+            description: rest.description,
+            detected_changes: rest.detected_changes,
+          })
+        : await adminCreateFormVersion(formKey as FormKey, {
+            schema_json: { fields },
+            diffed_from_version: versionParam ?? undefined,
+            ...rest,
+          });
       setDirty(false);
       setShowSaveDialog(false);
       showToast(
-        payload.make_default
-          ? t('saveVersion.savedDefault', { n: created.version_number })
-          : t('saveVersion.saved', { n: created.version_number }),
+        mode === 'amend'
+          ? t('saveVersion.amended', { n: created.version_number })
+          : payload.make_default
+            ? t('saveVersion.savedDefault', { n: created.version_number })
+            : t('saveVersion.saved', { n: created.version_number }),
         'success',
       );
       // The saved schema is the new baseline for any further edits.
@@ -672,6 +689,7 @@ const FlatFormEditorPage: React.FC = () => {
       <SaveVersionDialog
         open={showSaveDialog}
         onClose={() => setShowSaveDialog(false)}
+        currentVersionNumber={loadedVersionNumber ?? undefined}
         defaultMakeDefault={loadedIsDefault}
         detectedChanges={
           showSaveDialog ? diffFormSchemas('flat', { fields: baseline }, { fields }) : []

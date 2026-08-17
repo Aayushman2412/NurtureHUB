@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, BoxSelect, ClipboardPaste, Copy, Download, Eye, Info, Layers, Monitor, Plus, Printer, Redo2, Save, Table, Trash2, Undo2, X } from 'lucide-react';
-import { adminCreateFormVersion, adminExportForm, adminGetForm, adminGetFormVersion } from '../../../api/forms';
+import {
+  adminAmendFormVersion, adminCreateFormVersion, adminExportForm, adminGetForm, adminGetFormVersion,
+} from '../../../api/forms';
 import { diffFormSchemas } from '../../../lib/formDiff';
 import SaveVersionDialog, { type SaveVersionPayload } from './SaveVersionDialog';
 import {
@@ -116,6 +118,9 @@ const FlowBuilderPage: React.FC = () => {
 
   // ?v=N opens that specific version from the history; absent = the live/default schema.
   const versionParam = Number(searchParams.get('v')) || null;
+  // Which version the canvas is actually showing: the one named in ?v=, or the
+  // form's default when opened plain. This is what an "amend" save writes into.
+  const loadedVersionNumber = versionParam ?? def?.default_version_number ?? null;
   // Set right before setSearchParams after a save so the load effect skips the
   // redundant refetch (which would blank the editor and wipe undo history).
   const skipLoadForVersionRef = useRef<number | null>(null);
@@ -591,20 +596,32 @@ const FlowBuilderPage: React.FC = () => {
     if (!formKey || !isFlowFormKey(formKey)) return;
     setSaving(true);
     try {
-      const created = await adminCreateFormVersion(formKey, {
-        schema_json: schemaRef.current,
-        title: title.trim() || def?.title || 'Untitled form',
-        definition_description: description,
-        diffed_from_version: versionParam ?? undefined,
-        ...payload,
-      });
+      const { mode, ...rest } = payload;
+      // 'amend' keeps the version number and logs the edit in its history;
+      // 'new' cuts vN+1. See SaveVersionDialog.
+      const created = mode === 'amend' && loadedVersionNumber
+        ? await adminAmendFormVersion(formKey, loadedVersionNumber, {
+            schema_json: schemaRef.current,
+            created_on: rest.created_on,
+            description: rest.description,
+            detected_changes: rest.detected_changes,
+          })
+        : await adminCreateFormVersion(formKey, {
+            schema_json: schemaRef.current,
+            title: title.trim() || def?.title || 'Untitled form',
+            definition_description: description,
+            diffed_from_version: versionParam ?? undefined,
+            ...rest,
+          });
       setTitle(created.title);
       setDirty(false);
       setShowSaveDialog(false);
       showToast(
-        payload.make_default
-          ? t('saveVersion.savedDefault', { n: created.version_number })
-          : t('saveVersion.saved', { n: created.version_number }),
+        mode === 'amend'
+          ? t('saveVersion.amended', { n: created.version_number })
+          : payload.make_default
+            ? t('saveVersion.savedDefault', { n: created.version_number })
+            : t('saveVersion.saved', { n: created.version_number }),
         'success',
       );
       // The saved schema is the new baseline for any further edits.
@@ -1104,6 +1121,7 @@ const FlowBuilderPage: React.FC = () => {
       <SaveVersionDialog
         open={showSaveDialog}
         onClose={() => setShowSaveDialog(false)}
+        currentVersionNumber={loadedVersionNumber ?? undefined}
         defaultMakeDefault={loadedIsDefault}
         detectedChanges={showSaveDialog ? diffFormSchemas('flow', baseline, schema) : []}
         saving={saving}

@@ -168,8 +168,8 @@ def start_test_attempt(id: int, current_user: User = Depends(get_verified_user),
     questions_out = []
     for q in questions:
         options_out = [
-            QuestionOptionOut(id=opt.id, label=opt.label, text=opt.text)
-            for opt in q.options
+            QuestionOptionOut(id=opt.id, label=opt.label, text=opt.text, image_url=opt.image_url)
+            for opt in sorted(q.options, key=lambda o: (o.label or ""))
         ]
         questions_out.append(
             QuestionOut(
@@ -177,6 +177,7 @@ def start_test_attempt(id: int, current_user: User = Depends(get_verified_user),
                 text=q.text,
                 marks=q.marks,
                 order_index=q.order_index,
+                image_url=q.image_url,
                 options=options_out
             )
         )

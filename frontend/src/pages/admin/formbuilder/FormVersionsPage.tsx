@@ -254,6 +254,31 @@ const FormVersionsPage: React.FC = () => {
                         </ul>
                       </div>
                     )}
+                    {/* History of modifications: corrections applied to this
+                        version without cutting a new version number. */}
+                    {(version.change_log ?? []).length > 0 && (
+                      <div className="mt-2 rounded-lg border border-border bg-surface-sunken/50 p-2.5">
+                        <p className="mb-1 mt-0 text-[11px] font-bold uppercase tracking-wide text-ink-muted">
+                          {t('versions.changeLogTitle', { n: version.change_log.length })}
+                        </p>
+                        <ul className="space-y-1.5">
+                          {version.change_log.map((entry, i) => (
+                            <li key={`${i}-${entry.at}`} className="text-xs text-ink">
+                              <span className="font-semibold">{entry.on}</span>
+                              {entry.by && <span className="text-ink-faint"> · {entry.by}</span>}
+                              <span className="block text-ink-muted">{entry.note}</span>
+                              {entry.detected.length > 0 && (
+                                <ul className="mt-0.5 space-y-0.5 border-l-2 border-border pl-2.5 text-[11px] text-ink-faint">
+                                  {entry.detected.map((change, j) => (
+                                    <li key={`${j}-${change}`}>{change}</li>
+                                  ))}
+                                </ul>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       <MapPin className="size-3.5 text-ink-faint" />
                       {version.districts.length === 0 ? (

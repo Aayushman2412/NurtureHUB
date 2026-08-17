@@ -544,6 +544,8 @@ export interface FormDefinition {
   description: string | null;
   builder_type: 'flow' | 'flat';
   version: number;
+  /** The version_number the builder shows when opened without ?v=. */
+  default_version_number: number | null;
   schema_json: FlowSchema | FlatSchema;
   updated_at: string | null;
   updated_by: string | null;

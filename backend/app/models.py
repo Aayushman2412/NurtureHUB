@@ -291,6 +291,9 @@ class Test(Base):
     duration_minutes = Column(Integer, default=0)
     passing_score_pct = Column(Integer, default=50) # e.g., 50 means 50%
     max_attempts = Column(Integer, default=3)
+    # Marks given to a question that does not state its own (manual add, or a
+    # sheet row with an empty Marks cell). Admin-editable per test.
+    default_marks = Column(Integer, nullable=False, default=1)
     # Lifecycle: draft -> (scheduled_at set) -> active (admin starts) -> ended (admin ends).
     # Students may only start attempts while status == 'active'.
     status = Column(String, nullable=False, default="draft")
@@ -313,6 +316,9 @@ class Question(Base):
     text = Column(Text, nullable=False)
     marks = Column(Integer, default=1)
     order_index = Column(Integer, default=0)
+    # Optional picture shown above the options (diagram, growth chart, photo).
+    # Stored as an /uploads/... or R2 CDN URL — see app/storage.py.
+    image_url = Column(String, nullable=True)
 
     # Relationships
     test = relationship("Test", back_populates="questions")
@@ -328,6 +334,9 @@ class QuestionOption(Base):
     label = Column(String, nullable=False) # e.g., "A", "B", "C", "D"
     text = Column(Text, nullable=False)
     is_correct = Column(Boolean, default=False, nullable=False)
+    # Optional picture for this option — lets a question be answered by picking
+    # between images (text may then be a short caption, or empty).
+    image_url = Column(String, nullable=True)
 
     # Relationships
     question = relationship("Question", back_populates="options")
@@ -858,6 +867,14 @@ class FormVersion(Base):
     # The version_number the diff was taken against (the editor may have been
     # opened on an older version, so this is not always the previous one).
     diffed_from_version = Column(Integer, nullable=True)
+    # "History of modifications" for THIS version. A version is immutable by
+    # default, but an admin may choose to amend it in place instead of cutting
+    # a new one (small mid-project corrections, typo fixes, relabelled
+    # questions). Every amendment appends one entry here:
+    #   {"on": "2026-08-17", "note": "...", "detected": [...], "by": "a@b.c",
+    #    "at": "<utc iso>"}
+    # so the version still carries a dated, attributable audit trail.
+    change_log = Column(JSON, nullable=True)
     schema_json = Column(JSON, nullable=False, default=dict)
     created_by = Column(String, nullable=True)         # admin email (audit)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

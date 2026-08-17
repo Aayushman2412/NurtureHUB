@@ -50,6 +50,7 @@ import AdminTutorialTrackingPage from './pages/admin/AdminTutorialTrackingPage';
 import AdminResultsPage from './pages/admin/AdminResultsPage';
 import AdminTestsPage from './pages/admin/AdminTestsPage';
 import AdminProjectsPage from './pages/admin/AdminProjectsPage';
+import AdminLearnersPage from './pages/admin/AdminLearnersPage';
 import AdminLiveMonitorPage from './pages/admin/AdminLiveMonitorPage';
 import AdminGrowthMonitorPage from './pages/admin/AdminGrowthMonitorPage';
 import AdminGrowthCasePage from './pages/admin/AdminGrowthCasePage';
@@ -180,6 +181,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/admin/projects" element={<AdminRoute><AdminProjectsPage /></AdminRoute>} />
       {/* Legacy path kept so bookmarks still work. */}
       <Route path="/admin/districts" element={<Navigate to="/admin/projects" replace />} />
+      <Route path="/admin/learners" element={<AdminRoute><AdminLearnersPage /></AdminRoute>} />
       <Route path="/admin/form-builder" element={<AdminRoute><FormBuilderHubPage /></AdminRoute>} />
       <Route path="/admin/form-builder/versions/:formKey" element={<AdminRoute><FormVersionsPage /></AdminRoute>} />
       <Route path="/admin/form-builder/flat/:formKey" element={<AdminRoute><FlatFormEditorPage /></AdminRoute>} />

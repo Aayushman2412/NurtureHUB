@@ -24,7 +24,9 @@ from app.models import (
     User, ProgramDistrict, Stage, Tutorial, Test, Question, QuestionOption,
     TestAttempt, TestAnswer, TutorialQuestion, TutorialQuestionOption,
     TutorialQuizResponse, UserTutorialProgress, Notification, FaceToFaceSelection,
+    Mother, FormDefinition, FormDistrictAssignment, FormVersion,
 )
+from app.seed_forms import FORM_SPECS, ensure_form_definitions
 from app.auth import verify_password, create_access_token
 from app.dependencies import get_current_admin, get_admin_email, invalidate_user_cache
 from app.notify import create_notification
@@ -341,6 +343,198 @@ def update_project(project_id: int, data: ProjectUpdate, db: Session = Depends(g
     return projects.serialize(db, project, user_count=counts.get(project.id, 0))
 
 
+@router.get("/projects/{project_id}/setup-options")
+def project_setup_options(project_id: int, db: Session = Depends(get_db),
+                          admin_email: str = Depends(get_admin_email)):
+    """Everything the "set up this project" wizard needs in one call: which
+    projects can be copied from (and how much content each has), and every form
+    with its versions so a version can be pinned per form up front."""
+    project = db.query(ProgramDistrict).filter(ProgramDistrict.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    sources = []
+    for row in projects.all_projects(db):
+        if row.id == project.id:
+            continue
+        stage_ids = [
+            s.id for s in db.query(Stage.id).filter(Stage.program_district_id == row.id).all()
+        ]
+        if not stage_ids:
+            continue
+        sources.append({
+            "id": row.id,
+            "name": row.name,
+            "level": row.level or ProgramDistrict.LEVEL_DISTRICT,
+            "phase_count": len(stage_ids),
+            "tutorial_count": db.query(Tutorial).filter(Tutorial.stage_id.in_(stage_ids)).count(),
+            "test_count": db.query(Test).filter(Test.stage_id.in_(stage_ids)).count(),
+        })
+
+    ensure_form_definitions(db)
+    definitions = {d.form_key: d for d in db.query(FormDefinition).all()}
+    assignments = {
+        a.form_key: a for a in db.query(FormDistrictAssignment).filter(
+            FormDistrictAssignment.program_district_id == project.id
+        ).all()
+    }
+    versions_by_form: Dict[str, List[FormVersion]] = {}
+    for version in db.query(FormVersion).order_by(FormVersion.version_number.desc()).all():
+        versions_by_form.setdefault(version.form_key, []).append(version)
+
+    forms = []
+    for form_key in FORM_SPECS:
+        definition = definitions.get(form_key)
+        if not definition:
+            continue
+        assignment = assignments.get(form_key)
+        current = None
+        if assignment:
+            current = next(
+                (v.version_number for v in versions_by_form.get(form_key, []) if v.id == assignment.version_id),
+                None,
+            )
+        forms.append({
+            "form_key": form_key,
+            "title": definition.title,
+            "default_version_number": (
+                definition.default_version.version_number if definition.default_version else None
+            ),
+            "current_version_number": current,   # None = follows the default
+            "versions": [
+                {
+                    "version_number": v.version_number,
+                    "created_on": v.created_on.isoformat() if v.created_on else None,
+                    "description": v.description,
+                }
+                for v in versions_by_form.get(form_key, [])
+            ],
+        })
+
+    return {
+        "project": projects.serialize(db, project),
+        "can_have_districts": project.is_state,
+        "sources": sorted(sources, key=lambda s: (s["name"] or "").lower()),
+        "forms": forms,
+    }
+
+
+@router.post("/projects/{project_id}/setup")
+def setup_project(project_id: int, data: Dict[str, Any], db: Session = Depends(get_db),
+                  admin_email: str = Depends(get_admin_email)):
+    """One-shot onboarding for a newly created project.
+
+    Payload (every part optional):
+      copy_content_from: int    — clone that project's phases/tutorials into this one
+      copy_tests:        bool   — also clone its test papers (as drafts, unscheduled)
+      form_versions:     {form_key: version_number | null}  — pin each form
+      child_districts:   [str]  — district projects to create inside a STATE project
+      children_inherit:  bool   — those districts serve this state's content
+
+    Content is only copied into an EMPTY project: re-running the wizard must
+    never silently duplicate a syllabus.
+    """
+    project = db.query(ProgramDistrict).filter(ProgramDistrict.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    result: Dict[str, Any] = {"phases_copied": 0, "forms_pinned": 0, "districts_created": []}
+
+    # ── 1. Content ────────────────────────────────────────────────────────────
+    source_id = data.get("copy_content_from")
+    if source_id:
+        source = db.query(ProgramDistrict).filter(ProgramDistrict.id == int(source_id)).first()
+        if not source:
+            raise HTTPException(status_code=404, detail="Source project not found")
+        if source.id == project.id:
+            raise HTTPException(status_code=400, detail="A project cannot copy content from itself")
+        existing = db.query(Stage).filter(Stage.program_district_id == project.id).count()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(f"'{project.name}' already has {existing} phase(s). Delete them first, or copy "
+                        "individual phases from the Tutorials screen."),
+            )
+        source_stages = (
+            db.query(Stage)
+            .filter(Stage.program_district_id == projects.content_project_id(source))
+            .order_by(Stage.order_index)
+            .all()
+        )
+        for i, stage in enumerate(source_stages):
+            _clone_stage(db, stage, project.id, i, include_tests=bool(data.get("copy_tests")))
+        result["phases_copied"] = len(source_stages)
+
+    # ── 2. Form versions ──────────────────────────────────────────────────────
+    wanted_versions: Dict[str, Any] = data.get("form_versions") or {}
+    if wanted_versions:
+        ensure_form_definitions(db)
+        existing_assignments = {
+            a.form_key: a for a in db.query(FormDistrictAssignment).filter(
+                FormDistrictAssignment.program_district_id == project.id
+            ).all()
+        }
+        for form_key, version_number in wanted_versions.items():
+            if form_key not in FORM_SPECS:
+                raise HTTPException(status_code=400, detail=f"Unknown form '{form_key}'")
+            assignment = existing_assignments.get(form_key)
+            if version_number is None:
+                # "Follow the default" — drop any pin.
+                if assignment:
+                    db.delete(assignment)
+                continue
+            version = db.query(FormVersion).filter(
+                FormVersion.form_key == form_key,
+                FormVersion.version_number == int(version_number),
+            ).first()
+            if not version:
+                raise HTTPException(status_code=404,
+                                    detail=f"{form_key} has no version {version_number}")
+            if assignment:
+                assignment.version_id = version.id
+                assignment.assigned_by = admin_email
+            else:
+                db.add(FormDistrictAssignment(
+                    form_key=form_key,
+                    program_district_id=project.id,
+                    version_id=version.id,
+                    assigned_by=admin_email,
+                ))
+            result["forms_pinned"] += 1
+
+    # ── 3. Child districts (state projects only) ──────────────────────────────
+    names = [str(n).strip() for n in (data.get("child_districts") or []) if str(n).strip()]
+    if names:
+        if not project.is_state:
+            raise HTTPException(status_code=400,
+                                detail="Only a state project can contain district projects")
+        inherit = bool(data.get("children_inherit"))
+        for name in names:
+            slug = _slugify(name)
+            clash = db.query(ProgramDistrict).filter(
+                (ProgramDistrict.name == name) | (ProgramDistrict.slug == slug)
+            ).first()
+            if clash:
+                raise HTTPException(status_code=400,
+                                    detail=f"A project named '{name}' already exists")
+            child = ProgramDistrict(
+                name=name,
+                slug=slug,
+                is_active=True,
+                level=ProgramDistrict.LEVEL_DISTRICT,
+                parent_id=project.id,
+                inherits_content=inherit,
+                state_prefix=project.state_prefix,
+            )
+            db.add(child)
+            db.flush()
+            MOCK_FORM_CONFIG[slug] = _default_form_config()
+            result["districts_created"].append({"id": child.id, "name": child.name, "slug": child.slug})
+
+    db.commit()
+    return result
+
+
 @router.delete("/projects/{project_id}")
 def delete_project(project_id: int, db: Session = Depends(get_db), admin_email: str = Depends(get_admin_email)):
     """Delete a project. A state with districts must be emptied first — the FK
@@ -445,20 +639,183 @@ def delete_district(district_id: int, db: Session = Depends(get_db), admin_email
 # ──────────────────────────────────────────────
 # User-District Assignment
 # ──────────────────────────────────────────────
+def _serialize_learner(db: Session, u: User) -> Dict[str, Any]:
+    return {
+        "id": u.id,
+        "email": u.email,
+        "full_name": u.full_name,
+        "phone": u.phone,
+        "role": u.role,
+        "learner_category": u.learner_category,
+        "work_center_name": u.work_center_name,
+        "is_verified": bool(u.is_verified),
+        "is_admin": bool(u.is_admin),
+        "created_at": iso_utc(u.created_at),
+        "program_district_id": u.program_district_id,
+        "program_district_name": u.program_district.name if u.program_district else None,
+    }
+
+
+def _learner_activity(db: Session, user_ids: List[int]) -> Dict[int, Dict[str, int]]:
+    """Per-learner counts used by the delete confirmation, in two grouped queries."""
+    if not user_ids:
+        return {}
+    activity: Dict[int, Dict[str, int]] = {uid: {"attempts": 0, "mothers": 0} for uid in user_ids}
+    for uid, count in (
+        db.query(TestAttempt.user_id, func.count(TestAttempt.id))
+        .filter(TestAttempt.user_id.in_(user_ids), TestAttempt.submitted_at.isnot(None))
+        .group_by(TestAttempt.user_id).all()
+    ):
+        activity[uid]["attempts"] = count
+    for uid, count in (
+        db.query(Mother.registered_by_user_id, func.count(Mother.id))
+        .filter(Mother.registered_by_user_id.in_(user_ids))
+        .group_by(Mother.registered_by_user_id).all()
+    ):
+        if uid in activity:
+            activity[uid]["mothers"] = count
+    return activity
+
+
 @router.get("/users")
-def list_users_for_admin(db: Session = Depends(get_db), admin_email: str = Depends(get_admin_email)):
-    """List all users with their district assignment."""
-    users = db.query(User).order_by(User.id).all()
-    result = []
-    for u in users:
-        result.append({
-            "id": u.id,
-            "email": u.email,
-            "full_name": u.full_name,
-            "program_district_id": u.program_district_id,
-            "program_district_name": u.program_district.name if u.program_district else None,
-        })
-    return result
+def list_users_for_admin(
+    q: str = Query("", description="Search name or email"),
+    project_id: Optional[int] = Query(None, description="Filter by project id; -1 = unassigned"),
+    limit: int = Query(200, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """List learners with their project assignment, searchable and filterable.
+
+    Returns `total` alongside the page so the UI can say "showing 200 of 4,318"
+    rather than silently truncating.
+    """
+    query = db.query(User)
+    term = (q or "").strip()
+    if term:
+        like = f"%{term.lower()}%"
+        query = query.filter(
+            func.lower(User.email).like(like) | func.lower(func.coalesce(User.full_name, "")).like(like)
+        )
+    if project_id is not None:
+        if project_id < 0:
+            query = query.filter(User.program_district_id.is_(None))
+        else:
+            query = query.filter(User.program_district_id == project_id)
+
+    total = query.count()
+    users = query.order_by(User.id).offset(offset).limit(limit).all()
+    activity = _learner_activity(db, [u.id for u in users])
+    return {
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "users": [{**_serialize_learner(db, u), **activity.get(u.id, {})} for u in users],
+    }
+
+
+LEARNER_EDITABLE_FIELDS = ["full_name", "phone", "role", "learner_category", "work_center_name"]
+
+
+@router.put("/users/{user_id}")
+def update_learner(
+    user_id: int,
+    payload: Dict[str, Any],
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Edit a learner's profile fields, verification flag and project."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    for key in LEARNER_EDITABLE_FIELDS:
+        if key in payload:
+            value = payload[key]
+            setattr(user, key, (value or None) if isinstance(value, str) else value)
+
+    if "email" in payload:
+        # Emails are the login identity and are stored lowercase everywhere.
+        email = (payload.get("email") or "").strip().lower()
+        if not email:
+            raise HTTPException(status_code=400, detail="Email is required")
+        clash = db.query(User.id).filter(func.lower(User.email) == email, User.id != user.id).first()
+        if clash:
+            raise HTTPException(status_code=400, detail="Another account already uses that email")
+        old_email = user.email
+        user.email = email
+        invalidate_user_cache(old_email)
+
+    if "is_verified" in payload:
+        user.is_verified = bool(payload["is_verified"])
+    if "program_district_id" in payload:
+        project_id = payload["program_district_id"]
+        if project_id is not None:
+            exists = db.query(ProgramDistrict.id).filter(ProgramDistrict.id == project_id).first()
+            if not exists:
+                raise HTTPException(status_code=404, detail="Project not found")
+        user.program_district_id = project_id
+
+    db.commit()
+    db.refresh(user)
+    # The cached snapshot gates content and verification — drop it so the edit
+    # takes effect on the learner's next request, not after the cache TTL.
+    invalidate_user_cache(user.email)
+    return _serialize_learner(db, user)
+
+
+@router.delete("/users/{user_id}")
+def delete_learner(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Permanently delete a learner account.
+
+    Everything owned by the account goes with it (progress, attempts, answers,
+    notifications, achievements, push subscriptions) via ON DELETE CASCADE.
+    Mothers and children they registered are field data belonging to the
+    programme, not to the account — those rows survive with a null registrar
+    (Mother.registered_by_user_id is ON DELETE SET NULL).
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if (user.email or "").lower() == (admin_email or "").lower():
+        raise HTTPException(status_code=400, detail="You cannot delete the account you are signed in as")
+
+    email = user.email
+    db.delete(user)
+    db.commit()
+    invalidate_user_cache(email)
+    return {"message": "Account deleted", "email": email}
+
+
+@router.post("/users/bulk-assign")
+def bulk_assign_users(
+    payload: Dict[str, Any],
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Move several learners to one project at once ({"user_ids": [...],
+    "program_district_id": n | null})."""
+    user_ids = [int(uid) for uid in (payload.get("user_ids") or [])]
+    if not user_ids:
+        raise HTTPException(status_code=400, detail="Select at least one learner")
+    project_id = payload.get("program_district_id")
+    if project_id is not None:
+        exists = db.query(ProgramDistrict.id).filter(ProgramDistrict.id == project_id).first()
+        if not exists:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+    users = db.query(User).filter(User.id.in_(user_ids)).all()
+    for user in users:
+        user.program_district_id = project_id
+    db.commit()
+    for user in users:
+        invalidate_user_cache(user.email)
+    return {"moved": len(users), "program_district_id": project_id}
 
 
 @router.put("/users/{user_id}/district")
@@ -642,6 +999,7 @@ def _serialize_admin_stage(db: Session, stage: Stage) -> Dict[str, Any]:
         "order_index": stage.order_index,
         "stage_type": stage.stage_type or "tutorials",
         "quiz_enabled": bool(stage.quiz_enabled),
+        "test_count": db.query(Test).filter(Test.stage_id == stage.id).count(),
         "tutorials": [_serialize_admin_tutorial(db, t) for t in tutorials],
     }
 
@@ -671,15 +1029,14 @@ TUTORIAL_EDITABLE_FIELDS = [
 @router.get("/stages")
 def get_admin_stages(district: str = Query("jalna", description="District slug"), db: Session = Depends(get_db), admin_email: str = Depends(get_admin_email)):
     """
-    Return the district's VIDEO phases (and their tutorials) for the Tutorials
-    manager. Test phases are deliberately excluded here — they live in Test
-    Management. This also prevents deleting a test (and its data) from this screen.
+    Return every phase of the project in running order — video phases with their
+    tutorials, and test phases so the sequence the learner walks through is
+    legible (and reorderable) in one place.
+
+    Test phases stay read-only here: their tests, schedules and results are
+    managed in Test Management, and delete_stage refuses them.
     """
-    return [
-        _serialize_admin_stage(db, s)
-        for s in _district_stages(db, district)
-        if (s.stage_type or "tutorials") != "test"
-    ]
+    return [_serialize_admin_stage(db, s) for s in _district_stages(db, district)]
 
 
 @router.post("/stages")
@@ -741,6 +1098,180 @@ def delete_stage(stage_id: int, district: str = Query("jalna", description="Dist
         s.order_index = i
     db.commit()
     return {"message": "Stage deleted"}
+
+
+def _clone_stage(
+    db: Session,
+    source: Stage,
+    target_project_id: int,
+    order_index: int,
+    include_tests: bool,
+) -> Stage:
+    """Deep-copy one phase into another project.
+
+    Copies the phase, its tutorials and each tutorial's post-video quiz. Test
+    papers are copied only when `include_tests` — and always as fresh DRAFTS
+    with no schedule, so a copy can never go live behind the admin's back. No
+    learner data (progress, attempts, answers) is ever copied.
+    """
+    new_stage = Stage(
+        program_district_id=target_project_id,
+        title=source.title,
+        description=source.description,
+        order_index=order_index,
+        stage_type=source.stage_type or "tutorials",
+        quiz_enabled=bool(source.quiz_enabled),
+    )
+    db.add(new_stage)
+    db.flush()
+
+    tutorials = (
+        db.query(Tutorial).filter(Tutorial.stage_id == source.id).order_by(Tutorial.order_index).all()
+    )
+    for tut in tutorials:
+        new_tut = Tutorial(
+            stage_id=new_stage.id,
+            title=tut.title,
+            description=tut.description,
+            module_number=tut.module_number,
+            duration_minutes=tut.duration_minutes,
+            video_url=tut.video_url,
+            youtube_url=tut.youtube_url,
+            start_seconds=tut.start_seconds,
+            end_seconds=tut.end_seconds,
+            gradient_colors=tut.gradient_colors,
+            order_index=tut.order_index,
+            quiz_enabled=bool(tut.quiz_enabled),
+        )
+        db.add(new_tut)
+        db.flush()
+        for question in tut.quiz_questions:
+            new_q = TutorialQuestion(
+                tutorial_id=new_tut.id,
+                text=question.text,
+                order_index=question.order_index,
+            )
+            db.add(new_q)
+            db.flush()
+            for option in question.options:
+                db.add(TutorialQuestionOption(
+                    question_id=new_q.id,
+                    label=option.label,
+                    text=option.text,
+                    is_correct=option.is_correct,
+                ))
+
+    if include_tests:
+        for test in db.query(Test).filter(Test.stage_id == source.id).order_by(Test.id).all():
+            new_test = Test(
+                stage_id=new_stage.id,
+                title=test.title,
+                description=test.description,
+                total_questions=test.total_questions,
+                duration_minutes=test.duration_minutes,
+                passing_score_pct=test.passing_score_pct,
+                max_attempts=test.max_attempts,
+                default_marks=test.default_marks or 1,
+                test_type=test.test_type,
+                status="draft",
+                scheduled_at=None,
+            )
+            db.add(new_test)
+            db.flush()
+            for question in sorted(test.questions, key=lambda q: (q.order_index or 0, q.id)):
+                new_q = Question(
+                    test_id=new_test.id,
+                    text=question.text,
+                    marks=question.marks,
+                    order_index=question.order_index,
+                    image_url=question.image_url,
+                )
+                db.add(new_q)
+                db.flush()
+                for option in question.options:
+                    db.add(QuestionOption(
+                        question_id=new_q.id,
+                        label=option.label,
+                        text=option.text,
+                        image_url=option.image_url,
+                        is_correct=option.is_correct,
+                    ))
+
+    return new_stage
+
+
+@router.post("/stages/reorder")
+def reorder_stages(
+    payload: Dict[str, Any],
+    district: str = Query("jalna", description="District slug"),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Set the running order of a project's phases from {"stage_ids": [...]}.
+
+    Order matters beyond presentation: a test is gated on every tutorial in its
+    own phase and all EARLIER ones (see app/flow.py), so moving a video phase
+    above or below a test phase changes what learners must finish first.
+    """
+    pd = _content_project_or_404(db, district)
+    wanted = [int(sid) for sid in (payload.get("stage_ids") or [])]
+    stages = db.query(Stage).filter(Stage.program_district_id == pd.id).all()
+    by_id = {s.id: s for s in stages}
+    unknown = [sid for sid in wanted if sid not in by_id]
+    if unknown:
+        raise HTTPException(status_code=400, detail=f"Unknown phase id(s) for this project: {unknown}")
+
+    # Listed phases take the given order; anything omitted keeps its relative
+    # position at the end, so a stale client list can never drop a phase.
+    ordered = [by_id[sid] for sid in wanted]
+    ordered += [s for s in sorted(stages, key=lambda s: s.order_index or 0) if s.id not in set(wanted)]
+    for i, stage in enumerate(ordered):
+        stage.order_index = i
+    db.commit()
+    return [_serialize_admin_stage(db, s) for s in ordered]
+
+
+@router.post("/stages/{stage_id}/copy")
+def copy_stage_to_projects(
+    stage_id: int,
+    payload: Dict[str, Any],
+    district: str = Query("jalna", description="District slug"),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Copy a phase — its tutorials and their post-video quiz questions — into
+    other projects ({"project_ids": [...]}).
+
+    This is a COPY, not a live link: each target project gets its own phase it
+    can then edit independently. (For a permanently shared syllabus, make the
+    district inherit its state's content on the Projects screen instead.)
+    Tests are not copied — they carry schedules, attempts and results.
+    """
+    source = db.query(Stage).filter(Stage.id == stage_id).first()
+    if not source:
+        raise HTTPException(status_code=404, detail="Phase not found")
+
+    target_ids = {int(pid) for pid in (payload.get("project_ids") or [])}
+    target_ids.discard(source.program_district_id)
+    if not target_ids:
+        raise HTTPException(status_code=400, detail="Pick at least one other project to copy into")
+
+    targets = db.query(ProgramDistrict).filter(ProgramDistrict.id.in_(target_ids)).all()
+    missing = target_ids - {p.id for p in targets}
+    if missing:
+        raise HTTPException(status_code=400, detail=f"Unknown project id(s): {sorted(missing)}")
+
+    source_tutorials = (
+        db.query(Tutorial).filter(Tutorial.stage_id == source.id).order_by(Tutorial.order_index).all()
+    )
+    copied = []
+    for target in targets:
+        count = db.query(Stage).filter(Stage.program_district_id == target.id).count()
+        new_stage = _clone_stage(db, source, target.id, count, include_tests=False)
+        copied.append({"project_id": target.id, "project_name": target.name, "stage_id": new_stage.id})
+
+    db.commit()
+    return {"copied": copied, "tutorials_per_copy": len(source_tutorials)}
 
 
 @router.post("/stages/{stage_id}/tutorials")
@@ -1171,29 +1702,40 @@ def _stage_position(stages: List[Stage], stage_id: int) -> int:
     return 1
 
 
+# Option slots a test question can use. Four was the historical fixed shape;
+# E/F let a question offer more choices without a schema change. Blank slots
+# are simply not stored, so a true/false question keeps only A and B.
+OPTION_LABELS = ["A", "B", "C", "D", "E", "F"]
+
+
+def _serialize_admin_question(q: Question) -> Dict[str, Any]:
+    """One question in the flat A–F shape the admin UI edits."""
+    opts = sorted(q.options, key=lambda o: (o.label or ""))
+    by_label = {(o.label or "").upper(): o for o in opts}
+    correct = next(((o.label or "").upper() for o in opts if o.is_correct), "A")
+    out: Dict[str, Any] = {
+        "id": q.id,
+        "text": q.text,
+        "correct_answer": correct,
+        "marks": q.marks,
+        "order_index": q.order_index or 0,
+        "image_url": q.image_url or "",
+    }
+    for label in OPTION_LABELS:
+        option = by_label.get(label)
+        out[f"option_{label.lower()}"] = option.text if option else ""
+        out[f"option_{label.lower()}_image"] = (option.image_url or "") if option else ""
+    return out
+
+
 def _serialize_admin_test(db: Session, test: Test, stage_position: int) -> Dict[str, Any]:
     """Serialize a DB Test into the flat shape the admin UI (AdminTestsPage) expects."""
     questions = (
         db.query(Question)
         .filter(Question.test_id == test.id)
-        .order_by(Question.order_index)
+        .order_by(Question.order_index, Question.id)
         .all()
     )
-    q_out = []
-    for q in questions:
-        opts = sorted(q.options, key=lambda o: (o.label or ""))
-        opt_map = {(o.label or "").upper(): o.text for o in opts}
-        correct = next(((o.label or "").upper() for o in opts if o.is_correct), "A")
-        q_out.append({
-            "id": q.id,
-            "text": q.text,
-            "option_a": opt_map.get("A", ""),
-            "option_b": opt_map.get("B", ""),
-            "option_c": opt_map.get("C", ""),
-            "option_d": opt_map.get("D", ""),
-            "correct_answer": correct,
-            "marks": q.marks,
-        })
     return {
         "id": test.id,
         "title": test.title,
@@ -1202,13 +1744,22 @@ def _serialize_admin_test(db: Session, test: Test, stage_position: int) -> Dict[
         "duration_minutes": test.duration_minutes,
         "passing_score_pct": test.passing_score_pct,
         "max_attempts": test.max_attempts,
+        "default_marks": test.default_marks or 1,
         "status": test.status or "draft",
         "test_type": test.test_type,
         "scheduled_at": iso_utc(test.scheduled_at),
         "started_at": iso_utc(test.started_at),
         "ended_at": iso_utc(test.ended_at),
-        "questions": q_out,
+        "has_submitted_attempts": _has_submitted_attempts(db, test),
+        "questions": [_serialize_admin_question(q) for q in questions],
     }
+
+
+def _has_submitted_attempts(db: Session, test: Test) -> bool:
+    return db.query(TestAttempt.id).filter(
+        TestAttempt.test_id == test.id,
+        TestAttempt.submitted_at.isnot(None),
+    ).first() is not None
 
 
 def _guard_questions_replaceable(db: Session, test: Test):
@@ -1216,12 +1767,12 @@ def _guard_questions_replaceable(db: Session, test: Test):
     Refuse to replace a test's questions once real attempts have been submitted.
     Question rows cascade-delete their TestAnswers, which would silently wipe the
     per-question result history of everyone who already took the test.
+
+    In-place wording/marks/image edits go through _apply_question_fields instead
+    and stay allowed — they keep the same question and option rows, so nobody's
+    answers are lost.
     """
-    submitted = db.query(TestAttempt).filter(
-        TestAttempt.test_id == test.id,
-        TestAttempt.submitted_at.isnot(None),
-    ).first()
-    if submitted:
+    if _has_submitted_attempts(db, test):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
@@ -1231,28 +1782,97 @@ def _guard_questions_replaceable(db: Session, test: Test):
         )
 
 
+def _apply_question_fields(
+    db: Session,
+    question: Question,
+    payload: Dict[str, Any],
+    default_marks: int,
+) -> None:
+    """Write the flat admin shape (text/marks/image + option_a..option_f) onto a
+    question, reusing existing option rows so submitted answers keep resolving.
+
+    An option slot left blank is removed; a slot that gains text/an image is
+    created. The correct answer must land on a slot that still has content.
+    """
+    if "text" in payload:
+        question.text = (payload.get("text") or "").strip()
+    if "image_url" in payload:
+        question.image_url = (payload.get("image_url") or "").strip() or None
+    if "marks" in payload:
+        try:
+            marks = int(payload.get("marks") or 0)
+        except (TypeError, ValueError):
+            marks = 0
+        question.marks = marks if marks > 0 else default_marks
+
+    by_label = {(o.label or "").upper(): o for o in question.options}
+    correct = str(payload.get("correct_answer") or "").upper()
+    if correct not in OPTION_LABELS:
+        correct = next((label for label, o in by_label.items() if o.is_correct), "A")
+
+    filled: List[str] = []
+    for label in OPTION_LABELS:
+        key = f"option_{label.lower()}"
+        # Absent keys mean "leave this slot alone" (partial update); present but
+        # empty means "clear it".
+        if key not in payload and f"{key}_image" not in payload:
+            if label in by_label:
+                filled.append(label)
+            continue
+        existing = by_label.get(label)
+        text = (payload.get(key) or "").strip() if key in payload else (existing.text if existing else "")
+        image = (
+            (payload.get(f"{key}_image") or "").strip()
+            if f"{key}_image" in payload
+            else (existing.image_url if existing else "")
+        )
+        if not text and not image:
+            if existing:
+                db.delete(existing)
+                by_label.pop(label, None)
+            continue
+        if existing:
+            existing.text = text
+            existing.image_url = image or None
+        else:
+            option = QuestionOption(
+                question_id=question.id,
+                label=label,
+                text=text,
+                image_url=image or None,
+                is_correct=False,
+            )
+            db.add(option)
+            by_label[label] = option
+        filled.append(label)
+
+    if filled and correct not in filled:
+        correct = filled[0]
+    for label, option in by_label.items():
+        option.is_correct = (label == correct)
+    db.flush()
+
+
 def _replace_questions(db: Session, test: Test, questions: List[Dict[str, Any]]):
-    """Replace a test's DB questions/options from the admin flat shape (A–D + correct_answer)."""
+    """Replace a test's DB questions/options from the admin flat shape.
+
+    Used by the sheet upload and by create-test. Marks fall back to the test's
+    `default_marks` rather than a hardcoded constant.
+    """
     for q in list(test.questions):
         db.delete(q)
     db.flush()
+    default_marks = test.default_marks or 1
     for idx, q in enumerate(questions):
         question = Question(
             test_id=test.id,
-            text=q.get("text", ""),
-            marks=q.get("marks", 2) or 2,
+            text=(q.get("text") or "").strip(),
+            marks=default_marks,
             order_index=idx,
         )
         db.add(question)
         db.flush()
-        correct = str(q.get("correct_answer", "A")).upper()
-        for label in ["A", "B", "C", "D"]:
-            db.add(QuestionOption(
-                question_id=question.id,
-                label=label,
-                text=q.get(f"option_{label.lower()}", "") or "",
-                is_correct=(label == correct),
-            ))
+        _apply_question_fields(db, question, {**q, "marks": q.get("marks")}, default_marks)
     test.total_questions = len(questions)
     db.flush()
 
@@ -1295,6 +1915,7 @@ def create_test(
         duration_minutes=test.get("duration_minutes", 10),
         passing_score_pct=test.get("passing_score_pct", 70),
         max_attempts=test.get("max_attempts", 3),
+        default_marks=max(1, int(test.get("default_marks") or 1)),
         test_type=test.get("test_type"),
         scheduled_at=scheduled_at,
         status="scheduled" if scheduled_at else "draft",
@@ -1324,6 +1945,8 @@ def update_test(
     for key in ["title", "description", "duration_minutes", "passing_score_pct", "max_attempts", "test_type"]:
         if key in test:
             setattr(db_test, key, test[key])
+    if "default_marks" in test:
+        db_test.default_marks = max(1, int(test.get("default_marks") or 1))
 
     if "scheduled_at" in test:
         db_test.scheduled_at = _parse_client_datetime(test.get("scheduled_at"))
@@ -1419,6 +2042,166 @@ def schedule_test(
     db.refresh(db_test)
     stages = _district_stages(db, district)
     return _serialize_admin_test(db, db_test, _stage_position(stages, db_test.stage_id))
+
+
+# ──────────────────────────────────────────────
+# Manual question authoring (add / edit / reorder / delete one at a time)
+# ──────────────────────────────────────────────
+# The sheet upload replaces the whole paper; these let an admin correct or
+# extend it in place — including attaching an image to the question or to
+# individual options.
+
+def _question_or_404(db: Session, question_id: int) -> Question:
+    question = db.query(Question).filter(Question.id == question_id).first()
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    return question
+
+
+def _renumber_questions(db: Session, test_id: int) -> None:
+    rows = (
+        db.query(Question)
+        .filter(Question.test_id == test_id)
+        .order_by(Question.order_index, Question.id)
+        .all()
+    )
+    for i, q in enumerate(rows):
+        q.order_index = i
+    db.flush()
+
+
+@router.post("/tests/{test_id}/questions")
+def add_question(
+    test_id: int,
+    payload: Dict[str, Any],
+    district: str = Query("jalna", description="District slug"),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Append one question to a test (manual authoring)."""
+    db_test = db.query(Test).filter(Test.id == test_id).first()
+    if not db_test:
+        raise HTTPException(status_code=404, detail="Test not found")
+    if not (payload.get("text") or "").strip():
+        raise HTTPException(status_code=400, detail="Question text is required")
+
+    last = (
+        db.query(func.max(Question.order_index))
+        .filter(Question.test_id == test_id)
+        .scalar()
+    )
+    question = Question(
+        test_id=test_id,
+        text=(payload.get("text") or "").strip(),
+        marks=db_test.default_marks or 1,
+        order_index=(last if last is not None else -1) + 1,
+    )
+    db.add(question)
+    db.flush()
+    _apply_question_fields(db, question, payload, db_test.default_marks or 1)
+    db_test.total_questions = db.query(Question).filter(Question.test_id == test_id).count()
+    db.commit()
+    db.refresh(question)
+    return _serialize_admin_question(question)
+
+
+@router.put("/questions/{question_id}")
+def update_question(
+    question_id: int,
+    payload: Dict[str, Any],
+    district: str = Query("jalna", description="District slug"),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Edit one question in place — wording, marks, option text, option images,
+    the correct answer.
+
+    Allowed even after submitted attempts: the question and its option rows
+    survive, so existing TestAnswers still point at real options. Clearing an
+    option that somebody already selected is the one destructive case, and it
+    is refused below.
+    """
+    question = _question_or_404(db, question_id)
+    db_test = db.query(Test).filter(Test.id == question.test_id).first()
+    if not db_test:
+        raise HTTPException(status_code=404, detail="Test not found")
+
+    if _has_submitted_attempts(db, db_test):
+        # Which option rows would this edit delete?
+        doomed = [
+            o.id for o in question.options
+            if f"option_{(o.label or '').lower()}" in payload
+            and not (payload.get(f"option_{(o.label or '').lower()}") or "").strip()
+            and not (payload.get(f"option_{(o.label or '').lower()}_image") or "").strip()
+        ]
+        if doomed and db.query(TestAnswer.id).filter(
+            TestAnswer.selected_option_id.in_(doomed)
+        ).first():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Learners have already chosen an option you are removing. Reword it "
+                    "instead of clearing it, or duplicate the test."
+                ),
+            )
+
+    _apply_question_fields(db, question, payload, db_test.default_marks or 1)
+    db.commit()
+    db.refresh(question)
+    return _serialize_admin_question(question)
+
+
+@router.post("/questions/{question_id}/move")
+def move_question(
+    question_id: int,
+    payload: Dict[str, Any],
+    district: str = Query("jalna", description="District slug"),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Move a question one slot up or down ({"direction": "up" | "down"})."""
+    question = _question_or_404(db, question_id)
+    direction = str(payload.get("direction") or "").lower()
+    if direction not in ("up", "down"):
+        raise HTTPException(status_code=400, detail="direction must be 'up' or 'down'")
+
+    _renumber_questions(db, question.test_id)
+    db.refresh(question)
+    neighbour = (
+        db.query(Question)
+        .filter(
+            Question.test_id == question.test_id,
+            Question.order_index == question.order_index + (-1 if direction == "up" else 1),
+        )
+        .first()
+    )
+    if neighbour:
+        question.order_index, neighbour.order_index = neighbour.order_index, question.order_index
+        db.commit()
+    return {"message": "Question moved"}
+
+
+@router.delete("/questions/{question_id}")
+def delete_question(
+    question_id: int,
+    district: str = Query("jalna", description="District slug"),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Delete one question. Refused once the test has submitted attempts —
+    the answer rows would cascade away with it."""
+    question = _question_or_404(db, question_id)
+    db_test = db.query(Test).filter(Test.id == question.test_id).first()
+    if db_test:
+        _guard_questions_replaceable(db, db_test)
+    test_id = question.test_id
+    db.delete(question)
+    db.flush()
+    _renumber_questions(db, test_id)
+    if db_test:
+        db_test.total_questions = db.query(Question).filter(Question.test_id == test_id).count()
+    db.commit()
+    return {"message": "Question deleted"}
 
 
 @router.post("/tests/{test_id}/upload-questions")

@@ -47,11 +47,13 @@ from app.seed_forms import FORM_SPECS, ensure_form_definitions
 router = APIRouter(prefix="/api/admin", tags=["admin-forms"], dependencies=[Depends(get_current_admin)])
 
 UPLOADS_SUBDIR = "form_assets"
+TEST_ASSETS_SUBDIR = "test_assets"
 
 # No .svg: an SVG can carry <script> and would execute in the backend origin
 # when its /uploads URL is opened directly (stored XSS) — raster formats only.
+_ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 _ALLOWED_UPLOAD_EXTENSIONS = {
-    ".png", ".jpg", ".jpeg", ".webp", ".gif",   # option media
+    *_ALLOWED_IMAGE_EXTENSIONS,                 # option media
     ".mp4", ".webm", ".mp3",                    # action media
 }
 _MAX_UPLOAD_BYTES = 25 * 1024 * 1024  # 25 MB
@@ -350,6 +352,44 @@ class FormVersionCreate(BaseModel):
         return v
 
 
+class FormVersionAmend(BaseModel):
+    """An edit recorded INSIDE the current version instead of creating a new one.
+
+    The programme's forms are not frozen before fieldwork starts — small
+    corrections (a relabelled question, a fixed typo, an extra option) keep
+    arriving mid-project. Cutting a version for each would fragment the history
+    for changes nobody analyses separately. This overwrites the version's schema
+    and appends a dated, attributed entry to its change_log.
+    """
+    model_config = ConfigDict(populate_by_name=True)
+
+    schema_data: Dict[str, Any] = Field(alias="schema_json")
+    created_on: date
+    description: str
+    detected_changes: Optional[List[str]] = None
+
+    @field_validator("detected_changes")
+    @classmethod
+    def _bound_detected_changes(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+        if not v:
+            return v
+        return [entry[:300] for entry in v[:60]]
+
+    @field_validator("description")
+    @classmethod
+    def _description_required(cls, v: str) -> str:
+        if not (v or "").strip():
+            raise ValueError("a change description is required")
+        return v.strip()
+
+    @field_validator("created_on")
+    @classmethod
+    def _no_future_dates(cls, v: date) -> date:
+        if v > date.today():
+            raise ValueError("the change date cannot be in the future")
+        return v
+
+
 class VersionDistrictsUpdate(BaseModel):
     """Replace-set of program-district ids pinned to a version."""
     district_ids: List[int] = Field(default_factory=list)
@@ -393,6 +433,11 @@ def _serialize(definition: FormDefinition) -> Dict[str, Any]:
         "description": definition.description,
         "builder_type": definition.builder_type,
         "version": definition.version,
+        # The version_number the builder is actually showing when opened
+        # without ?v= — needed so a save can amend that version in place.
+        "default_version_number": (
+            definition.default_version.version_number if definition.default_version else None
+        ),
         "schema_json": definition.schema_json or {},
         "updated_at": definition.updated_at.isoformat() if definition.updated_at else None,
         "updated_by": definition.updated_by,
@@ -544,6 +589,7 @@ def _serialize_version(
         "description": version.description,
         "detected_changes": version.detected_changes or [],
         "diffed_from_version": version.diffed_from_version,
+        "change_log": version.change_log or [],
         "created_by": version.created_by,
         "created_at": version.created_at.isoformat() if version.created_at else None,
         "is_default": definition.default_version_id == version.id,
@@ -701,6 +747,49 @@ def create_version(
         detected_changes=data.detected_changes,
         diffed_from_version=data.diffed_from_version,
     )
+    return _serialize_version(version, definition, include_schema=True)
+
+
+@router.put("/forms/{form_key}/versions/{version_number}")
+def amend_version(
+    form_key: str,
+    version_number: int,
+    data: FormVersionAmend,
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Update this version in place and log the change in its history.
+
+    No new version number is created — the districts pinned here (and, if this
+    is the default, everyone else) simply see the corrected form. Assessments
+    already submitted are untouched: each response snapshots its own question
+    text and option labels at submit time, so past data never silently changes
+    meaning when a question is relabelled.
+    """
+    definition = _get_definition(db, form_key)
+    _ensure_initial_version(db, definition)
+    version = _version_or_404(db, form_key, version_number)
+    schema = _validate_schema(definition.builder_type, data.schema_data)
+
+    entry = {
+        "on": data.created_on.isoformat(),
+        "note": data.description,
+        "detected": data.detected_changes or [],
+        "by": admin_email,
+        "at": datetime.now(timezone.utc).isoformat(),
+    }
+    # Reassign rather than append: JSON columns are not mutation-tracked, so an
+    # in-place list.append() would not be flushed.
+    version.change_log = [*(version.change_log or []), entry]
+    version.schema_json = schema
+
+    if definition.default_version_id == version.id:
+        definition.schema_json = schema           # keep legacy consumers in sync
+        definition.version = (definition.version or 0) + 1
+        definition.updated_by = admin_email
+
+    db.commit()
+    db.refresh(version)
     return _serialize_version(version, definition, include_schema=True)
 
 
@@ -931,16 +1020,14 @@ def export_form(form_key: str, version: Optional[int] = None, db: Session = Depe
     )
 
 
-@router.post("/forms/assets")
-async def upload_form_asset(file: UploadFile = File(...)):
-    """Store an option image/GIF or action video; returns its /uploads/... URL."""
-    original_name = file.filename or ""
-    ext = os.path.splitext(original_name)[1].lower()
-    if ext not in _ALLOWED_UPLOAD_EXTENSIONS:
+async def _store_upload(file: UploadFile, allowed: set, subdir: str) -> Dict[str, str]:
+    """Validate, size-bound and store one uploaded file; returns {"url": ...}."""
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in allowed:
         raise HTTPException(
             status_code=400,
             detail=f"Unsupported file type '{ext or 'unknown'}'. "
-                   f"Allowed: {', '.join(sorted(_ALLOWED_UPLOAD_EXTENSIONS))}",
+                   f"Allowed: {', '.join(sorted(allowed))}",
         )
     # Stream in bounded chunks so an oversized body is rejected without ever
     # being buffered whole in memory.
@@ -957,5 +1044,22 @@ async def upload_form_asset(file: UploadFile = File(...)):
 
     # Cloudflare R2 (CDN) when configured, backend/uploads/ otherwise.
     filename = f"{uuid.uuid4().hex}{ext}"
-    url = storage.save_media(UPLOADS_SUBDIR, filename, b"".join(chunks), file.content_type)
+    url = storage.save_media(subdir, filename, b"".join(chunks), file.content_type)
     return {"url": url}
+
+
+@router.post("/forms/assets")
+async def upload_form_asset(file: UploadFile = File(...)):
+    """Store an option image/GIF or action video; returns its /uploads/... URL."""
+    return await _store_upload(file, _ALLOWED_UPLOAD_EXTENSIONS, UPLOADS_SUBDIR)
+
+
+@router.post("/tests/assets")
+async def upload_test_asset(file: UploadFile = File(...)):
+    """Store a picture for a test question or one of its options.
+
+    Images only — a test question has nothing to do with video, and keeping the
+    allowlist narrow here means an admin cannot accidentally attach a 25 MB clip
+    to a paper that must render on a field phone.
+    """
+    return await _store_upload(file, _ALLOWED_IMAGE_EXTENSIONS, TEST_ASSETS_SUBDIR)

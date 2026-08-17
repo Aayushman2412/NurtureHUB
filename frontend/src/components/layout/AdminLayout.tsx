@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, FileText, Video, ClipboardList, LogOut, Shield, MapPin, ChevronDown, Building2, Sun, Moon,
   MonitorPlay, GraduationCap, Radio, Activity, Table2, FileSpreadsheet, Menu,
-  DatabaseZap,
+  DatabaseZap, Users,
 } from 'lucide-react';
 import { clearOfflineCaches } from '../../pwa';
 import { defaultProject, groupProjects, listProjects, type ProjectGroups } from '../../api/projects';
@@ -20,6 +20,7 @@ interface AdminLayoutProps {
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, key: 'dashboard', end: true },
   { to: '/admin/projects', icon: Building2, key: 'projects', end: false },
+  { to: '/admin/learners', icon: Users, key: 'learners', end: false },
   { to: '/admin/form-builder', icon: FileText, key: 'formBuilder', end: false },
   { to: '/admin/tutorials', icon: Video, key: 'tutorials', end: false },
   { to: '/admin/tutorial-tracking', icon: MonitorPlay, key: 'tutorialTracking', end: false },

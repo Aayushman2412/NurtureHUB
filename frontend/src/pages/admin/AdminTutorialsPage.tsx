@@ -23,8 +23,13 @@ import {
   AlertCircle,
   CheckCircle2,
 } from 'lucide-react';
-import { Button, Card, FieldLabel, Input, Modal, PageHeader, PageLoader, Select } from '../../components/ui';
+import { ArrowDown, ArrowUp, Copy } from 'lucide-react';
+import {
+  Alert, Button, Card, Checkbox, FieldLabel, Input, Modal, PageHeader, PageLoader, Select,
+} from '../../components/ui';
 import { getProjectSlug, PROJECT_EVENT } from '../../lib/adminProject';
+import { listProjects } from '../../api/projects';
+import type { AdminProject } from '../../lib/adminProject';
 import { inputClasses } from '../../components/ui/Input';
 import { cn } from '../../utils/cn';
 
@@ -50,6 +55,7 @@ interface Stage {
   order_index: number;
   stage_type: 'tutorials' | 'test';
   quiz_enabled: boolean;
+  test_count: number;
   tutorials: Tutorial[];
 }
 
@@ -122,9 +128,20 @@ const AdminTutorialsPage: React.FC = () => {
   const [previewStart, setPreviewStart] = useState(0);
   const [previewEnd, setPreviewEnd] = useState(0);
 
-  // New stage form (this screen only creates VIDEO phases; test phases live in Test Management)
+  // New phase form. A phase is either a run of videos or a slot that holds a
+  // test — the running order of the two is what defines the methodology.
   const [newStageTitle, setNewStageTitle] = useState('');
   const [newStageDesc, setNewStageDesc] = useState('');
+  const [newStageType, setNewStageType] = useState<'tutorials' | 'test'>('tutorials');
+
+  // Phase editing / copying
+  const [editingStage, setEditingStage] = useState<number | null>(null);
+  const [stageEdit, setStageEdit] = useState({ title: '', description: '' });
+  const [copyStage, setCopyStage] = useState<Stage | null>(null);
+  const [projects, setProjects] = useState<AdminProject[]>([]);
+  const [copyTargets, setCopyTargets] = useState<number[]>([]);
+  const [copyBusy, setCopyBusy] = useState(false);
+  const [copyResult, setCopyResult] = useState<string>('');
 
   const [newTut, setNewTut] = useState<Partial<Tutorial>>({
     title: '',
@@ -172,19 +189,78 @@ const AdminTutorialsPage: React.FC = () => {
       .post(`/api/admin/stages?district=${(getProjectSlug() ?? '')}`, {
         title: newStageTitle,
         description: newStageDesc,
-        stage_type: 'tutorials',
+        stage_type: newStageType,
       })
       .then(() => {
         fetchStages();
         setShowAddStage(false);
         setNewStageTitle('');
         setNewStageDesc('');
+        setNewStageType('tutorials');
       });
   };
 
   const deleteStage = (id: number) => {
     if (!confirm(t('stage.confirmDelete'))) return;
-    client.delete(`/api/admin/stages/${id}?district=${(getProjectSlug() ?? '')}`).then(fetchStages);
+    client
+      .delete(`/api/admin/stages/${id}?district=${(getProjectSlug() ?? '')}`)
+      .then(fetchStages)
+      .catch((err: { response?: { data?: { detail?: string } } }) =>
+        alert(err?.response?.data?.detail || t('stage.deleteFailed')));
+  };
+
+  const saveStageEdit = (id: number) => {
+    if (!stageEdit.title.trim()) return;
+    client
+      .put(`/api/admin/stages/${id}?district=${(getProjectSlug() ?? '')}`, {
+        title: stageEdit.title.trim(),
+        description: stageEdit.description,
+      })
+      .then(() => {
+        setEditingStage(null);
+        fetchStages();
+      });
+  };
+
+  /** Swap a phase with its neighbour. Order decides what a learner must finish
+   *  before a test unlocks, so this is a real change, not just presentation. */
+  const moveStage = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= stages.length) return;
+    const next = [...stages];
+    [next[index], next[target]] = [next[target], next[index]];
+    setStages(next);   // optimistic: the list re-renders in the new order at once
+    client
+      .post(`/api/admin/stages/reorder?district=${(getProjectSlug() ?? '')}`, {
+        stage_ids: next.map(s => s.id),
+      })
+      .then(res => setStages(res.data))
+      .catch(fetchStages);
+  };
+
+  const openCopy = (stage: Stage) => {
+    setCopyStage(stage);
+    setCopyTargets([]);
+    setCopyResult('');
+    listProjects().then(setProjects).catch(() => setProjects([]));
+  };
+
+  const runCopy = () => {
+    if (!copyStage || copyTargets.length === 0) return;
+    setCopyBusy(true);
+    setCopyResult('');
+    client
+      .post(`/api/admin/stages/${copyStage.id}/copy?district=${(getProjectSlug() ?? '')}`, {
+        project_ids: copyTargets,
+      })
+      .then(res => {
+        const names = (res.data.copied || []).map((c: { project_name: string }) => c.project_name);
+        setCopyResult(t('copyPhase.done', { names: names.join(', '), n: res.data.tutorials_per_copy }));
+        setCopyTargets([]);
+      })
+      .catch((err: { response?: { data?: { detail?: string } } }) =>
+        setCopyResult(err?.response?.data?.detail || t('copyPhase.failed')))
+      .finally(() => setCopyBusy(false));
   };
 
   const toggleStageQuiz = (stage: Stage) => {
@@ -409,32 +485,98 @@ const AdminTutorialsPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Stages */}
+      <Alert variant="info" className="mb-4">{t('stage.orderNote')}</Alert>
+
+      {/* Phases, in the order a learner walks through them */}
       <div className="flex flex-col gap-4">
-        {stages.map(stage => (
+        {stages.map((stage, stageIdx) => (
           <Card key={stage.id} className="overflow-hidden">
             <button
               className="flex w-full items-start justify-between gap-4 p-5 text-left"
               onClick={() => setExpandedStage(expandedStage === stage.id ? null : stage.id)}
             >
-              <div>
+              <div className="min-w-0 flex-1">
                 <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-coral-600 dark:text-coral-300">
                   {stage.stage_type === 'test' && <FileText className="size-3" />}
-                  {t('stage.phaseLabel', { n: stage.order_index + 1 })}
+                  {t('stage.phaseLabel', { n: stageIdx + 1 })}
                   {stage.stage_type === 'test' ? t('stage.testPhaseSuffix') : ''}
                 </span>
-                <h3 className="mt-0.5 font-display text-lg font-bold text-ink">{stage.title}</h3>
-                <p className="text-sm text-ink-muted">{stage.description}</p>
-                <span className="text-xs text-ink-faint">
-                  {stage.stage_type === 'test'
-                    ? t('stage.testSummary')
-                    : t('stage.summary', {
-                        n: stage.tutorials.length,
-                        status: stage.quiz_enabled ? t('stage.quizEnabled') : t('stage.quizDisabled'),
-                      })}
-                </span>
+                {editingStage === stage.id ? (
+                  <div
+                    className="mt-2 flex flex-col gap-2"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <Input
+                      value={stageEdit.title}
+                      autoFocus
+                      placeholder={t('placeholders.phaseTitle')}
+                      onChange={e => setStageEdit({ ...stageEdit, title: e.target.value })}
+                    />
+                    <textarea
+                      className={cn(inputClasses(), 'resize-y')}
+                      rows={2}
+                      placeholder={t('placeholders.phaseDescription')}
+                      value={stageEdit.description}
+                      onChange={e => setStageEdit({ ...stageEdit, description: e.target.value })}
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" iconLeft={<Save className="size-3.5" />}
+                        onClick={() => saveStageEdit(stage.id)} disabled={!stageEdit.title.trim()}>
+                        {t('stage.saveEdit')}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingStage(null)}>
+                        {t('addPhaseModal.cancel')}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="mt-0.5 font-display text-lg font-bold text-ink">{stage.title}</h3>
+                    <p className="text-sm text-ink-muted">{stage.description}</p>
+                    <span className="text-xs text-ink-faint">
+                      {stage.stage_type === 'test'
+                        ? t('stage.testSummaryN', { n: stage.test_count })
+                        : t('stage.summary', {
+                            n: stage.tutorials.length,
+                            status: stage.quiz_enabled ? t('stage.quizEnabled') : t('stage.quizDisabled'),
+                          })}
+                    </span>
+                  </>
+                )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-1">
+                <span
+                  role="button" tabIndex={0}
+                  className={cn(iconBtn, stageIdx === 0 && 'pointer-events-none opacity-30')}
+                  title={t('stage.moveUp')}
+                  onClick={e => { e.stopPropagation(); moveStage(stageIdx, -1); }}
+                >
+                  <ArrowUp className="size-4" />
+                </span>
+                <span
+                  role="button" tabIndex={0}
+                  className={cn(iconBtn, stageIdx === stages.length - 1 && 'pointer-events-none opacity-30')}
+                  title={t('stage.moveDown')}
+                  onClick={e => { e.stopPropagation(); moveStage(stageIdx, 1); }}
+                >
+                  <ArrowDown className="size-4" />
+                </span>
+                <span
+                  role="button" tabIndex={0} className={iconBtn} title={t('stage.editPhase')}
+                  onClick={e => {
+                    e.stopPropagation();
+                    setEditingStage(stage.id);
+                    setStageEdit({ title: stage.title, description: stage.description || '' });
+                  }}
+                >
+                  <Edit3 className="size-4" />
+                </span>
+                <span
+                  role="button" tabIndex={0} className={iconBtn} title={t('copyPhase.title')}
+                  onClick={e => { e.stopPropagation(); openCopy(stage); }}
+                >
+                  <Copy className="size-4" />
+                </span>
                 {stage.stage_type !== 'test' && (
                   <span
                     role="button"
@@ -756,6 +898,16 @@ const AdminTutorialsPage: React.FC = () => {
             />
           </div>
           <div>
+            <FieldLabel size="sm">{t('addPhaseModal.phaseTypeLabel')}</FieldLabel>
+            <Select value={newStageType} onChange={e => setNewStageType(e.target.value as 'tutorials' | 'test')}>
+              <option value="tutorials">{t('addPhaseModal.typeVideos')}</option>
+              <option value="test">{t('addPhaseModal.typeTest')}</option>
+            </Select>
+            <p className="mt-1 text-[11px] text-ink-faint">
+              {newStageType === 'test' ? t('addPhaseModal.typeTestHint') : t('addPhaseModal.typeVideosHint')}
+            </p>
+          </div>
+          <div>
             <FieldLabel size="sm">{t('fields.description')}</FieldLabel>
             <textarea
               className={cn(inputClasses(), 'resize-y')}
@@ -769,6 +921,50 @@ const AdminTutorialsPage: React.FC = () => {
             <Trans t={t} i18nKey="addPhaseModal.note" components={{ strong: <strong className="text-ink-muted" /> }} />
           </p>
         </div>
+      </Modal>
+
+      {/* Copy phase into other projects */}
+      <Modal
+        open={copyStage !== null}
+        onClose={() => setCopyStage(null)}
+        title={
+          <span className="flex items-center gap-2">
+            <Copy className="size-4" /> {t('copyPhase.titleWith', { title: copyStage?.title ?? '' })}
+          </span>
+        }
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setCopyStage(null)}>{t('addPhaseModal.cancel')}</Button>
+            <Button
+              iconLeft={<Copy className="size-4" />}
+              loading={copyBusy}
+              disabled={copyBusy || copyTargets.length === 0}
+              onClick={runCopy}
+            >
+              {t('copyPhase.action', { n: copyTargets.length })}
+            </Button>
+          </>
+        }
+      >
+        <p className="mt-0 text-[13px] text-ink-muted">{t('copyPhase.intro')}</p>
+        {copyResult && <Alert variant="info" className="mt-3">{copyResult}</Alert>}
+        <div className="mt-3 flex max-h-72 flex-col gap-1 overflow-y-auto">
+          {projects
+            .filter(p => p.slug !== getProjectSlug())
+            .map(project => (
+              <Checkbox
+                key={project.id}
+                checked={copyTargets.includes(project.id)}
+                onChange={e =>
+                  setCopyTargets(prev =>
+                    e.target.checked ? [...prev, project.id] : prev.filter(id => id !== project.id),
+                  )
+                }
+                label={`${project.name}${project.level === 'state' ? ` (${t('copyPhase.stateLabel')})` : ''}`}
+              />
+            ))}
+        </div>
+        <p className="mt-3 text-[11px] text-ink-faint">{t('copyPhase.note')}</p>
       </Modal>
 
       {/* Bulk sheet upload modal */}

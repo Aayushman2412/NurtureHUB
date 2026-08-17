@@ -77,12 +77,27 @@ export interface FormVersionSummary {
   detected_changes: string[];
   /** The version number that diff was taken against (null for pre-diff rows). */
   diffed_from_version: number | null;
+  /** History of modifications made INSIDE this version (amend-in-place saves). */
+  change_log: FormVersionChange[];
   created_by: string | null;
   created_at: string | null;
   is_default: boolean;
   /** Assessments filed against this version (null when not computed). */
   response_count: number | null;
   districts: FormVersionDistrict[];
+}
+
+/** One dated correction recorded against a version without renumbering it. */
+export interface FormVersionChange {
+  /** Admin-entered date of the change (ISO date). */
+  on: string;
+  /** What the admin said changed. */
+  note: string;
+  /** What the builder itself detected. */
+  detected: string[];
+  by: string | null;
+  /** Server timestamp (ISO). */
+  at: string;
 }
 
 export interface FormVersionDetail extends FormVersionSummary {
@@ -122,6 +137,24 @@ export const adminCreateFormVersion = (
   },
 ): Promise<FormVersionDetail> =>
   client.post(`/api/admin/forms/${formKey}/versions`, payload).then(r => r.data);
+
+/**
+ * Amend a version in place: overwrite its schema and append a dated entry to
+ * its "history of modifications" instead of cutting a new version number.
+ * Used for the small mid-project corrections that arrive after fieldwork has
+ * started and that nobody wants a separate version for.
+ */
+export const adminAmendFormVersion = (
+  formKey: FormKey,
+  versionNumber: number,
+  payload: {
+    schema_json: FlowSchema | FlatSchema;
+    created_on: string;       // ISO date the change was made
+    description: string;      // what changed
+    detected_changes?: string[];
+  },
+): Promise<FormVersionDetail> =>
+  client.put(`/api/admin/forms/${formKey}/versions/${versionNumber}`, payload).then(r => r.data);
 
 export const adminSetVersionDistricts = (
   formKey: FormKey,

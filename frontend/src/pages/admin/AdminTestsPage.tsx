@@ -6,7 +6,7 @@ import { getProjectSlug, PROJECT_EVENT } from '../../lib/adminProject';
 import * as XLSX from 'xlsx';
 import {
   Trash2, Save, Upload, Play, Square, Download, ChevronDown, ChevronUp, FileSpreadsheet, ClipboardList,
-  AlertCircle, Radio, CalendarClock,
+  AlertCircle, Radio, CalendarClock, Plus, Pencil, ArrowUp, ArrowDown, Image as ImageIcon,
 } from 'lucide-react';
 import {
   Alert, Badge, Button, Card, EmptyState, Input, Modal, PageHeader, PageLoader, Select, Spinner, Table,
@@ -14,18 +14,15 @@ import {
 } from '../../components/ui';
 import { inputClasses } from '../../components/ui/Input';
 import { cn } from '../../utils/cn';
+import { resolveAssetUrl } from '../../lib/flowGraph';
+import TestQuestionEditor from '../../components/admin/TestQuestionEditor';
+import {
+  OPTION_LABELS, addQuestion, deleteQuestion as apiDeleteQuestion, emptyQuestionDraft, listPhases,
+  moveQuestion, saveQuestion, type AdminPhase, type AdminQuestion,
+} from '../../api/adminTests';
 import { SUCCESS_500, ERROR_500, CREAM_100, INK_900 } from '../../utils/brandColors';
 
-interface Question {
-  id: number;
-  text: string;
-  option_a: string;
-  option_b: string;
-  option_c: string;
-  option_d: string;
-  correct_answer: string;
-  marks: number;
-}
+type Question = AdminQuestion;
 
 interface Test {
   id: number;
@@ -35,11 +32,13 @@ interface Test {
   duration_minutes: number;
   passing_score_pct: number;
   max_attempts: number;
+  default_marks: number;
   status: string;
   test_type: 'formative' | 'screening' | null;
   scheduled_at: string | null;
   started_at: string | null;
   ended_at: string | null;
+  has_submitted_attempts: boolean;
   questions: Question[];
 }
 
@@ -66,10 +65,29 @@ const toLocalInputValue = (iso: string | null): string => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+/** Sheet columns for the question upload. Marks and the image columns are
+ *  optional — an old 6-column sheet still imports unchanged. */
+const QUESTION_SHEET_HEADERS = [
+  'Question Text', 'Option A', 'Option B', 'Option C', 'Option D', 'Option E', 'Option F',
+  'Correct Answer', 'Marks', 'Question Image URL',
+] as const;
+
+/** Header cells are matched ignoring case, spaces and punctuation. */
+const normalizeHeader = (h: string) => h.toLowerCase().replace(/[^a-z]/g, '');
+
+/** Phase titles often already read "Phase 2: Formative Test"; the badge supplies
+ *  the number, so drop a leading "Phase N:" to avoid "Phase 2: Phase 2: …". */
+const phaseSuffix = (title?: string) => {
+  if (!title) return '';
+  const stripped = title.replace(/^\s*phase\s*\d+\s*[:.\-–]?\s*/i, '').trim();
+  return stripped ? `: ${stripped}` : '';
+};
+
 const AdminTestsPage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation('adminTests');
   const [tests, setTests] = useState<Test[]>([]);
+  const [phases, setPhases] = useState<AdminPhase[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedTest, setExpandedTest] = useState<number | null>(null);
   const [showAddTest, setShowAddTest] = useState(false);
@@ -78,6 +96,13 @@ const AdminTestsPage: React.FC = () => {
   const [resultLoading, setResultLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadTargetTest, setUploadTargetTest] = useState<number | null>(null);
+  const [uploadError, setUploadError] = useState('');
+
+  // Question authoring: which question is open in the editor (0 = the new one)
+  const [editingQuestion, setEditingQuestion] = useState<{ testId: number; id: number } | null>(null);
+  const [questionDraft, setQuestionDraft] = useState<AdminQuestion>(emptyQuestionDraft());
+  const [questionSaving, setQuestionSaving] = useState(false);
+  const [questionError, setQuestionError] = useState('');
 
   const [newTest, setNewTest] = useState({
     title: '',
@@ -86,6 +111,7 @@ const AdminTestsPage: React.FC = () => {
     duration_minutes: 10,
     passing_score_pct: 70,
     max_attempts: 3,
+    default_marks: 1,
     test_type: '',
   });
 
@@ -102,6 +128,7 @@ const AdminTestsPage: React.FC = () => {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+    listPhases().then(setPhases).catch(() => setPhases([]));
   };
 
   useEffect(() => {
@@ -110,6 +137,69 @@ const AdminTestsPage: React.FC = () => {
     window.addEventListener(PROJECT_EVENT, handleDistrictChange);
     return () => window.removeEventListener(PROJECT_EVENT, handleDistrictChange);
   }, []);
+
+  // ── Question authoring ─────────────────────────────────────────────────────
+
+  const openNewQuestion = (testId: number) => {
+    setQuestionError('');
+    setQuestionDraft(emptyQuestionDraft());
+    setEditingQuestion({ testId, id: 0 });
+  };
+
+  const openEditQuestion = (testId: number, question: Question) => {
+    setQuestionError('');
+    setQuestionDraft({ ...question });
+    setEditingQuestion({ testId, id: question.id });
+  };
+
+  const submitQuestion = async () => {
+    if (!editingQuestion) return;
+    setQuestionSaving(true);
+    setQuestionError('');
+    try {
+      if (editingQuestion.id === 0) {
+        await addQuestion(editingQuestion.testId, questionDraft);
+      } else {
+        await saveQuestion(editingQuestion.id, questionDraft);
+      }
+      setEditingQuestion(null);
+      fetchTests();
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setQuestionError(detail || t('editor.saveFailed'));
+    } finally {
+      setQuestionSaving(false);
+    }
+  };
+
+  const removeQuestion = async (question: Question) => {
+    if (!confirm(t('confirm.deleteQuestion'))) return;
+    try {
+      await apiDeleteQuestion(question.id);
+      fetchTests();
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      alert(detail || t('editor.deleteFailed'));
+    }
+  };
+
+  const shiftQuestion = async (question: Question, direction: 'up' | 'down') => {
+    await moveQuestion(question.id, direction);
+    fetchTests();
+  };
+
+  const downloadQuestionTemplate = () => {
+    const ws = XLSX.utils.aoa_to_sheet([
+      [...QUESTION_SHEET_HEADERS],
+      ['Which of these is a complex carbohydrate?', 'Cellulose', 'Glucose', 'Maltose', 'Sucrose', '', '', 'A', '2', ''],
+      ['Identify the growth pattern shown in the chart', 'Normal', 'Faltering', 'Catch-up', '', '', '', 'B', '3',
+        'https://…/chart.png'],
+    ]);
+    ws['!cols'] = QUESTION_SHEET_HEADERS.map(h => ({ wch: Math.max(h.length + 4, 16) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Questions');
+    XLSX.writeFile(wb, 'nurturehub_test_questions_template.xlsx');
+  };
 
   const createTest = () => {
     if (!newTest.title.trim()) return;
@@ -122,7 +212,10 @@ const AdminTestsPage: React.FC = () => {
       .then(() => {
         fetchTests();
         setShowAddTest(false);
-        setNewTest({ title: '', description: '', stage_id: 1, duration_minutes: 10, passing_score_pct: 70, max_attempts: 3, test_type: '' });
+        setNewTest({
+          title: '', description: '', stage_id: 1, duration_minutes: 10,
+          passing_score_pct: 70, max_attempts: 3, default_marks: 1, test_type: '',
+        });
       });
   };
 
@@ -217,7 +310,11 @@ const AdminTestsPage: React.FC = () => {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || uploadTargetTest === null) return;
+    const targetTest = uploadTargetTest;
+    e.target.value = '';
+    setUploadTargetTest(null);
+    if (!file || targetTest === null) return;
+    setUploadError('');
 
     const reader = new FileReader();
     reader.onload = evt => {
@@ -225,34 +322,48 @@ const AdminTestsPage: React.FC = () => {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const json: any[] = XLSX.utils.sheet_to_json(sheet);
+        const json: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, { raw: false, defval: '' });
 
-        const questions: Question[] = json.map((row, idx) => {
+        const questions = json.map(row => {
           const keys = Object.keys(row);
-          return {
-            id: idx + 1,
-            text: row[keys[0]] || '',
-            option_a: row[keys[1]] || '',
-            option_b: row[keys[2]] || '',
-            option_c: row[keys[3]] || '',
-            option_d: row[keys[4]] || '',
-            correct_answer: (row[keys[5]] || 'A').toString().toUpperCase(),
-            marks: 2,
+          // Named columns when the header row matches the template; positional
+          // fallback keeps the original 6-column sheets importable.
+          const named = (want: string) => {
+            const key = keys.find(h => normalizeHeader(h) === want);
+            return key ? String(row[key] ?? '').trim() : undefined;
           };
-        });
+          const at = (i: number) => String(row[keys[i]] ?? '').trim();
+          const marksRaw = named('marks') ?? '';
+          const parsedMarks = parseInt(marksRaw, 10);
+          return {
+            text: named('questiontext') ?? at(0),
+            option_a: named('optiona') ?? at(1),
+            option_b: named('optionb') ?? at(2),
+            option_c: named('optionc') ?? at(3),
+            option_d: named('optiond') ?? at(4),
+            option_e: named('optione') ?? '',
+            option_f: named('optionf') ?? '',
+            correct_answer: (named('correctanswer') ?? at(5) ?? 'A').toUpperCase() || 'A',
+            // Blank / non-numeric Marks => the test's default marks decide.
+            marks: Number.isFinite(parsedMarks) && parsedMarks > 0 ? parsedMarks : 0,
+            image_url: named('questionimageurl') ?? '',
+          };
+        }).filter(q => q.text);
 
-        if (questions.length > 0) {
-          client
-            .post(`/api/admin/tests/${uploadTargetTest}/upload-questions?district=${(getProjectSlug() ?? '')}`, questions)
-            .then(fetchTests);
+        if (questions.length === 0) {
+          setUploadError(t('upload.emptySheet'));
+          return;
         }
-      } catch (err) {
-        console.error('Failed to parse file:', err);
+        client
+          .post(`/api/admin/tests/${targetTest}/upload-questions?district=${(getProjectSlug() ?? '')}`, questions)
+          .then(fetchTests)
+          .catch((err: { response?: { data?: { detail?: string } } }) =>
+            setUploadError(err?.response?.data?.detail || t('upload.failed')));
+      } catch {
+        setUploadError(t('upload.parseError'));
       }
     };
     reader.readAsArrayBuffer(file);
-    e.target.value = '';
-    setUploadTargetTest(null);
   };
 
   const statusBadge = (status: string) => {
@@ -271,6 +382,8 @@ const AdminTestsPage: React.FC = () => {
   if (loading) return <PageLoader label={t('loading')} />;
 
   const iconBtn = 'flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-error-50 hover:text-error-500 cursor-pointer dark:hover:bg-error-500/10';
+  const iconNeutralBtn =
+    'flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer disabled:cursor-not-allowed disabled:opacity-35';
 
   const resultCellClass = (val: string) =>
     val === 'correct'
@@ -304,7 +417,8 @@ const AdminTestsPage: React.FC = () => {
               <div>
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <span className="text-xs font-bold uppercase tracking-wider text-coral-600 dark:text-coral-300">
-                    {t('card.stage', { n: test.stage_id })}
+                    {t('card.phase', { n: test.stage_id })}
+                    {phaseSuffix(phases[test.stage_id - 1]?.title)}
                   </span>
                   {test.test_type && (
                     <Badge variant="info">
@@ -410,10 +524,32 @@ const AdminTestsPage: React.FC = () => {
                 {/* Settings */}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <div><FieldLabel size="sm">{t('fields.title')}</FieldLabel><Input value={test.title} onChange={e => updateTest(test.id, { title: e.target.value })} /></div>
-                  <div><FieldLabel size="sm">{t('fields.stageId')}</FieldLabel><Input type="number" value={test.stage_id} onChange={e => updateTest(test.id, { stage_id: parseInt(e.target.value) || 1 })} /></div>
+                  <div>
+                    <FieldLabel size="sm">{t('fields.phase')}</FieldLabel>
+                    <Select
+                      value={test.stage_id}
+                      onChange={e => updateTest(test.id, { stage_id: parseInt(e.target.value, 10) || 1 })}
+                    >
+                      {phases.map((phase, i) => (
+                        <option key={phase.id} value={i + 1}>
+                          {t('card.phase', { n: i + 1 })}{phaseSuffix(phase.title)}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
                   <div><FieldLabel size="sm">{t('fields.duration')}</FieldLabel><Input type="number" value={test.duration_minutes} onChange={e => updateTest(test.id, { duration_minutes: parseInt(e.target.value) || 10 })} /></div>
                   <div><FieldLabel size="sm">{t('fields.passPct')}</FieldLabel><Input type="number" value={test.passing_score_pct} onChange={e => updateTest(test.id, { passing_score_pct: parseInt(e.target.value) || 70 })} /></div>
                   <div><FieldLabel size="sm">{t('fields.maxAttempts')}</FieldLabel><Input type="number" value={test.max_attempts} onChange={e => updateTest(test.id, { max_attempts: parseInt(e.target.value) || 3 })} /></div>
+                  <div>
+                    <FieldLabel size="sm">{t('fields.defaultMarks')}</FieldLabel>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={test.default_marks}
+                      onChange={e => updateTest(test.id, { default_marks: parseInt(e.target.value, 10) || 1 })}
+                    />
+                    <p className="mt-1 text-[11px] text-ink-faint">{t('fields.defaultMarksHint')}</p>
+                  </div>
                   <div>
                     <FieldLabel size="sm">{t('fields.testType')}</FieldLabel>
                     <Select
@@ -427,8 +563,14 @@ const AdminTestsPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Upload */}
-                <div className="my-4 flex flex-wrap items-center gap-3">
+                {/* Question toolbar */}
+                <div className="my-4 flex flex-wrap items-center gap-2">
+                  <Button
+                    iconLeft={<Plus className="size-4" />}
+                    onClick={() => openNewQuestion(test.id)}
+                  >
+                    {t('editor.addQuestion')}
+                  </Button>
                   <Button
                     variant="outline"
                     iconLeft={<Upload className="size-4" />}
@@ -439,45 +581,129 @@ const AdminTestsPage: React.FC = () => {
                   >
                     {t('upload.button')}
                   </Button>
-                  <Alert variant="info" className="flex-1">
-                    <span className="flex items-center gap-2">
-                      <AlertCircle className="size-3.5" /> {t('upload.formatHint')}
-                    </span>
-                  </Alert>
+                  <Button
+                    variant="secondary"
+                    iconLeft={<Download className="size-4" />}
+                    onClick={downloadQuestionTemplate}
+                  >
+                    {t('upload.template')}
+                  </Button>
                 </div>
+                <Alert variant="info">
+                  <span className="flex items-start gap-2">
+                    <AlertCircle className="mt-0.5 size-3.5 shrink-0" /> {t('upload.formatHint')}
+                  </span>
+                </Alert>
+                {uploadError && (
+                  <Alert variant="error" className="mt-2">{uploadError}</Alert>
+                )}
+                {test.has_submitted_attempts && (
+                  <Alert variant="warning" className="mt-2">{t('editor.attemptsWarning')}</Alert>
+                )}
+
+                {/* New-question editor */}
+                {editingQuestion?.testId === test.id && editingQuestion.id === 0 && (
+                  <div className="mt-4">
+                    <TestQuestionEditor
+                      value={questionDraft}
+                      onChange={setQuestionDraft}
+                      onSave={() => void submitQuestion()}
+                      onCancel={() => setEditingQuestion(null)}
+                      saving={questionSaving}
+                      defaultMarks={test.default_marks}
+                      locked={test.has_submitted_attempts}
+                      error={questionError}
+                    />
+                  </div>
+                )}
 
                 {/* Questions */}
                 {test.questions.length > 0 ? (
-                  <Table density="compact">
-                    <THead>
-                      <Tr>
-                        <Th className="w-10">#</Th>
-                        <Th>{t('questionsTable.question')}</Th>
-                        <Th>A</Th>
-                        <Th>B</Th>
-                        <Th>C</Th>
-                        <Th>D</Th>
-                        <Th className="w-16">{t('questionsTable.answer')}</Th>
-                        <Th className="w-14">{t('questionsTable.marks')}</Th>
-                      </Tr>
-                    </THead>
-                    <TBody>
-                      {test.questions.map((q, idx) => (
-                        <Tr key={q.id}>
-                          <Td className="text-center text-ink-muted">{idx + 1}</Td>
-                          <Td>{q.text}</Td>
-                          <Td className="text-xs text-ink-muted">{q.option_a}</Td>
-                          <Td className="text-xs text-ink-muted">{q.option_b}</Td>
-                          <Td className="text-xs text-ink-muted">{q.option_c}</Td>
-                          <Td className="text-xs text-ink-muted">{q.option_d}</Td>
-                          <Td className="text-center">
-                            <Badge variant="coral">{q.correct_answer}</Badge>
-                          </Td>
-                          <Td className="text-center">{q.marks}</Td>
-                        </Tr>
-                      ))}
-                    </TBody>
-                  </Table>
+                  <div className="mt-4 flex flex-col gap-2">
+                    {test.questions.map((q, idx) =>
+                      editingQuestion?.testId === test.id && editingQuestion.id === q.id ? (
+                        <TestQuestionEditor
+                          key={q.id}
+                          value={questionDraft}
+                          onChange={setQuestionDraft}
+                          onSave={() => void submitQuestion()}
+                          onCancel={() => setEditingQuestion(null)}
+                          saving={questionSaving}
+                          defaultMarks={test.default_marks}
+                          locked={test.has_submitted_attempts}
+                          error={questionError}
+                        />
+                      ) : (
+                        <div key={q.id} className="rounded-xl border border-border p-3">
+                          <div className="flex items-start gap-3">
+                            <span className="mt-0.5 w-6 shrink-0 text-center text-xs font-bold text-ink-faint">
+                              {idx + 1}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="m-0 text-sm font-semibold text-ink">
+                                {q.text}
+                                {q.image_url && <ImageIcon className="ml-1.5 inline size-3.5 text-ink-faint" />}
+                              </p>
+                              {q.image_url && (
+                                <img
+                                  src={resolveAssetUrl(q.image_url)}
+                                  alt=""
+                                  className="mt-2 h-20 rounded-lg border border-border object-cover"
+                                />
+                              )}
+                              <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted">
+                                {OPTION_LABELS.map(label => {
+                                  const text = q[`option_${label.toLowerCase()}` as keyof Question] as string;
+                                  const img = q[`option_${label.toLowerCase()}_image` as keyof Question] as string;
+                                  if (!text && !img) return null;
+                                  return (
+                                    <span
+                                      key={label}
+                                      className={cn(
+                                        'flex items-center gap-1',
+                                        q.correct_answer === label && 'font-bold text-success-600 dark:text-success-400',
+                                      )}
+                                    >
+                                      <span className="font-mono">{label}.</span>
+                                      {img && (
+                                        <img
+                                          src={resolveAssetUrl(img)}
+                                          alt=""
+                                          className="size-6 rounded border border-border object-cover"
+                                        />
+                                      )}
+                                      {text || (img ? t('editor.pictureOption') : '')}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-1">
+                              <Badge variant="neutral">{t('editor.marksBadge', { n: q.marks })}</Badge>
+                              <button className={iconNeutralBtn} title={t('editor.moveUp')}
+                                disabled={idx === 0}
+                                onClick={() => void shiftQuestion(q, 'up')}>
+                                <ArrowUp className="size-3.5" />
+                              </button>
+                              <button className={iconNeutralBtn} title={t('editor.moveDown')}
+                                disabled={idx === test.questions.length - 1}
+                                onClick={() => void shiftQuestion(q, 'down')}>
+                                <ArrowDown className="size-3.5" />
+                              </button>
+                              <button className={iconNeutralBtn} title={t('editor.edit')}
+                                onClick={() => openEditQuestion(test.id, q)}>
+                                <Pencil className="size-3.5" />
+                              </button>
+                              <button className={iconBtn} title={t('editor.delete')}
+                                onClick={() => void removeQuestion(q)}>
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ),
+                    )}
+                  </div>
                 ) : (
                   <EmptyState
                     icon={<FileSpreadsheet />}
@@ -509,10 +735,27 @@ const AdminTestsPage: React.FC = () => {
       >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div><FieldLabel size="sm">{t('fields.titleRequired')}</FieldLabel><Input placeholder={t('createModal.titlePlaceholder')} value={newTest.title} onChange={e => setNewTest({ ...newTest, title: e.target.value })} /></div>
-          <div><FieldLabel size="sm">{t('fields.stageId')}</FieldLabel><Input type="number" value={newTest.stage_id} onChange={e => setNewTest({ ...newTest, stage_id: parseInt(e.target.value) || 1 })} /></div>
+          <div>
+            <FieldLabel size="sm">{t('fields.phase')}</FieldLabel>
+            <Select
+              value={newTest.stage_id}
+              onChange={e => setNewTest({ ...newTest, stage_id: parseInt(e.target.value, 10) || 1 })}
+            >
+              {phases.map((phase, i) => (
+                <option key={phase.id} value={i + 1}>
+                  {t('card.phase', { n: i + 1 })}{phaseSuffix(phase.title)}
+                </option>
+              ))}
+            </Select>
+          </div>
           <div><FieldLabel size="sm">{t('fields.duration')}</FieldLabel><Input type="number" value={newTest.duration_minutes} onChange={e => setNewTest({ ...newTest, duration_minutes: parseInt(e.target.value) || 10 })} /></div>
           <div><FieldLabel size="sm">{t('fields.passingPct')}</FieldLabel><Input type="number" value={newTest.passing_score_pct} onChange={e => setNewTest({ ...newTest, passing_score_pct: parseInt(e.target.value) || 70 })} /></div>
           <div><FieldLabel size="sm">{t('fields.maxAttempts')}</FieldLabel><Input type="number" value={newTest.max_attempts} onChange={e => setNewTest({ ...newTest, max_attempts: parseInt(e.target.value) || 3 })} /></div>
+          <div>
+            <FieldLabel size="sm">{t('fields.defaultMarks')}</FieldLabel>
+            <Input type="number" min={1} value={newTest.default_marks}
+              onChange={e => setNewTest({ ...newTest, default_marks: parseInt(e.target.value, 10) || 1 })} />
+          </div>
           <div>
             <FieldLabel size="sm">{t('fields.testType')}</FieldLabel>
             <Select value={newTest.test_type} onChange={e => setNewTest({ ...newTest, test_type: e.target.value })}>

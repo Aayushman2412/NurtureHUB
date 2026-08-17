@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Plus, Trash2, Edit3, Save, X, MapPin, Users, CheckCircle2, Building2, Link2,
+  Plus, Trash2, Edit3, Save, X, MapPin, Users, CheckCircle2, Building2, Link2, Rocket,
 } from 'lucide-react';
 import {
   Badge, Button, Card, Checkbox, EmptyState, FieldLabel, Input, Modal, PageHeader,
@@ -12,6 +12,7 @@ import {
   type ProjectGroups,
 } from '../../api/projects';
 import { PROJECT_EVENT, type AdminProject } from '../../lib/adminProject';
+import ProjectSetupWizard from './ProjectSetupWizard';
 import { cn } from '../../utils/cn';
 
 type AddMode = { level: 'state' } | { level: 'district'; parentId: number | null; parentName?: string };
@@ -31,6 +32,9 @@ const AdminProjectsPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
+  // The project whose setup wizard is open — opened automatically right after
+  // a project is created, and on demand from any project card.
+  const [setupProjectId, setSetupProjectId] = useState<number | null>(null);
 
   // Add-project form
   const [name, setName] = useState('');
@@ -73,7 +77,7 @@ const AdminProjectsPage: React.FC = () => {
     setSaving(true);
     setFormError('');
     try {
-      await createProject({
+      const created = await createProject({
         name: name.trim(),
         // Always explicit: an omitted level must never silently create a state.
         level: addMode.level,
@@ -84,6 +88,9 @@ const AdminProjectsPage: React.FC = () => {
       });
       setAddMode(null);
       announce();
+      // Follow straight through into setup: content, form versions, and (for a
+      // state) its districts — instead of leaving the admin on an empty project.
+      if (created?.id) setSetupProjectId(created.id);
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
       setFormError(detail || t('projects.errCreate'));
@@ -187,6 +194,12 @@ const AdminProjectsPage: React.FC = () => {
 
         {editingId !== project.id && (
           <div className="flex shrink-0 items-center gap-1">
+            <Button
+              size="sm" variant="ghost" title={t('setup.buttonTitle')}
+              onClick={() => setSetupProjectId(project.id)}
+            >
+              <Rocket className="size-4" />
+            </Button>
             {project.parent_id && (
               <Button
                 size="sm" variant="ghost"
@@ -327,6 +340,17 @@ const AdminProjectsPage: React.FC = () => {
           {formError && <p className="text-[13px] text-error-600">{formError}</p>}
         </div>
       </Modal>
+
+      {setupProjectId !== null && (
+        <ProjectSetupWizard
+          projectId={setupProjectId}
+          onClose={() => setSetupProjectId(null)}
+          onDone={() => {
+            setSetupProjectId(null);
+            announce();
+          }}
+        />
+      )}
     </div>
   );
 };

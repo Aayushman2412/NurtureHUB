@@ -19,8 +19,15 @@
     "toggleQuizEnable": "Enable quiz popups for the whole phase",
     "toggleQuizDisable": "Disable quiz popups for the whole phase",
     "deletePhase": "Delete phase",
-    "confirmDelete": "Delete this stage and all its tutorials?",
-    "testPhaseNote": "This is a test phase — manage its test, schedule and questions in <strong>Test Management</strong>."
+    "confirmDelete": "Delete this phase and all its tutorials?",
+    "testPhaseNote": "This is a test phase — manage its test, schedule and questions in <strong>Test Management</strong>.",
+    "testSummaryN": "Test phase — holds {{n}} test(s); manage them in Test Management",
+    "orderNote": "Phases run top to bottom. A test only unlocks once every video in its own phase and all phases above it is complete — so moving a phase changes what learners must finish first.",
+    "moveUp": "Move this phase earlier",
+    "moveDown": "Move this phase later",
+    "editPhase": "Rename / edit this phase",
+    "saveEdit": "Save phase",
+    "deleteFailed": "This phase could not be deleted."
   },
   "tutorial": {
     "meta": "{{module}} • {{minutes}}min",
@@ -67,11 +74,16 @@
     "submit": "Add Tutorial"
   },
   "addPhaseModal": {
-    "title": "Add New Video Phase",
+    "title": "Add New Phase",
     "cancel": "Cancel",
     "create": "Create Phase",
     "phaseTitleLabel": "Phase Title *",
-    "note": "This creates a video phase. Scheduled tests are managed in <strong>Test Management</strong>."
+    "note": "Phases are added at the end of the sequence — use the arrows on a phase card to move it. A <strong>test phase</strong> gates on every video phase above it.",
+    "phaseTypeLabel": "Phase type",
+    "typeVideos": "Video phase (tutorials)",
+    "typeTest": "Test phase (holds an assessment)",
+    "typeVideosHint": "A run of video tutorials, each with an optional post-video quiz.",
+    "typeTestHint": "An empty slot in the sequence. Create the actual test paper inside it from Test Management."
   },
   "quiz": {
     "modalTitle": "Quiz Questions — {{title}}",
@@ -118,5 +130,15 @@
     "empty": "The sheet has no data rows.",
     "parseError": "Could not read that file — is it a valid .xlsx sheet?",
     "failed": "Upload failed — check your connection and try again."
+  },
+  "copyPhase": {
+    "title": "Copy this phase to other projects",
+    "titleWith": "Copy phase: {{title}}",
+    "intro": "Pick the projects that should get their own copy of this phase, its tutorials and their post-video quizzes.",
+    "action": "Copy to {{n}} project(s)",
+    "done": "Copied {{n}} tutorial(s) into: {{names}}",
+    "failed": "The copy failed.",
+    "stateLabel": "state",
+    "note": "This is a copy, not a live link — each project can then edit its copy independently. Tests are not copied (they carry their own schedules and results). For a permanently shared syllabus, set the district to inherit its state's content on the Projects screen instead."
   }
 }

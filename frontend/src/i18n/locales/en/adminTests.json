@@ -18,7 +18,8 @@
   "card": {
     "stage": "Stage {{n}}",
     "meta": "{{questions}} questions • {{minutes}}min • Pass: {{pass}}%",
-    "goesLive": "🗓 Goes live: {{date}}"
+    "goesLive": "🗓 Goes live: {{date}}",
+    "phase": "Phase {{n}}"
   },
   "actions": {
     "schedule": "Schedule",
@@ -38,11 +39,18 @@
     "passingPct": "Passing %",
     "maxAttempts": "Max Attempts",
     "testType": "Test Type",
-    "description": "Description"
+    "description": "Description",
+    "phase": "Phase",
+    "defaultMarks": "Default marks per question",
+    "defaultMarksHint": "Used when a question does not state its own marks."
   },
   "upload": {
     "button": "Upload Questions (Excel/CSV)",
-    "formatHint": "Excel format: Question Text | Option A | Option B | Option C | Option D | Correct Answer"
+    "formatHint": "Sheet columns: Question Text | Option A | Option B | Option C | Option D | Option E | Option F | Correct Answer | Marks | Question Image URL. Only the question, two options and the correct answer are required — a blank Marks cell falls back to the test's default marks. Uploading REPLACES every question in this test.",
+    "template": "Download template",
+    "emptySheet": "No question rows found in that sheet.",
+    "parseError": "That file could not be read as an Excel/CSV sheet.",
+    "failed": "Upload failed."
   },
   "questionsTable": {
     "question": "Question",
@@ -51,7 +59,7 @@
   },
   "questionsEmpty": {
     "title": "No questions yet",
-    "description": "Upload an Excel/CSV file to populate questions."
+    "description": "Add questions one at a time, or upload an Excel/CSV sheet."
   },
   "createModal": {
     "title": "Create New Assessment",
@@ -88,7 +96,8 @@
   "confirm": {
     "delete": "Delete this test and all its questions?",
     "start": "Start this test now? Eligible users will immediately be able to take it.",
-    "end": "End this test now? Users will no longer be able to take it."
+    "end": "End this test now? Users will no longer be able to take it.",
+    "deleteQuestion": "Delete this question?"
   },
   "excel": {
     "sheet": "Results",
@@ -98,5 +107,36 @@
     "totalUnattempted": "Total Unattempted",
     "scorePct": "Score %"
   },
-  "qColumn": "Q{{n}}"
+  "qColumn": "Q{{n}}",
+  "editor": {
+    "addQuestion": "Add question",
+    "questionText": "Question",
+    "questionPlaceholder": "Type the question…",
+    "questionImage": "Question image",
+    "questionImageHint": "Optional — shown above the options (a chart, photo or diagram).",
+    "options": "Options",
+    "optionsHint": "Fill at least two. Leave the rest blank to hide them. An option may be an image, a text answer, or both. Select the radio button of the correct answer.",
+    "optionPlaceholder": "Option {{label}}",
+    "markCorrect": "Mark as the correct answer",
+    "marks": "Marks",
+    "marksDefault": "Default ({{n}})",
+    "marksHint": "Leave blank to use this test's default of {{n}}.",
+    "marksBadge": "{{n}} marks",
+    "needTwoOptions": "A question needs text and at least two options.",
+    "save": "Save question",
+    "saveFailed": "Could not save this question.",
+    "deleteFailed": "Could not delete this question.",
+    "edit": "Edit question",
+    "delete": "Delete question",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "pictureOption": "(picture)",
+    "lockedNote": "Learners have already submitted this test. You can reword questions and options, but an option someone already chose cannot be removed.",
+    "attemptsWarning": "This test has submitted attempts. Questions can be edited in place, but they can no longer be deleted or bulk-replaced — that would destroy the existing result history."
+  },
+  "images": {
+    "add": "Add image",
+    "remove": "Remove image",
+    "uploadFailed": "Upload failed"
+  }
 }
