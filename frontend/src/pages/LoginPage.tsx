@@ -61,7 +61,11 @@ const LoginPage: React.FC = () => {
       updateToast(toastId, t('login.toast.welcomeBack'), 'success');
 
       // Handle page routing according to user auth states
-      if (!response.is_verified) {
+      if (response.is_admin) {
+        localStorage.setItem('nh_admin', 'true');
+        localStorage.setItem('nh_admin_token', response.access_token);
+        navigate('/admin');
+      } else if (!response.is_verified) {
         navigate('/verify');
       } else if (!response.is_profile_complete) {
         navigate('/register');
@@ -78,16 +82,19 @@ const LoginPage: React.FC = () => {
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adminEmail || !adminPassword) {
+    const trimmedEmail = adminEmail.trim();
+    if (!trimmedEmail || !adminPassword) {
       showToast(t('login.toast.enterAdminCreds'), 'warning');
       return;
     }
     setAdminLoading(true);
     try {
-      const res = await client.post('/api/admin/login', { email: adminEmail, password: adminPassword });
+      const res = await client.post('/api/admin/login', { email: trimmedEmail, password: adminPassword });
       localStorage.setItem('nh_admin', 'true');
       localStorage.setItem('nh_admin_token', res.data.access_token);
       localStorage.setItem('nh_admin_name', res.data.admin_name);
+      localStorage.setItem('nh_token', res.data.access_token);
+      localStorage.setItem('nh_user_email', trimmedEmail.toLowerCase());
       showToast(t('login.toast.adminGranted'), 'success');
       navigate('/admin');
     } catch (err: any) {

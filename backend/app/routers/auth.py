@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from datetime import datetime, timedelta
 from app.database import get_db
 from app.models import User
@@ -65,7 +66,8 @@ def _consume_otp(user: User, code: str, db: Session) -> None:
 @limiter.limit(lambda: settings.RATE_LIMIT_REGISTER)
 def register(request: Request, user_data: UserRegister, db: Session = Depends(get_db)):
     # Check if user already exists
-    existing_user = db.query(User).filter(User.email == user_data.email).first()
+    norm_email = user_data.email.strip().lower()
+    existing_user = db.query(User).filter(func.lower(User.email) == norm_email).first()
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -76,7 +78,7 @@ def register(request: Request, user_data: UserRegister, db: Session = Depends(ge
     otp = generate_otp()
 
     new_user = User(
-        email=user_data.email,
+        email=norm_email,
         password_hash=get_password_hash(user_data.password),
         full_name=user_data.full_name,
         is_verified=False,
@@ -103,20 +105,23 @@ def register(request: Request, user_data: UserRegister, db: Session = Depends(ge
     db.commit()
     db.refresh(new_user)
 
-    access_token = create_access_token(data={"sub": new_user.email})
+    is_complete = bool(new_user.role is not None or new_user.is_admin)
+    access_token = create_access_token(data={"sub": new_user.email, "is_admin": bool(new_user.is_admin)})
 
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "is_verified": False,
-        "is_profile_complete": False
+        "is_profile_complete": is_complete,
+        "is_admin": bool(new_user.is_admin)
     }
 
 
 @router.post("/login", response_model=Token)
 @limiter.limit(lambda: settings.RATE_LIMIT_LOGIN)
 def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == credentials.email).first()
+    norm_email = credentials.email.strip().lower()
+    user = db.query(User).filter(func.lower(User.email) == norm_email).first()
     if not user or not user.password_hash or not verify_password(credentials.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -124,23 +129,25 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Profile is considered complete once a role/designation has been set.
-    is_complete = user.role is not None
+    # Profile is considered complete once a role/designation has been set, or if user is admin
+    is_complete = bool(user.role is not None or user.is_admin)
 
-    access_token = create_access_token(data={"sub": user.email})
+    access_token = create_access_token(data={"sub": user.email, "is_admin": bool(user.is_admin)})
 
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "is_verified": user.is_verified,
-        "is_profile_complete": is_complete
+        "is_profile_complete": is_complete,
+        "is_admin": bool(user.is_admin)
     }
 
 
 @router.post("/verify-otp", response_model=Token)
 @limiter.limit(lambda: settings.RATE_LIMIT_OTP)
 def verify_otp(request: Request, data: OTPVerify, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == data.email).first()
+    norm_email = data.email.strip().lower()
+    user = db.query(User).filter(func.lower(User.email) == norm_email).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -151,14 +158,15 @@ def verify_otp(request: Request, data: OTPVerify, db: Session = Depends(get_db))
     user.is_verified = True
     db.commit()
 
-    is_complete = user.role is not None
-    access_token = create_access_token(data={"sub": user.email})
+    is_complete = bool(user.role is not None or user.is_admin)
+    access_token = create_access_token(data={"sub": user.email, "is_admin": bool(user.is_admin)})
 
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "is_verified": True,
-        "is_profile_complete": is_complete
+        "is_profile_complete": is_complete,
+        "is_admin": bool(user.is_admin)
     }
 
 
@@ -264,12 +272,13 @@ def google_auth(request: Request, google_request: GoogleLoginRequest, db: Sessio
             user.is_verified = True
             db.commit()
 
-    is_complete = user.role is not None
-    access_token = create_access_token(data={"sub": user.email})
+    is_complete = bool(user.role is not None or user.is_admin)
+    access_token = create_access_token(data={"sub": user.email, "is_admin": bool(user.is_admin)})
 
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "is_verified": True,
-        "is_profile_complete": is_complete
+        "is_profile_complete": is_complete,
+        "is_admin": bool(user.is_admin)
     }

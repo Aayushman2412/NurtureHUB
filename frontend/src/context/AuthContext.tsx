@@ -34,6 +34,7 @@ export interface User {
   work_center_name: string | null;
   district: string | null;
   avatar_initials: string | null;
+  is_admin?: boolean;
   is_verified: boolean;
   program_district_id: number | null;
   program_district: { id: number; name: string; slug: string; is_active: boolean } | null;
@@ -125,7 +126,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await client.get('/api/users/me');
       setUser(response.data);
       setIsVerified(response.data.is_verified);
-      setIsProfileComplete(!!response.data.role); // Role being set indicates registration completes
+      setIsProfileComplete(!!response.data.role || !!response.data.is_admin);
+      if (response.data.is_admin) {
+        localStorage.setItem('nh_admin', 'true');
+        localStorage.setItem('nh_admin_token', token);
+        if (response.data.full_name) {
+          localStorage.setItem('nh_admin_name', response.data.full_name);
+        }
+      }
       // Snapshot for offline app starts (below) — keyed to this account.
       try {
         localStorage.setItem('nh_user_cache', JSON.stringify(response.data));
@@ -146,7 +154,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (cached && cached.email === emailFromToken(token)) {
             setUser(cached);
             setIsVerified(cached.is_verified);
-            setIsProfileComplete(!!cached.role);
+            setIsProfileComplete(!!cached.role || !!cached.is_admin);
           }
         } catch { /* corrupt snapshot — stay logged out visually until online */ }
       }
@@ -166,12 +174,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const login = async (email: string, password: string) => {
-    const response = await client.post('/api/auth/login', { email, password });
-    const { access_token, is_verified, is_profile_complete } = response.data;
+    const trimmedEmail = email.trim();
+    const response = await client.post('/api/auth/login', { email: trimmedEmail, password });
+    const { access_token, is_verified, is_profile_complete, is_admin } = response.data;
 
     localStorage.setItem('nh_token', access_token);
-    localStorage.setItem('nh_user_email', email);
-    await clearCachesOnIdentityChange(emailFromToken(access_token) ?? email);
+    localStorage.setItem('nh_user_email', trimmedEmail.toLowerCase());
+    if (is_admin) {
+      localStorage.setItem('nh_admin', 'true');
+      localStorage.setItem('nh_admin_token', access_token);
+      localStorage.setItem('nh_admin_name', trimmedEmail.split('@')[0]);
+    }
+    await clearCachesOnIdentityChange(emailFromToken(access_token) ?? trimmedEmail.toLowerCase());
 
     setIsVerified(is_verified);
     setIsProfileComplete(is_profile_complete);
@@ -181,16 +195,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (email: string, password: string, fullName: string) => {
+    const trimmedEmail = email.trim();
     const response = await client.post('/api/auth/register', { 
-      email, 
+      email: trimmedEmail, 
       password, 
       full_name: fullName 
     });
-    const { access_token, is_verified, is_profile_complete } = response.data;
+    const { access_token, is_verified, is_profile_complete, is_admin } = response.data;
     
     localStorage.setItem('nh_token', access_token);
-    localStorage.setItem('nh_user_email', email);
-    await clearCachesOnIdentityChange(emailFromToken(access_token) ?? email);
+    localStorage.setItem('nh_user_email', trimmedEmail.toLowerCase());
+    if (is_admin) {
+      localStorage.setItem('nh_admin', 'true');
+      localStorage.setItem('nh_admin_token', access_token);
+      localStorage.setItem('nh_admin_name', fullName || trimmedEmail.split('@')[0]);
+    }
+    await clearCachesOnIdentityChange(emailFromToken(access_token) ?? trimmedEmail.toLowerCase());
 
     setIsVerified(is_verified);
     setIsProfileComplete(is_profile_complete);
@@ -200,11 +220,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const verifyOtp = async (email: string, code: string) => {
-    const response = await client.post('/api/auth/verify-otp', { email, code });
-    const { access_token, is_verified, is_profile_complete } = response.data;
+    const trimmedEmail = email.trim();
+    const response = await client.post('/api/auth/verify-otp', { email: trimmedEmail, code });
+    const { access_token, is_verified, is_profile_complete, is_admin } = response.data;
 
     localStorage.setItem('nh_token', access_token);
-    await clearCachesOnIdentityChange(emailFromToken(access_token) ?? email);
+    if (is_admin) {
+      localStorage.setItem('nh_admin', 'true');
+      localStorage.setItem('nh_admin_token', access_token);
+      localStorage.setItem('nh_admin_name', trimmedEmail.split('@')[0]);
+    }
+    await clearCachesOnIdentityChange(emailFromToken(access_token) ?? trimmedEmail.toLowerCase());
     setIsVerified(is_verified);
     setIsProfileComplete(is_profile_complete);
 
@@ -213,20 +239,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const forgotPassword = async (email: string) => {
-    const response = await client.post('/api/auth/forgot-password', { email });
+    const response = await client.post('/api/auth/forgot-password', { email: email.trim() });
     return response.data;
   };
 
   const resetPassword = async (email: string, code: string, newPassword: string) => {
-    const response = await client.post(`/api/auth/reset-password?new_password=${encodeURIComponent(newPassword)}`, { email, code });
+    const response = await client.post(`/api/auth/reset-password?new_password=${encodeURIComponent(newPassword)}`, { email: email.trim(), code });
     return response.data;
   };
 
   const googleLogin = async (idToken: string) => {
     const response = await client.post('/api/auth/google', { id_token: idToken });
-    const { access_token, is_verified, is_profile_complete } = response.data;
+    const { access_token, is_verified, is_profile_complete, is_admin } = response.data;
 
     localStorage.setItem('nh_token', access_token);
+    if (is_admin) {
+      localStorage.setItem('nh_admin', 'true');
+      localStorage.setItem('nh_admin_token', access_token);
+    }
     await clearCachesOnIdentityChange(emailFromToken(access_token));
     setIsVerified(is_verified);
     setIsProfileComplete(is_profile_complete);
@@ -242,6 +272,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('nh_token');
     localStorage.removeItem('nh_user_email');
     localStorage.removeItem('nh_user_cache');
+    localStorage.removeItem('nh_admin');
+    localStorage.removeItem('nh_admin_token');
+    localStorage.removeItem('nh_admin_name');
+    localStorage.removeItem('nh_admin_district');
     // Cached API data must not survive into the next user's session. (The
     // offline queue stays — it is owner-scoped and only ever syncs under the
     // capturing account's own token.)
@@ -255,7 +289,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfile = async (profileData: Partial<User>) => {
     const response = await client.put('/api/users/me', profileData);
     setUser(response.data);
-    setIsProfileComplete(!!response.data.role);
+    setIsProfileComplete(!!response.data.role || !!response.data.is_admin);
     return response.data;
   };
 

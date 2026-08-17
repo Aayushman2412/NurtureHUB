@@ -440,6 +440,7 @@ class Token(BaseModel):
     token_type: str
     is_verified: bool
     is_profile_complete: bool
+    is_admin: bool = False
 
 # Profile Schema
 class UserProfileUpdate(BaseModel):
@@ -534,6 +535,7 @@ class UserOut(BaseModel):
     work_center_name: Optional[str] = None
     district: Optional[str] = None
     avatar_initials: Optional[str] = None
+    is_admin: bool = False
     is_verified: bool
     program_district_id: Optional[int] = None
     created_at: datetime
