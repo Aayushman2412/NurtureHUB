@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ChevronDown,
   ChevronUp,
+  ClipboardPaste,
   Download,
   Edit3,
   Eye,
@@ -17,6 +18,7 @@ import {
   adminAmendFormVersion, adminCreateFormVersion, adminExportForm, adminGetForm, adminGetFormVersion,
 } from '../../../api/forms';
 import { diffFormSchemas } from '../../../lib/formDiff';
+import { appendPastedOptions, isMultiOptionPaste, parseOptionLabels } from '../../../lib/optionList';
 import SaveVersionDialog, { type SaveVersionPayload } from './SaveVersionDialog';
 import { FORM_KEYS } from '../../../lib/flowTypes';
 import type {
@@ -48,6 +50,13 @@ const FIELD_TYPE_VALUES: FlatField['type'][] = [
   'text', 'number', 'date', 'dropdown', 'radio', 'textarea', 'checkbox', 'image',
 ];
 
+/** Field types that carry an answer-option list. `checkbox` belongs here too —
+ *  the learner runner has always rendered its options, but the builder used to
+ *  leave them null, so a checkbox field could only ever be created empty. */
+const CHOICE_TYPES: FlatField['type'][] = ['dropdown', 'radio', 'checkbox'];
+
+const isChoiceType = (type: string): boolean => (CHOICE_TYPES as string[]).includes(type);
+
 /** Parse a numeric-input string → number | null (blank clears the setting). */
 const numOrNull = (raw: string): number | null => {
   const v = raw.trim();
@@ -78,47 +87,131 @@ const emptyNewField = (): FlatField => ({
 
 /** Options editor used by both the inline field editor and the add-field modal. */
 const OptionsEditor: React.FC<{
-  title: string;
-  addLabel: string;
-  placeholder: string;
   options: FlatFieldOption[];
-  onRemove: (i: number) => void;
-  optionLabel: string;
-  setOptionLabel: (v: string) => void;
-  onAdd: () => void;
-}> = ({ title, addLabel, placeholder, options, onRemove, optionLabel, setOptionLabel, onAdd }) => (
-  <div className="mt-4">
-    <FieldLabel size="sm">{title}</FieldLabel>
-    <div className="flex flex-wrap gap-2">
-      {options.map((opt, oi) => (
-        <span
-          key={oi}
-          className="inline-flex items-center gap-2 rounded-lg bg-surface-sunken px-3 py-1.5 text-sm text-ink"
+  onChange: (options: FlatFieldOption[]) => void;
+  /** Choice fields can offer a free-text "Other" answer alongside the list. */
+  allowOther: boolean;
+  onAllowOtherChange: (allow: boolean) => void;
+}> = ({ options, onChange, allowOther, onAllowOtherChange }) => {
+  const { t } = useTranslation('adminFormBuilder');
+  const [label, setLabel] = useState('');
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkText, setBulkText] = useState('');
+  const [notice, setNotice] = useState('');
+
+  const makeOpt = (l: string, value: string): FlatFieldOption => ({ label: l, value });
+
+  const addOne = () => {
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    const { options: next, added } = appendPastedOptions(options, trimmed, makeOpt);
+    setNotice(added === 0 ? t('options.duplicateSkipped') : '');
+    onChange(next);
+    setLabel('');
+  };
+
+  /** Absorb a multi-cell paste in the single-option box instead of dumping the
+   *  whole spreadsheet column into one label. */
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData('text');
+    if (!isMultiOptionPaste(text)) return;
+    e.preventDefault();
+    applyBulk(text);
+  };
+
+  const applyBulk = (text: string) => {
+    const { options: next, added, skipped } = appendPastedOptions(options, text, makeOpt);
+    if (added === 0 && skipped === 0) {
+      setNotice(t('options.pasteEmpty'));
+      return;
+    }
+    onChange(next);
+    setNotice(t('options.pasteResult', { added, skipped }));
+    setLabel('');
+  };
+
+  return (
+    <div className="mt-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <FieldLabel size="sm">
+          {t('options.title')} <span className="font-normal text-ink-faint">({options.length})</span>
+        </FieldLabel>
+        <button
+          type="button"
+          onClick={() => { setBulkOpen(o => !o); setNotice(''); }}
+          className="mb-1.5 inline-flex items-center gap-1.5 text-[11px] font-bold text-primary-ink hover:underline cursor-pointer"
         >
-          {opt.label}
-          <button
-            type="button"
-            onClick={() => onRemove(oi)}
-            className="text-ink-faint hover:text-error-500 cursor-pointer"
+          <ClipboardPaste className="size-3.5" />
+          {bulkOpen ? t('options.bulkHide') : t('options.bulkShow')}
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt, oi) => (
+          <span
+            key={oi}
+            className="inline-flex items-center gap-2 rounded-lg bg-surface-sunken px-3 py-1.5 text-sm text-ink"
           >
-            <Trash2 className="size-3" />
-          </button>
-        </span>
-      ))}
+            {opt.label}
+            <button
+              type="button"
+              onClick={() => onChange(options.filter((_, i) => i !== oi))}
+              className="text-ink-faint hover:text-error-500 cursor-pointer"
+            >
+              <Trash2 className="size-3" />
+            </button>
+          </span>
+        ))}
+      </div>
+
+      <div className="mt-2 flex gap-2">
+        <Input
+          placeholder={t('options.newPlaceholder')}
+          value={label}
+          onChange={e => setLabel(e.target.value)}
+          onPaste={handlePaste}
+          onKeyDown={e => e.key === 'Enter' && addOne()}
+        />
+        <Button size="sm" onClick={addOne}>
+          {t('actions.add')}
+        </Button>
+      </div>
+
+      {bulkOpen && (
+        <div className="mt-2 rounded-lg border border-dashed border-border-strong/60 p-3">
+          <textarea
+            rows={5}
+            className={cn(inputClasses(), 'resize-y font-mono text-xs')}
+            placeholder={t('options.bulkPlaceholder')}
+            value={bulkText}
+            onChange={e => setBulkText(e.target.value)}
+          />
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <p className="text-[11px] leading-snug text-ink-faint">{t('options.bulkHint')}</p>
+            <Button
+              size="sm"
+              disabled={!bulkText.trim()}
+              onClick={() => { applyBulk(bulkText); setBulkText(''); }}
+            >
+              {t('options.bulkAdd', { n: parseOptionLabels(bulkText).length })}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {notice && <p className="mt-1.5 text-[11px] font-semibold text-ink-muted">{notice}</p>}
+
+      <div className="mt-3">
+        <Checkbox
+          label={t('options.allowOther')}
+          checked={allowOther}
+          onChange={e => onAllowOtherChange(e.target.checked)}
+        />
+        <p className="mt-1 text-[11px] leading-snug text-ink-faint">{t('options.allowOtherHint')}</p>
+      </div>
     </div>
-    <div className="mt-2 flex gap-2">
-      <Input
-        placeholder={placeholder}
-        value={optionLabel}
-        onChange={e => setOptionLabel(e.target.value)}
-        onKeyDown={e => e.key === 'Enter' && onAdd()}
-      />
-      <Button size="sm" onClick={onAdd}>
-        {addLabel}
-      </Button>
-    </div>
-  </div>
-);
+  );
+};
 
 /**
  * Field-list editor for flat forms (registration/growth/antenatal). Keeps the
@@ -147,8 +240,6 @@ const FlatFormEditorPage: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [newField, setNewField] = useState<FlatField>(emptyNewField());
-  const [newOptionLabel, setNewOptionLabel] = useState('');
-  const [editOptionLabel, setEditOptionLabel] = useState('');
 
   const validKey = !!formKey && (FORM_KEYS as readonly string[]).includes(formKey);
   // ?v=N opens that specific version from the history; absent = the live/default schema.
@@ -283,7 +374,7 @@ const FlatFormEditorPage: React.FC = () => {
     const id =
       newField.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') + '_' + Date.now();
     const field: FlatField = { ...newField, id };
-    if (['dropdown', 'radio'].includes(field.type) && !field.options) field.options = [];
+    if (CHOICE_TYPES.includes(field.type) && !field.options) field.options = [];
     applyFields([...fields, field]);
     setNewField(emptyNewField());
     setShowAddModal(false);
@@ -291,34 +382,6 @@ const FlatFormEditorPage: React.FC = () => {
 
   const updateField = (id: string, updates: Partial<FlatField>) =>
     applyFields(fields.map(f => (f.id === id ? { ...f, ...updates } : f)));
-
-  const addOptionToField = (fieldId: string) => {
-    if (!editOptionLabel.trim()) return;
-    const field = fields.find(f => f.id === fieldId);
-    if (!field) return;
-    const newOpt: FlatFieldOption = {
-      label: editOptionLabel.trim(),
-      value: editOptionLabel.trim().toLowerCase().replace(/\s+/g, '_'),
-    };
-    updateField(fieldId, { options: [...(field.options || []), newOpt] });
-    setEditOptionLabel('');
-  };
-
-  const removeOptionFromField = (fieldId: string, optIndex: number) => {
-    const field = fields.find(f => f.id === fieldId);
-    if (!field || !field.options) return;
-    updateField(fieldId, { options: field.options.filter((_, i) => i !== optIndex) });
-  };
-
-  const addOptionToNewField = () => {
-    if (!newOptionLabel.trim()) return;
-    const newOpt: FlatFieldOption = {
-      label: newOptionLabel.trim(),
-      value: newOptionLabel.trim().toLowerCase().replace(/\s+/g, '_'),
-    };
-    setNewField({ ...newField, options: [...(newField.options || []), newOpt] });
-    setNewOptionLabel('');
-  };
 
   if (!validKey) {
     return (
@@ -480,7 +543,7 @@ const FlatFormEditorPage: React.FC = () => {
                         onChange={e =>
                           updateField(field.id, {
                             type: e.target.value as FlatField['type'],
-                            options: ['dropdown', 'radio'].includes(e.target.value) ? field.options || [] : null,
+                            options: isChoiceType(e.target.value) ? field.options || [] : null,
                           })
                         }
                       >
@@ -509,14 +572,10 @@ const FlatFormEditorPage: React.FC = () => {
 
                   {field.options !== null && (
                     <OptionsEditor
-                      title={t('options.title')}
-                      addLabel={t('actions.add')}
-                      placeholder={t('options.newPlaceholder')}
                       options={field.options}
-                      onRemove={oi => removeOptionFromField(field.id, oi)}
-                      optionLabel={editOptionLabel}
-                      setOptionLabel={setEditOptionLabel}
-                      onAdd={() => addOptionToField(field.id)}
+                      onChange={options => updateField(field.id, { options })}
+                      allowOther={!!field.allowOther}
+                      onAllowOtherChange={allowOther => updateField(field.id, { allowOther })}
                     />
                   )}
 
@@ -592,15 +651,34 @@ const FlatFormEditorPage: React.FC = () => {
                       {field.options?.map((o, i) => (
                         <option key={i}>{o.label}</option>
                       ))}
+                      {field.allowOther && <option>{t('options.otherLabel')}</option>}
                     </Select>
                   )}
-                  {field.type === 'radio' && (
+                  {(field.type === 'radio' || field.type === 'checkbox') && (
                     <div className="mt-1 flex flex-wrap gap-4">
                       {field.options?.map((o, i) => (
                         <label key={i} className="flex items-center gap-1.5 text-sm text-ink-muted">
-                          <input type="radio" name={field.id} readOnly className="accent-(--primary)" /> {o.label}
+                          <input
+                            type={field.type === 'radio' ? 'radio' : 'checkbox'}
+                            name={field.id}
+                            readOnly
+                            className="accent-(--primary)"
+                          />{' '}
+                          {o.label}
                         </label>
                       ))}
+                      {field.allowOther && (
+                        <label className="flex flex-1 items-center gap-1.5 text-sm text-ink-muted">
+                          <input
+                            type={field.type === 'radio' ? 'radio' : 'checkbox'}
+                            name={field.id}
+                            readOnly
+                            className="accent-(--primary)"
+                          />{' '}
+                          {t('options.otherLabel')}
+                          <span className="ml-1 min-w-24 flex-1 border-b border-border-strong/60" />
+                        </label>
+                      )}
                     </div>
                   )}
                 </div>
@@ -643,7 +721,7 @@ const FlatFormEditorPage: React.FC = () => {
                 setNewField({
                   ...newField,
                   type: e.target.value as FlatField['type'],
-                  options: ['dropdown', 'radio'].includes(e.target.value) ? [] : null,
+                  options: isChoiceType(e.target.value) ? [] : null,
                 })
               }
             >
@@ -673,14 +751,10 @@ const FlatFormEditorPage: React.FC = () => {
 
         {newField.options !== null && (
           <OptionsEditor
-            title={t('options.title')}
-            addLabel={t('actions.add')}
-            placeholder={t('options.newPlaceholder')}
             options={newField.options}
-            onRemove={oi => setNewField({ ...newField, options: newField.options!.filter((_, i) => i !== oi) })}
-            optionLabel={newOptionLabel}
-            setOptionLabel={setNewOptionLabel}
-            onAdd={addOptionToNewField}
+            onChange={options => setNewField({ ...newField, options })}
+            allowOther={!!newField.allowOther}
+            onAllowOtherChange={allowOther => setNewField({ ...newField, allowOther })}
           />
         )}
       </Modal>

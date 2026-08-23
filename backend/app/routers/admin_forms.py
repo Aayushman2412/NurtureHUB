@@ -291,6 +291,9 @@ class FlatFieldModel(BaseModel):
     flagMax: Optional[float] = None
     noFuture: Optional[bool] = None
     notBeforeDob: Optional[bool] = None
+    # Semi-open choice field: offer an "Other" answer with a free-text box
+    # (see OTHER_OPTION_VALUE in routers/forms.py).
+    allowOther: Optional[bool] = None
     showIf: Optional[List[FlatFieldConditionModel]] = None
     # Read-only derived field computed by the runner (stored as text).
     computed: Optional[Literal["gestational_age", "weight_gain"]] = None

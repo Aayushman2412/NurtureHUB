@@ -38,6 +38,12 @@ FLAT_RESPONSE_FORM_KEYS = {"growth_monitoring", "antenatal"}
 MOTHER_FORM_KEYS = {"mother_protein_intake", "antenatal"}
 RESPONSE_FORM_KEYS = FLOW_FORM_KEYS | FLAT_RESPONSE_FORM_KEYS
 CF_MIN_AGE_DAYS = 150
+
+# Reserved option value for a semi-open choice field's "Other" answer (a field
+# with `allowOther`). It never appears in the authored option list — the runner
+# adds it and this module recognises it — so no real option can collide with it.
+# Mirrors OTHER_OPTION_VALUE in frontend/src/lib/flowTypes.ts.
+OTHER_OPTION_VALUE = "__other__"
 MAX_ACTION_NOTIFICATIONS = 15
 
 # A 24-hour protein total above this is implausible for one mother and almost
@@ -608,6 +614,35 @@ def _snapshot_flat_answers(
         a = by_id.get(f["id"])
         selected_values = values.get(f["id"], [])
         raw_value = (a.value or "").strip() if a and a.value else ""
+
+        option_labels = {o.get("value"): o.get("label") for o in (f.get("options") or []) if isinstance(o, dict)}
+        # Semi-open field: "Other" is a legitimate answer whose label is the
+        # learner's own text (carried in `value`, which choice fields otherwise
+        # leave null). Picking it without typing anything is not an answer.
+        allows_other = bool(f.get("allowOther")) and ftype in choice_types
+
+        # An option id the form does not define is not an answer. This has to
+        # settle BEFORE `answered` is decided: the unknown ids used to be
+        # dropped further down, *after* the required-field check had already
+        # seen a non-empty list — so posting `optionIds: ["anything"]` satisfied
+        # a required question and stored a snapshot with `selected: []`.
+        if ftype in choice_types and option_labels:
+            def _acceptable(v: str) -> bool:
+                return v in option_labels or (allows_other and v == OTHER_OPTION_VALUE)
+
+            unknown = [v for v in selected_values if not _acceptable(v)]
+            if unknown and enforce:
+                raise _bad(f, f"unknown answer option {unknown[0]!r}")
+            # Drafts are allowed to be junk — they are re-validated on submit.
+            selected_values = [v for v in selected_values if _acceptable(v)]
+        # A choice field with NO authored options keeps accepting anything: its
+        # values come from somewhere other than the schema, and there is nothing
+        # to check them against. Deliberately unchanged.
+
+        other_picked = allows_other and OTHER_OPTION_VALUE in selected_values
+        if other_picked and enforce and not raw_value:
+            raise _bad(f, "type the 'Other' answer")
+
         answered = bool(selected_values) if ftype in choice_types else bool(raw_value)
         number_flag: Optional[str] = None
 
@@ -644,12 +679,16 @@ def _snapshot_flat_answers(
             if f.get("notBeforeDob") and child and child.dob and d < child.dob:
                 raise _bad(f, "date cannot be before the child's date of birth")
 
-        option_labels = {o.get("value"): o.get("label") for o in (f.get("options") or []) if isinstance(o, dict)}
+        def _label_for(v: str) -> str:
+            if v == OTHER_OPTION_VALUE:
+                return f"Other: {raw_value}" if raw_value else "Other"
+            return option_labels.get(v, v)
+
+        # `selected_values` is already validated against the option list above.
         selected = [
-            {"optionId": v, "label": option_labels.get(v, v), "verdict": None,
+            {"optionId": v, "label": _label_for(v), "verdict": None,
              "action": {"type": "none", "message": "", "url": "", "startSeconds": None, "endSeconds": None}}
             for v in selected_values
-            if not option_labels or v in option_labels
         ]
         if number_flag:
             flat_red += 1

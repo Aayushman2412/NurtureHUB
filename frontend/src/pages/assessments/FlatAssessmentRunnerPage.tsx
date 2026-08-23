@@ -30,12 +30,14 @@ import {
 } from '../../offline/submit';
 import { vaultClear, vaultKey, vaultLoad, vaultSave } from '../../offline/answerVault';
 import type { FlatField, FlatSchema, FormDefinition, FormKey } from '../../lib/flowTypes';
-import { isMotherFormKey } from '../../lib/flowTypes';
+import { isMotherFormKey, OTHER_OPTION_VALUE } from '../../lib/flowTypes';
 import {
   buildFlatAnswersPayload,
   buildFlatZodSchema,
   emptyFlatValues,
+  flatSchemaKeys,
   isChoiceField,
+  otherTextKey,
   visibleFlatFields,
   type FlatFormValues,
 } from '../../lib/flatForm';
@@ -173,8 +175,21 @@ const FlatAssessmentRunnerPage: React.FC = () => {
             const f = byId.get(ans.nodeId);
             if (!f) continue;
             if (isChoiceField(f)) {
-              const ids = ans.selected ? ans.selected.map(s => s.optionId) : (ans.optionIds ?? []);
+              const saved = ans.selected ? ans.selected.map(s => s.optionId) : (ans.optionIds ?? []);
+              // Drop options the form no longer defines. A draft saved before
+              // the admin edited the form can name a deleted option: it renders
+              // as nothing selected, but would still be POSTed — and the server
+              // rejects undefined option ids. On a checkbox there is no longer
+              // a tickbox to clear it with, so the learner would be stuck.
+              const allowed = new Set((f.options ?? []).map(o => o.value));
+              if (f.allowOther) allowed.add(OTHER_OPTION_VALUE);
+              const ids = allowed.size > 0 ? saved.filter(id => allowed.has(id)) : saved;
               next[f.id] = f.type === 'checkbox' ? ids : (ids[0] ?? '');
+              // A semi-open answer stores its typed text in `value`; put it
+              // back in the "Other" box so an edit resumes where it left off.
+              if (f.allowOther && ids.includes(OTHER_OPTION_VALUE)) {
+                next[otherTextKey(f.id)] = ans.value ?? '';
+              }
             } else {
               next[f.id] = ans.value ?? '';
             }
@@ -337,6 +352,10 @@ const FlatAssessmentRunnerPage: React.FC = () => {
     // Only visible fields are in the schema, so parse only those keys.
     const subset: FlatFormValues = {};
     for (const f of visible) subset[f.id] = values[f.id] ?? (f.type === 'checkbox' ? [] : '');
+    // Semi-open fields also carry an "Other" text slot the schema validates.
+    for (const key of flatSchemaKeys(visible)) {
+      if (!(key in subset)) subset[key] = values[key] ?? '';
+    }
     const result = schema.safeParse(subset);
     if (!result.success) {
       const fieldErrors = toFieldErrors(result);
@@ -444,6 +463,9 @@ const FlatAssessmentRunnerPage: React.FC = () => {
               value={values[f.id] ?? (f.type === 'checkbox' ? [] : '')}
               onChange={v => setValue(f.id, v)}
               error={errors[f.id]}
+              otherText={String(values[otherTextKey(f.id)] ?? '')}
+              onOtherTextChange={v => setValue(otherTextKey(f.id), v)}
+              otherError={errors[otherTextKey(f.id)]}
               disabled={busy}
               dobIso={child?.dob ?? null}
               todayIso={today}

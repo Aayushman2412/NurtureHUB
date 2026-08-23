@@ -453,6 +453,16 @@ export const parseMatrixAnswer = (raw: string | null | undefined): MatrixAnswer 
 
 // ── Flat schema (classic field list) ─────────────────────────────────────────
 
+/**
+ * The reserved option value for a semi-open field's "Other" answer (see
+ * `FlatField.allowOther`). It is never stored in a field's option list — the
+ * runner adds it, and the server recognises it — so an author cannot collide
+ * with it by naming a real option "Other".
+ *
+ * Mirrors OTHER_OPTION_VALUE in backend/app/routers/forms.py.
+ */
+export const OTHER_OPTION_VALUE = '__other__';
+
 export interface FlatFieldOption {
   label: string;
   value: string;
@@ -508,6 +518,10 @@ export interface FlatField {
   noFuture?: boolean;
   /** Date must not be before the child's date of birth (child-scoped forms). */
   notBeforeDob?: boolean;
+  /** Semi-open choice field: render an extra "Other" answer with a free-text
+   *  box beside it. The typed text travels in the answer's `value`; the option
+   *  itself is the OTHER_OPTION_VALUE sentinel. */
+  allowOther?: boolean | null;
   /** Conditional display; absent/empty = always shown. */
   showIf?: FlatFieldCondition[];
   /** Read-only derived field, computed by the runner and stored as text:

@@ -17,7 +17,7 @@ import { discardQueuedMedia, enqueue, getMedia, storeMedia, OFFLINE_MEDIA_PREFIX
 import { cn } from '../../utils/cn';
 import { resolveAssetUrl } from '../../lib/flowGraph';
 import type { FlatField } from '../../lib/flowTypes';
-import { isExclusiveOption } from '../../lib/flowTypes';
+import { isExclusiveOption, OTHER_OPTION_VALUE } from '../../lib/flowTypes';
 import { useToast } from '../../context/ToastContext';
 
 export interface FlatFieldInputProps {
@@ -30,6 +30,10 @@ export interface FlatFieldInputProps {
   dobIso?: string | null;
   /** Today (ISO) — upper bound for `noFuture` date fields. */
   todayIso: string;
+  /** Semi-open fields (`allowOther`): the free text typed beside "Other". */
+  otherText?: string;
+  onOtherTextChange?: (value: string) => void;
+  otherError?: string;
 }
 
 const asString = (v: string | string[]): string => (Array.isArray(v) ? '' : v);
@@ -43,11 +47,40 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
   disabled,
   dobIso,
   todayIso,
+  otherText = '',
+  onOtherTextChange,
+  otherError,
 }) => {
   const { t } = useTranslation('assessments');
   const { showToast } = useToast();
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const otherRef = useRef<HTMLInputElement>(null);
+
+  const allowOther = !!field.allowOther;
+  const otherPicked = Array.isArray(value)
+    ? value.includes(OTHER_OPTION_VALUE)
+    : value === OTHER_OPTION_VALUE;
+
+  /** The free-text box that turns a closed list into a semi-open question.
+   *  Disabled until "Other" is picked so it reads as belonging to that answer. */
+  const otherInput = (indent: boolean) => (
+    <div className={cn('mt-1.5', indent && 'ml-6')}>
+      <Input
+        ref={otherRef}
+        aria-label={t('growth.otherSpecify', { label: field.label })}
+        placeholder={t('growth.otherPlaceholder')}
+        value={otherText}
+        error={!!otherError}
+        disabled={disabled || !otherPicked}
+        onChange={e => onOtherTextChange?.(e.target.value)}
+      />
+      {otherError && <p className="mt-1 text-xs text-error-500">{otherError}</p>}
+    </div>
+  );
+
+  /** Picking "Other" should land the caret in the box — one tap, not two. */
+  const focusOther = () => window.setTimeout(() => otherRef.current?.focus(), 0);
 
   const label = (
     <>
@@ -154,20 +187,30 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
 
       case 'dropdown':
         return (
-          <Select
-            id={field.id}
-            value={asString(value)}
-            error={!!error}
-            disabled={disabled}
-            onChange={e => onChange(e.target.value)}
-          >
-            <option value="">{field.placeholder || t('growth.selectPlaceholder')}</option>
-            {(field.options ?? []).map(o => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </Select>
+          <>
+            <Select
+              id={field.id}
+              value={asString(value)}
+              error={!!error}
+              disabled={disabled}
+              onChange={e => {
+                onChange(e.target.value);
+                if (e.target.value === OTHER_OPTION_VALUE) focusOther();
+                else if (otherPicked) onOtherTextChange?.('');
+              }}
+            >
+              <option value="">{field.placeholder || t('growth.selectPlaceholder')}</option>
+              {(field.options ?? []).map(o => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+              {allowOther && <option value={OTHER_OPTION_VALUE}>{t('growth.otherOption')}</option>}
+            </Select>
+            {/* Rendered (disabled) even before "Other" is picked so the printed
+                paper form carries a write-on line, like the radio/checkbox ones. */}
+            {allowOther && otherInput(false)}
+          </>
         );
 
       case 'radio':
@@ -181,9 +224,28 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
                 value={o.value}
                 disabled={disabled}
                 checked={asString(value) === o.value}
-                onChange={() => onChange(o.value)}
+                onChange={() => {
+                  onChange(o.value);
+                  if (otherPicked) onOtherTextChange?.('');
+                }}
               />
             ))}
+            {allowOther && (
+              <div>
+                <Radio
+                  name={field.id}
+                  label={t('growth.otherOption')}
+                  value={OTHER_OPTION_VALUE}
+                  disabled={disabled}
+                  checked={otherPicked}
+                  onChange={() => {
+                    onChange(OTHER_OPTION_VALUE);
+                    focusOther();
+                  }}
+                />
+                {otherInput(true)}
+              </div>
+            )}
           </div>
         );
 
@@ -199,6 +261,21 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
                 onChange={() => toggleCheckbox(o.value)}
               />
             ))}
+            {allowOther && (
+              <div>
+                <Checkbox
+                  label={t('growth.otherOption')}
+                  disabled={disabled}
+                  checked={otherPicked}
+                  onChange={() => {
+                    toggleCheckbox(OTHER_OPTION_VALUE);
+                    if (otherPicked) onOtherTextChange?.('');
+                    else focusOther();
+                  }}
+                />
+                {otherInput(true)}
+              </div>
+            )}
           </div>
         );
 

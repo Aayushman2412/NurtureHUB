@@ -82,6 +82,7 @@ def _build_cases(
     department: Optional[str] = None,
     learner_category: Optional[str] = None,
     learner_id: Optional[int] = None,
+    learner_ids: Optional[List[int]] = None,
     child_id: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
     """One case per child: identity of the learner-mother-child triple plus the
@@ -112,6 +113,10 @@ def _build_cases(
         rows = rows.filter(models.Mother.registered_by_user_id == user_id)
     if learner_id is not None:
         rows = rows.filter(models.User.id == learner_id)
+    if learner_ids:
+        # Hand-picked set of learners (admin monitor multi-select). An empty
+        # list means "no narrowing", never "match nothing".
+        rows = rows.filter(models.User.id.in_(learner_ids))
     if child_id is not None:
         rows = rows.filter(models.Child.id == child_id)
     if learner_category:
@@ -602,6 +607,14 @@ def my_growth_cases(
     return {"cases": _build_cases(db, user_id=current_user.id)}
 
 
+def _parse_learner_ids(raw: str) -> Optional[List[int]]:
+    """`learner_ids=3,7,12` -> [3, 7, 12]. Blank/garbage entries are dropped and
+    an empty result becomes None, so a stray comma cannot silently filter the
+    monitor down to nothing."""
+    ids = [int(part) for part in (raw or "").split(",") if part.strip().lstrip("-").isdigit()]
+    return ids or None
+
+
 @admin_router.get("/monitor")
 def admin_growth_monitor(
     district: str = Query("", description="Program-district slug; empty = all districts"),
@@ -609,13 +622,15 @@ def admin_growth_monitor(
     department: str = Query("", description="Learner department; empty = all"),
     learner_category: str = Query("", description="Learner category (a group of learners); empty = all"),
     learner_id: Optional[int] = Query(None, description="Single learner id; null = all"),
+    learner_ids: str = Query("", description="Comma-separated learner ids; empty = all"),
     child_id: Optional[int] = Query(None, description="Single case (child) id; null = all"),
     admin: dict = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     return {"cases": _build_cases(
         db, district_slug=district or None, role=role or None,
-        department=department or None, learner_category=learner_category or None, learner_id=learner_id, child_id=child_id,
+        department=department or None, learner_category=learner_category or None, learner_id=learner_id,
+        learner_ids=_parse_learner_ids(learner_ids), child_id=child_id,
     )}
 
 
@@ -626,14 +641,17 @@ def admin_growth_summary(
     department: str = Query(""),
     learner_category: str = Query(""),
     learner_id: Optional[int] = Query(None),
+    learner_ids: str = Query("", description="Comma-separated learner ids; empty = all"),
     admin: dict = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """Learner-level summary table: EC/AC/IC per form group + WFAz/HFAz outcomes,
-    one row per learner-mother-child case, honouring the four filters."""
+    one row per learner-mother-child case, honouring the shared filters
+    (district, role, department, category and the hand-picked learner set)."""
     cases = _build_cases(
         db, district_slug=district or None, role=role or None,
         department=department or None, learner_category=learner_category or None, learner_id=learner_id,
+        learner_ids=_parse_learner_ids(learner_ids),
     )
     return {"rows": _summary_rows(cases), "mock": bool(gsm.MOCK_ENABLED)}
 
@@ -698,6 +716,7 @@ def admin_growth_summary_export(
     department: str = Query(""),
     learner_category: str = Query(""),
     learner_id: Optional[int] = Query(None),
+    learner_ids: str = Query("", description="Comma-separated learner ids; empty = all"),
     admin: dict = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
@@ -705,6 +724,7 @@ def admin_growth_summary_export(
     cases = _build_cases(
         db, district_slug=district or None, role=role or None,
         department=department or None, learner_category=learner_category or None, learner_id=learner_id,
+        learner_ids=_parse_learner_ids(learner_ids),
     )
     buffer = _summary_xlsx(_summary_rows(cases))
     return StreamingResponse(

@@ -138,7 +138,11 @@
       "decimals": "Use at most {{n}} decimal place(s)",
       "date": "Enter a valid date",
       "dateFuture": "The date cannot be in the future",
-      "dateBeforeDob": "The date cannot be before the child's date of birth"
-    }
+      "dateBeforeDob": "The date cannot be before the child's date of birth",
+      "otherRequired": "Type the \"Other\" answer"
+    },
+    "otherOption": "Other",
+    "otherSpecify": "{{label}} — other, please specify",
+    "otherPlaceholder": "Type your answer"
   }
 }

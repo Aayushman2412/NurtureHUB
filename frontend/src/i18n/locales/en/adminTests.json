@@ -138,5 +138,9 @@
     "add": "Add image",
     "remove": "Remove image",
     "uploadFailed": "Upload failed"
+  },
+  "danger": {
+    "deleteTest": "Delete test",
+    "deleteHint": "Deleting removes the test and every question in it. This cannot be undone."
   }
 }

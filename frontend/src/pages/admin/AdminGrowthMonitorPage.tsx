@@ -20,7 +20,7 @@ import {
 import GrowthChartGrid, { GrowthLegend } from '../../components/growth/GrowthChartGrid';
 import GrowthSummaryTable from '../../components/growth/GrowthSummaryTable';
 import VisitDetailModal from '../../components/growth/VisitDetailModal';
-import { Button, EmptyState, PageLoader, SearchableSelect, SelectField, Tabs } from '../../components/ui';
+import { Button, EmptyState, MultiSelect, PageLoader, SearchableSelect, SelectField, Tabs } from '../../components/ui';
 import { downloadChartsCombined } from '../../lib/chartExport';
 import { sexKeyForGender, type GrowthPoint } from '../../lib/growthChart';
 
@@ -118,7 +118,24 @@ const AdminGrowthMonitorPage: React.FC = () => {
   useEffect(() => {
     setPairChildId(null);
   }, [filters]);
-  const hasFilters = !!(filters.district || filters.role || filters.department || filters.learnerCategory);
+  const hasFilters = !!(
+    filters.district || filters.role || filters.department || filters.learnerCategory ||
+    (filters.learnerIds?.length ?? 0) > 0
+  );
+
+  // Options come from the unfiltered filters endpoint, never from `cases` —
+  // deriving them from the (already learner-filtered) case set would shrink the
+  // list to whatever is picked and make the rest unreachable.
+  const learnerOptions = useMemo(
+    () =>
+      [...options.learners]
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+        .map(l => ({
+          value: l.id,
+          label: l.district ? `${l.name} — ${l.district}` : l.name,
+        })),
+    [options.learners],
+  );
 
   // The optional pair filter narrows the charts to one case before sex-splitting.
   const pairCases = useMemo(
@@ -214,7 +231,7 @@ const AdminGrowthMonitorPage: React.FC = () => {
 
       {/* filters — apply to both the table and the charts */}
       <div className="rounded-xl border border-border bg-surface p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <SelectField
             label={t('admin.district')}
             value={filters.district ?? ''}
@@ -247,6 +264,20 @@ const AdminGrowthMonitorPage: React.FC = () => {
               { value: '', label: t('filters.allCategories') },
               ...options.learner_categories.map(c => ({ value: c, label: c })),
             ]}
+          />
+          {/* Individual learners, hand-picked. Categories and roles cover the
+              standing groups; this is for comparing an arbitrary handful. */}
+          <MultiSelect
+            label={t('filters.learners')}
+            value={filters.learnerIds ?? []}
+            onChange={v => patch({ learnerIds: v.map(Number) })}
+            placeholder={t('filters.allLearners')}
+            emptyMessage={t('filters.noLearners')}
+            searchPlaceholder={t('filters.searchLearners')}
+            selectAllLabel={t('filters.selectAll')}
+            clearLabel={t('filters.clear')}
+            selectedLabel={n => t('filters.learnersSelected', { count: n })}
+            options={learnerOptions}
           />
         </div>
         {hasFilters && (

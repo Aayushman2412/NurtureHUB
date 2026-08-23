@@ -9,8 +9,8 @@ import {
   AlertCircle, Radio, CalendarClock, Plus, Pencil, ArrowUp, ArrowDown, Image as ImageIcon,
 } from 'lucide-react';
 import {
-  Alert, Badge, Button, Card, EmptyState, Input, Modal, PageHeader, PageLoader, Select, Spinner, Table,
-  TBody, Td, Th, THead, Tr, FieldLabel,
+  Alert, Badge, Button, Card, EmptyState, Input, Modal, NumberInput, PageHeader, PageLoader, Select,
+  Spinner, Table, TBody, Td, Th, THead, Tr, FieldLabel,
 } from '../../components/ui';
 import { inputClasses } from '../../components/ui/Input';
 import { cn } from '../../utils/cn';
@@ -505,15 +505,6 @@ const AdminTestsPage: React.FC = () => {
                   >
                     {t('actions.monitorLive')}
                   </Button>
-                  <button
-                    className={iconBtn}
-                    onClick={e => {
-                      e.stopPropagation();
-                      deleteTest(test.id);
-                    }}
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
                 </div>
                 {expandedTest === test.id ? <ChevronUp className="size-5" /> : <ChevronDown className="size-5" />}
               </div>
@@ -537,16 +528,41 @@ const AdminTestsPage: React.FC = () => {
                       ))}
                     </Select>
                   </div>
-                  <div><FieldLabel size="sm">{t('fields.duration')}</FieldLabel><Input type="number" value={test.duration_minutes} onChange={e => updateTest(test.id, { duration_minutes: parseInt(e.target.value) || 10 })} /></div>
-                  <div><FieldLabel size="sm">{t('fields.passPct')}</FieldLabel><Input type="number" value={test.passing_score_pct} onChange={e => updateTest(test.id, { passing_score_pct: parseInt(e.target.value) || 70 })} /></div>
-                  <div><FieldLabel size="sm">{t('fields.maxAttempts')}</FieldLabel><Input type="number" value={test.max_attempts} onChange={e => updateTest(test.id, { max_attempts: parseInt(e.target.value) || 3 })} /></div>
+                  <div>
+                    <FieldLabel size="sm">{t('fields.duration')}</FieldLabel>
+                    <NumberInput
+                      min={1}
+                      value={test.duration_minutes}
+                      fallback={10}
+                      onChange={v => updateTest(test.id, { duration_minutes: v })}
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel size="sm">{t('fields.passPct')}</FieldLabel>
+                    <NumberInput
+                      min={0}
+                      max={100}
+                      value={test.passing_score_pct}
+                      fallback={70}
+                      onChange={v => updateTest(test.id, { passing_score_pct: v })}
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel size="sm">{t('fields.maxAttempts')}</FieldLabel>
+                    <NumberInput
+                      min={1}
+                      value={test.max_attempts}
+                      fallback={3}
+                      onChange={v => updateTest(test.id, { max_attempts: v })}
+                    />
+                  </div>
                   <div>
                     <FieldLabel size="sm">{t('fields.defaultMarks')}</FieldLabel>
-                    <Input
-                      type="number"
+                    <NumberInput
                       min={1}
                       value={test.default_marks}
-                      onChange={e => updateTest(test.id, { default_marks: parseInt(e.target.value, 10) || 1 })}
+                      fallback={1}
+                      onChange={v => updateTest(test.id, { default_marks: v })}
                     />
                     <p className="mt-1 text-[11px] text-ink-faint">{t('fields.defaultMarksHint')}</p>
                   </div>
@@ -711,6 +727,22 @@ const AdminTestsPage: React.FC = () => {
                     description={t('questionsEmpty.description')}
                   />
                 )}
+
+                {/* Danger zone. Delete used to sit in the header next to the
+                    expand chevron, where a mistimed tap on a phone opened the
+                    delete confirm instead of the card — so it lives down here,
+                    labelled, behind a deliberate scroll. */}
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-error-500/30 bg-error-50/60 p-3.5 dark:bg-error-500/5">
+                  <p className="text-xs leading-snug text-ink-muted">{t('danger.deleteHint')}</p>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    iconLeft={<Trash2 className="size-3.5" />}
+                    onClick={() => deleteTest(test.id)}
+                  >
+                    {t('danger.deleteTest')}
+                  </Button>
+                </div>
               </div>
             )}
           </Card>
@@ -748,13 +780,42 @@ const AdminTestsPage: React.FC = () => {
               ))}
             </Select>
           </div>
-          <div><FieldLabel size="sm">{t('fields.duration')}</FieldLabel><Input type="number" value={newTest.duration_minutes} onChange={e => setNewTest({ ...newTest, duration_minutes: parseInt(e.target.value) || 10 })} /></div>
-          <div><FieldLabel size="sm">{t('fields.passingPct')}</FieldLabel><Input type="number" value={newTest.passing_score_pct} onChange={e => setNewTest({ ...newTest, passing_score_pct: parseInt(e.target.value) || 70 })} /></div>
-          <div><FieldLabel size="sm">{t('fields.maxAttempts')}</FieldLabel><Input type="number" value={newTest.max_attempts} onChange={e => setNewTest({ ...newTest, max_attempts: parseInt(e.target.value) || 3 })} /></div>
+          <div>
+            <FieldLabel size="sm">{t('fields.duration')}</FieldLabel>
+            <NumberInput
+              min={1}
+              value={newTest.duration_minutes}
+              fallback={10}
+              onChange={v => setNewTest({ ...newTest, duration_minutes: v })}
+            />
+          </div>
+          <div>
+            <FieldLabel size="sm">{t('fields.passingPct')}</FieldLabel>
+            <NumberInput
+              min={0}
+              max={100}
+              value={newTest.passing_score_pct}
+              fallback={70}
+              onChange={v => setNewTest({ ...newTest, passing_score_pct: v })}
+            />
+          </div>
+          <div>
+            <FieldLabel size="sm">{t('fields.maxAttempts')}</FieldLabel>
+            <NumberInput
+              min={1}
+              value={newTest.max_attempts}
+              fallback={3}
+              onChange={v => setNewTest({ ...newTest, max_attempts: v })}
+            />
+          </div>
           <div>
             <FieldLabel size="sm">{t('fields.defaultMarks')}</FieldLabel>
-            <Input type="number" min={1} value={newTest.default_marks}
-              onChange={e => setNewTest({ ...newTest, default_marks: parseInt(e.target.value, 10) || 1 })} />
+            <NumberInput
+              min={1}
+              value={newTest.default_marks}
+              fallback={1}
+              onChange={v => setNewTest({ ...newTest, default_marks: v })}
+            />
           </div>
           <div>
             <FieldLabel size="sm">{t('fields.testType')}</FieldLabel>

@@ -1,0 +1,8 @@
+# Test-only dependencies. Kept OUT of requirements.txt because that file is what
+# the Dockerfile installs into the production image.
+#
+#   pip install -r requirements-dev.txt
+#   python -m pytest tests/
+-r requirements.txt
+
+pytest>=8.0

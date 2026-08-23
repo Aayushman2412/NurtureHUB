@@ -119,6 +119,8 @@ export interface GrowthFilters {
   learnerCategory?: string;
   /** Narrow to one learner — kept for programmatic drill-downs, not a UI filter. */
   learnerId?: number | null;
+  /** Hand-picked set of learners (the monitor's multi-select). Empty = all. */
+  learnerIds?: number[];
   /** Narrow to a single case (child) — used by the case-detail page. */
   childId?: number | null;
 }
@@ -129,6 +131,7 @@ const filterParams = (f: GrowthFilters) => ({
   ...(f.department ? { department: f.department } : {}),
   ...(f.learnerCategory ? { learner_category: f.learnerCategory } : {}),
   ...(f.learnerId ? { learner_id: f.learnerId } : {}),
+  ...(f.learnerIds && f.learnerIds.length > 0 ? { learner_ids: f.learnerIds.join(',') } : {}),
   ...(f.childId ? { child_id: f.childId } : {}),
 });
 

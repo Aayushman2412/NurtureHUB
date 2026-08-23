@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { ClipboardPaste, Plus } from 'lucide-react';
 import type {
   FlowDisplaySettings,
   FlowQuestionNode,
@@ -16,6 +16,7 @@ import { cn } from '../../utils/cn';
 import MediaPicker from './MediaPicker';
 import OptionEditor from './OptionEditor';
 import { makeOption } from './factories';
+import { parseOptionLabels } from '../../lib/optionList';
 import { QUESTION_TYPE_LABELS } from './constants';
 import type { QuestionPatch, TargetOption } from './constants';
 
@@ -51,6 +52,8 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
   defaultNextSlot,
 }) => {
   const [expandedOptionId, setExpandedOptionId] = useState<string | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkText, setBulkText] = useState('');
   const hasOptions = question.questionType === 'single' || question.questionType === 'multi';
   const branchable = allowBranching && question.questionType === 'single';
 
@@ -145,6 +148,20 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
     const option = makeOption();
     onPatch({ options: [...question.options, option] });
     setExpandedOptionId(option.id);
+  };
+
+  /** Bulk-add options from a pasted spreadsheet column — the alternative is
+   *  clicking "Add option" and typing a label a few hundred times. Labels
+   *  already on the question are skipped so a re-paste does not double it. */
+  const addPastedOptions = (text: string) => {
+    const have = new Set(question.options.map(o => o.label.trim().toLowerCase()));
+    const fresh = parseOptionLabels(text)
+      .filter(label => !have.has(label.toLowerCase()))
+      .map(label => makeOption(label));
+    if (fresh.length === 0) return;
+    onPatch({ options: [...question.options, ...fresh] });
+    setBulkText('');
+    setBulkOpen(false);
   };
 
   return (
@@ -298,12 +315,47 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
 
       {hasOptions && (
         <div>
-          <div className="mb-1.5 flex items-baseline justify-between">
+          <div className="mb-1.5 flex items-baseline justify-between gap-3">
             <FieldLabel size="sm" className="mb-0">
               Answer options
             </FieldLabel>
-            <span className="text-[11px] text-ink-faint">{question.options.length}</span>
+            <div className="flex items-baseline gap-3">
+              <button
+                type="button"
+                onClick={() => setBulkOpen(o => !o)}
+                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-primary-ink hover:underline cursor-pointer"
+              >
+                <ClipboardPaste className="size-3.5" />
+                {bulkOpen ? 'Hide paste box' : 'Paste a list'}
+              </button>
+              <span className="text-[11px] text-ink-faint">{question.options.length}</span>
+            </div>
           </div>
+
+          {bulkOpen && (
+            <div className="mb-2 rounded-lg border border-dashed border-border-strong/60 p-3">
+              <textarea
+                rows={5}
+                className={cn(inputClasses(), 'resize-y font-mono text-xs')}
+                placeholder="Paste a column from Excel — one option per line"
+                value={bulkText}
+                onChange={e => setBulkText(e.target.value)}
+              />
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <p className="text-[11px] leading-snug text-ink-faint">
+                  One option per line. Verdicts and coaching actions are set afterwards, per option.
+                </p>
+                <button
+                  type="button"
+                  disabled={!bulkText.trim()}
+                  onClick={() => addPastedOptions(bulkText)}
+                  className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Add {parseOptionLabels(bulkText).length} option(s)
+                </button>
+              </div>
+            </div>
+          )}
           <div className="space-y-2">
             {question.options.map((option, i) => (
               <OptionEditor

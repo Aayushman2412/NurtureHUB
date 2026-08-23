@@ -58,7 +58,14 @@
     "clear": "फ़िल्टर हटाएँ",
     "learnerCategory": "लर्नर श्रेणी",
     "allCategories": "सभी लर्नर श्रेणियाँ",
-    "noCategories": "अभी कोई लर्नर श्रेणी नहीं"
+    "noCategories": "अभी कोई लर्नर श्रेणी नहीं",
+    "learners": "शिक्षार्थी",
+    "allLearners": "सभी शिक्षार्थी",
+    "noLearners": "कोई शिक्षार्थी नहीं मिला",
+    "searchLearners": "शिक्षार्थी खोजें...",
+    "selectAll": "सभी चुनें",
+    "learnersSelected": "{{count}} शिक्षार्थी चुने गए",
+    "learnersSelected_other": "{{count}} शिक्षार्थी चुने गए"
   },
   "summary": {
     "tab": "सारांश तालिका",

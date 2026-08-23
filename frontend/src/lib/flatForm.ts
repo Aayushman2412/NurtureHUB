@@ -11,10 +11,27 @@
  */
 
 import { z } from 'zod';
+import { OTHER_OPTION_VALUE } from './flowTypes';
 import type { FlatField, FlatFieldCondition } from './flowTypes';
 
 /** field id → value. Checkbox fields hold string[]; everything else a string. */
 export type FlatFormValues = Record<string, string | string[]>;
+
+/**
+ * Where a semi-open field parks its typed "Other" text.
+ *
+ * It rides in the same values map under a derived key rather than a second
+ * piece of state, so drafts, offline queueing and rehydration carry it around
+ * for free. It is stripped back out when the payload is built.
+ */
+export const otherTextKey = (fieldId: string): string => `${fieldId}__other`;
+
+/** True when this field's answer currently includes the "Other" option. */
+export const isOtherSelected = (field: FlatField, values: FlatFormValues): boolean => {
+  if (!field.allowOther || !isChoiceField(field)) return false;
+  const v = values[field.id];
+  return Array.isArray(v) ? v.includes(OTHER_OPTION_VALUE) : v === OTHER_OPTION_VALUE;
+};
 
 export interface FlatFormContext {
   /** react-i18next `t` (or any translator) — used at schema-build time. */
@@ -31,7 +48,10 @@ export const isChoiceField = (f: FlatField): boolean =>
 /** Initial values map: '' for scalars, [] for checkboxes. */
 export function emptyFlatValues(fields: FlatField[]): FlatFormValues {
   const out: FlatFormValues = {};
-  for (const f of fields) out[f.id] = f.type === 'checkbox' ? [] : '';
+  for (const f of fields) {
+    out[f.id] = f.type === 'checkbox' ? [] : '';
+    if (f.allowOther && isChoiceField(f)) out[otherTextKey(f.id)] = '';
+  }
   return out;
 }
 
@@ -168,8 +188,32 @@ export function buildFlatZodSchema(
   const shape: Record<string, z.ZodTypeAny> = {};
   for (const f of visibleFlatFields(fields, values, ctx.ageDays)) {
     shape[f.id] = zodForField(f, ctx);
+    // A picked "Other" with nothing typed beside it is not an answer, so the
+    // text is required whenever the option is selected — required field or not.
+    if (f.allowOther && isChoiceField(f)) {
+      const needsText = isOtherSelected(f, values);
+      shape[otherTextKey(f.id)] = z.string().superRefine((raw, issueCtx) => {
+        if (needsText && !raw.trim()) {
+          issueCtx.addIssue({
+            code: 'custom',
+            message: ctx.t('assessments:growth.validation.otherRequired'),
+          });
+        }
+      });
+    }
   }
   return z.object(shape);
+}
+
+/** The value keys a schema built from these fields expects — field ids plus the
+ *  "Other" text slots. Callers parse exactly this subset. */
+export function flatSchemaKeys(visible: FlatField[]): string[] {
+  const keys: string[] = [];
+  for (const f of visible) {
+    keys.push(f.id);
+    if (f.allowOther && isChoiceField(f)) keys.push(otherTextKey(f.id));
+  }
+  return keys;
 }
 
 // ── Submission payload ───────────────────────────────────────────────────────
@@ -190,7 +234,12 @@ export function buildFlatAnswersPayload(
     if (isChoiceField(f)) {
       const selected = Array.isArray(v) ? v : v ? [v] : [];
       if (selected.length === 0) continue;
-      out.push({ nodeId: f.id, optionIds: selected, value: null });
+      // Semi-open field: the typed text rides along in `value`, which choice
+      // fields otherwise leave null. The server pairs it with the sentinel.
+      const otherText = isOtherSelected(f, values)
+        ? String(values[otherTextKey(f.id)] ?? '').trim()
+        : '';
+      out.push({ nodeId: f.id, optionIds: selected, value: otherText || null });
     } else {
       const raw = typeof v === 'string' ? v.trim() : '';
       if (!raw) continue;

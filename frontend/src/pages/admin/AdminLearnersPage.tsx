@@ -2,20 +2,45 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Search, Users, Pencil, Trash2, Save, ShieldCheck, ShieldAlert, MoveRight, X,
+  Copy, RefreshCw, UserPlus,
 } from 'lucide-react';
 import {
   Alert, Badge, Button, Card, Checkbox, EmptyState, FieldLabel, Input, Modal, PageHeader,
   PageLoader, Select, Table, TBody, Td, Th, THead, Tr,
 } from '../../components/ui';
 import {
-  bulkAssignLearners, deleteLearner, listLearners, updateLearner,
-  type AdminLearner,
+  bulkAssignLearners, createLearner, deleteLearner, listLearners, updateLearner,
+  type AdminLearner, type CreatedLearner,
 } from '../../api/adminLearners';
 import { listProjects } from '../../api/projects';
 import type { AdminProject } from '../../lib/adminProject';
 import { cn } from '../../utils/cn';
 
 const PAGE_SIZE = 100;
+
+/**
+ * A fresh trial address: `test.<mmdd>.<4 random>@nurturehub.org`. Random rather
+ * than sequential so two admins creating accounts minutes apart never collide.
+ *
+ * The domain must be a normal one. Reserved TLDs (`.test`, `.invalid`,
+ * `.localhost`, `.example`) look tidy but are rejected by the EmailStr rule on
+ * /api/auth/login, so an account created at one would be unable to sign in —
+ * exactly the dead end these accounts exist to avoid. Nothing is ever emailed.
+ */
+const suggestTestEmail = (): string => {
+  const now = new Date();
+  const stamp = `${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+  const rand = Math.random().toString(36).slice(2, 6);
+  return `test.${stamp}.${rand}@nurturehub.org`;
+};
+
+/** A readable throwaway password — no ambiguous 0/O/1/l, long enough to pass
+ *  the 8-character server rule with room to spare. */
+const suggestPassword = (): string => {
+  const alphabet = 'abcdefghijkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXY23456789';
+  const pick = () => alphabet[Math.floor(Math.random() * alphabet.length)];
+  return Array.from({ length: 10 }, pick).join('');
+};
 
 /**
  * The learner directory: every registered account, searchable, with the four
@@ -46,6 +71,13 @@ const AdminLearnersPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<AdminLearner | null>(null);
+
+  // Create-account flow. `created` holds the one-time password echo.
+  const [showCreate, setShowCreate] = useState(false);
+  const [newLearner, setNewLearner] = useState({ email: '', password: '', full_name: '', projectId: '' });
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [created, setCreated] = useState<CreatedLearner | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -134,11 +166,54 @@ const AdminLearnersPage: React.FC = () => {
     load();
   };
 
+  const openCreate = () => {
+    setNewLearner({ email: suggestTestEmail(), password: suggestPassword(), full_name: '', projectId: '' });
+    setCreateError('');
+    setCreated(null);
+    setShowCreate(true);
+  };
+
+  const runCreate = async () => {
+    setCreating(true);
+    setCreateError('');
+    try {
+      const account = await createLearner({
+        email: newLearner.email.trim(),
+        password: newLearner.password,
+        full_name: newLearner.full_name.trim() || undefined,
+        program_district_id: newLearner.projectId ? Number(newLearner.projectId) : null,
+      });
+      setCreated(account);
+      load();
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setCreateError(detail || t('learners.createFailed'));
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const copyCredentials = () => {
+    if (!created) return;
+    void navigator.clipboard
+      ?.writeText(`${created.email} / ${created.password}`)
+      .then(() => setBanner(t('learners.credentialsCopied')))
+      .catch(() => {});
+  };
+
   const allOnPageSelected = learners.length > 0 && learners.every(l => selected.includes(l.id));
 
   return (
     <div>
-      <PageHeader title={t('learners.title')} description={t('learners.description')} />
+      <PageHeader
+        title={t('learners.title')}
+        description={t('learners.description')}
+        actions={
+          <Button iconLeft={<UserPlus className="size-4" />} onClick={openCreate}>
+            {t('learners.createAccount')}
+          </Button>
+        }
+      />
 
       {banner && (
         <Alert variant="success" className="mb-4">
@@ -396,6 +471,111 @@ const AdminLearnersPage: React.FC = () => {
           <li>{t('learners.deleteKeepsMothers', { n: confirmDelete?.mothers ?? 0 })}</li>
           <li>{t('learners.deleteIrreversible')}</li>
         </ul>
+      </Modal>
+
+      {/* Create a ready-to-use account. Verified on creation, so there is no
+          email round-trip — the point is to stop burning real mailboxes on
+          trial runs. The password is shown once and never again. */}
+      <Modal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        title={created ? t('learners.createdTitle') : t('learners.createTitle')}
+        footer={
+          created ? (
+            <>
+              <Button variant="outline" iconLeft={<Copy className="size-4" />} onClick={copyCredentials}>
+                {t('learners.copyCredentials')}
+              </Button>
+              <Button variant="outline" iconLeft={<UserPlus className="size-4" />} onClick={openCreate}>
+                {t('learners.createAnother')}
+              </Button>
+              <Button onClick={() => setShowCreate(false)}>{t('learners.done')}</Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setShowCreate(false)}>{t('learners.cancel')}</Button>
+              <Button
+                iconLeft={<UserPlus className="size-4" />}
+                loading={creating}
+                disabled={creating || !newLearner.email.trim() || newLearner.password.length < 8}
+                onClick={() => void runCreate()}
+              >
+                {t('learners.createConfirm')}
+              </Button>
+            </>
+          )
+        }
+      >
+        {created ? (
+          <div>
+            <Alert variant="success" title={t('learners.createdBanner')}>
+              {t('learners.createdNote')}
+            </Alert>
+            <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-xl bg-surface-sunken p-4 text-sm">
+              <dt className="font-semibold text-ink-muted">{t('learners.fieldEmail')}</dt>
+              <dd className="font-mono break-all text-ink">{created.email}</dd>
+              <dt className="font-semibold text-ink-muted">{t('learners.fieldPassword')}</dt>
+              <dd className="font-mono text-ink">{created.password}</dd>
+            </dl>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <FieldLabel size="sm">{t('learners.fieldEmail')}</FieldLabel>
+              <div className="flex gap-2">
+                <Input
+                  value={newLearner.email}
+                  onChange={e => setNewLearner({ ...newLearner, email: e.target.value })}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  title={t('learners.regenerate')}
+                  onClick={() => setNewLearner({ ...newLearner, email: suggestTestEmail() })}
+                >
+                  <RefreshCw className="size-4" />
+                </Button>
+              </div>
+              <p className="mt-1 text-[11px] text-ink-faint">{t('learners.emailHint')}</p>
+            </div>
+            <div>
+              <FieldLabel size="sm">{t('learners.fieldPassword')}</FieldLabel>
+              <div className="flex gap-2">
+                <Input
+                  value={newLearner.password}
+                  onChange={e => setNewLearner({ ...newLearner, password: e.target.value })}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  title={t('learners.regenerate')}
+                  onClick={() => setNewLearner({ ...newLearner, password: suggestPassword() })}
+                >
+                  <RefreshCw className="size-4" />
+                </Button>
+              </div>
+            </div>
+            <div>
+              <FieldLabel size="sm">{t('learners.fieldName')}</FieldLabel>
+              <Input
+                value={newLearner.full_name}
+                placeholder={t('learners.namePlaceholder')}
+                onChange={e => setNewLearner({ ...newLearner, full_name: e.target.value })}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <FieldLabel size="sm">{t('learners.fieldProject')}</FieldLabel>
+              <Select
+                value={newLearner.projectId}
+                onChange={e => setNewLearner({ ...newLearner, projectId: e.target.value })}
+              >
+                <option value="">{t('learners.unassigned')}</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </Select>
+            </div>
+            {createError && <p className="text-[13px] text-error-600 sm:col-span-2">{createError}</p>}
+          </div>
+        )}
       </Modal>
     </div>
   );

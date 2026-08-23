@@ -50,7 +50,18 @@
   },
   "options": {
     "title": "Options",
-    "newPlaceholder": "New option label"
+    "newPlaceholder": "New option label",
+    "bulkShow": "Paste a list",
+    "bulkHide": "Hide paste box",
+    "bulkPlaceholder": "Paste a column from Excel — one option per line",
+    "bulkHint": "One option per line. Tabs and line breaks both separate options; commas do not.",
+    "bulkAdd": "Add {{n}} option(s)",
+    "pasteResult": "Added {{added}}, skipped {{skipped}} already in the list.",
+    "pasteEmpty": "Nothing to add — the pasted text had no labels.",
+    "duplicateSkipped": "That option is already in the list.",
+    "allowOther": "Allow an \"Other\" answer",
+    "allowOtherHint": "Adds an \"Other\" choice with a free-text box, for answers the list does not cover.",
+    "otherLabel": "Other"
   },
   "numeric": {
     "title": "Numerical settings",

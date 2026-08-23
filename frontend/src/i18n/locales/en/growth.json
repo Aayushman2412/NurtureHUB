@@ -58,7 +58,14 @@
     "clear": "Clear filters",
     "learnerCategory": "Learner category",
     "allCategories": "All learner categories",
-    "noCategories": "No learner categories yet"
+    "noCategories": "No learner categories yet",
+    "learners": "Learners",
+    "allLearners": "All learners",
+    "noLearners": "No learners match",
+    "searchLearners": "Search learners...",
+    "selectAll": "Select all",
+    "learnersSelected": "{{count}} learner selected",
+    "learnersSelected_other": "{{count}} learners selected"
   },
   "summary": {
     "tab": "Summary table",

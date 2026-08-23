@@ -43,6 +43,21 @@ export const listLearners = ({ q, projectId, limit = 100, offset = 0 }: LearnerQ
   return client.get(`/api/admin/users?${params.toString()}`).then(r => r.data);
 };
 
+export interface NewLearner {
+  email: string;
+  password: string;
+  full_name?: string;
+  learner_category?: string;
+  program_district_id?: number | null;
+}
+
+/** The created account, plus the plaintext password echoed back exactly once —
+ *  the server only keeps a hash, so this response is the only chance to show it. */
+export type CreatedLearner = AdminLearner & { password: string };
+
+export const createLearner = (payload: NewLearner): Promise<CreatedLearner> =>
+  client.post('/api/admin/users', payload).then(r => r.data);
+
 export const updateLearner = (id: number, patch: Partial<AdminLearner>): Promise<AdminLearner> =>
   client.put(`/api/admin/users/${id}`, patch).then(r => r.data);
 

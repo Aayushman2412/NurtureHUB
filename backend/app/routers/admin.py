@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ValidationError
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import json
@@ -27,7 +27,7 @@ from app.models import (
     Mother, FormDefinition, FormDistrictAssignment, FormVersion,
 )
 from app.seed_forms import FORM_SPECS, ensure_form_definitions
-from app.auth import verify_password, create_access_token
+from app.auth import verify_password, create_access_token, get_password_hash
 from app.dependencies import get_current_admin, get_admin_email, invalidate_user_cache
 from app.notify import create_notification
 from app.rate_limit import limiter
@@ -716,6 +716,74 @@ def list_users_for_admin(
 
 
 LEARNER_EDITABLE_FIELDS = ["full_name", "phone", "role", "learner_category", "work_center_name"]
+
+# Default designation for an admin-created account, so the profile reads as
+# complete and the learner lands on the dashboard rather than the profile
+# wizard (see the note about `role` in CLAUDE.md).
+DEFAULT_LEARNER_ROLE = "Anganwadi Worker (AWW)"
+
+
+class _EmailOnly(BaseModel):
+    """Borrows EmailStr so admin-created addresses clear the same bar as login."""
+    email: EmailStr
+
+
+@router.post("/users")
+def create_learner(
+    payload: Dict[str, Any],
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Create a learner account from the admin panel.
+
+    The team kept running out of addresses to test with — real sign-ups burn a
+    mailbox each, and once an address is registered it cannot be reused. This
+    mints ready-to-use accounts (already verified, no email round-trip) so a
+    trial run does not cost a personal inbox.
+
+    The password is returned ONCE, in this response, because it is stored only
+    as a hash. Callers show it to the admin and forget it.
+    """
+    # Validate with the SAME rule the login endpoint uses (schemas.UserLogin is
+    # an EmailStr). Anything looser lets an admin mint an account that cannot
+    # sign in — reserved TLDs like `.test` and `.invalid` are rejected there,
+    # so an address that only passes an "@ is present" check is a trap.
+    try:
+        email = _EmailOnly(email=(payload.get("email") or "").strip()).email.lower()
+    except ValidationError:
+        raise HTTPException(status_code=400, detail="Enter a valid email address")
+
+    password = (payload.get("password") or "").strip()
+    if len(password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+
+    clash = db.query(User.id).filter(func.lower(User.email) == email).first()
+    if clash:
+        raise HTTPException(status_code=400, detail="An account already uses that email")
+
+    project_id = payload.get("program_district_id")
+    if project_id is not None:
+        project_id = int(project_id)
+        if not db.query(ProgramDistrict.id).filter(ProgramDistrict.id == project_id).first():
+            raise HTTPException(status_code=404, detail="Project not found")
+
+    full_name = (payload.get("full_name") or "").strip() or email.split("@")[0]
+    initials = "".join(part[0] for part in full_name.split()[:2]).upper() or full_name[:2].upper()
+
+    user = User(
+        email=email,
+        full_name=full_name,
+        password_hash=get_password_hash(password),
+        is_verified=True,
+        avatar_initials=initials,
+        role=(payload.get("role") or "").strip() or DEFAULT_LEARNER_ROLE,
+        learner_category=(payload.get("learner_category") or "").strip() or None,
+        program_district_id=project_id,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return {**_serialize_learner(db, user), "password": password}
 
 
 @router.put("/users/{user_id}")
