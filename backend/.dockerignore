@@ -9,6 +9,11 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 
+# Tests and their runner — the image installs requirements.txt only, so pytest
+# is not present to run them anyway.
+tests/
+requirements-dev.txt
+
 # Secrets & local config (env comes from docker-compose)
 .env
 .env.*
