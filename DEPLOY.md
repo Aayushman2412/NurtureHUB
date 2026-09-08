@@ -3,6 +3,12 @@
 The compose stack is self-contained; a **host-level nginx** (managed by ops)
 terminates TLS in front of it.
 
+> **Deploying the data-protection layer for the first time?** Follow
+> [`deploy/GO_LIVE.md`](deploy/GO_LIVE.md) instead — it is the ordered
+> checklist, with the values you must obtain from other people up front and a
+> stop gate after each step. This file remains the reference for how the stack
+> works.
+
 > **Current rollout:** internal testing for team members (not public users yet).
 > The shipped `.env.production` runs in *relaxed* mode — simple secrets +
 > `CORS_ORIGINS=*` — which is fine for a trusted internal audience. Before a
