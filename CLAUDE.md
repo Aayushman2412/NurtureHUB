@@ -85,6 +85,68 @@ Two layers, all idempotent via count guards:
   (see `hooks/useLearnerMetadata.ts`). The cascade change handler sets the value and resets
   its dependents; the hook only fetches.
 
+## Data protection (`backend/app/security/`) — IMPORTANT
+
+The platform holds identified maternal and child health records, and the Maharashtra
+MOU makes NurtureHUB answerable for what happens to them. Full rationale and the
+legal mapping live in **`SECURITY.md`** — read it before changing anything below.
+
+### Rules when touching patient data
+
+- **Every route that reads or writes a mother/child record must record it.** Use the
+  helpers in `app/security/phi.py` (`log_read`, `log_list`, `log_create`, `log_update`,
+  `log_delete`, `log_export`, `log_denied`) rather than calling `audit.record` directly —
+  they keep the trail queryable by *data principal*, which is the query both a breach
+  investigation and a DPDP access request start from.
+- **`subject_type`/`subject_id` is the person the data is about**, which is not always
+  the resource. A growth measurement's resource is a form response; its subject is the
+  child. Getting this wrong makes the register unable to answer the questions the law
+  gives people the right to ask.
+- **Exports and deletions use the synchronous path** (`log_export`, `log_delete` with
+  `db=`) and commit with the action. At the moment of export the data leaves this
+  system's custody, and under the MOU custody is what responsibility follows.
+- **Never log an identifier's value.** Audit details record the *names* of the sensitive
+  fields returned, never their contents. Details are deep-redacted on write anyway
+  (`app/security/redaction.py`), but do not rely on that as a licence.
+- **Routers returning patient data carry `Depends(require_phi_access)`** so the
+  `PHI_ACCESS_FROZEN` emergency switch reaches them.
+- **Ownership refusals answer 404, not 403** (so they don't confirm a record exists) —
+  but they must call `phi.log_denied` with the true reason, or the
+  denied-access-burst detection rule has nothing to see.
+
+### Encrypted columns
+
+`mothers.mobile/alternate_mobile/email` and `users.phone/alternate_phone` are
+`EncryptedString` (AES-256-GCM, transparent at the ORM boundary). Consequences:
+
+- **They cannot appear in a SQL predicate** — no `filter`, `ilike`, `order_by`.
+  Ciphertext is non-deterministic. Use the blind index (`mothers.mobile_lookup`,
+  `phone_index(value, domain)`) for exact-match lookup.
+- Adding another encrypted column means calling `sync_lookups()` on write if it has
+  an index, and extending `scripts/encrypt_phi.py` so existing rows get sealed.
+- Names are deliberately NOT encrypted (search/sort depend on them). Don't "fix" this
+  without reading the reasoning in `SECURITY.md` §5.
+
+### The audit chain
+
+`audit_events` rows are signed with a keyed MAC and chained. Two traps:
+
+- **Never change `_HASHED_FIELDS` or `canonical_payload` in place** — that invalidates
+  every existing row. Bump `_HASH_VERSION` and keep the old rule for old rows.
+- **Chain positions are assigned at commit, not at `record_sync()`.** A rolled-back
+  transaction must not consume one: a sequence gap is indistinguishable from someone
+  deleting rows, and a trail that cries wolf is worse than none. Anything writing
+  audit rows outside a request must go through `_persist`/`_flush`, never raw SQL.
+
+Verify after any change here: `venv/bin/python -m pytest tests/test_security_layer.py`.
+
+### Adding a consent purpose or a retention rule
+
+`app/security/consent.py:PURPOSES` and `app/security/retention.py:DEFAULT_POLICIES`
+are the sources of truth; the privacy notice is generated from the former, so the two
+cannot drift. Bump `NOTICE_VERSION` whenever the notice text changes — consent is only
+meaningful against the notice the person actually saw.
+
 ## Notes
 
 - Don't hardcode option lists in the UI — serve them from the backend (metadata endpoints).

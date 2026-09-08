@@ -122,10 +122,127 @@ The relaxed settings are deliberate for internal testing. Before real users:
 1. **`JWT_SECRET_KEY`** → `openssl rand -hex 32` (do it during a planned cutover —
    it invalidates existing sessions).
 2. **`CORS_ORIGINS`** → your real `https://<domain>` (drop the `*`).
+3. **Work through "Data protection rollout" below.** With `APP_ENV=production` the
+   app now REFUSES to boot without the encryption and audit keys, `ALLOWED_HOSTS`,
+   a real DPO contact, and demo/mock data off. That is deliberate: booting without
+   them means the platform cannot honestly claim protections the MOU commits us to.
 
-Optionally flip `APP_ENV=production` for strict mode; with real SMTP + a non-default
-JWT key + the Postgres DB URL, the boot-time guardrail will pass. In strict mode the
-OTP is emailed only (no longer printed to the logs).
+In strict mode (`APP_ENV=production`) the OTP is emailed only (no longer printed
+to the logs).
+
+## Before a test goes live (capacity)
+
+A scheduled test is the platform's peak: a few hundred health workers sign in
+within a couple of minutes. Measured on a 16-core box with one worker:
+
+| Arrival pattern | Result |
+|---|---|
+| 300 sign-ins, spread over a few seconds | **300/300 succeed in ~12s**, p95 wait 2.0s |
+| 300 sign-ins, all sockets in the same instant | 212 succeed, 88 get a retryable **503 + Retry-After** |
+
+Sustained throughput is **~26 sign-ins/second per worker**. The wall is bcrypt,
+not the database — each verification costs ~310ms of CPU at `BCRYPT_ROUNDS=12`,
+so 300 sign-ins is ~93 CPU-seconds however the rest is tuned.
+
+**If a cohort is larger than ~300, or the box has few cores:**
+
+1. **Add workers** (`--workers N`, N ≈ cores). Capacity scales with CPU. Also set
+   `RATE_LIMIT_STORAGE_URI=redis://…` so the ceilings are shared rather than
+   per-process, and keep `(DB_POOL_SIZE + DB_MAX_OVERFLOW) × N` under the
+   Postgres `max_connections`.
+2. **`BCRYPT_ROUNDS=10`** — roughly 4× cheaper. Existing hashes are upgraded in
+   place on each user's next sign-in, so no reset is needed. 10 is the floor
+   OWASP still accepts for bcrypt; this weakens offline-cracking resistance, so
+   prefer more cores if you can have them.
+3. **Stagger the start.** Arrivals spread over even 30 seconds are trivially
+   handled — the pathological case above is 300 sockets in one instant, which
+   real users do not produce.
+
+> **Do NOT tighten the sign-in rate limits to "harden" this.** They are flood
+> ceilings, not brute-force controls. A whole ICDS block office reaches the
+> internet through one NAT address, so a per-address limit tuned for one human
+> throttles a district while doing nothing to an attacker, who has many
+> addresses. Brute force is handled per **account** by the lockout table.
+> The original `10/minute` setting was measured refusing 50 of 60 legitimate
+> sign-ins from one address.
+
+Rate limiting now sits at two levels:
+
+- **nginx** (`deploy/nginx.host.conf.example`) sheds volumetric floods before
+  they cost a worker or a connection. Add your office/NAT egress addresses to
+  the `geo $nh_limit_key` exemption block so a test start can never be
+  throttled at the edge.
+- **The application** limits unauthenticated endpoints by address (generous
+  ceilings) and authenticated ones by **account** — exports at
+  `RATE_LIMIT_EXPORT`, pipeline runs at `RATE_LIMIT_PIPELINE`. Keying on the
+  account is what makes those safe to set tight: a shared office address is
+  many accounts, but a stolen token is one.
+
+## Data protection rollout
+
+Full rationale in **`SECURITY.md`**. The order matters — steps 5 and 6 lock people
+out if done early.
+
+```bash
+# 1. Generate the keys ON THE SERVER and add them to .env
+docker compose exec backend python -c \
+  "from app.security.crypto import generate_key; print('v1:'+generate_key())"   # PHI_ENCRYPTION_KEYS
+openssl rand -base64 32    # PHI_INDEX_KEY
+openssl rand -hex 32       # AUDIT_HMAC_KEY   (MUST differ from JWT_SECRET_KEY)
+```
+
+2. Fill in `DPO_NAME`, `DPO_EMAIL`, `DPO_PHONE`, `ALLOWED_HOSTS`, `PUBLIC_BASE_URL`,
+   and set `ALLOW_DEV_ADMIN=false`, `ENABLE_API_DOCS=false`, `SERVE_LOCAL_UPLOADS=false`,
+   `TRUST_PROXY_HEADERS=true`. See `.env.production.example` for the full list.
+
+3. Deploy as usual (`docker compose up -d --build`). The migration
+   (`f49dcd0d8f64`) applies on boot and creates the audit, session, consent,
+   breach-register and retention tables.
+
+4. Seal the contact details already in the database:
+
+```bash
+docker compose exec backend python -m scripts.encrypt_phi --dry-run   # count first
+docker compose exec backend python -m scripts.encrypt_phi
+```
+
+   Safe to interrupt and safe to re-run. The app can read every row at every moment
+   during it — reads tolerate plaintext, and each value is sealed by a single atomic
+   UPDATE.
+
+5. Enrol every administrator with an authenticator app — **Data Protection → Access
+   control → Set up an authenticator app** — and have them save their recovery codes.
+   THEN set `MFA_REQUIRED_FOR_ADMINS=true` and restart. Doing this in the other order
+   locks every administrator out of the console.
+
+6. About 24 hours later (one full token lifetime), set
+   `SESSION_ALLOW_LEGACY_TOKENS=false` and restart. Until then, tokens issued before
+   the deploy keep working so field workers are not signed out mid-visit.
+
+7. Update the host nginx from `deploy/nginx.host.conf.example` — it now carries TLS
+   hardening, HSTS, and the `X-Forwarded-For` line that makes audit rows record the
+   real client address instead of the proxy. Then `nginx -t && systemctl reload nginx`.
+
+8. Open **Data Protection → Overview** and confirm every control reads green, then
+   review the retention schedule and the processing register against the MOU annexure.
+
+### Two things that must be on volumes
+
+- `audit_spool` — the on-disk fallback that keeps audit events from being lost while
+  the database is briefly unavailable. Already wired in `docker-compose.yml`. Without
+  it, a container restart discards exactly the evidence a restart-shaped incident needs.
+- The database volume itself should sit on an encrypted filesystem. Application-level
+  encryption covers contact details; mothers' and children's **names** are stored in
+  plaintext because the admin search and the growth monitor sort on them
+  (`SECURITY.md` §5). Full-disk encryption is what covers that gap.
+
+### If a breach is suspected
+
+Open the incident **on suspicion, not on certainty** — the CERT-In clock is six hours
+from awareness. Data Protection → Breaches → Report a breach. Containment (end every
+session) and the notification drafts are in the incident view. For a hard stop, set
+`PHI_ACCESS_FROZEN=true` and restart: every patient-data endpoint refuses while
+sign-in, administration and the security console keep working.
 
 ## Scaling out (pgbouncer + multiple workers + read replica)
 
