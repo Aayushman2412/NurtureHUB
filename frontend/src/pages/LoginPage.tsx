@@ -32,6 +32,11 @@ const LoginPage: React.FC = () => {
   const [showAdminForm, setShowAdminForm] = useState(false);
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
+  // Second-factor step. The server answers the first attempt with 401
+  // "mfa_required" when this administrator has an authenticator enrolled;
+  // we then show the code field and resubmit the same credentials with it.
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
   const [adminLoading, setAdminLoading] = useState(false);
 
   const { login } = useAuth();
@@ -87,17 +92,37 @@ const LoginPage: React.FC = () => {
       showToast(t('login.toast.enterAdminCreds'), 'warning');
       return;
     }
+    if (mfaRequired && !mfaCode.trim()) {
+      showToast(t('login.toast.enterMfaCode'), 'warning');
+      return;
+    }
     setAdminLoading(true);
     try {
-      const res = await client.post('/api/admin/login', { email: trimmedEmail, password: adminPassword });
+      const res = await client.post('/api/admin/login', {
+        email: trimmedEmail,
+        password: adminPassword,
+        ...(mfaCode.trim() ? { mfa_code: mfaCode.trim() } : {}),
+      });
       localStorage.setItem('nh_admin', 'true');
       localStorage.setItem('nh_admin_token', res.data.access_token);
       localStorage.setItem('nh_admin_name', res.data.admin_name);
       localStorage.setItem('nh_token', res.data.access_token);
       localStorage.setItem('nh_user_email', trimmedEmail.toLowerCase());
+      setMfaRequired(false);
+      setMfaCode('');
       showToast(t('login.toast.adminGranted'), 'success');
       navigate('/admin');
     } catch (err: any) {
+      // The password was right but a second factor is needed. Say so plainly
+      // rather than showing "invalid credentials", which would send someone
+      // resetting a password that is not the problem.
+      if (err.response?.data?.detail === 'mfa_required') {
+        setMfaRequired(true);
+        setMfaCode('');
+        showToast(t('login.toast.mfaRequired'), 'info');
+        return;
+      }
+      setMfaCode('');
       showToast(err.response?.data?.detail || t('login.toast.invalidAdmin'), 'error');
     } finally {
       setAdminLoading(false);
@@ -132,6 +157,26 @@ const LoginPage: React.FC = () => {
               disabled={adminLoading}
             />
           </div>
+          {mfaRequired && (
+            <div>
+              <FieldLabel htmlFor="admin-mfa">{t('login.mfaCode')}</FieldLabel>
+              <Input
+                id="admin-mfa"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]*"
+                maxLength={9}
+                placeholder="123456"
+                value={mfaCode}
+                onChange={e => setMfaCode(e.target.value)}
+                autoFocus
+                required
+                disabled={adminLoading}
+              />
+              <p className="mt-1.5 text-[13px] text-muted">{t('login.mfaHelp')}</p>
+            </div>
+          )}
           <Button
             type="submit"
             variant="secondary"

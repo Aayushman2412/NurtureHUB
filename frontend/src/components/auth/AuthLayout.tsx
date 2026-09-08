@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { Sun, Moon, BookOpen, Award, Sprout, LogOut } from 'lucide-react';
 import LanguageSwitcher from '../LanguageSwitcher';
@@ -62,6 +63,16 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle, onSi
             <p className="mt-2 mb-8 text-ink-muted">{subtitle}</p>
 
             {children}
+
+            {/* Every sign-in screen carries the route to the privacy notice and
+                to a rights request. The DPDP Act's grievance route has to be
+                reachable by someone who cannot get past this page — which is
+                often exactly who needs it. */}
+            <p className="mt-8 text-center text-[13px] text-ink-muted lg:text-left">
+              <Link to="/privacy" className="hover:text-ink hover:underline">
+                {t('auth:privacyLink')}
+              </Link>
+            </p>
           </div>
         </div>
 

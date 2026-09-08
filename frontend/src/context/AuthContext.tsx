@@ -244,7 +244,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const resetPassword = async (email: string, code: string, newPassword: string) => {
-    const response = await client.post(`/api/auth/reset-password?new_password=${encodeURIComponent(newPassword)}`, { email: email.trim(), code });
+    // The new password goes in the request BODY. It used to be a query
+    // parameter, which wrote the plaintext password into the nginx access
+    // log, the browser's history and every proxy in between.
+    const response = await client.post('/api/auth/reset-password', {
+      email: email.trim(),
+      code,
+      new_password: newPassword,
+    });
     return response.data;
   };
 
@@ -266,6 +273,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    // Tell the server first. Clearing localStorage only makes THIS browser
+    // forget the token; the credential itself stayed valid for the rest of
+    // its life, which matters on the shared phones field workers use and is
+    // the first thing you need to be able to undo during an incident.
+    // Fire-and-forget: a failed call must never trap someone in a session
+    // they are trying to leave, and the token expires on its own regardless.
+    const wasAdmin = localStorage.getItem('nh_admin') === 'true';
+    void client.post(wasAdmin ? '/api/admin/logout' : '/api/auth/logout').catch(() => {});
     // Detach this device's push endpoint from the account (token snapshot —
     // the async call outlives the localStorage clear below).
     void detachPushSubscription(localStorage.getItem('nh_token'));

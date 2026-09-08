@@ -57,6 +57,8 @@ import AdminGrowthCasePage from './pages/admin/AdminGrowthCasePage';
 import AdminRawDataPage from './pages/admin/AdminRawDataPage';
 import AdminCrosstabsPipelinePage from './pages/admin/AdminCrosstabsPipelinePage';
 import AdminMasdPipelinePage from './pages/admin/AdminMasdPipelinePage';
+import AdminDataProtectionPage from './pages/admin/AdminDataProtectionPage';
+import PrivacyPage from './pages/PrivacyPage';
 
 // --- Route Guards ---
 
@@ -136,6 +138,9 @@ const AppRoutes: React.FC = () => {
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
       <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+      {/* Reachable signed out AND signed in: the DPDP right to know what is held
+          about you must not depend on being able to log in. */}
+      <Route path="/privacy" element={<PrivacyPage />} />
 
       {/* OTP verification is protected from guest, but verified state is checked */}
       <Route path="/verify" element={<ProtectedRoute><OTPPage /></ProtectedRoute>} />
@@ -199,6 +204,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/admin/tests/:testId/monitor" element={<AdminRoute><AdminLiveMonitorPage /></AdminRoute>} />
       <Route path="/admin/growth" element={<AdminRoute><AdminGrowthMonitorPage /></AdminRoute>} />
       <Route path="/admin/growth/cases/:childId" element={<AdminRoute><AdminGrowthCasePage /></AdminRoute>} />
+      <Route path="/admin/data-protection" element={<AdminRoute><AdminDataProtectionPage /></AdminRoute>} />
       <Route path="/admin/database/rawdata" element={<AdminRoute><AdminRawDataPage /></AdminRoute>} />
       <Route path="/admin/database/crosstabs" element={<AdminRoute><AdminCrosstabsPipelinePage /></AdminRoute>} />
       <Route path="/admin/database/masd" element={<AdminRoute><AdminMasdPipelinePage /></AdminRoute>} />
