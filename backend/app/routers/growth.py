@@ -23,19 +23,28 @@ from datetime import date
 from io import BytesIO
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app import growth_summary_mock as gsm  # MOCK: summary-table demo values (removable)
 from app import models, projects
 from app.database import get_db
-from app.dependencies import get_current_admin, get_verified_user
+from app.config import settings
+from app.dependencies import get_verified_user, get_current_admin, require_phi_access
+from app.rate_limit import limiter, principal_key
+from app.security import phi
 from app.routers.forms import PROTEIN_HIGH_TOTAL_G, _serialize_detail
 from app.who_growth import percentile_curves, zscore_for_value
 
-router = APIRouter(prefix="/api/growth", tags=["growth"])
-admin_router = APIRouter(prefix="/api/admin/growth", tags=["growth"])
+router = APIRouter(
+    prefix="/api/growth", tags=["growth"],
+    dependencies=[Depends(require_phi_access)],
+)
+admin_router = APIRouter(
+    prefix="/api/admin/growth", tags=["admin-growth"],
+    dependencies=[Depends(require_phi_access)],
+)
 
 GROWTH_FORM_KEY = "growth_monitoring"
 VISIT_FORM_KEYS = ("growth_monitoring", "breastfeeding", "complementary_feeding")
@@ -604,7 +613,15 @@ def my_growth_cases(
     current_user: models.User = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ):
-    return {"cases": _build_cases(db, user_id=current_user.id)}
+    cases = _build_cases(db, user_id=current_user.id)
+    phi.log_list(
+        resource_type="growth_case",
+        count=len(cases),
+        subject_type=phi.CHILD,
+        subject_ids=[c["child"]["id"] for c in cases if c.get("child")],
+        detail={"scope": "own_cases"},
+    )
+    return {"cases": cases}
 
 
 def _parse_learner_ids(raw: str) -> Optional[List[int]]:
@@ -627,11 +644,29 @@ def admin_growth_monitor(
     admin: dict = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
-    return {"cases": _build_cases(
+    cases = _build_cases(
         db, district_slug=district or None, role=role or None,
         department=department or None, learner_category=learner_category or None, learner_id=learner_id,
         learner_ids=_parse_learner_ids(learner_ids), child_id=child_id,
-    )}
+    )
+    # A supervisory view reaches across every health worker's caseload, so the
+    # filters are recorded with the count: "who looked at this district's
+    # children, and how many" is the question a later investigation asks.
+    phi.log_list(
+        resource_type="growth_case",
+        count=len(cases),
+        subject_type=phi.CHILD,
+        subject_ids=[c["child"]["id"] for c in cases if c.get("child")],
+        detail={
+            "scope": "supervisory",
+            "filters": {
+                "district": district or None, "role": role or None,
+                "department": department or None, "learner_category": learner_category or None,
+                "learner_id": learner_id, "child_id": child_id,
+            },
+        },
+    )
+    return {"cases": cases}
 
 
 @admin_router.get("/summary")
@@ -653,7 +688,15 @@ def admin_growth_summary(
         department=department or None, learner_category=learner_category or None, learner_id=learner_id,
         learner_ids=_parse_learner_ids(learner_ids),
     )
-    return {"rows": _summary_rows(cases), "mock": bool(gsm.MOCK_ENABLED)}
+    rows = _summary_rows(cases)
+    phi.log_list(
+        resource_type="growth_summary",
+        count=len(rows),
+        subject_type=phi.CHILD,
+        subject_ids=[c["child"]["id"] for c in cases if c.get("child")],
+        detail={"scope": "supervisory_summary", "mock": bool(gsm.MOCK_ENABLED)},
+    )
+    return {"rows": rows, "mock": bool(gsm.MOCK_ENABLED)}
 
 
 @admin_router.get("/alerts")
@@ -698,6 +741,13 @@ def admin_growth_alerts(
         })
         if len(alerts) >= limit:
             break
+    phi.log_list(
+        resource_type="protein_alert",
+        count=len(alerts),
+        subject_type=phi.MOTHER,
+        subject_ids=[a["mother_id"] for a in alerts if a.get("mother_id")],
+        detail={"threshold": PROTEIN_HIGH_TOTAL_G},
+    )
     return {"alerts": alerts, "threshold": PROTEIN_HIGH_TOTAL_G}
 
 
@@ -710,7 +760,13 @@ def admin_growth_summary_filters(
 
 
 @admin_router.get("/summary/export")
+# Keyed by the signed-in ACCOUNT, not the source address, so a shared
+# office connection is many buckets and a legitimate cohort is unaffected -
+# while one stolen token cannot pull the database at machine speed. An
+# export is the moment data leaves this system's custody (SECURITY.md).
+@limiter.limit(lambda: settings.RATE_LIMIT_EXPORT, key_func=principal_key)
 def admin_growth_summary_export(
+    request: Request,
     district: str = Query(""),
     role: str = Query(""),
     department: str = Query(""),
@@ -726,7 +782,27 @@ def admin_growth_summary_export(
         department=department or None, learner_category=learner_category or None, learner_id=learner_id,
         learner_ids=_parse_learner_ids(learner_ids),
     )
-    buffer = _summary_xlsx(_summary_rows(cases))
+    rows = _summary_rows(cases)
+    buffer = _summary_xlsx(rows)
+    # Written synchronously: at this moment the data leaves the platform's
+    # custody, and under the MOU custody is what responsibility follows. The
+    # record of the export must be durable before the bytes go out.
+    phi.log_export(
+        resource_type="growth_summary",
+        record_count=len(rows),
+        fmt="xlsx",
+        subject_type=phi.CHILD,
+        db=db,
+        detail={
+            "filters": {
+                "district": district or None, "role": role or None,
+                "department": department or None,
+                "learner_category": learner_category or None, "learner_id": learner_id,
+            },
+            "custody_note": "the exported file is in the custody of whoever holds it",
+        },
+    )
+    db.commit()
     return StreamingResponse(
         buffer,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -745,11 +821,26 @@ def admin_growth_case_detail(
     forms (antenatal, protein intake) — each with its complete answer detail."""
     child = db.query(models.Child).filter(models.Child.id == child_id).first()
     if not child:
+        phi.log_denied(
+            resource_type="growth_case", resource_id=child_id,
+            subject_type=phi.CHILD, subject_id=child_id, reason="no_such_record",
+        )
         raise HTTPException(status_code=404, detail="Child not found")
     mother = db.query(models.Mother).filter(models.Mother.id == child.mother_id).first()
     learner = None
     if mother and mother.registered_by_user_id:
         learner = db.query(models.User).filter(models.User.id == mother.registered_by_user_id).first()
+
+    # The drill-down is the most identifying view in the platform: one named
+    # child, her mother, their contact details and every assessment ever taken.
+    phi.log_read(
+        resource_type="growth_case",
+        resource_id=child_id,
+        subject_type=phi.CHILD,
+        subject_id=child_id,
+        fields=["child_name", "dob", "mother_name", "mobile", "measurements", "assessments"],
+        detail={"mother_id": child.mother_id, "scope": "supervisory_drilldown"},
+    )
 
     child_responses = (
         db.query(models.FormResponse)

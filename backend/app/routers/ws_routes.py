@@ -14,8 +14,9 @@ from starlette.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session, joinedload
 
 from app.config import settings
-from app.database import session_scope
+from app.database import SessionLocal, session_scope
 from app.auth import decode_access_token
+from app.security import audit, sessions
 from app.models import User, Test, TestAttempt, Question
 from app.models_live import LiveSession, ActivityEvent, SuspiciousFlag, AdminAction
 from app.ws_manager import manager
@@ -33,10 +34,43 @@ _hb_persisted: dict[int, float] = {}
 
 
 def authenticate_ws_token(token: str) -> dict | None:
-    """Validate JWT token from WebSocket query parameter."""
+    """Validate a JWT from the WebSocket query parameter.
+
+    The socket is checked once, at connect, and then stays open for the length
+    of a test — so unlike a REST request this is the *only* chance to notice a
+    revoked credential. It therefore consults the session row rather than
+    trusting the signature alone: a token revoked during an incident must not be
+    able to open a live monitoring feed of candidates minutes later.
+
+    Its own short-lived session is used because this runs before FastAPI's
+    dependency injection has given the handler one.
+    """
     if not token:
         return None
     payload = decode_access_token(token)
+    if payload is None:
+        return None
+
+    jti = payload.get("jti")
+    if not jti:
+        # Pre-rollout token; accepted only while the allowance is on (see
+        # SESSION_ALLOW_LEGACY_TOKENS), and drains itself within a token life.
+        return payload if settings.SESSION_ALLOW_LEGACY_TOKENS else None
+
+    db = SessionLocal()
+    try:
+        if sessions.lookup(db, jti) is None:
+            audit.record(
+                audit.Action.TOKEN_REJECTED,
+                resource_type="websocket",
+                outcome="denied",
+                is_phi=False,
+                record_count=0,
+                detail={"reason": "session_revoked_or_expired", "principal": payload.get("sub")},
+            )
+            return None
+    finally:
+        db.close()
     return payload
 
 

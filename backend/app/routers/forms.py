@@ -26,10 +26,15 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app import models, storage, projects
-from app.dependencies import get_verified_user
+from app.dependencies import get_verified_user, require_phi_access
+from app.security import phi
 from app.notify import create_notification
 
-router = APIRouter(prefix="/api/forms", tags=["forms"])
+router = APIRouter(
+    prefix="/api/forms", tags=["forms"],
+    # Assessment answers are clinical records about a named mother or child.
+    dependencies=[Depends(require_phi_access)],
+)
 
 FLOW_FORM_KEYS = {"breastfeeding", "complementary_feeding", "mother_protein_intake"}
 # Flat (field-list) forms learners can submit per child.
@@ -136,6 +141,23 @@ def _resolve_for_user(
     return definition, definition.schema_json or {}, definition.version
 
 
+def _audit_denied(kind: str, ident) -> None:
+    """Record an ownership refusal with its real reason.
+
+    These handlers answer 404 so they do not confirm a record exists to someone
+    walking ids. That is right for the response and useless for the trail, so
+    the true reason goes here — and a burst of them is what the
+    denied-access-burst rule watches for.
+    """
+    phi.log_denied(
+        resource_type=kind,
+        resource_id=ident,
+        subject_type=phi.CHILD if kind == "child" else (phi.MOTHER if kind == "mother" else None),
+        subject_id=ident if kind in ("child", "mother") else None,
+        reason="not_owner",
+    )
+
+
 def _get_owned_child(db: Session, child_id: int, user: models.User) -> models.Child:
     child = (
         db.query(models.Child)
@@ -147,6 +169,7 @@ def _get_owned_child(db: Session, child_id: int, user: models.User) -> models.Ch
         .first()
     )
     if not child:
+        _audit_denied("child", child_id)
         raise HTTPException(status_code=404, detail="Child not found")
     return child
 
@@ -160,6 +183,7 @@ def _get_owned_mother(db: Session, mother_id: Optional[int], user: models.User) 
         .first()
     )
     if not mother:
+        _audit_denied("mother", mother_id)
         raise HTTPException(status_code=404, detail="Mother not found")
     return mother
 
@@ -173,6 +197,7 @@ def _get_owned_response(db: Session, response_id: int, user: models.User) -> mod
         .first()
     )
     if not response:
+        _audit_denied("form_response", response_id)
         raise HTTPException(status_code=404, detail="Assessment not found")
 
     owner_id: Optional[int] = None
@@ -889,7 +914,32 @@ async def upload_learner_media(
     # Cloudflare R2 (CDN) when configured, backend/uploads/ otherwise.
     filename = f"{uuid.uuid4().hex}{ext}"
     url = storage.save_media("learner_media", filename, b"".join(chunks), file.content_type)
+    # Measurement photographs are health data about an identifiable child, and
+    # the object URL is the only thing protecting them once stored. Recording
+    # the upload is what makes a later "which photographs were exposed" question
+    # answerable.
+    phi.log_create(
+        resource_type="media",
+        resource_id=filename,
+        detail={"bytes": total, "content_type": file.content_type,
+                "storage": "r2" if url.startswith("http") else "local_disk"},
+    )
     return {"url": url}
+
+
+def _subject_of(response: models.FormResponse):
+    """(subject_type, subject_id) for an assessment.
+
+    A response's *resource* is the assessment; its *subject* is the person the
+    clinical record is about. Keeping them distinct is what lets the trail answer
+    "everything that touched this child", which is the shape both a
+    data-principal access request and a breach investigation need.
+    """
+    if response.child_id is not None:
+        return phi.CHILD, response.child_id
+    if response.mother_id is not None:
+        return phi.MOTHER, response.mother_id
+    return None, None
 
 
 def _response_subject(db: Session, response: models.FormResponse):
@@ -915,6 +965,14 @@ def get_response(
 ):
     response = _get_owned_response(db, response_id, current_user)
     child, mother, _ = _response_subject(db, response)
+    subject_type, subject_id = _subject_of(response)
+    phi.log_read(
+        resource_type="form_response",
+        resource_id=response.id,
+        subject_type=subject_type,
+        subject_id=subject_id,
+        detail={"form_key": response.form_key, "status": response.status},
+    )
     return _serialize_detail(response, child, mother)
 
 
@@ -962,6 +1020,19 @@ def update_response(
 
     db.commit()
     db.refresh(response)
+    subject_type, subject_id = _subject_of(response)
+    phi.log_update(
+        resource_type="form_response",
+        resource_id=response.id,
+        subject_type=subject_type,
+        subject_id=subject_id,
+        detail={
+            "form_key": response.form_key,
+            "status": response.status,
+            "was_submitted": was_submitted,
+            "assessment_date": str(response.assessment_date),
+        },
+    )
     return _serialize_detail(response, child, mother)
 
 
@@ -974,7 +1045,20 @@ def delete_response(
     response = _get_owned_response(db, response_id, current_user)
     if response.status == "submitted":
         raise HTTPException(status_code=400, detail="A submitted assessment cannot be deleted")
+    subject_type, subject_id = _subject_of(response)
+    form_key = response.form_key
     db.delete(response)
+    # Written into the caller's transaction so the deletion and its record
+    # commit together — a deletion whose audit row was lost is indistinguishable
+    # from a deletion that was hidden.
+    phi.log_delete(
+        resource_type="form_response",
+        resource_id=response_id,
+        subject_type=subject_type,
+        subject_id=subject_id,
+        db=db,
+        detail={"form_key": form_key, "status": "draft"},
+    )
     db.commit()
     return {"message": "Draft deleted"}
 
@@ -1019,6 +1103,13 @@ def list_responses(
     rows = query.order_by(
         models.FormResponse.assessment_date.desc(), models.FormResponse.id.desc()
     ).all()
+    phi.log_list(
+        resource_type="form_response",
+        count=len(rows),
+        subject_type=phi.MOTHER if form_key in MOTHER_FORM_KEYS else phi.CHILD,
+        subject_ids=[mother_id] if form_key in MOTHER_FORM_KEYS else [child_id],
+        detail={"form_key": form_key},
+    )
     return [_serialize_list_item(r) for r in rows]
 
 
@@ -1096,4 +1187,17 @@ def create_response(
 
     db.commit()
     db.refresh(response)
+    subject_type, subject_id = _subject_of(response)
+    phi.log_create(
+        resource_type="form_response",
+        resource_id=response.id,
+        subject_type=subject_type,
+        subject_id=subject_id,
+        detail={
+            "form_key": form_key,
+            "status": response.status,
+            "assessment_date": str(response.assessment_date),
+            "offline_replay": bool(data.client_ref),
+        },
+    )
     return _serialize_detail(response, child, mother)
