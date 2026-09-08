@@ -22,6 +22,7 @@
     "notAttempted": "Not attempted",
     "watchedLine": "{{pct}}% watched • quizzes {{done}}✓ {{skipped}}⨯",
     "riskLine": "risk {{risk}} • tabs {{tabs}} • fs {{fs}} • cp {{cp}}",
+    "flagged": "flagged",
     "outOf100": "/100"
   },
   "status": {

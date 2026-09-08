@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -142,7 +142,7 @@ const DashboardPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Welcome Banner â€” shared component, styled once (adapts light/dark) */}
+      {/* Welcome Banner — shared component, styled once (adapts light/dark) */}
       <WelcomeBanner
         eyebrow={
           user?.program_district?.name
@@ -151,7 +151,7 @@ const DashboardPage: React.FC = () => {
         }
         title={
           <>
-            {user?.full_name || t('welcome.nameFallback')} <span className="align-middle">ðŸŒ±</span>
+            {user?.full_name || t('welcome.nameFallback')}
           </>
         }
         subtitle={t('welcome.subtitle', {
@@ -167,7 +167,7 @@ const DashboardPage: React.FC = () => {
         </span>
       </WelcomeBanner>
 
-      {/* Awaiting results banner â€” everything is done */}
+      {/* Awaiting results banner — everything is done */}
       {data.awaiting_results && (
         <Card accent="amber" className="flex items-center gap-4 p-6">
           <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600">
@@ -225,7 +225,7 @@ const DashboardPage: React.FC = () => {
             {data.stages.map((stg, i) => {
               const isTestPhase = stg.stage_type === 'test' || (!!stg.test && stg.tutorials.length === 0);
 
-              // â”€â”€ Test phase card (formative / screening) â”€â”€
+              // ── Test phase card (formative / screening) ──
               if (isTestPhase && stg.test) {
                 const test = stg.test;
                 const canTake = test.status === 'active' && !stg.is_locked && !test.is_submitted;
@@ -235,7 +235,7 @@ const DashboardPage: React.FC = () => {
                     <div className="mb-2 flex items-start justify-between gap-4">
                       <div>
                         <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-600">
-                          <FileText className="size-3" /> {t('phase', { n: i + 1 })} â€¢{' '}
+                          <FileText className="size-3" /> {t('phase', { n: i + 1 })} •{' '}
                           {test.test_type === 'screening' ? t('test.screeningLabel') : t('test.formativeLabel')}
                         </span>
                         <h4 className="mt-0.5 mb-1.5 font-display text-lg font-bold text-ink">{test.title}</h4>
@@ -260,7 +260,7 @@ const DashboardPage: React.FC = () => {
                         <strong className="text-ink">
                           {test.status === 'active' ? t('test.takeNow') : formatScheduled(test.scheduled_at, t)}
                         </strong>
-                        <span className="text-ink-faint"> â€¢ {t('test.durationMins', { minutes: test.duration_minutes })}</span>
+                        <span className="text-ink-faint"> • {t('test.durationMins', { minutes: test.duration_minutes })}</span>
                       </div>
                     </div>
 
@@ -286,7 +286,7 @@ const DashboardPage: React.FC = () => {
                 );
               }
 
-              // â”€â”€ Tutorial phase card (basic / add-on videos) â”€â”€
+              // ── Tutorial phase card (basic / add-on videos) ──
               const pct = stg.total_tutorials
                 ? Math.round((stg.tutorials_completed / stg.total_tutorials) * 100)
                 : 0;
@@ -296,7 +296,7 @@ const DashboardPage: React.FC = () => {
                   <div className="mb-2 flex items-start justify-between gap-4">
                     <div>
                       <span className="text-xs font-bold uppercase tracking-wider text-primary-ink">
-                        {t('phase', { n: i + 1 })} â€¢ {t('videos.label')}
+                        {t('phase', { n: i + 1 })} • {t('videos.label')}
                       </span>
                       <h4 className="mt-0.5 mb-1.5 font-display text-lg font-bold text-ink">{stg.title}</h4>
                       <p className="text-sm leading-snug text-ink-muted">{stg.description}</p>

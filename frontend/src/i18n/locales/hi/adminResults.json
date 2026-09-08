@@ -22,6 +22,7 @@
     "notAttempted": "प्रयास नहीं किया",
     "watchedLine": "{{pct}}% देखा • क्विज़ {{done}}✓ {{skipped}}⨯",
     "riskLine": "खतरा {{risk}} • टैब {{tabs}} • fs {{fs}} • cp {{cp}}",
+    "flagged": "चिह्नित",
     "outOf100": "/100"
   },
   "status": {

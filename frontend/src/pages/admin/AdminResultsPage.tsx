@@ -334,7 +334,7 @@ const AdminResultsPage: React.FC = () => {
                         </div>
                         <div className={cn('text-[0.7rem]', riskAlert ? 'text-error-600' : 'text-ink-faint')}>
                           {t('table.riskLine', { risk: r.max_risk_score, tabs: r.tab_switches, fs: r.fullscreen_exits, cp: r.copy_paste_events })}
-                          {r.was_flagged ? ' • 🚩' : ''}
+                          {r.was_flagged ? ` • ${t('table.flagged')}` : ''}
                         </div>
                       </Td>
                     );

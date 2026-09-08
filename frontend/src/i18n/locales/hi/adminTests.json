@@ -6,10 +6,10 @@
     "createTest": "परीक्षा बनाएँ"
   },
   "status": {
-    "active": "🟢 सक्रिय",
-    "ended": "🔴 समाप्त",
-    "scheduled": "🗓 निर्धारित",
-    "draft": "📝 मसौदा"
+    "active": "सक्रिय",
+    "ended": "समाप्त",
+    "scheduled": "निर्धारित",
+    "draft": "मसौदा"
   },
   "testType": {
     "formative": "रचनात्मक",
@@ -18,7 +18,7 @@
   "card": {
     "stage": "चरण {{n}}",
     "meta": "{{questions}} प्रश्न • {{minutes}}मिनट • पास: {{pass}}%",
-    "goesLive": "🗓 लाइव होगा: {{date}}",
+    "goesLive": "लाइव होगा: {{date}}",
     "phase": "चरण {{n}}"
   },
   "actions": {

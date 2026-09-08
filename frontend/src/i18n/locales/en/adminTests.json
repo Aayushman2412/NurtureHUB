@@ -6,10 +6,10 @@
     "createTest": "Create Test"
   },
   "status": {
-    "active": "🟢 Active",
-    "ended": "🔴 Ended",
-    "scheduled": "🗓 Scheduled",
-    "draft": "📝 Draft"
+    "active": "Active",
+    "ended": "Ended",
+    "scheduled": "Scheduled",
+    "draft": "Draft"
   },
   "testType": {
     "formative": "Formative",
@@ -18,7 +18,7 @@
   "card": {
     "stage": "Stage {{n}}",
     "meta": "{{questions}} questions • {{minutes}}min • Pass: {{pass}}%",
-    "goesLive": "🗓 Goes live: {{date}}",
+    "goesLive": "Goes live: {{date}}",
     "phase": "Phase {{n}}"
   },
   "actions": {

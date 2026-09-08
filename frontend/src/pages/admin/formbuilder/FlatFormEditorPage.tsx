@@ -65,17 +65,6 @@ const numOrNull = (raw: string): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
-const TYPE_ICONS: Record<FlatField['type'], string> = {
-  text: '📝',
-  number: '🔢',
-  date: '📅',
-  dropdown: '📋',
-  radio: '🔘',
-  textarea: '📄',
-  checkbox: '☑️',
-  image: '🖼️',
-};
-
 const emptyNewField = (): FlatField => ({
   id: '',
   label: '',
@@ -490,7 +479,6 @@ const FlatFormEditorPage: React.FC = () => {
             <Card key={field.id} className="p-4">
               <div className="flex items-center gap-3">
                 <GripVertical className="size-4 shrink-0 text-ink-faint" />
-                <span className="text-xl">{TYPE_ICONS[field.type]}</span>
                 <div className="min-w-0 flex-1">
                   <span className="block truncate font-semibold text-ink">{field.label}</span>
                   <span className="text-xs text-ink-faint">
