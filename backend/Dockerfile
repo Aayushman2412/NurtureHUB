@@ -27,7 +27,7 @@ COPY . .
 # 10001 cannot write to. Creating them appuser-owned is what makes the volumes
 # writable — without it, the first pipeline upload dies on PermissionError.
 RUN useradd --create-home --uid 10001 appuser \
-    && mkdir -p /app/uploads /data/pipeline_data \
+    && mkdir -p /app/uploads /data/pipeline_data /data/audit_spool \
     && chown -R appuser:appuser /app /data
 USER appuser
 

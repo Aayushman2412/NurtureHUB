@@ -6,6 +6,9 @@ psycopg2-binary>=2.9.9
 pydantic[email]>=2.6.0
 pydantic-settings>=2.2.0
 python-jose[cryptography]>=3.3.0
+# Imported directly by app/security/crypto.py for AES-256-GCM field encryption.
+# It arrives transitively via python-jose, but this layer depends on it outright.
+cryptography>=42.0.0
 passlib[bcrypt]>=1.7.4
 python-multipart>=0.0.9
 google-auth>=2.28.0

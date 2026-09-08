@@ -34,6 +34,33 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-NurtureHUB <noreply@nurturehub.org>}
       PIPELINE_DATA_DIR: /data/pipeline_data
+      # ── Data protection (see .env.production.example for what each does) ──
+      # The backend refuses to boot in production if the REQUIRED ones are unset.
+      PHI_ENCRYPTION_KEYS: ${PHI_ENCRYPTION_KEYS:-}
+      PHI_ENCRYPTION_ACTIVE_KEY: ${PHI_ENCRYPTION_ACTIVE_KEY:-}
+      PHI_INDEX_KEY: ${PHI_INDEX_KEY:-}
+      AUDIT_HMAC_KEY: ${AUDIT_HMAC_KEY:-}
+      # The audit spool is the on-disk fallback that keeps events from being lost
+      # when the database is briefly unavailable. It MUST live on a volume, or a
+      # container restart discards exactly the evidence a restart-shaped incident
+      # would need.
+      AUDIT_SPOOL_PATH: /data/audit_spool/audit_spool.jsonl
+      ORG_LEGAL_NAME: ${ORG_LEGAL_NAME:-}
+      DPO_NAME: ${DPO_NAME:-}
+      DPO_EMAIL: ${DPO_EMAIL:-}
+      DPO_PHONE: ${DPO_PHONE:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-}
+      ADMIN_BOOTSTRAP_EMAIL: ${ADMIN_BOOTSTRAP_EMAIL:-admin@nurturehub.org}
+      ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:-}
+      ALLOW_DEV_ADMIN: ${ALLOW_DEV_ADMIN:-true}
+      MFA_REQUIRED_FOR_ADMINS: ${MFA_REQUIRED_FOR_ADMINS:-false}
+      HSTS_ENABLED: ${HSTS_ENABLED:-true}
+      ENABLE_API_DOCS: ${ENABLE_API_DOCS:-true}
+      SERVE_LOCAL_UPLOADS: ${SERVE_LOCAL_UPLOADS:-true}
+      TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-false}
+      SESSION_ALLOW_LEGACY_TOKENS: ${SESSION_ALLOW_LEGACY_TOKENS:-true}
+      RAW_EXPORT_MOCK: ${RAW_EXPORT_MOCK:-false}
     volumes:
       # Admin "Database" section: uploaded pipeline inputs, uploaded script
       # versions and every run's outputs. Must outlive the container — without
@@ -41,6 +68,8 @@ services:
       - pipeline_data:/data/pipeline_data
       # Admin form-builder media (option images, action videos).
       - uploads_data:/app/uploads
+      # Audit spool — see AUDIT_SPOOL_PATH above.
+      - audit_spool:/data/audit_spool
     # Bound to localhost by default (host-only API/docs access at /docs). In
     # production the SPA reaches the backend via the frontend nginx proxy, not this.
     ports:
@@ -74,3 +103,4 @@ volumes:
   db_data:
   pipeline_data:
   uploads_data:
+  audit_spool:

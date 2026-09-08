@@ -20,6 +20,63 @@ map $http_upgrade $connection_upgrade {
     ''      close;
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# RATE LIMITING — also http{} scope.
+#
+# READ THIS BEFORE TIGHTENING ANY NUMBER BELOW.
+#
+# These limits exist to shed a volumetric flood before it costs the application
+# a worker and a database connection. They are NOT the brute-force control:
+# that lives in the app, per ACCOUNT, in the lockout table.
+#
+# The reason the distinction matters is NAT. A whole ICDS block office reaches
+# the internet through one public address, and Indian mobile carriers put
+# thousands of subscribers behind one CGNAT address. So when a test goes live
+# and 300 health workers sign in over a couple of minutes, every one of them
+# arrives from the SAME $binary_remote_addr. A per-address limit tuned for "one
+# human" turns that into a failed exam day for a district while doing nothing
+# to an attacker, who simply uses more addresses.
+#
+# Hence: generous general zone, tight zone only where no legitimate burst can
+# occur, and an explicit exemption list for known office egress addresses.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Exemption list. An empty key disables the limit for that client, so put the
+# programme's own office / NAT gateway ranges here and a test start can never
+# be throttled at the edge.
+geo $nh_limit_key {
+    default        $binary_remote_addr;
+    127.0.0.1      "";
+    # 10.0.0.0/8     "";   # internal
+    # 203.0.113.7/32 "";   # e.g. the district office gateway — ADD REAL ONES
+}
+
+# General API traffic. Sized for the worst legitimate burst: a whole district
+# signing in at once behind one address, each doing ~10 requests in the first
+# half-minute. Only a genuine flood (one host, thousands of requests a second)
+# exceeds it.
+limit_req_zone $nh_limit_key zone=nh_api:16m rate=100r/s;
+
+# Static assets and the SPA shell — cheap to serve, cached, so this only needs
+# to stop something pathological.
+limit_req_zone $nh_limit_key zone=nh_web:8m rate=200r/s;
+
+# Endpoints with NO legitimate burst: self-registration, password reset, and
+# the public grievance form. A real person does these once. This is the one
+# place a tight per-address number is both safe and useful.
+limit_req_zone $nh_limit_key zone=nh_sensitive:8m rate=20r/m;
+
+# Concurrent connections per address. Generous, because a NAT'd office is many
+# real browsers; it exists to stop one host holding sockets open (slowloris).
+limit_conn_zone $nh_limit_key zone=nh_conn:16m;
+
+# Answer 429 rather than nginx's default 503, so clients (and the app's own
+# error handling) can tell throttling apart from an outage.
+limit_req_status  429;
+limit_conn_status 429;
+# Log throttling at warn, so shedding shows up in the access log without noise.
+limit_req_log_level warn;
+
 # ── Verifying WebSockets end-to-end ──────────────────────────────────────────
 # Live test monitoring (/ws/*) DEPENDS on the three proxy_* upgrade lines in
 # the location{} below. nginx proxies with HTTP/1.0 semantics by default and
@@ -57,18 +114,104 @@ server {
     ssl_certificate     /etc/letsencrypt/live/nurturehub.example.org/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/nurturehub.example.org/privkey.pem;
 
+    # ── TLS hardening ───────────────────────────────────────────────────────
+    # This platform carries identified maternal and child health records over
+    # this connection, so the legacy protocols are simply off. TLS 1.2 stays
+    # because field devices are old Android phones; 1.0/1.1 do not.
+    ssl_protocols             TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_ciphers               ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+    ssl_session_cache         shared:SSL:10m;
+    ssl_session_timeout       1d;
+    ssl_session_tickets       off;
+    ssl_stapling              on;
+    ssl_stapling_verify       on;
+
+    # HSTS. The app also emits this (HSTS_ENABLED), but setting it here means it
+    # is present even on responses nginx generates itself — an error page, a
+    # redirect — which is where a downgrade would otherwise slip through.
+    #
+    # Read the commitment before enabling `preload`: it is effectively
+    # irreversible for the domain and every subdomain. Start without it.
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # Do not advertise the exact nginx version to anyone scanning.
+    server_tokens off;
+
     # Match the app's upload limit (see frontend/nginx.conf + backend).
     client_max_body_size 10m;
 
+    # Concurrency cap for every location below.
+    limit_conn nh_conn 200;
+
+    # Self-registration, password reset and the public grievance form. Declared
+    # BEFORE the general location so it wins for these exact paths.
+    #
+    # burst=10 nodelay lets a genuine person retry a few times without waiting;
+    # sustained abuse is refused. Note these paths are also limited in the app
+    # (RATE_LIMIT_REGISTER / RATE_LIMIT_PUBLIC_FORM) — the edge limit is here to
+    # spare the worker and the database connection entirely.
+    location ~ ^/api/(auth/(register|forgot-password)|privacy/requests)$ {
+        limit_req zone=nh_sensitive burst=10 nodelay;
+
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Everything else under /api, including sign-in. burst=300 absorbs the
+    # test-start thundering herd; beyond that we are shedding a flood.
+    location /api/ {
+        limit_req zone=nh_api burst=300 nodelay;
+
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_http_version 1.1;
+        proxy_read_timeout 300s;
+    }
+
+    # WebSockets are long-lived, so rate limiting them by request count is
+    # meaningless — limit_conn above is the right control for these.
+    location /ws/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade    $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_read_timeout 3600s;
+    }
+
     location / {
+        limit_req zone=nh_web burst=400 nodelay;
+
         proxy_pass http://127.0.0.1:8080;      # the frontend container
 
         proxy_set_header Host              $host;
         proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        # $remote_addr, NOT $proxy_add_x_forwarded_for. The app keys rate
+        # limits and audit rows on the LEFT-MOST X-Forwarded-For hop when
+        # TRUST_PROXY_HEADERS=true, and $proxy_add_x_forwarded_for appends to
+        # whatever the client sent — so a client sending its own
+        # "X-Forwarded-For: 1.2.3.4" would land at the left and have every one
+        # of its actions attributed to a made-up address in the access log.
+        # This form discards the client's value and records the real peer.
+        proxy_set_header X-Forwarded-For   $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;   # tells the app it's https
 
-        # WebSocket upgrade (covers /ws/* used by live test monitoring)
+        # /ws/* now has its own location above; these upgrade lines stay as a
+        # safety net so a future path change cannot silently break the live
+        # monitor the way a missing upgrade header did once before (see the
+        # verification curl at the top of this file).
         proxy_http_version 1.1;
         proxy_set_header Upgrade    $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
