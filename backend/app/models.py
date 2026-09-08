@@ -3,6 +3,7 @@ from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, Foreign
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.sql import func
 from app.database import Base
+from app.security.crypto import EncryptedString, phone_index
 
 
 class ProgramDistrict(Base):
@@ -83,8 +84,17 @@ class User(Base):
     age = Column(Integer, nullable=True)
     date_of_birth = Column(Date, nullable=True)
     gender = Column(String, nullable=True)
-    phone = Column(String, nullable=True)
-    alternate_phone = Column(String, nullable=True)
+    # Contact numbers are sealed at rest (AES-256-GCM, app/security/crypto.py).
+    # Reads and writes are transparent; a database dump, a replica or a backup
+    # yields ciphertext. Names stay in plaintext because the admin learner list
+    # searches and sorts on them — they are protected by scoping, audit and
+    # disk-level encryption instead.
+    phone = Column(EncryptedString("users.phone"), nullable=True)
+    alternate_phone = Column(EncryptedString("users.alternate_phone"), nullable=True)
+    # Keyed one-way index over the normalised number, so "who has this number"
+    # still works without storing the number. Never unique: two learners can
+    # legitimately share a facility phone.
+    phone_lookup = Column(String(32), nullable=True, index=True)
     state_id = Column(Integer, ForeignKey("states.id"), nullable=True)
     district_id = Column(Integer, ForeignKey("districts.id"), nullable=True)
     block_id = Column(Integer, ForeignKey("blocks.id"), nullable=True)
@@ -663,9 +673,17 @@ class Mother(Base):
     lmp = Column(Date, nullable=True)
     edd_lmp = Column(Date, nullable=True)             # auto = LMP + 280 days (read-only)
     edd_records = Column(Date, nullable=True)         # typed, "as per latest records"
-    mobile = Column(String, nullable=True)
-    alternate_mobile = Column(String, nullable=True)
-    email = Column(String, nullable=True)
+    # Direct identifiers, sealed at rest. These are the fields whose disclosure
+    # turns "some health data leaked" into "this named woman's pregnancy leaked",
+    # and none of them appear in a SQL predicate anywhere in the codebase, so
+    # encrypting them costs nothing operationally.
+    mobile = Column(EncryptedString("mothers.mobile"), nullable=True)
+    alternate_mobile = Column(EncryptedString("mothers.alternate_mobile"), nullable=True)
+    email = Column(EncryptedString("mothers.email"), nullable=True)
+    # Blind index over the primary mobile, keyed separately from the encryption
+    # key ring, so a field worker can still find an existing registration by
+    # phone number without the number being stored.
+    mobile_lookup = Column(String(32), nullable=True, index=True)
     # gestational weeks/months are time-relative → derived from lmp on read, not stored.
 
     # Geography (state/district/taluk reuse the shared masters; village is free text)
@@ -711,6 +729,16 @@ class Mother(Base):
     children = relationship(
         "Child", back_populates="mother", cascade="all, delete-orphan"
     )
+
+    def sync_lookups(self) -> None:
+        """Recompute the blind index from the current mobile.
+
+        Called by the mother router after any write. Kept explicit rather than
+        hidden in an ORM event so it is obvious where the index is maintained —
+        an index that silently drifts out of step with its column is worse than
+        no index, because lookups then return confidently wrong answers.
+        """
+        self.mobile_lookup = phone_index(self.mobile, "mother.mobile")
 
     # Gestational age is time-relative → derived from LMP, never stored. An LMP more
     # than 315 days (45 weeks) old cannot be a current pregnancy → no gestational age.

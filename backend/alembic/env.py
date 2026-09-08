@@ -20,6 +20,7 @@ from app.database import Base
 # --autogenerate can see the full schema.
 from app import models  # noqa: F401
 from app import models_live  # noqa: F401 — registers live-monitoring tables on Base
+from app import models_security  # noqa: F401 — registers the data-protection tables on Base
 
 # Alembic Config object — provides access to values in alembic.ini.
 config = context.config
