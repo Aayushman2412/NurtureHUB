@@ -52,7 +52,21 @@
     "problemsTitle": "Required inputs missing — the pipeline cannot run yet",
     "warningsTitle": "Optional inputs missing — the run will work but skip these enrichments",
     "uploadedCount": "{{n}} file(s) uploaded",
-    "deletedCount": "{{n}} file(s) deleted"
+    "deletedCount": "{{n}} file(s) deleted",
+    "download": "Download",
+    "downloadAll": "Download all",
+    "downloadZip": "ZIP",
+    "downloadExcel": "Excel",
+    "downloadTitle": "Download inputs",
+    "downloadDescription": "Take a copy of the stored input files. ZIP keeps the original files and folders so the bundle can be re-uploaded; Excel merges the spreadsheets and CSVs into one workbook, a sheet per file, for reading.",
+    "selectFile": "Select this file",
+    "selectAllInSection": "Select all in this section",
+    "selectedCount_one": "{{count}} file selected",
+    "selectedCount_other": "{{count}} files selected",
+    "clearSelection": "Clear",
+    "downloadSelected": "Download selected",
+    "downloadedFile": "Downloaded {{name}}",
+    "downloadFailed": "Download failed"
   },
   "scripts": {
     "intro": "Each stage runs the built-in (default) script unless you upload and activate a replacement. To change pipeline logic: edit the notebook/script locally, then upload it here — the next run picks it up automatically. Reverting to the default is always one click.",

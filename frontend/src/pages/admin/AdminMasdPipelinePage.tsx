@@ -3,9 +3,12 @@ import { useTranslation } from 'react-i18next';
 import {
   CheckCircle2, FileCode2, FolderInput, PlayCircle, FileSpreadsheet, XCircle,
 } from 'lucide-react';
-import type { InputFile, InputGroup, InputKind, MasdInputStatus, ScriptSlot } from '../../api/pipelines';
+import type {
+  InputBundleFormat, InputFile, InputGroup, InputKind, MasdInputStatus, ScriptSlot,
+} from '../../api/pipelines';
 import {
-  deletePipelineInput, deletePipelineInputGroup, getMasdInputs, getPipelineScripts,
+  deletePipelineInput, deletePipelineInputGroup, downloadPipelineInput,
+  downloadPipelineInputs, getMasdInputs, getPipelineScripts,
   triggerMasdRun, uploadPipelineInputs, uploadPipelineInputsZip,
 } from '../../api/pipelines';
 import { useToast } from '../../context/ToastContext';
@@ -89,6 +92,14 @@ const AdminMasdPipelinePage: React.FC = () => {
     deletePipelineInput('masd', undefined, path)
       .then(() => loadInputs())
       .catch(err => showToast(apiErrorDetail(err) || t('errors.actionFailed'), 'error'));
+
+  const handleDownload = (path: string) =>
+    downloadPipelineInput('masd', undefined, path)
+      .catch(err => { showToast(apiErrorDetail(err) || t('inputs.downloadFailed'), 'error'); });
+
+  const handleDownloadBundle = (format: InputBundleFormat, paths?: string[]) =>
+    downloadPipelineInputs('masd', undefined, { paths, format })
+      .catch(err => { showToast(apiErrorDetail(err) || t('inputs.downloadFailed'), 'error'); });
 
   const handleDeleteGroup = (group: InputGroup | 'all') =>
     deletePipelineInputGroup('masd', undefined, group)
@@ -227,6 +238,8 @@ const AdminMasdPipelinePage: React.FC = () => {
           onUploadZip={handleUploadZip}
           onDelete={handleDelete}
           onDeleteGroup={handleDeleteGroup}
+          onDownload={handleDownload}
+          onDownloadBundle={handleDownloadBundle}
           extra={<div className="space-y-3">{statusBanners}</div>}
         />
       )}

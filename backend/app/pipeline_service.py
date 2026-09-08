@@ -1680,14 +1680,217 @@ def build_run_zip(run: PipelineRun, paths: Optional[list[str]] = None,
 
 
 def _sweep_temp_zips(tmp_dir: Path, max_age_hours: int = 6) -> None:
-    """Delete leftover download zips (a cancelled download skips its cleanup)."""
+    """Delete leftover download bundles (a cancelled download skips its cleanup)."""
     cutoff = datetime.now(timezone.utc).timestamp() - max_age_hours * 3600
-    for stale in tmp_dir.glob("pipeline_run_*.zip"):
+    for pattern in ("pipeline_run_*.zip", "pipeline_inputs_dl_*.zip",
+                    "pipeline_inputs_dl_*.xlsx"):
+        for stale in tmp_dir.glob(pattern):
+            try:
+                if stale.stat().st_mtime < cutoff:
+                    stale.unlink()
+            except OSError:
+                pass
+
+
+# ==============================================================================
+# Input downloads
+# ==============================================================================
+# The Inputs tab could always put files IN; until now there was no way to get
+# them back out. That matters because the inputs are the evidence for a run:
+# reproducing a result, or answering "what exactly did we feed it", needs the
+# same bytes back, not a re-export that may have drifted.
+
+def input_file_path(pipeline: str, project: Optional[str], rel_path: str) -> Path:
+    """Resolve one stored input file, confined to the input store."""
+    root = ensure_inputs(pipeline, project)
+    path = _safe_join(root, rel_path)
+    if not path.is_file():
+        raise PipelineError("File not found", 404)
+    return path
+
+
+def _select_inputs(pipeline: str, project: Optional[str],
+                   paths: Optional[list[str]], kind: Optional[str]) -> list[dict]:
+    """Pick the input files a download refers to: explicit list, one slot, or all."""
+    available = list_input_files(pipeline, project)
+    if paths:
+        wanted = list(dict.fromkeys(paths))
+        by_path = {f["path"]: f for f in available}
+        missing = [p for p in wanted if p not in by_path]
+        if missing:
+            raise PipelineError(
+                "Unknown input files requested: " + ", ".join(missing[:5]), 400)
+        return [by_path[p] for p in wanted]
+    if kind:
+        return [f for f in available if f["kind"] == kind]
+    return available
+
+
+def _bundle_stem(pipeline: str, project: Optional[str], label: str) -> str:
+    parts = [pipeline, (project or "").upper() or None, label,
+             datetime.now(timezone.utc).strftime("%Y%m%d")]
+    stem = "_".join(p for p in parts if p)
+    return re.sub(r"[^A-Za-z0-9_\-]", "", stem) or "inputs"
+
+
+def _new_temp(suffix: str) -> Path:
+    tmp_dir = data_root() / "tmp"
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    _sweep_temp_zips(tmp_dir)
+    fd, name = tempfile.mkstemp(suffix=suffix, prefix="pipeline_inputs_dl_",
+                                dir=str(tmp_dir))
+    os.close(fd)
+    return Path(name)
+
+
+def build_inputs_zip(pipeline: str, project: Optional[str] = None,
+                     paths: Optional[list[str]] = None,
+                     kind: Optional[str] = None) -> tuple[Path, str, int]:
+    """Zip the selected input files, keeping their folder layout.
+
+    The layout is preserved deliberately: the crosstabs raw CSVs are meaningful
+    only inside their dated `input_folder/<district> (CUD)` directory, and a
+    flat zip would be useless for re-uploading.
+    """
+    selected = _select_inputs(pipeline, project, paths, kind)
+    if not selected:
+        raise PipelineError("No input files to download", 404)
+
+    root = ensure_inputs(pipeline, project)
+    tmp = _new_temp(".zip")
+    written = 0
+    try:
+        with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as archive:
+            for item in selected:
+                src = _safe_join(root, item["path"])
+                if src.is_file():
+                    archive.write(src, arcname=item["path"])
+                    written += 1
+    except Exception:
+        tmp.unlink(missing_ok=True)
+        raise
+    label = "selected" if paths else (kind or "all")
+    return tmp, f"{_bundle_stem(pipeline, project, label)}.zip", written
+
+
+# Excel's hard ceiling. A sheet cannot hold more, so a bigger input is
+# truncated and said to be truncated -- silently dropping rows from a file
+# someone is about to analyse would be far worse than refusing.
+_XLSX_MAX_ROWS = 1_048_575
+_INVALID_SHEET_CHARS = re.compile(r"[\[\]:*?/\\]")
+
+
+def _sheet_name(raw: str, used: set) -> str:
+    """Excel sheet names: <=31 chars, no []:*?/\\, and unique in the workbook."""
+    name = _INVALID_SHEET_CHARS.sub("-", raw).strip() or "sheet"
+    name = name[:31]
+    if name.lower() not in used:
+        used.add(name.lower())
+        return name
+    for n in range(2, 1000):
+        suffix = f"~{n}"
+        candidate = name[:31 - len(suffix)] + suffix
+        if candidate.lower() not in used:
+            used.add(candidate.lower())
+            return candidate
+    raise PipelineError("Too many similarly named sheets", 400)
+
+
+def _read_tabular(path: Path) -> "list[tuple[str, object]]":
+    """Read one input file into (sheet_label, DataFrame) pairs.
+
+    A workbook contributes one entry per sheet, so a multi-sheet reference
+    workbook does not silently lose all but its first sheet.
+    """
+    import pandas as pd
+
+    suffix = path.suffix.lower()
+    if suffix == ".csv":
+        for encoding in ("utf-8-sig", "cp1252", "latin-1"):
+            try:
+                return [("", pd.read_csv(path, dtype=str, encoding=encoding,
+                                         keep_default_na=False))]
+            except UnicodeDecodeError:
+                continue
+        raise PipelineError(f"Could not decode {path.name}", 400)
+    if suffix in (".xlsx", ".xls"):
+        book = pd.read_excel(path, dtype=str, sheet_name=None)
+        return [(str(name), frame) for name, frame in book.items()]
+    return []
+
+
+def build_inputs_workbook(pipeline: str, project: Optional[str] = None,
+                          paths: Optional[list[str]] = None,
+                          kind: Optional[str] = None) -> tuple[Path, str, int]:
+    """Combine the selected inputs into ONE workbook, a sheet per source.
+
+    For reading and cross-checking rather than for re-uploading: everything is
+    read as text so identifiers are not reformatted (a mobile number must not
+    come back as 9.19e+11), and the first sheet is a contents page recording
+    exactly what went in and what did not. A file that cannot be parsed is
+    listed there rather than dropped in silence.
+    """
+    import pandas as pd
+
+    selected = _select_inputs(pipeline, project, paths, kind)
+    if not selected:
+        raise PipelineError("No input files to download", 404)
+
+    root = ensure_inputs(pipeline, project)
+    tmp = _new_temp(".xlsx")
+    used: set = set()
+    contents, sheets, skipped = [], [], 0
+
+    for item in selected:
+        src = _safe_join(root, item["path"])
+        if not src.is_file():
+            continue
         try:
-            if stale.stat().st_mtime < cutoff:
-                stale.unlink()
-        except OSError:
-            pass
+            frames = _read_tabular(src)
+        except Exception as exc:                        # noqa: BLE001
+            contents.append({"File": item["path"], "Sheet": "",
+                             "Rows": "", "Columns": "",
+                             "Included": "no", "Note": f"could not read: {exc}"})
+            skipped += 1
+            continue
+        if not frames:
+            contents.append({"File": item["path"], "Sheet": "", "Rows": "",
+                             "Columns": "", "Included": "no",
+                             "Note": "not a spreadsheet or CSV — use the ZIP download"})
+            skipped += 1
+            continue
+        for sheet_label, frame in frames:
+            base = Path(item["path"]).stem
+            if sheet_label and sheet_label.lower() not in ("sheet1", "sheet"):
+                base = f"{base}-{sheet_label}"
+            name = _sheet_name(base, used)
+            note = ""
+            if len(frame) > _XLSX_MAX_ROWS:
+                frame = frame.iloc[:_XLSX_MAX_ROWS]
+                note = (f"TRUNCATED to {_XLSX_MAX_ROWS:,} rows — Excel's limit. "
+                        "Use the ZIP download for the whole file.")
+            sheets.append((name, frame))
+            contents.append({"File": item["path"], "Sheet": sheet_label or "—",
+                             "Rows": len(frame), "Columns": frame.shape[1],
+                             "Included": name, "Note": note})
+
+    if not sheets:
+        tmp.unlink(missing_ok=True)
+        raise PipelineError(
+            "None of the selected files are spreadsheets or CSVs. "
+            "Use the ZIP download instead.", 400)
+
+    try:
+        with pd.ExcelWriter(tmp, engine="openpyxl") as writer:
+            pd.DataFrame(contents).to_excel(writer, sheet_name="Contents", index=False)
+            for name, frame in sheets:
+                frame.to_excel(writer, sheet_name=name, index=False)
+    except Exception:
+        tmp.unlink(missing_ok=True)
+        raise
+
+    label = "selected" if paths else (kind or "all")
+    return tmp, f"{_bundle_stem(pipeline, project, label)}.xlsx", len(sheets)
 
 
 def run_to_dict(run: PipelineRun, include_manifest: bool = False) -> dict:

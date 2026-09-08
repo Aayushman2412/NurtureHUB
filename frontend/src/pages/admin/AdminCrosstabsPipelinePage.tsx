@@ -5,9 +5,11 @@ import type {
   CrosstabsInputStatus, InputFile, InputGroup, InputKind, PipelineProject, ScriptSlot,
 } from '../../api/pipelines';
 import {
-  deletePipelineInput, deletePipelineInputGroup, getCrosstabsInputs, getPipelineOverview,
+  deletePipelineInput, deletePipelineInputGroup, downloadPipelineInput,
+  downloadPipelineInputs, getCrosstabsInputs, getPipelineOverview,
   getPipelineScripts, triggerCrosstabsRun, uploadPipelineInputs, uploadPipelineInputsZip,
 } from '../../api/pipelines';
+import type { InputBundleFormat } from '../../api/pipelines';
 import { useToast } from '../../context/ToastContext';
 import { Alert, Button, EmptyState, Field, Input, PageHeader, PageLoader, Tabs } from '../../components/ui';
 import InputsPanel from '../../components/pipelines/InputsPanel';
@@ -124,6 +126,14 @@ const AdminCrosstabsPipelinePage: React.FC = () => {
     deletePipelineInput('crosstabs', project, path)
       .then(() => loadInputs())
       .catch(err => showToast(apiErrorDetail(err) || t('errors.actionFailed'), 'error'));
+
+  const handleDownload = (path: string) =>
+    downloadPipelineInput('crosstabs', project, path)
+      .catch(err => { showToast(apiErrorDetail(err) || t('inputs.downloadFailed'), 'error'); });
+
+  const handleDownloadBundle = (format: InputBundleFormat, paths?: string[]) =>
+    downloadPipelineInputs('crosstabs', project, { paths, format })
+      .catch(err => { showToast(apiErrorDetail(err) || t('inputs.downloadFailed'), 'error'); });
 
   const handleDeleteGroup = (group: InputGroup | 'all') =>
     deletePipelineInputGroup('crosstabs', project, group)
@@ -253,6 +263,8 @@ const AdminCrosstabsPipelinePage: React.FC = () => {
           onUploadZip={handleUploadZip}
           onDelete={handleDelete}
           onDeleteGroup={handleDeleteGroup}
+          onDownload={handleDownload}
+          onDownloadBundle={handleDownloadBundle}
           slotExtras={{
             raw_folder: (
               <Field

@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle2, FileArchive, Trash2, Upload } from 'lucide-react';
+import { CheckCircle2, Download, FileArchive, Trash2, Upload } from 'lucide-react';
 import type { InputFile, InputKind } from '../../api/pipelines';
 import { Badge, Button, Table, THead, TBody, Tr, Th, Td } from '../ui';
 import { formatBytes, formatWhen } from './helpers';
@@ -12,18 +12,26 @@ interface InputKindCardProps {
   onUpload: (files: File[], kind: string) => void;
   onUploadZip: (file: File, kind: string) => void;
   onDelete: (path: string) => void;
+  /** Download one stored file, byte-for-byte as uploaded. */
+  onDownload: (path: string) => void;
+  /** Paths currently ticked, owned by the panel so a selection can span slots. */
+  selected: Set<string>;
+  onToggle: (path: string) => void;
+  onToggleMany: (paths: string[], select: boolean) => void;
   /** Extra controls for this slot (the crosstabs raw-folder name field). */
   children?: React.ReactNode;
 }
 
 /** One upload slot: what it is, what's currently stored, and its own uploader. */
 const InputKindCard: React.FC<InputKindCardProps> = ({
-  kind, files, uploading, onUpload, onUploadZip, onDelete, children,
+  kind, files, uploading, onUpload, onUploadZip, onDelete,
+  onDownload, selected, onToggle, onToggleMany, children,
 }) => {
   const { t } = useTranslation('pipelines');
   const fileRef = useRef<HTMLInputElement>(null);
   const zipRef = useRef<HTMLInputElement>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   const handleDelete = (path: string) => {
     if (!window.confirm(t('inputs.confirmDelete', { path }))) return;
@@ -31,7 +39,15 @@ const InputKindCard: React.FC<InputKindCardProps> = ({
     Promise.resolve(onDelete(path)).finally(() => setDeleting(null));
   };
 
+  const handleDownload = (path: string) => {
+    setDownloading(path);
+    Promise.resolve(onDownload(path)).finally(() => setDownloading(null));
+  };
+
   const present = files.length > 0;
+  const paths = files.map(f => f.path);
+  const selectedHere = paths.filter(p => selected.has(p)).length;
+  const allSelected = present && selectedHere === paths.length;
 
   return (
     <div className="rounded-xl border border-border bg-surface p-4">
@@ -115,6 +131,19 @@ const InputKindCard: React.FC<InputKindCardProps> = ({
           <Table density="compact">
             <THead>
               <Tr>
+                <Th className="w-8">
+                  <input
+                    type="checkbox"
+                    className="size-4 cursor-pointer accent-primary"
+                    checked={allSelected}
+                    // Partly-selected shows the dash state rather than an
+                    // unticked box, so "some" never reads as "none".
+                    ref={el => { if (el) el.indeterminate = selectedHere > 0 && !allSelected; }}
+                    onChange={() => onToggleMany(paths, !allSelected)}
+                    aria-label={t('inputs.selectAllInSection')}
+                    title={t('inputs.selectAllInSection')}
+                  />
+                </Th>
                 <Th>{t('inputs.colFile')}</Th>
                 <Th>{t('inputs.colSize')}</Th>
                 <Th>{t('inputs.colModified')}</Th>
@@ -124,6 +153,15 @@ const InputKindCard: React.FC<InputKindCardProps> = ({
             <TBody>
               {files.map(file => (
                 <Tr key={file.path}>
+                  <Td>
+                    <input
+                      type="checkbox"
+                      className="size-4 cursor-pointer accent-primary"
+                      checked={selected.has(file.path)}
+                      onChange={() => onToggle(file.path)}
+                      aria-label={t('inputs.selectFile')}
+                    />
+                  </Td>
                   <Td>
                     <span className="flex items-center gap-1.5">
                       <CheckCircle2 className="size-3.5 shrink-0 text-success-600" />
@@ -138,15 +176,26 @@ const InputKindCard: React.FC<InputKindCardProps> = ({
                   <Td className="tabular-nums">{formatBytes(file.size)}</Td>
                   <Td className="tabular-nums">{formatWhen(file.modified)}</Td>
                   <Td>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      loading={deleting === file.path}
-                      onClick={() => handleDelete(file.path)}
-                      title={t('inputs.delete')}
-                    >
-                      <Trash2 className="size-4 text-error-600" />
-                    </Button>
+                    <span className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        loading={downloading === file.path}
+                        onClick={() => handleDownload(file.path)}
+                        title={t('inputs.download')}
+                      >
+                        <Download className="size-4 text-ink-muted" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        loading={deleting === file.path}
+                        onClick={() => handleDelete(file.path)}
+                        title={t('inputs.delete')}
+                      >
+                        <Trash2 className="size-4 text-error-600" />
+                      </Button>
+                    </span>
                   </Td>
                 </Tr>
               ))}

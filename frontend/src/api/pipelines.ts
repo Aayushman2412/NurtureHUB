@@ -186,6 +186,46 @@ export const deletePipelineInputGroup = (
 ): Promise<{ deleted: number }> =>
   client.delete(`${inputsUrl(pipeline, project)}/group/${group}`).then(r => r.data);
 
+/** Download one stored input file, byte-for-byte as uploaded. */
+export const downloadPipelineInput = async (
+  pipeline: PipelineKey,
+  project: string | undefined,
+  path: string,
+): Promise<void> => {
+  const res = await client.get(`${inputsUrl(pipeline, project)}/file`, {
+    params: { path },
+    responseType: 'blob',
+  });
+  triggerBlobDownload(res.data as Blob, path.split('/').pop() || 'input');
+};
+
+export type InputBundleFormat = 'zip' | 'xlsx';
+
+/**
+ * Bundle inputs into one download.
+ *
+ * No `paths` and no `kind` means everything; `kind` limits it to one upload
+ * slot. 'zip' keeps the original files and their folder layout (so the bundle
+ * can be re-uploaded); 'xlsx' merges the tabular ones into a single workbook,
+ * a sheet per source, for reading.
+ */
+export const downloadPipelineInputs = async (
+  pipeline: PipelineKey,
+  project: string | undefined,
+  options: { paths?: string[]; kind?: string; format: InputBundleFormat },
+): Promise<void> => {
+  const res = await client.post(`${inputsUrl(pipeline, project)}/download`, options, {
+    responseType: 'blob',
+  });
+  // The server names the bundle (project + scope + date); prefer that over
+  // guessing here, and fall back only if the header is missing.
+  const disposition = String(res.headers?.['content-disposition'] || '');
+  const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+  const fallback = `${pipeline}_inputs.${options.format}`;
+  triggerBlobDownload(res.data as Blob,
+                      match ? decodeURIComponent(match[1]) : fallback);
+};
+
 // ---------------------------------------------------------------------- runs
 
 export const triggerCrosstabsRun = (project: string): Promise<PipelineRun> =>

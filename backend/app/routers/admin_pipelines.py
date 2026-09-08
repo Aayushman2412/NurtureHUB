@@ -21,6 +21,7 @@ from app.dependencies import get_admin_email, get_current_admin
 from app import pipeline_service as svc
 from app.rate_limit import limiter, principal_key
 from app.models import PipelineRun
+from app.security import phi
 
 router = APIRouter(
     prefix="/api/admin/pipelines",
@@ -155,6 +156,123 @@ def delete_crosstabs_input_group(project: str, group: str):
 @router.delete("/masd/inputs/group/{group}")
 def delete_masd_input_group(group: str):
     return {"deleted": svc.delete_input_group(svc.MASD, None, group)}
+
+
+# --------------------------------------------------------- input downloads
+# The pipeline inputs are exports of real mothers' and children's records, so
+# taking a copy out is an export in the DPDP sense, not a convenience: it is
+# rate-limited per account and written to the audit trail, exactly like the
+# raw-data download it mirrors. Under the MOU, custody is what responsibility
+# follows, so the trail has to say who took what and when.
+
+class InputDownloadRequest(BaseModel):
+    """Empty payload = every stored input; `kind` = one upload slot."""
+    paths: Optional[list[str]] = None
+    kind: Optional[str] = None
+    format: str = "zip"          # "zip" | "xlsx"
+
+
+def _download_inputs(pipeline: str, project: Optional[str],
+                     payload: InputDownloadRequest, db: Session,
+                     admin_email: Optional[str]) -> FileResponse:
+    fmt = (payload.format or "zip").lower()
+    if fmt not in ("zip", "xlsx"):
+        raise svc.PipelineError("format must be 'zip' or 'xlsx'", 400)
+
+    build = svc.build_inputs_zip if fmt == "zip" else svc.build_inputs_workbook
+    tmp, filename, count = build(pipeline, project, paths=payload.paths,
+                                 kind=payload.kind)
+
+    scope = "selected" if payload.paths else (payload.kind or "all")
+    phi.log_export(
+        resource_type="pipeline_input_bundle",
+        record_count=count,
+        fmt=fmt,
+        db=db,
+        detail={
+            "pipeline": pipeline,
+            "project": project,
+            "scope": scope,
+            # File NAMES only. The paths say which extract was taken; the rows
+            # inside are never echoed into the trail.
+            "files": [p for p in (payload.paths or [])][:50],
+            "file_count": count,
+            "downloaded_by": admin_email,
+            "custody_note": "the downloaded copy leaves this system's custody",
+        },
+    )
+    db.commit()
+
+    media = ("application/zip" if fmt == "zip"
+             else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    return FileResponse(
+        tmp, filename=filename, media_type=media,
+        background=BackgroundTask(lambda: tmp.unlink(missing_ok=True)),
+    )
+
+
+@router.get("/crosstabs/{project}/inputs/file")
+@limiter.limit(lambda: settings.RATE_LIMIT_EXPORT, key_func=principal_key)
+def download_crosstabs_input(
+    request: Request,
+    project: str,
+    path: str = Query(...),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    file_path = svc.input_file_path(svc.CROSSTABS, project, path)
+    phi.log_export(
+        resource_type="pipeline_input_file", record_count=1,
+        fmt=file_path.suffix.lstrip(".").lower() or "file", db=db,
+        detail={"pipeline": svc.CROSSTABS, "project": project, "file": path,
+                "downloaded_by": admin_email,
+                "custody_note": "the downloaded copy leaves this system's custody"},
+    )
+    db.commit()
+    return FileResponse(file_path, filename=file_path.name)
+
+
+@router.get("/masd/inputs/file")
+@limiter.limit(lambda: settings.RATE_LIMIT_EXPORT, key_func=principal_key)
+def download_masd_input(
+    request: Request,
+    path: str = Query(...),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    file_path = svc.input_file_path(svc.MASD, None, path)
+    phi.log_export(
+        resource_type="pipeline_input_file", record_count=1,
+        fmt=file_path.suffix.lstrip(".").lower() or "file", db=db,
+        detail={"pipeline": svc.MASD, "project": None, "file": path,
+                "downloaded_by": admin_email,
+                "custody_note": "the downloaded copy leaves this system's custody"},
+    )
+    db.commit()
+    return FileResponse(file_path, filename=file_path.name)
+
+
+@router.post("/crosstabs/{project}/inputs/download")
+@limiter.limit(lambda: settings.RATE_LIMIT_EXPORT, key_func=principal_key)
+def download_crosstabs_inputs(
+    request: Request,
+    project: str,
+    payload: InputDownloadRequest,
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    return _download_inputs(svc.CROSSTABS, project, payload, db, admin_email)
+
+
+@router.post("/masd/inputs/download")
+@limiter.limit(lambda: settings.RATE_LIMIT_EXPORT, key_func=principal_key)
+def download_masd_inputs(
+    request: Request,
+    payload: InputDownloadRequest,
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    return _download_inputs(svc.MASD, None, payload, db, admin_email)
 
 
 # -------------------------------------------------------------------- runs

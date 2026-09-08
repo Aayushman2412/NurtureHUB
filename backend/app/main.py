@@ -326,7 +326,10 @@ app.add_middleware(
     # Named explicitly rather than "*": with allow_credentials a wildcard is
     # ignored by browsers anyway, and listing them documents what the SPA sends.
     allow_headers=["Authorization", "Content-Type", "X-Requested-With", "X-Request-Id"],
-    expose_headers=["X-Request-Id", "X-MFA-Required"],
+    # Content-Disposition carries the server-chosen download filename. Without
+    # it exposed, a cross-origin SPA cannot read the name and has to invent one,
+    # so an export arrives called something other than what the server named it.
+    expose_headers=["X-Request-Id", "X-MFA-Required", "Content-Disposition"],
     max_age=600,
 )
 

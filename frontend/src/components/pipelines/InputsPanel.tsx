@@ -1,7 +1,11 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CalendarClock, FileArchive, Lock, Trash2 } from 'lucide-react';
-import type { InputFile, InputGroup, InputKind } from '../../api/pipelines';
+import {
+  CalendarClock, Download, FileArchive, FileSpreadsheet, Lock, Trash2, X,
+} from 'lucide-react';
+import type {
+  InputBundleFormat, InputFile, InputGroup, InputKind,
+} from '../../api/pipelines';
 import { Button } from '../ui';
 import InputKindCard from './InputKindCard';
 
@@ -13,6 +17,12 @@ interface InputsPanelProps {
   onUploadZip: (file: File, kind?: string) => void;
   onDelete: (path: string) => void;
   onDeleteGroup: (group: InputGroup | 'all') => void;
+  /** Download a single stored file. */
+  onDownload: (path: string) => void | Promise<void>;
+  /** Bundle everything, or just `paths`, as a zip or a combined workbook. */
+  onDownloadBundle: (
+    format: InputBundleFormat, paths?: string[],
+  ) => void | Promise<void>;
   /** Extra controls rendered inside a specific slot, keyed by kind. */
   slotExtras?: Record<string, React.ReactNode>;
   /** Rendered above the sections (status banners etc.). */
@@ -23,11 +33,13 @@ interface InputsPanelProps {
  *  run data replaced every run vs fixed reference sheets. */
 const InputsPanel: React.FC<InputsPanelProps> = ({
   files, kinds, uploading, onUploadFiles, onUploadZip, onDelete, onDeleteGroup,
-  slotExtras, extra,
+  onDownload, onDownloadBundle, slotExtras, extra,
 }) => {
   const { t } = useTranslation('pipelines');
   const bulkZipRef = useRef<HTMLInputElement>(null);
   const [deletingGroup, setDeletingGroup] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState<string | null>(null);
 
   const byKind = useMemo(() => {
     const map = new Map<string, InputFile[]>();
@@ -40,6 +52,68 @@ const InputsPanel: React.FC<InputsPanelProps> = ({
   }, [files]);
 
   const other = byKind.get('other') || [];
+
+  // A deleted or replaced file must not stay silently ticked, or the next
+  // "download selected" asks the server for something that no longer exists.
+  const known = useMemo(() => new Set(files.map(f => f.path)), [files]);
+  const selectedPaths = useMemo(
+    () => files.filter(f => selected.has(f.path)).map(f => f.path),
+    [files, selected],
+  );
+  React.useEffect(() => {
+    setSelected(prev => {
+      const next = new Set([...prev].filter(p => known.has(p)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [known]);
+
+  const toggle = (path: string) => setSelected(prev => {
+    const next = new Set(prev);
+    if (next.has(path)) next.delete(path);
+    else next.add(path);
+    return next;
+  });
+
+  const toggleMany = (paths: string[], select: boolean) => setSelected(prev => {
+    const next = new Set(prev);
+    for (const p of paths) {
+      if (select) next.add(p);
+      else next.delete(p);
+    }
+    return next;
+  });
+
+  const runDownload = (key: string, fn: () => void | Promise<void>) => {
+    setBusy(key);
+    Promise.resolve(fn()).finally(() => setBusy(null));
+  };
+
+  const downloadButtons = (
+    keyPrefix: string,
+    paths: string[] | undefined,
+    size: 'sm' = 'sm',
+  ) => (
+    <>
+      <Button
+        variant="secondary"
+        size={size}
+        iconLeft={<FileArchive className="size-4" />}
+        loading={busy === `${keyPrefix}:zip`}
+        onClick={() => runDownload(`${keyPrefix}:zip`, () => onDownloadBundle('zip', paths))}
+      >
+        {t('inputs.downloadZip')}
+      </Button>
+      <Button
+        variant="outline"
+        size={size}
+        iconLeft={<FileSpreadsheet className="size-4" />}
+        loading={busy === `${keyPrefix}:xlsx`}
+        onClick={() => runDownload(`${keyPrefix}:xlsx`, () => onDownloadBundle('xlsx', paths))}
+      >
+        {t('inputs.downloadExcel')}
+      </Button>
+    </>
+  );
 
   const handleDeleteGroup = (group: InputGroup | 'all', count: number) => {
     const key = group === 'reference'
@@ -98,6 +172,10 @@ const InputsPanel: React.FC<InputsPanelProps> = ({
               onUpload={onUploadFiles}
               onUploadZip={onUploadZip}
               onDelete={onDelete}
+              onDownload={onDownload}
+              selected={selected}
+              onToggle={toggle}
+              onToggleMany={toggleMany}
             >
               {slotExtras?.[kind.key]}
             </InputKindCard>
@@ -149,6 +227,45 @@ const InputsPanel: React.FC<InputsPanelProps> = ({
         />
       </div>
 
+      {/* Getting the inputs back out. The two formats answer different
+          questions: the zip is the archive (re-uploadable, byte-identical),
+          the workbook is for reading and cross-checking in one place. */}
+      {files.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-4">
+          <Download className="size-5 shrink-0 text-primary-ink" />
+          <div className="min-w-0 flex-1">
+            <div className="font-display text-sm font-bold text-ink">
+              {t('inputs.downloadTitle')}{' '}
+              <span className="font-normal text-ink-muted">({files.length})</span>
+            </div>
+            <p className="text-xs text-ink-muted">{t('inputs.downloadDescription')}</p>
+          </div>
+          <span className="text-xs font-semibold text-ink-muted">{t('inputs.downloadAll')}</span>
+          {downloadButtons('all', undefined)}
+        </div>
+      )}
+
+      {/* Only appears once something is ticked, so the default view stays calm. */}
+      {selectedPaths.length > 0 && (
+        <div className="sticky top-2 z-10 flex flex-wrap items-center gap-3 rounded-xl border border-primary/40 bg-primary-soft p-3 shadow-sm">
+          <span className="min-w-0 flex-1 text-sm font-semibold text-ink">
+            {t('inputs.selectedCount', { count: selectedPaths.length })}
+          </span>
+          <span className="text-xs font-semibold text-ink-muted">
+            {t('inputs.downloadSelected')}
+          </span>
+          {downloadButtons('sel', selectedPaths)}
+          <Button
+            variant="ghost"
+            size="sm"
+            iconLeft={<X className="size-4" />}
+            onClick={() => setSelected(new Set())}
+          >
+            {t('inputs.clearSelection')}
+          </Button>
+        </div>
+      )}
+
       {extra}
 
       {groupSection(
@@ -174,7 +291,23 @@ const InputsPanel: React.FC<InputsPanelProps> = ({
           <div className="rounded-xl border border-border bg-surface p-3">
             {other.map(file => (
               <div key={file.path} className="flex items-center gap-2 py-1 text-sm">
+                <input
+                  type="checkbox"
+                  className="size-4 shrink-0 cursor-pointer accent-primary"
+                  checked={selected.has(file.path)}
+                  onChange={() => toggle(file.path)}
+                  aria-label={t('inputs.selectFile')}
+                />
                 <span className="min-w-0 flex-1 truncate text-ink">{file.path}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  loading={busy === `one:${file.path}`}
+                  onClick={() => runDownload(`one:${file.path}`, () => onDownload(file.path))}
+                  title={t('inputs.download')}
+                >
+                  <Download className="size-4 text-ink-muted" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
