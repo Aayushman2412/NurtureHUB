@@ -71,6 +71,19 @@ def get_db():
     try:
         yield db
     finally:
+        # A request that raised leaves its transaction uncommitted, and this
+        # session may still be carrying audit events that were meant to be
+        # written alongside it (a rejected sign-in, for instance). Hand them to
+        # the background writer rather than letting them disappear with the
+        # session: the events that describe a failure are the ones an
+        # investigation most wants, and closing without this would silently
+        # drop exactly those.
+        try:
+            from app.security.audit import release_session
+
+            release_session(db)
+        except Exception:  # noqa: BLE001 — never fail a request while cleaning up
+            pass
         db.close()
 
 

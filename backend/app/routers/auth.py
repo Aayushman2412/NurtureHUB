@@ -1,19 +1,92 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from typing import Optional
 from datetime import datetime, timedelta
 from app.database import get_db
 from app.models import User
 from app.schemas import UserRegister, UserLogin, OTPVerify, ForgotPasswordRequest, Token, GoogleLoginRequest
 from app.auth import (
     get_password_hash, verify_password, create_access_token, verify_google_token,
-    hash_otp, verify_otp_code,
+    hash_otp, verify_otp_code, needs_rehash,
 )
 from app.utils import generate_otp, send_otp_email, EmailDeliveryError
 from app.config import settings
 from app.rate_limit import limiter
+from app.dependencies import get_current_user, oauth2_scheme
+from app.security import audit, lockout, mfa, passwords, sessions
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=1)
+
+
+def _issue(db: Session, user: User, request: Request, mfa_satisfied: bool = False) -> str:
+    """Mint a token backed by a revocable session row."""
+    token, _session = sessions.issue(
+        db,
+        principal=user.email,
+        is_admin=bool(user.is_admin),
+        user_id=user.id,
+        request=request,
+        mfa_satisfied=mfa_satisfied,
+        commit=False,
+    )
+    return token
+
+
+def maybe_upgrade_hash(db: Session, user_id, stored_hash: str, plaintext: str) -> bool:
+    """Re-hash a password whose stored work factor no longer matches the setting.
+
+    Sign-in is the only moment the plaintext exists, so it is the only moment
+    this is possible. Best-effort by design: a failure here must never turn a
+    correct password into a failed sign-in, so it is swallowed and simply
+    retried next time.
+    """
+    if not user_id or not stored_hash or not needs_rehash(stored_hash):
+        return False
+    try:
+        db.query(User).filter(User.id == user_id).update(
+            {"password_hash": get_password_hash(plaintext)}, synchronize_session=False
+        )
+        return True
+    except Exception:  # noqa: BLE001 — never fail a valid sign-in over this
+        return False
+
+
+def _guard_lockout(db: Session, principal: str) -> None:
+    """Refuse a sign-in attempt while the account is in its cooling-off period.
+
+    The message says how long is left rather than staying vague: a locked-out
+    health worker in the field needs to know whether to wait or to call someone,
+    and the lockout is already discoverable by trying again.
+    """
+    active = lockout.active_lockout(db, principal)
+    if not active:
+        return
+    seconds = lockout.seconds_remaining(active)
+    minutes = max(1, (seconds + 59) // 60)
+    audit.record(
+        audit.Action.LOGIN_FAILURE,
+        resource_type="account",
+        resource_id=principal,
+        outcome="denied",
+        is_phi=False,
+        record_count=0,
+        detail={"principal": principal, "reason": "account_locked", "seconds_remaining": seconds},
+    )
+    raise HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail=(
+            f"Too many failed sign-in attempts. Try again in {minutes} minute"
+            f"{'s' if minutes != 1 else ''}, or ask an administrator to unlock the account."
+        ),
+        headers={"Retry-After": str(seconds)},
+    )
 
 
 def _otp_expiry() -> datetime:
@@ -74,6 +147,16 @@ def register(request: Request, user_data: UserRegister, db: Session = Depends(ge
             detail="A user with this email address already exists"
         )
 
+    # Password policy is enforced here rather than in the Pydantic schema so the
+    # message can name the specific rule that failed. A 400 with "must be at
+    # least 10 characters" is actionable; a 422 validation blob is not.
+    try:
+        passwords.validate(
+            user_data.password, email=norm_email, full_name=user_data.full_name
+        )
+    except passwords.PasswordPolicyError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
     # Generate OTP (plaintext is emailed; only the hash is stored)
     otp = generate_otp()
 
@@ -102,11 +185,21 @@ def register(request: Request, user_data: UserRegister, db: Session = Depends(ge
             detail="Could not send the verification email. Please try again shortly."
         )
 
+    passwords.record_history(db, norm_email, new_user.password_hash)
+    access_token = _issue(db, new_user, request)
+    audit.record_sync(
+        audit.Action.OTP_SENT,
+        db=db,
+        resource_type="account",
+        resource_id=norm_email,
+        is_phi=False,
+        actor_override={"actor_type": "learner", "actor_label": norm_email, "actor_id": new_user.id},
+        detail={"principal": norm_email, "stage": "registration"},
+    )
     db.commit()
     db.refresh(new_user)
 
     is_complete = bool(new_user.role is not None or new_user.is_admin)
-    access_token = create_access_token(data={"sub": new_user.email, "is_admin": bool(new_user.is_admin)})
 
     return {
         "access_token": access_token,
@@ -121,8 +214,49 @@ def register(request: Request, user_data: UserRegister, db: Session = Depends(ge
 @limiter.limit(lambda: settings.RATE_LIMIT_LOGIN)
 def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db)):
     norm_email = credentials.email.strip().lower()
+    _guard_lockout(db, norm_email)
+
     user = db.query(User).filter(func.lower(User.email) == norm_email).first()
-    if not user or not user.password_hash or not verify_password(credentials.password, user.password_hash):
+
+    # Read everything needed off the row, then END THE TRANSACTION before
+    # hashing.
+    #
+    # Verifying a bcrypt hash costs ~300ms of CPU, and until this commit the
+    # handler held its database connection open across the whole of it — an
+    # "idle in transaction" connection per in-flight sign-in. When a test goes
+    # live and a few hundred health workers sign in together, that exhausted
+    # the pool (QueuePool limit of size 20 overflow 40 reached) and turned
+    # legitimate sign-ins into 500s. The hash does not need a database, so it
+    # should not hold one.
+    stored_hash = user.password_hash if user else None
+    user_id = user.id if user else None
+    user_email = user.email if user else None
+    user_is_admin = bool(user.is_admin) if user else False
+    user_is_verified = bool(user.is_verified) if user else False
+    user_role = user.role if user else None
+    db.commit()
+
+    if not stored_hash or not verify_password(credentials.password, stored_hash):
+        # The attempt is recorded before the 401 is raised — a failed sign-in
+        # against an account that does not exist is as interesting to an
+        # investigation as one against an account that does.
+        lockout.record_attempt(
+            db,
+            principal=norm_email,
+            successful=False,
+            surface="learner",
+            reason="no_such_user" if not stored_hash else "bad_password",
+            request=request,
+        )
+        audit.record(
+            audit.Action.LOGIN_FAILURE,
+            resource_type="account",
+            resource_id=norm_email,
+            outcome="denied",
+            is_phi=False,
+            record_count=0,
+            detail={"principal": norm_email, "surface": "learner"},
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -130,14 +264,40 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
         )
 
     # Profile is considered complete once a role/designation has been set, or if user is admin
-    is_complete = bool(user.role is not None or user.is_admin)
+    is_complete = bool(user_role is not None or user_is_admin)
 
-    access_token = create_access_token(data={"sub": user.email, "is_admin": bool(user.is_admin)})
+    # The stored hash may predate a change to BCRYPT_ROUNDS. This is the only
+    # moment the plaintext is available, so it is the only moment a rehash is
+    # possible — see app/auth.py:needs_rehash.
+    upgraded = maybe_upgrade_hash(db, user_id, stored_hash, credentials.password)
+
+    lockout.record_attempt(
+        db, principal=norm_email, successful=True, surface="learner", request=request, commit=False
+    )
+    access_token, _session = sessions.issue(
+        db,
+        principal=user_email,
+        is_admin=user_is_admin,
+        user_id=user_id,
+        request=request,
+        commit=False,
+    )
+    audit.record_sync(
+        audit.Action.LOGIN_SUCCESS,
+        db=db,
+        resource_type="account",
+        resource_id=norm_email,
+        is_phi=False,
+        actor_override={"actor_type": "learner", "actor_label": user_email, "actor_id": user_id},
+        detail={"principal": user_email, "surface": "learner", "verified": user_is_verified,
+                "password_hash_upgraded": upgraded},
+    )
+    db.commit()
 
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "is_verified": user.is_verified,
+        "is_verified": user_is_verified,
         "is_profile_complete": is_complete,
         "is_admin": bool(user.is_admin)
     }
@@ -156,10 +316,19 @@ def verify_otp(request: Request, data: OTPVerify, db: Session = Depends(get_db))
 
     _consume_otp(user, data.code, db)
     user.is_verified = True
-    db.commit()
 
     is_complete = bool(user.role is not None or user.is_admin)
-    access_token = create_access_token(data={"sub": user.email, "is_admin": bool(user.is_admin)})
+    access_token = _issue(db, user, request)
+    audit.record_sync(
+        audit.Action.OTP_VERIFIED,
+        db=db,
+        resource_type="account",
+        resource_id=norm_email,
+        is_phi=False,
+        actor_override={"actor_type": "learner", "actor_label": user.email, "actor_id": user.id},
+        detail={"principal": user.email},
+    )
+    db.commit()
 
     return {
         "access_token": access_token,
@@ -203,26 +372,188 @@ def forgot_password(request: Request, data: ForgotPasswordRequest, db: Session =
     return generic_response
 
 
+class PasswordResetRequest(OTPVerify):
+    """Reset payload. `new_password` travels in the body, never the URL.
+
+    It used to be a query parameter, which put the plaintext password into the
+    nginx access log, the browser's history and every proxy in between. The
+    query form is still accepted for one release so a client running a cached
+    bundle is not stranded mid-reset, and its use is recorded.
+    """
+
+    new_password: Optional[str] = None
+
+
 @router.post("/reset-password")
 @limiter.limit(lambda: settings.RATE_LIMIT_OTP)
-def reset_password(request: Request, data: OTPVerify, new_password: str, db: Session = Depends(get_db)):
-    if len(new_password) < 6:
+def reset_password(
+    request: Request,
+    data: PasswordResetRequest,
+    new_password: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    submitted = data.new_password or new_password
+    if not submitted:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Password must be at least 6 characters")
+                            detail="Provide the new password.")
+    if data.new_password is None and new_password is not None:
+        audit.record(
+            "auth.password.reset.deprecated_query",
+            resource_type="account",
+            resource_id=(data.email or "").strip().lower(),
+            is_phi=False,
+            record_count=0,
+            detail={"note": "new_password arrived as a URL query parameter (old client bundle)"},
+        )
 
-    user = db.query(User).filter(User.email == data.email).first()
+    norm_email = (data.email or "").strip().lower()
+    user = db.query(User).filter(func.lower(User.email) == norm_email).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
 
+    try:
+        passwords.enforce(
+            db,
+            submitted,
+            principal=user.email,
+            is_admin=bool(user.is_admin),
+            full_name=user.full_name,
+        )
+    except passwords.PasswordPolicyError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
     _consume_otp(user, data.code, db)
-    user.password_hash = get_password_hash(new_password)
+    user.password_hash = get_password_hash(submitted)
     user.is_verified = True
+    passwords.record_history(db, user.email, user.password_hash)
+
+    # A password reset is the standard response to a suspected compromise, so it
+    # must end every session that credential opened. Leaving them alive would
+    # mean the attacker keeps their access and the legitimate owner believes the
+    # problem is solved.
+    revoked = sessions.revoke_all_for(
+        db, user.email, reason="password_reset", by=user.email, commit=False
+    )
+    lockout.clear(db, user.email, by="password_reset", commit=False)
+    audit.record_sync(
+        audit.Action.PASSWORD_RESET,
+        db=db,
+        resource_type="account",
+        resource_id=user.email,
+        is_phi=False,
+        actor_override={"actor_type": "learner", "actor_label": user.email, "actor_id": user.id},
+        detail={"principal": user.email, "sessions_revoked": revoked},
+    )
     db.commit()
 
-    return {"message": "Password reset successful. You can now login with your new password."}
+    return {
+        "message": "Password reset successful. You can now login with your new password.",
+        "sessions_ended": revoked,
+    }
+
+
+@router.post("/change-password")
+def change_password(
+    request: Request,
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Change your own password, proving you know the current one.
+
+    Other sessions are ended; the one making the change survives, so a person
+    changing their password on a shared device is not signed out of the browser
+    they are standing at while every other copy of the credential is cut off.
+    """
+    if not current_user.password_hash or not verify_password(
+        payload.current_password, current_user.password_hash
+    ):
+        audit.record(
+            audit.Action.LOGIN_FAILURE,
+            resource_type="account",
+            resource_id=current_user.email,
+            outcome="denied",
+            is_phi=False,
+            record_count=0,
+            detail={"principal": current_user.email, "stage": "change_password"},
+        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Your current password is not correct.")
+    try:
+        passwords.enforce(
+            db,
+            payload.new_password,
+            principal=current_user.email,
+            is_admin=bool(current_user.is_admin),
+            full_name=current_user.full_name,
+        )
+    except passwords.PasswordPolicyError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    current_user.password_hash = get_password_hash(payload.new_password)
+    passwords.record_history(db, current_user.email, current_user.password_hash)
+
+    from app.security import context as security_context
+
+    keep = security_context.get_context().session_jti
+    revoked = sessions.revoke_all_for(
+        db, current_user.email, reason="password_change", by=current_user.email,
+        except_jti=keep, commit=False,
+    )
+    audit.record_sync(
+        audit.Action.PASSWORD_CHANGED,
+        db=db,
+        resource_type="account",
+        resource_id=current_user.email,
+        is_phi=False,
+        detail={"principal": current_user.email, "other_sessions_revoked": revoked},
+    )
+    db.commit()
+    from app.dependencies import invalidate_user_cache
+
+    invalidate_user_cache(current_user.email)
+    return {"message": "Password changed.", "other_sessions_ended": revoked}
+
+
+@router.post("/logout")
+def logout(
+    request: Request,
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+):
+    """End this session on the server.
+
+    Previously signing out only cleared the browser's copy of the token, which
+    left the credential valid for the rest of its life — a real problem on the
+    shared phones field workers use.
+    """
+    from app.auth import decode_access_token
+
+    payload = decode_access_token(token) if token else None
+    if not payload:
+        return {"message": "Signed out."}
+    jti = payload.get("jti")
+    principal = payload.get("sub")
+    if jti:
+        sessions.revoke(db, jti, reason="logout", by=principal)
+    audit.record_sync(
+        audit.Action.LOGOUT,
+        resource_type="account",
+        resource_id=principal,
+        is_phi=False,
+        actor_override={"actor_type": "learner", "actor_label": principal, "session_jti": jti},
+        detail={"principal": principal},
+    )
+    return {"message": "Signed out."}
+
+
+@router.get("/password-policy")
+def password_policy(is_admin: bool = False):
+    """The rules, so the sign-up form can state them instead of guessing."""
+    return passwords.describe_policy(is_admin=is_admin)
 
 
 @router.post("/google", response_model=Token)
@@ -273,7 +604,17 @@ def google_auth(request: Request, google_request: GoogleLoginRequest, db: Sessio
             db.commit()
 
     is_complete = bool(user.role is not None or user.is_admin)
-    access_token = create_access_token(data={"sub": user.email, "is_admin": bool(user.is_admin)})
+    access_token = _issue(db, user, request)
+    audit.record_sync(
+        audit.Action.LOGIN_SUCCESS,
+        db=db,
+        resource_type="account",
+        resource_id=user.email,
+        is_phi=False,
+        actor_override={"actor_type": "learner", "actor_label": user.email, "actor_id": user.id},
+        detail={"principal": user.email, "surface": "google"},
+    )
+    db.commit()
 
     return {
         "access_token": access_token,

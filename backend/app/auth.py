@@ -16,8 +16,32 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 def get_password_hash(password: str) -> str:
-    salt = bcrypt.gensalt()
+    salt = bcrypt.gensalt(rounds=settings.BCRYPT_ROUNDS)
     return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
+
+
+def hash_rounds(hashed_password: str):
+    """The work factor baked into an existing hash, or None if unreadable.
+
+    A bcrypt hash looks like `$2b$12$<salt+digest>`; the third field is the
+    cost.
+    """
+    try:
+        return int(hashed_password.split("$")[2])
+    except (AttributeError, IndexError, ValueError):
+        return None
+
+
+def needs_rehash(hashed_password: str) -> bool:
+    """True when a stored hash was made with a different work factor.
+
+    Changing BCRYPT_ROUNDS only affects new hashes, so without this a
+    deployment that lowers the factor to speed up a test start would keep
+    paying the old cost forever for everyone who already has an account — and
+    one that RAISES it would leave existing accounts on the weaker setting.
+    """
+    current = hash_rounds(hashed_password)
+    return current is not None and current != settings.BCRYPT_ROUNDS
 
 def hash_otp(otp: str) -> str:
     """Hash an OTP for storage. OTPs are never persisted in plaintext."""

@@ -9,15 +9,17 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from starlette.background import BackgroundTask
 
+from app.config import settings
 from app.database import get_db
 from app.dependencies import get_admin_email, get_current_admin
 from app import pipeline_service as svc
+from app.rate_limit import limiter, principal_key
 from app.models import PipelineRun
 
 router = APIRouter(
@@ -162,7 +164,11 @@ class MasdRunRequest(BaseModel):
 
 
 @router.post("/crosstabs/{project}/runs")
+# A run is minutes of CPU in a subprocess. Keyed by account so one
+# administrator cannot queue them faster than they finish.
+@limiter.limit(lambda: settings.RATE_LIMIT_PIPELINE, key_func=principal_key)
 def trigger_crosstabs_run(
+    request: Request,
     project: str,
     db: Session = Depends(get_db),
     admin_email: str = Depends(get_admin_email),
@@ -172,7 +178,9 @@ def trigger_crosstabs_run(
 
 
 @router.post("/masd/runs")
+@limiter.limit(lambda: settings.RATE_LIMIT_PIPELINE, key_func=principal_key)
 def trigger_masd_run(
+    request: Request,
     payload: MasdRunRequest,
     db: Session = Depends(get_db),
     admin_email: str = Depends(get_admin_email),
