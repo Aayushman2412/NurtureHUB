@@ -59,6 +59,7 @@ OUTPUTS_DIR = WORKSPACE_DIR / "outputs"
 # deliverable of a run lives under one folder tree.
 REQUESTED_CT_DIR = OUTPUTS_DIR / "requested_CTs"        # column-wise %
 REQUESTED_CT_DIR_2 = OUTPUTS_DIR / "requested_CTs_2"    # row-wise %
+BV_AV_LV_DIR = OUTPUTS_DIR / "bv_av_lv"                  # 3-timeline BV/AV/LV
 
 # File Dependency Paths
 ROLE_SHEET_FILE = INPUTS_DIR / "Role and department sheet.xlsx"
@@ -91,6 +92,7 @@ CLEANING_NOTEBOOK = SCRIPTS_DIR / "Cleaning, Combining and Merging.ipynb"
 ML_NOTEBOOK = SCRIPTS_DIR / "ML_Pipeline(streamlined draft).ipynb"
 CROSSTAB_NOTEBOOK = SCRIPTS_DIR / "CrossTab_streamlined pipeline.ipynb"
 REQUESTED_CT_NOTEBOOK = SCRIPTS_DIR / "CrossTab_requested_individual_CTs.ipynb"
+BVAVLV_NOTEBOOK = SCRIPTS_DIR / "UW_ST_WT_BVAVLV.ipynb"
 
 # Date Suffix (used in stage 1 cleaning file names)
 # ADD-ON (NurtureHUB server): overridable per run so cleaned files carry the
@@ -708,7 +710,91 @@ MASD_BLOCK_SHEET = r'{MASD_SHEET_FILE}'
               f"generated in {REQUESTED_CT_DIR}")
 
         # ==================================================================
-        # STAGE 5: CrossTab total validation
+        # STAGE 5: 3-timeline BV / AV / LV
+        # ==================================================================
+        # UW / ST / WS prevalence at birth, adoption and last visit, broken down
+        # by every analysis variable, in one workbook per run. Written into
+        # outputs/bv_av_lv/ so it lands in its own section of the admin Outputs
+        # tab instead of being mistaken for a column-wise crosstab.
+        #
+        # Deliberately NON-FATAL: by this point stages 1-4 have already written
+        # every crosstab, and this is an additional analysis. A problem in it
+        # (a renamed column upstream, say) must not throw away a run that has
+        # otherwise succeeded -- it is reported and the pipeline continues, the
+        # same treatment the validation stage gets.
+        if not BVAVLV_NOTEBOOK.exists():
+            print(f"\nSKIPPING STAGE: 3-timeline BV/AV/LV - notebook not found "
+                  f"at {BVAVLV_NOTEBOOK}")
+        else:
+            print(f"\n==================================================")
+            print(f"STARTING STAGE: 3-timeline BV / AV / LV")
+            print(f"Notebook: {BVAVLV_NOTEBOOK.name}")
+            print(f"==================================================")
+
+            BV_AV_LV_DIR.mkdir(parents=True, exist_ok=True)
+            bvavlv_dir_fwd = str(BV_AV_LV_DIR).replace("\\", "/")
+
+            bvavlv_nb_code = extract_nb_code(BVAVLV_NOTEBOOK)
+            # INPUT_FILE = "<anything>" -> this run's derived extract. The
+            # notebook then names its own output after that file's dataset code
+            # and version stamp, so we do not pass a filename in.
+            bvavlv_nb_code, _n_in = re.subn(
+                r'INPUT_FILE\s*=\s*(?:r)?["\'][^"\']*["\']',
+                f'INPUT_FILE = "{ml_output_fwd2}"',
+                bvavlv_nb_code, count=1
+            )
+            bvavlv_nb_code, _n_out = re.subn(
+                r'OUTPUT_DIR\s*=\s*(?:r)?["\'][^"\']*["\']',
+                f'OUTPUT_DIR = "{bvavlv_dir_fwd}"',
+                bvavlv_nb_code, count=1
+            )
+            if not _n_in or not _n_out:
+                print(f"WARNING: BV/AV/LV notebook - INPUT_FILE replaced={bool(_n_in)}, "
+                      f"OUTPUT_DIR replaced={bool(_n_out)}. An unreplaced constant "
+                      f"means it would read or write a local path.", file=sys.stderr)
+
+            print(f"BV/AV/LV: INPUT_FILE -> {ml_output_fwd2}")
+            print(f"BV/AV/LV: OUTPUT_DIR -> {bvavlv_dir_fwd}")
+
+            start_time = time.time()
+            original_stdout = sys.stdout
+            original_stderr = sys.stderr
+            dual_stdout = DualStream(original_stdout, log_file_path)
+            dual_stderr = DualStream(original_stderr, log_file_path)
+            sys.stdout = dual_stdout
+            sys.stderr = dual_stderr
+            original_cwd = os.getcwd()
+            try:
+                os.chdir(str(WORKSPACE_DIR))
+                print(f"Working directory set to: {os.getcwd()}")
+                globals_dict = {"__name__": "__main__", "__builtins__": __builtins__}
+                exec(bvavlv_nb_code, globals_dict)
+
+                bvavlv_files = [f for f in BV_AV_LV_DIR.glob("*.xlsx")
+                                if not f.name.startswith("~$")]
+                if not bvavlv_files:
+                    raise FileNotFoundError(
+                        f"No BV/AV/LV workbook was generated in: {BV_AV_LV_DIR}")
+                times["bvavlv"] = time.time() - start_time
+                print(f"Validation success: {len(bvavlv_files)} BV/AV/LV workbook(s) "
+                      f"generated in {BV_AV_LV_DIR}")
+                print(f"\n=== Completed Stage: 3-timeline BV / AV / LV in "
+                      f"{times['bvavlv']:.2f} seconds ===\n")
+            except Exception as e:
+                print(f"\n!!! Stage [3-timeline BV / AV / LV] failed: {str(e)} !!!",
+                      file=sys.stderr)
+                print("    The crosstabs from stages 1-4 are unaffected; continuing.",
+                      file=sys.stderr)
+                traceback.print_exc(file=sys.stderr)
+            finally:
+                os.chdir(original_cwd)
+                sys.stdout = original_stdout
+                sys.stderr = original_stderr
+                dual_stdout.close()
+                dual_stderr.close()
+
+        # ==================================================================
+        # STAGE 6: CrossTab total validation
         # ==================================================================
         # Re-open every exported workbook and check that the printed counts
         # actually add up to the printed Total, column-wise AND row-wise, for

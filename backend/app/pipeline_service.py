@@ -112,6 +112,7 @@ CROSSTABS_SLOTS = {
     "derived": {"label": "Stage 2 — Derived columns (ML pipeline)", "canonical": "ML_Pipeline(streamlined draft).ipynb", "dest": "All scripts"},
     "crosstabs": {"label": "Stage 3 — CrossTab pipeline", "canonical": "CrossTab_streamlined pipeline.ipynb", "dest": "All scripts"},
     "requested": {"label": "Stage 4 — Requested individual CTs", "canonical": "CrossTab_requested_individual_CTs.ipynb", "dest": "All scripts"},
+    "bvavlv": {"label": "Stage 5 — 3-timeline BV/AV/LV", "canonical": "UW_ST_WT_BVAVLV.ipynb", "dest": "All scripts"},
     "extra": {"label": "Extra scripts", "canonical": None, "dest": ""},
 }
 MASD_SLOTS = {
@@ -170,6 +171,7 @@ SECTION_ORDER = {
         "Crosstabs — row-wise %",
         "Requested CTs — column-wise %",
         "Requested CTs — row-wise %",
+        "3-timeline BV/AV/LV",
         "Case lists & diagnostics",
         "Derived workbook",
         "Merged master data",
@@ -1440,7 +1442,12 @@ def _crosstabs_manifest(run_dir: Path) -> list[dict]:
                 # output_jalna_2 from the vendored script, requested_CTs_2
                 # from the newer analyst versions.
                 row_wise = bool(re.search(r"[_ ]2$", parent.strip()))
-                if "requested" in parent.lower():
+                if parent == "bv_av_lv":
+                    # Stage 5 writes one workbook per run into its own folder.
+                    # Matched on folder identity before the heuristics below,
+                    # which would otherwise read it as a column-wise crosstab.
+                    section = "3-timeline BV/AV/LV"
+                elif "requested" in parent.lower():
                     # The ~100-workbook requested_CTs(_2) folders get their own
                     # sections — folder identity beats filename heuristics here
                     # so each folder's custom_report_tables stays with it.
