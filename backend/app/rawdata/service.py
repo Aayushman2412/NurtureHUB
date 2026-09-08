@@ -173,6 +173,43 @@ def set_file_path(pipeline: str, project: Optional[str], rel: str) -> Path:
     return path
 
 
+def build_set_bundle(pipeline: str, project: Optional[str],
+                     paths: Optional[list[str]] = None,
+                     fmt: str = "zip") -> tuple[Path, str, int]:
+    """Bundle the current raw-data set: everything, or just `paths`.
+
+    Shares the pipeline-input builders rather than repeating them, so the
+    contents page, the text-preserving reads and the Excel row cap behave
+    identically in both places. A set is generated fresh each time, so what
+    comes out here is exactly what an ingest would put into the pipeline.
+    """
+    available = [f["path"] for f in list_set(pipeline, project)["files"]]
+    if not available:
+        raise PipelineError(
+            "Nothing to download — generate the raw-data set first.", 404)
+
+    if paths:
+        wanted = list(dict.fromkeys(paths))
+        unknown = [p for p in wanted if p not in available]
+        if unknown:
+            raise PipelineError(
+                "Unknown raw-data files requested: " + ", ".join(unknown[:5]), 400)
+        selected, label = wanted, "selected"
+    else:
+        selected, label = available, "all"
+
+    stem = "_".join(p for p in (
+        "rawdata", pipeline, (project or "").upper() or None, label,
+        datetime.now().strftime("%Y%m%d"),
+    ) if p)
+    stem = "".join(c for c in stem if c.isalnum() or c in "_-") or "rawdata"
+
+    root = _set_dir(pipeline, project)
+    build = (pipeline_service.bundle_zip if fmt == "zip"
+             else pipeline_service.bundle_workbook)
+    return build(root, selected, stem)
+
+
 def ingest_set(pipeline: str, project: Optional[str], db: Optional[Session] = None) -> dict:
     """Copy the current set into the pipeline input store (what a manual
     upload would have produced); returns what landed where.

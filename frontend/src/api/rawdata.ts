@@ -44,3 +44,28 @@ export const downloadRawFile = async (
   });
   triggerBlobDownload(res.data as Blob, path.split('/').pop() || 'raw.csv');
 };
+
+export type { InputBundleFormat as RawBundleFormat } from './pipelines';
+
+/**
+ * Download the generated set as one file.
+ *
+ * No `paths` means the whole set. 'zip' keeps the CSVs as they are; 'xlsx'
+ * merges them into one workbook, a sheet per file, with a contents page.
+ */
+export const downloadRawBundle = async (
+  pipeline: RawPipeline,
+  options: { paths?: string[]; format: 'zip' | 'xlsx' },
+  project?: string,
+): Promise<void> => {
+  const res = await client.post(`/api/admin/rawdata/${pipeline}/download`, options, {
+    params: params(project),
+    responseType: 'blob',
+  });
+  // Prefer the name the server chose (pipeline + project + scope + date).
+  const disposition = String(res.headers?.['content-disposition'] || '');
+  const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+  triggerBlobDownload(res.data as Blob,
+                      match ? decodeURIComponent(match[1])
+                            : `rawdata_${pipeline}.${options.format}`);
+};

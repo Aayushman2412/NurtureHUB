@@ -1743,34 +1743,41 @@ def _new_temp(suffix: str) -> Path:
     return Path(name)
 
 
-def build_inputs_zip(pipeline: str, project: Optional[str] = None,
-                     paths: Optional[list[str]] = None,
-                     kind: Optional[str] = None) -> tuple[Path, str, int]:
-    """Zip the selected input files, keeping their folder layout.
+def bundle_zip(root: Path, rel_paths: list[str], stem: str) -> tuple[Path, str, int]:
+    """Zip files under `root`, keeping their folder layout.
 
     The layout is preserved deliberately: the crosstabs raw CSVs are meaningful
     only inside their dated `input_folder/<district> (CUD)` directory, and a
     flat zip would be useless for re-uploading.
     """
-    selected = _select_inputs(pipeline, project, paths, kind)
-    if not selected:
-        raise PipelineError("No input files to download", 404)
-
-    root = ensure_inputs(pipeline, project)
+    if not rel_paths:
+        raise PipelineError("No files to download", 404)
     tmp = _new_temp(".zip")
     written = 0
     try:
         with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as archive:
-            for item in selected:
-                src = _safe_join(root, item["path"])
+            for rel in rel_paths:
+                src = _safe_join(root, rel)
                 if src.is_file():
-                    archive.write(src, arcname=item["path"])
+                    archive.write(src, arcname=rel)
                     written += 1
     except Exception:
         tmp.unlink(missing_ok=True)
         raise
+    return tmp, f"{stem}.zip", written
+
+
+def build_inputs_zip(pipeline: str, project: Optional[str] = None,
+                     paths: Optional[list[str]] = None,
+                     kind: Optional[str] = None) -> tuple[Path, str, int]:
+    """Zip the selected pipeline inputs."""
+    selected = _select_inputs(pipeline, project, paths, kind)
+    if not selected:
+        raise PipelineError("No input files to download", 404)
     label = "selected" if paths else (kind or "all")
-    return tmp, f"{_bundle_stem(pipeline, project, label)}.zip", written
+    return bundle_zip(ensure_inputs(pipeline, project),
+                      [item["path"] for item in selected],
+                      _bundle_stem(pipeline, project, label))
 
 
 # Excel's hard ceiling. A sheet cannot hold more, so a bigger input is
@@ -1819,10 +1826,8 @@ def _read_tabular(path: Path) -> "list[tuple[str, object]]":
     return []
 
 
-def build_inputs_workbook(pipeline: str, project: Optional[str] = None,
-                          paths: Optional[list[str]] = None,
-                          kind: Optional[str] = None) -> tuple[Path, str, int]:
-    """Combine the selected inputs into ONE workbook, a sheet per source.
+def bundle_workbook(root: Path, rel_paths: list[str], stem: str) -> tuple[Path, str, int]:
+    """Combine files under `root` into ONE workbook, a sheet per source.
 
     For reading and cross-checking rather than for re-uploading: everything is
     read as text so identifiers are not reformatted (a mobile number must not
@@ -1832,35 +1837,30 @@ def build_inputs_workbook(pipeline: str, project: Optional[str] = None,
     """
     import pandas as pd
 
-    selected = _select_inputs(pipeline, project, paths, kind)
-    if not selected:
-        raise PipelineError("No input files to download", 404)
+    if not rel_paths:
+        raise PipelineError("No files to download", 404)
 
-    root = ensure_inputs(pipeline, project)
     tmp = _new_temp(".xlsx")
     used: set = set()
-    contents, sheets, skipped = [], [], 0
+    contents, sheets = [], []
 
-    for item in selected:
-        src = _safe_join(root, item["path"])
+    for rel in rel_paths:
+        src = _safe_join(root, rel)
         if not src.is_file():
             continue
         try:
             frames = _read_tabular(src)
         except Exception as exc:                        # noqa: BLE001
-            contents.append({"File": item["path"], "Sheet": "",
-                             "Rows": "", "Columns": "",
+            contents.append({"File": rel, "Sheet": "", "Rows": "", "Columns": "",
                              "Included": "no", "Note": f"could not read: {exc}"})
-            skipped += 1
             continue
         if not frames:
-            contents.append({"File": item["path"], "Sheet": "", "Rows": "",
-                             "Columns": "", "Included": "no",
+            contents.append({"File": rel, "Sheet": "", "Rows": "", "Columns": "",
+                             "Included": "no",
                              "Note": "not a spreadsheet or CSV — use the ZIP download"})
-            skipped += 1
             continue
         for sheet_label, frame in frames:
-            base = Path(item["path"]).stem
+            base = Path(rel).stem
             if sheet_label and sheet_label.lower() not in ("sheet1", "sheet"):
                 base = f"{base}-{sheet_label}"
             name = _sheet_name(base, used)
@@ -1870,7 +1870,7 @@ def build_inputs_workbook(pipeline: str, project: Optional[str] = None,
                 note = (f"TRUNCATED to {_XLSX_MAX_ROWS:,} rows — Excel's limit. "
                         "Use the ZIP download for the whole file.")
             sheets.append((name, frame))
-            contents.append({"File": item["path"], "Sheet": sheet_label or "—",
+            contents.append({"File": rel, "Sheet": sheet_label or "—",
                              "Rows": len(frame), "Columns": frame.shape[1],
                              "Included": name, "Note": note})
 
@@ -1889,8 +1889,20 @@ def build_inputs_workbook(pipeline: str, project: Optional[str] = None,
         tmp.unlink(missing_ok=True)
         raise
 
+    return tmp, f"{stem}.xlsx", len(sheets)
+
+
+def build_inputs_workbook(pipeline: str, project: Optional[str] = None,
+                          paths: Optional[list[str]] = None,
+                          kind: Optional[str] = None) -> tuple[Path, str, int]:
+    """Combine the selected pipeline inputs into one workbook."""
+    selected = _select_inputs(pipeline, project, paths, kind)
+    if not selected:
+        raise PipelineError("No input files to download", 404)
     label = "selected" if paths else (kind or "all")
-    return tmp, f"{_bundle_stem(pipeline, project, label)}.xlsx", len(sheets)
+    return bundle_workbook(ensure_inputs(pipeline, project),
+                           [item["path"] for item in selected],
+                           _bundle_stem(pipeline, project, label))
 
 
 def run_to_dict(run: PipelineRun, include_manifest: bool = False) -> dict:

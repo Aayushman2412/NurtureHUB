@@ -10,6 +10,8 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
+from starlette.background import BackgroundTask
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -100,6 +102,61 @@ def download(
     )
     db.commit()
     return FileResponse(file_path, filename=file_path.name, media_type="text/csv")
+
+
+class RawDownloadRequest(BaseModel):
+    """Empty `paths` = the whole current set."""
+    paths: Optional[list[str]] = None
+    format: str = "zip"          # "zip" | "xlsx"
+
+
+@router.post("/{pipeline}/download")
+@limiter.limit(lambda: settings.RATE_LIMIT_EXPORT, key_func=principal_key)
+def download_bundle(
+    request: Request,
+    pipeline: str,
+    payload: RawDownloadRequest,
+    project: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Take a copy of the generated raw-data set out of the platform.
+
+    Every file here is patient-derived, so a bulk copy is the most consequential
+    export the Database section offers: rate-limited per account and recorded,
+    the same as the single-file download beside it.
+    """
+    fmt = (payload.format or "zip").lower()
+    if fmt not in ("zip", "xlsx"):
+        raise HTTPException(status_code=400, detail="format must be 'zip' or 'xlsx'")
+
+    tmp, filename, count = service.build_set_bundle(
+        _pipeline(pipeline), project, paths=payload.paths, fmt=fmt)
+
+    phi.log_export(
+        resource_type="rawdata_bundle",
+        record_count=count,
+        fmt=fmt,
+        db=db,
+        detail={
+            "pipeline": pipeline,
+            "project": project,
+            "scope": "selected" if payload.paths else "all",
+            # File names only — never the rows inside them.
+            "files": list(payload.paths or [])[:50],
+            "file_count": count,
+            "downloaded_by": admin_email,
+            "custody_note": "the downloaded copy leaves this system's custody",
+        },
+    )
+    db.commit()
+
+    media = ("application/zip" if fmt == "zip"
+             else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    return FileResponse(
+        tmp, filename=filename, media_type=media,
+        background=BackgroundTask(lambda: tmp.unlink(missing_ok=True)),
+    )
 
 
 @router.post("/{pipeline}/ingest")

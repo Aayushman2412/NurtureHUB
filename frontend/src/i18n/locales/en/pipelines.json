@@ -180,6 +180,16 @@
       "crosstabs": "Generates the 9 raw CSVs (mother, child, BF, CF, growth, antenatal, protein, case measurements, case report) for the selected project. Ingest places them as a dated raw-data folder in the project's Crosstabs inputs — reference sheets (Role sheet, DOCS, report spec) are still uploaded on the pipeline page.",
       "masd": "Generates one MASD learner CSV per program district. Ingest places them in the MASD input pool — the Role sheet and location masters are still uploaded on the MASD pipeline page."
     },
-    "stateSuffix": "state — one file set per district"
+    "stateSuffix": "state — one file set per district",
+    "downloadAll": "Download all",
+    "downloadSelected": "Download selected",
+    "downloadZip": "ZIP",
+    "downloadExcel": "Excel",
+    "selectFile": "Select this file",
+    "selectAll": "Select all files",
+    "selectedCount_one": "{{count}} file selected",
+    "selectedCount_other": "{{count}} files selected",
+    "clearSelection": "Clear",
+    "bundleHint": "ZIP keeps the CSVs as they are. Excel merges them into one workbook, a sheet per file, with a contents page."
   }
 }

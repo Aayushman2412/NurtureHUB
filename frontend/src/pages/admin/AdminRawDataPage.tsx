@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Database, Download, FlaskConical, Import, RefreshCw } from 'lucide-react';
+import {
+  Database, Download, FileArchive, FileSpreadsheet, FlaskConical, Import,
+  RefreshCw, X,
+} from 'lucide-react';
 import {
   Badge, Button, Card, CardBody, EmptyState, PageHeader, Select, Spinner,
   Table, TBody, Td, Th, THead, Tr,
 } from '../../components/ui';
 import { useToast } from '../../context/ToastContext';
 import {
-  downloadRawFile, generateRawSet, getRawSet, ingestRawSet,
+  downloadRawBundle, downloadRawFile, generateRawSet, getRawSet, ingestRawSet,
   type RawPipeline, type RawSet,
 } from '../../api/rawdata';
 import { getPipelineOverview } from '../../api/pipelines';
@@ -27,6 +30,7 @@ const AdminRawDataPage: React.FC = () => {
   const [project, setProject] = useState<string>('UJ');
   const [projectList, setProjectList] = useState<PipelineProject[]>([]);
   const [set, setSet] = useState<RawSet | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -69,6 +73,61 @@ const AdminRawDataPage: React.FC = () => {
       setBusy(null);
     }
   };
+
+  // Switching pipeline or project swaps the whole set, so a selection made
+  // against the previous one is meaningless -- and would name files the new
+  // set does not contain.
+  useEffect(() => { setSelected(new Set()); }, [tab, project]);
+
+  // A regenerated set can drop files that were ticked; keep only what exists.
+  useEffect(() => {
+    const present = new Set((set?.files ?? []).map(f => f.path));
+    setSelected(prev => {
+      const next = new Set([...prev].filter(p => present.has(p)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [set]);
+
+  const files = set?.files ?? [];
+  const selectedPaths = files.filter(f => selected.has(f.path)).map(f => f.path);
+  const allSelected = files.length > 0 && selectedPaths.length === files.length;
+
+  const toggle = (path: string) => setSelected(prev => {
+    const next = new Set(prev);
+    if (next.has(path)) next.delete(path);
+    else next.add(path);
+    return next;
+  });
+
+  const bundle = (format: 'zip' | 'xlsx', paths?: string[]) =>
+    run(`bundle:${paths ? 'sel' : 'all'}:${format}`,
+        () => downloadRawBundle(tab, { paths, format }, projectParam),
+        t('rawdata.downloaded'));
+
+  const bundleButtons = (paths?: string[]) => (
+    <>
+      <Button
+        size="sm"
+        variant="secondary"
+        iconLeft={<FileArchive className="size-4" />}
+        loading={busy === `bundle:${paths ? 'sel' : 'all'}:zip`}
+        disabled={busy !== null}
+        onClick={() => void bundle('zip', paths)}
+      >
+        {t('rawdata.downloadZip')}
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        iconLeft={<FileSpreadsheet className="size-4" />}
+        loading={busy === `bundle:${paths ? 'sel' : 'all'}:xlsx`}
+        disabled={busy !== null}
+        onClick={() => void bundle('xlsx', paths)}
+      >
+        {t('rawdata.downloadExcel')}
+      </Button>
+    </>
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -135,8 +194,40 @@ const AdminRawDataPage: React.FC = () => {
             >
               {t('rawdata.ingest')}
             </Button>
+            {files.length > 0 && (
+              <>
+                <span className="ml-1 text-xs font-semibold text-ink-muted">
+                  {t('rawdata.downloadAll')}
+                </span>
+                {bundleButtons()}
+              </>
+            )}
           </div>
           <p className="text-[13px] text-ink-muted">{t(`rawdata.hint.${tab}`)}</p>
+          {files.length > 0 && (
+            <p className="text-[13px] text-ink-muted">{t('rawdata.bundleHint')}</p>
+          )}
+
+          {/* Only once something is ticked, so the default view stays calm. */}
+          {selectedPaths.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/40 bg-primary-soft p-3">
+              <span className="min-w-0 flex-1 text-sm font-semibold text-ink">
+                {t('rawdata.selectedCount', { count: selectedPaths.length })}
+              </span>
+              <span className="text-xs font-semibold text-ink-muted">
+                {t('rawdata.downloadSelected')}
+              </span>
+              {bundleButtons(selectedPaths)}
+              <Button
+                variant="ghost"
+                size="sm"
+                iconLeft={<X className="size-4" />}
+                onClick={() => setSelected(new Set())}
+              >
+                {t('rawdata.clearSelection')}
+              </Button>
+            </div>
+          )}
 
           {loading ? (
             <div className="flex justify-center py-8"><Spinner /></div>
@@ -150,6 +241,19 @@ const AdminRawDataPage: React.FC = () => {
             <Table density="compact">
               <THead>
                 <Tr>
+                  <Th className="w-8">
+                    <input
+                      type="checkbox"
+                      className="size-4 cursor-pointer accent-primary"
+                      checked={allSelected}
+                      ref={el => { if (el) el.indeterminate = selectedPaths.length > 0 && !allSelected; }}
+                      onChange={() => setSelected(allSelected
+                        ? new Set()
+                        : new Set(files.map(f => f.path)))}
+                      aria-label={t('rawdata.selectAll')}
+                      title={t('rawdata.selectAll')}
+                    />
+                  </Th>
                   <Th>{t('rawdata.colFile')}</Th>
                   <Th>{t('rawdata.colRows')}</Th>
                   <Th>{t('rawdata.colSize')}</Th>
@@ -157,8 +261,17 @@ const AdminRawDataPage: React.FC = () => {
                 </Tr>
               </THead>
               <TBody>
-                {set.files.map(file => (
+                {files.map(file => (
                   <Tr key={file.path}>
+                    <Td>
+                      <input
+                        type="checkbox"
+                        className="size-4 cursor-pointer accent-primary"
+                        checked={selected.has(file.path)}
+                        onChange={() => toggle(file.path)}
+                        aria-label={t('rawdata.selectFile')}
+                      />
+                    </Td>
                     <Td className="font-medium text-ink">{file.name}</Td>
                     <Td className="tabular-nums">{file.rows.toLocaleString()}</Td>
                     <Td className="tabular-nums">{formatBytes(file.size)}</Td>
