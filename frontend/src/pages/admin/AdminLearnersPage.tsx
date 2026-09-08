@@ -34,12 +34,46 @@ const suggestTestEmail = (): string => {
   return `test.${stamp}.${rand}@nurturehub.org`;
 };
 
-/** A readable throwaway password — no ambiguous 0/O/1/l, long enough to pass
- *  the 8-character server rule with room to spare. */
+/** A readable throwaway password that always satisfies the server's policy.
+ *
+ *  No ambiguous 0/O/1/l, because someone reads this off a screen and types it
+ *  on a phone. Twelve characters with at least one of each class, drawn
+ *  explicitly rather than hoped for: a plain random draw from a mixed alphabet
+ *  misses the digit class about a fifth of the time, and the server (rightly)
+ *  rejects those — which would show up as an intermittent, baffling failure
+ *  when creating a test account.
+ *
+ *  Uses crypto.getRandomValues, not Math.random: these accounts read real
+ *  mothers' and children's records. */
+const PASSWORD_LENGTH = 12;
+
+const randomInt = (max: number): number => {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return buf[0] % max;
+};
+
 const suggestPassword = (): string => {
-  const alphabet = 'abcdefghijkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXY23456789';
-  const pick = () => alphabet[Math.floor(Math.random() * alphabet.length)];
-  return Array.from({ length: 10 }, pick).join('');
+  const lower = 'abcdefghijkmnpqrstuvwxyz';
+  const upper = 'ACDEFGHJKLMNPQRSTUVWXY';
+  const digits = '23456789';
+  const symbols = '#@$%&*+=?';
+  const all = lower + upper + digits + symbols;
+
+  // One guaranteed character per class, then fill, then shuffle so the classes
+  // do not always land in the same positions.
+  const chars = [
+    lower[randomInt(lower.length)],
+    upper[randomInt(upper.length)],
+    digits[randomInt(digits.length)],
+    symbols[randomInt(symbols.length)],
+  ];
+  while (chars.length < PASSWORD_LENGTH) chars.push(all[randomInt(all.length)]);
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join('');
 };
 
 /**
@@ -497,7 +531,7 @@ const AdminLearnersPage: React.FC = () => {
               <Button
                 iconLeft={<UserPlus className="size-4" />}
                 loading={creating}
-                disabled={creating || !newLearner.email.trim() || newLearner.password.length < 8}
+                disabled={creating || !newLearner.email.trim() || newLearner.password.length < PASSWORD_LENGTH}
                 onClick={() => void runCreate()}
               >
                 {t('learners.createConfirm')}

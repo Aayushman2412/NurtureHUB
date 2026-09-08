@@ -16,6 +16,7 @@ import json
 import io
 import random
 import re
+import secrets
 
 from app import projects
 from app.config import settings
@@ -28,9 +29,12 @@ from app.models import (
 )
 from app.seed_forms import FORM_SPECS, ensure_form_definitions
 from app.auth import verify_password, create_access_token, get_password_hash
-from app.dependencies import get_current_admin, get_admin_email, invalidate_user_cache
+from app.dependencies import (
+    get_current_admin, get_admin_email, invalidate_user_cache, oauth2_scheme,
+)
+from app.security import audit, lockout, mfa, passwords, sessions
 from app.notify import create_notification
-from app.rate_limit import limiter
+from app.rate_limit import limiter, principal_key
 from app.timeutils import iso_utc, utcnow
 
 # Public admin endpoints (login only) — no token required.
@@ -40,10 +44,24 @@ auth_router = APIRouter(prefix="/api/admin", tags=["admin-auth"])
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(get_current_admin)])
 
 # ──────────────────────────────────────────────
-# Hardcoded admin credentials for quick testing
+# Administrator credentials
 # ──────────────────────────────────────────────
-HARDCODED_ADMIN_EMAIL = "admin@nurturehub.org"
-HARDCODED_ADMIN_PASSWORD = "admin123"
+# These used to be literals here — admin@nurturehub.org / admin123 — which meant
+# every deployment of this code shipped with a publicly-known password to the
+# full patient database. They now come from configuration:
+#
+#   ALLOW_DEV_ADMIN            local convenience; the production validator
+#                              refuses to boot with it enabled
+#   ADMIN_BOOTSTRAP_PASSWORD   creates the first administrator on an empty
+#                              database, then must be unset
+#
+# See app/config.py:Settings.validate_production.
+DEV_ADMIN_EMAIL = "admin@nurturehub.org"
+
+
+def _dev_admin_active() -> bool:
+    """The local-development administrator, never available in production."""
+    return bool(settings.ALLOW_DEV_ADMIN and not settings.is_production)
 
 # ──────────────────────────────────────────────
 # Schemas
@@ -51,6 +69,9 @@ HARDCODED_ADMIN_PASSWORD = "admin123"
 class AdminLoginRequest(BaseModel):
     email: str
     password: str
+    # Present on the second leg of a two-step sign-in: the first call answers
+    # 401 "mfa_required", the console then re-submits with the code.
+    mfa_code: Optional[str] = None
 
 class AdminLoginResponse(BaseModel):
     access_token: str
@@ -169,37 +190,175 @@ def _slugify(name: str) -> str:
 # ──────────────────────────────────────────────
 # Admin Login
 # ──────────────────────────────────────────────
+def _guard_admin_lockout(db: Session, principal: str) -> None:
+    active = lockout.active_lockout(db, principal)
+    if not active:
+        return
+    seconds = lockout.seconds_remaining(active)
+    minutes = max(1, (seconds + 59) // 60)
+    plural = "s" if minutes != 1 else ""
+    raise HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail=f"Too many failed sign-in attempts. Try again in {minutes} minute{plural}.",
+        headers={"Retry-After": str(seconds)},
+    )
+
+
 @auth_router.post("/login", response_model=AdminLoginResponse)
 @limiter.limit("10/minute")
 def admin_login(request: Request, credentials: AdminLoginRequest, db: Session = Depends(get_db)):
-    """
-    Authenticate admin user.
-    Supports both hardcoded credentials for testing and DB-validated admin auth.
+    """Authenticate an administrator.
+
+    An administrator token reads every mother and child in the programme, so
+    this path carries more than a password check:
+
+      * the account locks out after repeated failures, for a period that
+        lengthens with each repeat;
+      * a second factor is demanded whenever the account has one enrolled, and
+        required outright when MFA_REQUIRED_FOR_ADMINS is on;
+      * the token names a revocable session row, so signing out and the
+        incident workflow's "end all sessions" both actually work;
+      * success and failure are written to the audit trail before the response
+        is returned.
     """
     norm_email = credentials.email.strip().lower()
-    # 1. Check hardcoded credentials first (for quick testing)
-    if (norm_email == HARDCODED_ADMIN_EMAIL.lower() and
-            credentials.password == HARDCODED_ADMIN_PASSWORD):
-        access_token = create_access_token(data={"sub": HARDCODED_ADMIN_EMAIL, "is_admin": True})
-        return AdminLoginResponse(
-            access_token=access_token,
-            admin_name="NurtureHUB Admin"
+    _guard_admin_lockout(db, norm_email)
+
+    def _fail(reason: str):
+        lockout.record_attempt(
+            db, principal=norm_email, successful=False, surface="admin",
+            reason=reason, request=request,
+        )
+        audit.record_sync(
+            audit.Action.LOGIN_FAILURE,
+            db=db,
+            resource_type="account",
+            resource_id=norm_email,
+            outcome="denied",
+            is_phi=False,
+            record_count=0,
+            actor_override={"actor_type": "admin", "actor_label": norm_email},
+            detail={"principal": norm_email, "surface": "admin", "reason": reason},
+        )
+        db.commit()
+        return HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid admin credentials",
         )
 
-    # 2. Check DB for admin users
     user = db.query(User).filter(func.lower(User.email) == norm_email).first()
-    if user and user.is_admin and user.password_hash:
-        if verify_password(credentials.password, user.password_hash):
-            access_token = create_access_token(data={"sub": user.email, "is_admin": True})
-            return AdminLoginResponse(
-                access_token=access_token,
-                admin_name=user.full_name or "Admin"
-            )
+    authenticated = False
+    admin_name = "Admin"
+    user_id = None
 
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid admin credentials"
+    if (
+        user
+        and user.is_admin
+        and user.password_hash
+        and verify_password(credentials.password, user.password_hash)
+    ):
+        authenticated = True
+        admin_name = user.full_name or "Admin"
+        user_id = user.id
+    elif (
+        _dev_admin_active()
+        and norm_email == DEV_ADMIN_EMAIL
+        and secrets.compare_digest(credentials.password, settings.DEV_ADMIN_PASSWORD)
+    ):
+        # Development only. Checked *after* the stored password so a real
+        # administrator credential always wins, and never reachable in
+        # production — Settings.validate_production refuses to boot with
+        # ALLOW_DEV_ADMIN enabled.
+        authenticated = True
+        admin_name = (user.full_name if user else None) or "NurtureHUB Admin (development)"
+        user_id = user.id if user else None
+
+    if not authenticated:
+        raise _fail("bad_credentials")
+
+    # Second factor. Demanded whenever this administrator has one enrolled:
+    # enrolling and then not being challenged would be worse than not enrolling.
+    enrolled = mfa.is_enrolled(db, norm_email)
+    if enrolled or settings.MFA_REQUIRED_FOR_ADMINS:
+        if not enrolled:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "This deployment requires a second factor for administrators, and this "
+                    "account has not enrolled one. Ask another administrator to enrol you."
+                ),
+            )
+        if not credentials.mfa_code:
+            audit.record_sync(
+                audit.Action.MFA_CHALLENGE_FAILED,
+                db=db,
+                resource_type="mfa",
+                resource_id=norm_email,
+                outcome="denied",
+                is_phi=False,
+                detail={"principal": norm_email, "stage": "challenge_required"},
+            )
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="mfa_required",
+                headers={"X-MFA-Required": "totp"},
+            )
+        if not mfa.verify(db, norm_email, credentials.mfa_code, commit=False):
+            raise _fail("bad_mfa_code")
+
+    lockout.record_attempt(
+        db, principal=norm_email, successful=True, surface="admin",
+        request=request, commit=False,
     )
+    access_token, _session = sessions.issue(
+        db,
+        principal=user.email if user else DEV_ADMIN_EMAIL,
+        is_admin=True,
+        user_id=user_id,
+        request=request,
+        mfa_satisfied=bool(enrolled),
+        commit=False,
+    )
+    audit.record_sync(
+        audit.Action.LOGIN_SUCCESS,
+        db=db,
+        resource_type="account",
+        resource_id=norm_email,
+        is_phi=False,
+        actor_override={"actor_type": "admin", "actor_label": norm_email, "actor_id": user_id},
+        detail={
+            "principal": norm_email,
+            "surface": "admin",
+            "mfa": "totp" if enrolled else "none",
+            "dev_credential": bool(user is None),
+        },
+    )
+    db.commit()
+    return AdminLoginResponse(access_token=access_token, admin_name=admin_name)
+
+
+@auth_router.post("/logout")
+def admin_logout(request: Request, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """End this administrator session on the server, not just in the browser."""
+    from app.auth import decode_access_token
+
+    payload = decode_access_token(token) if token else None
+    if payload and payload.get("jti"):
+        sessions.revoke(db, payload["jti"], reason="logout", by=payload.get("sub"))
+        audit.record_sync(
+            audit.Action.LOGOUT,
+            resource_type="account",
+            resource_id=payload.get("sub"),
+            is_phi=False,
+            actor_override={
+                "actor_type": "admin",
+                "actor_label": payload.get("sub"),
+                "session_jti": payload.get("jti"),
+            },
+            detail={"principal": payload.get("sub"), "surface": "admin"},
+        )
+    return {"message": "Signed out."}
 
 
 # ──────────────────────────────────────────────
@@ -753,9 +912,15 @@ def create_learner(
     except ValidationError:
         raise HTTPException(status_code=400, detail="Enter a valid email address")
 
+    # The same policy the sign-up form enforces. An admin-minted account reads
+    # real mothers' and children's records once it is used, so "it's only a test
+    # account" is not a reason to hold it to a weaker rule — test accounts are
+    # exactly the ones that get a memorable password and are never cleaned up.
     password = (payload.get("password") or "").strip()
-    if len(password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    try:
+        passwords.validate(password, email=email, full_name=payload.get("full_name"))
+    except passwords.PasswordPolicyError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
     clash = db.query(User.id).filter(func.lower(User.email) == email).first()
     if clash:
@@ -781,6 +946,17 @@ def create_learner(
         program_district_id=project_id,
     )
     db.add(user)
+    db.flush()
+    passwords.record_history(db, email, user.password_hash)
+    audit.record_sync(
+        audit.Action.ADMIN_USER_CHANGE,
+        db=db,
+        resource_type="user",
+        resource_id=user.id,
+        is_phi=False,
+        detail={"action": "created", "principal": email, "by": admin_email,
+                "project_id": project_id, "role": user.role},
+    )
     db.commit()
     db.refresh(user)
     return {**_serialize_learner(db, user), "password": password}
@@ -2376,7 +2552,13 @@ def get_test_results(
 
 
 @router.get("/tests/{test_id}/results/download")
+# Keyed by the signed-in ACCOUNT, not the source address, so a shared
+# office connection is many buckets and a legitimate cohort is unaffected -
+# while one stolen token cannot pull the database at machine speed. An
+# export is the moment data leaves this system's custody (SECURITY.md).
+@limiter.limit(lambda: settings.RATE_LIMIT_EXPORT, key_func=principal_key)
 def download_test_results_csv(
+    request: Request,
     test_id: int,
     district: str = Query("jalna", description="District slug"),
     db: Session = Depends(get_db),
@@ -2915,7 +3097,9 @@ def get_tutorial_tracking(
 # ──────────────────────────────────────────────
 
 @router.get("/tests/{test_id}/live/export")
+@limiter.limit(lambda: settings.RATE_LIMIT_EXPORT, key_func=principal_key)
 def export_live_report(
+    request: Request,
     test_id: int,
     db: Session = Depends(get_db),
     admin_email: str = Depends(get_admin_email),

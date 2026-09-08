@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, FileText, Video, ClipboardList, LogOut, Shield, MapPin, ChevronDown, Building2, Sun, Moon,
   MonitorPlay, GraduationCap, Radio, Activity, Table2, FileSpreadsheet, Menu,
-  DatabaseZap, Users,
+  DatabaseZap, Users, ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { defaultProject, groupProjects, listProjects, type ProjectGroups } from '../../api/projects';
@@ -28,6 +28,7 @@ const navItems = [
   { to: '/admin/tests', icon: Radio, key: 'liveMonitor', end: false },
   { to: '/admin/results', icon: GraduationCap, key: 'results', end: false },
   { to: '/admin/growth', icon: Activity, key: 'growthMonitor', end: false },
+  { to: '/admin/data-protection', icon: ShieldCheck, key: 'dataProtection', end: false },
 ] as const;
 
 // "Database" section — the data-analytics pipelines (admin-run crosstabs/MASD)
@@ -218,7 +219,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         </div>
 
         {/* Nav */}
-        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
+        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3 pb-4">
           {navItems.map(item => (
             <NavLink
               key={item.key}
@@ -227,7 +228,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold transition-colors',
+                  'flex items-center gap-3 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors',
                   isActive
                     ? 'bg-coral-50 text-primary-ink dark:bg-coral-500/10'
                     : 'text-ink-muted hover:bg-surface-sunken hover:text-ink',
@@ -250,7 +251,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold transition-colors',
+                  'flex items-center gap-3 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors',
                   isActive
                     ? 'bg-coral-50 text-primary-ink dark:bg-coral-500/10'
                     : 'text-ink-muted hover:bg-surface-sunken hover:text-ink',

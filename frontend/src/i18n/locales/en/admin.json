@@ -22,7 +22,8 @@
       "crosstabsPipeline": "Crosstabs Pipeline",
       "masdPipeline": "MASD Pipeline",
       "rawData": "Raw Data",
-      "learners": "Learners"
+      "learners": "Learners",
+      "dataProtection": "Data Protection"
     },
     "selectProject": "Select project",
     "stateBadge": "State",

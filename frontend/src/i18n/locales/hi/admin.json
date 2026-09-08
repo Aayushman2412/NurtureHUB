@@ -22,7 +22,8 @@
       "crosstabsPipeline": "क्रॉसटैब पाइपलाइन",
       "masdPipeline": "MASD पाइपलाइन",
       "rawData": "रॉ डेटा",
-      "learners": "सीखने वाले"
+      "learners": "सीखने वाले",
+      "dataProtection": "डेटा सुरक्षा"
     },
     "selectProject": "प्रोजेक्ट चुनें",
     "stateBadge": "राज्य",

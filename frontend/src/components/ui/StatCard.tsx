@@ -19,6 +19,15 @@ export interface StatCardProps {
   trend?: React.ReactNode;
   trendDirection?: 'up' | 'down';
   tone?: StatTone;
+  /**
+   * Let a long label wrap onto a second line instead of being clipped.
+   *
+   * Off by default: the dense dashboard rows use short labels and rely on a
+   * uniform single-line height. Turn it on where the label carries something
+   * the reader cannot infer - a metric's time window, say, since "12 refused"
+   * means nothing without "in 24 hours".
+   */
+  wrapLabel?: boolean;
   className?: string;
 }
 
@@ -29,6 +38,7 @@ const StatCard: React.FC<StatCardProps> = ({
   trend,
   trendDirection,
   tone = 'coral',
+  wrapLabel = false,
   className,
 }) => (
   <Card className={cn('flex items-center gap-4 p-5', className)}>
@@ -38,8 +48,15 @@ const StatCard: React.FC<StatCardProps> = ({
     >
       {icon}
     </div>
-    <div className="min-w-0">
-      <div className="text-sm text-ink-muted truncate">{label}</div>
+    <div className="min-w-0 flex-1">
+      <div
+        className={cn(
+          'text-sm text-ink-muted',
+          wrapLabel ? 'text-pretty line-clamp-2 min-h-10' : 'truncate',
+        )}
+      >
+        {label}
+      </div>
       <div className="font-display font-extrabold text-2xl text-ink leading-tight">{value}</div>
       {trend && (
         <div
