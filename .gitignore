@@ -50,3 +50,14 @@ backend/form_backups/
 
 # Data-analytics pipeline runtime data (admin uploads, run workspaces, outputs)
 backend/pipeline_data/
+
+# Audit spool — the on-disk fallback for audit events when the database is
+# briefly unavailable. Contains real access records; never commit it.
+audit_spool.jsonl
+backend/audit_spool.jsonl
+
+# Local interview-prep notes — not part of the platform.
+HLD_Interview_Guide.html
+LLD_Interview_Guide.html
+NurtureHUB_Backend_Interview_Guide.html
+NurtureHUB_Diagrams.html
