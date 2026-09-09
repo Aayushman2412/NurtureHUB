@@ -1964,6 +1964,8 @@ def _serialize_admin_question(q: Question) -> Dict[str, Any]:
         "marks": q.marks,
         "order_index": q.order_index or 0,
         "image_url": q.image_url or "",
+        "topic": q.topic or "",
+        "subtopic": q.subtopic or "",
     }
     for label in OPTION_LABELS:
         option = by_label.get(label)
@@ -1991,6 +1993,8 @@ def _serialize_admin_test(db: Session, test: Test, stage_position: int) -> Dict[
         "default_marks": test.default_marks or 1,
         "status": test.status or "draft",
         "test_type": test.test_type,
+        "shuffle_questions": bool(test.shuffle_questions),
+        "shuffle_options": bool(test.shuffle_options),
         "scheduled_at": iso_utc(test.scheduled_at),
         "started_at": iso_utc(test.started_at),
         "ended_at": iso_utc(test.ended_at),
@@ -2048,6 +2052,9 @@ def _apply_question_fields(
         except (TypeError, ValueError):
             marks = 0
         question.marks = marks if marks > 0 else default_marks
+    for field in ("topic", "subtopic"):
+        if field in payload:
+            setattr(question, field, (payload.get(field) or "").strip() or None)
 
     by_label = {(o.label or "").upper(): o for o in question.options}
     correct = str(payload.get("correct_answer") or "").upper()
@@ -2097,27 +2104,40 @@ def _apply_question_fields(
     db.flush()
 
 
-def _replace_questions(db: Session, test: Test, questions: List[Dict[str, Any]]):
-    """Replace a test's DB questions/options from the admin flat shape.
+def _replace_questions(db: Session, test: Test, questions: List[Dict[str, Any]],
+                       mode: str = "replace"):
+    """Write questions/options onto a test from the admin flat shape.
 
-    Used by the sheet upload and by create-test. Marks fall back to the test's
-    `default_marks` rather than a hardcoded constant.
+    mode="replace" clears the existing questions first (the original behaviour);
+    mode="append" keeps them and adds these after, which is what an admin wants
+    when a sheet holds the NEXT batch rather than the whole paper. Appending
+    never deletes a question row, so it is safe on a test that already has
+    submitted attempts.
     """
-    for q in list(test.questions):
-        db.delete(q)
-    db.flush()
+    if mode == "replace":
+        for q in list(test.questions):
+            db.delete(q)
+        db.flush()
+        start = 0
+    else:
+        start = (
+            db.query(func.coalesce(func.max(Question.order_index), -1))
+            .filter(Question.test_id == test.id)
+            .scalar()
+        ) + 1
+
     default_marks = test.default_marks or 1
     for idx, q in enumerate(questions):
         question = Question(
             test_id=test.id,
             text=(q.get("text") or "").strip(),
             marks=default_marks,
-            order_index=idx,
+            order_index=start + idx,
         )
         db.add(question)
         db.flush()
         _apply_question_fields(db, question, {**q, "marks": q.get("marks")}, default_marks)
-    test.total_questions = len(questions)
+    test.total_questions = db.query(Question).filter(Question.test_id == test.id).count()
     db.flush()
 
 
@@ -2189,6 +2209,9 @@ def update_test(
     for key in ["title", "description", "duration_minutes", "passing_score_pct", "max_attempts", "test_type"]:
         if key in test:
             setattr(db_test, key, test[key])
+    for flag in ("shuffle_questions", "shuffle_options"):
+        if flag in test:
+            setattr(db_test, flag, bool(test[flag]))
     if "default_marks" in test:
         db_test.default_marks = max(1, int(test.get("default_marks") or 1))
 
@@ -2448,20 +2471,256 @@ def delete_question(
     return {"message": "Question deleted"}
 
 
+# ---------------------------------------------------------------- bulk edits
+# The single-question endpoints above are fine for a correction, but an admin
+# reviewing a 100-question paper works in batches: tick fifteen, delete them,
+# or set them all to 2 marks. Doing that one request at a time is slow and
+# leaves the paper half-changed if the tab is closed midway, so these apply the
+# whole batch in one transaction.
+
+_BULK_ACTIONS = ("delete", "move_top", "move_bottom", "set_marks",
+                 "set_topic", "set_subtopic")
+
+
+@router.post("/tests/{test_id}/questions/bulk")
+def bulk_question_action(
+    test_id: int,
+    payload: Dict[str, Any],
+    district: str = Query("jalna", description="District slug"),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Apply one action to many questions at once.
+
+    {"action": "delete" | "move_top" | "move_bottom" | "set_marks" |
+                "set_topic" | "set_subtopic",
+     "question_ids": [...], "value": <for the set_* actions>}
+    """
+    action = str(payload.get("action") or "").strip()
+    if action not in _BULK_ACTIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"action must be one of: {', '.join(_BULK_ACTIONS)}")
+
+    db_test = db.query(Test).filter(Test.id == test_id).first()
+    if not db_test:
+        raise HTTPException(status_code=404, detail="Test not found")
+
+    wanted = [int(q) for q in (payload.get("question_ids") or [])]
+    if not wanted:
+        raise HTTPException(status_code=400, detail="Select at least one question")
+
+    questions = (
+        db.query(Question)
+        .filter(Question.test_id == test_id, Question.id.in_(wanted))
+        .all()
+    )
+    found = {q.id for q in questions}
+    missing = [q for q in wanted if q not in found]
+    if missing:
+        # Named rather than ignored: a stale tick list means the admin is
+        # looking at a paper that has changed underneath them.
+        raise HTTPException(
+            status_code=400,
+            detail=f"These questions are not in this test any more: {missing[:5]}")
+
+    if action == "delete":
+        # Same rule as deleting one: answer rows cascade, so a submitted test
+        # is protected.
+        _guard_questions_replaceable(db, db_test)
+        for q in questions:
+            db.delete(q)
+        db.flush()
+        _renumber_questions(db, test_id)
+        db_test.total_questions = db.query(Question).filter(
+            Question.test_id == test_id).count()
+
+    elif action in ("move_top", "move_bottom"):
+        selected = sorted(questions, key=lambda q: (q.order_index or 0, q.id))
+        others = (
+            db.query(Question)
+            .filter(Question.test_id == test_id, ~Question.id.in_(found))
+            .order_by(Question.order_index, Question.id)
+            .all()
+        )
+        # Selected questions keep their relative order within the block, so a
+        # batch move is predictable rather than reshuffling the selection.
+        ordered = selected + others if action == "move_top" else others + selected
+        for i, q in enumerate(ordered):
+            q.order_index = i
+
+    elif action == "set_marks":
+        try:
+            marks = int(payload.get("value"))
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="value must be a whole number of marks")
+        if marks < 1:
+            raise HTTPException(status_code=400, detail="Marks must be at least 1")
+        for q in questions:
+            q.marks = marks
+
+    else:  # set_topic / set_subtopic
+        field = "topic" if action == "set_topic" else "subtopic"
+        value = (str(payload.get("value") or "")).strip() or None
+        for q in questions:
+            setattr(q, field, value)
+
+    db.commit()
+    stages = _district_stages(db, district)
+    return _serialize_admin_test(db, db_test, _stage_position(stages, db_test.stage_id))
+
+
+# ------------------------------------------------------------- duplicate scan
+
+def _normalise_question(text: str) -> str:
+    """Collapse a question to a comparable key.
+
+    Case, punctuation and whitespace differences are what make near-identical
+    questions slip past a human reviewer, so they are exactly what this
+    ignores. Deliberately NOT fuzzy matching: a reviewer can act on "these two
+    are the same sentence", but a similarity score invites arguing with it.
+    """
+    lowered = (text or "").lower()
+    kept = [c if c.isalnum() else " " for c in lowered]
+    return " ".join("".join(kept).split())
+
+
+@router.get("/tests/duplicates")
+def find_duplicate_questions(
+    district: str = Query("jalna", description="District slug"),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Find questions that repeat, within a test type and across types.
+
+    Two groups, because they mean different things to a programme:
+      - `within`  the same question twice in one type of test, which is
+                  usually an upload mistake and inflates that topic's weight;
+      - `across`  the same question in, say, the formative AND the screening
+                  test, which may be deliberate (measuring change) or may leak
+                  the screening paper into practice. The admin decides — this
+                  only surfaces it.
+    """
+    stages = _district_stages(db, district)
+    stage_ids = [s.id for s in stages]
+    if not stage_ids:
+        return {"within": [], "across": [], "scanned_tests": 0, "scanned_questions": 0}
+
+    tests = db.query(Test).filter(Test.stage_id.in_(stage_ids)).all()
+    by_test = {t.id: t for t in tests}
+    if not by_test:
+        return {"within": [], "across": [], "scanned_tests": 0, "scanned_questions": 0}
+
+    questions = (
+        db.query(Question)
+        .filter(Question.test_id.in_(list(by_test)))
+        .order_by(Question.test_id, Question.order_index, Question.id)
+        .all()
+    )
+
+    buckets: Dict[str, List[Dict[str, Any]]] = {}
+    for q in questions:
+        key = _normalise_question(q.text)
+        if not key:
+            continue
+        test = by_test[q.test_id]
+        buckets.setdefault(key, []).append({
+            "question_id": q.id,
+            "test_id": test.id,
+            "test_title": test.title,
+            "test_type": test.test_type or "unclassified",
+            "position": (q.order_index or 0) + 1,
+            "text": q.text,
+            "topic": q.topic or "",
+        })
+
+    within, across = [], []
+    for key, rows in buckets.items():
+        if len(rows) < 2:
+            continue
+        types = {r["test_type"] for r in rows}
+        entry = {"text": rows[0]["text"], "count": len(rows), "occurrences": rows}
+        if len(types) > 1:
+            across.append({**entry, "test_types": sorted(types)})
+        else:
+            # Repeated inside one type — but only report it when it really is a
+            # repeat, i.e. more than one occurrence within a single test type.
+            within.append({**entry, "test_type": rows[0]["test_type"]})
+
+    within.sort(key=lambda e: (-e["count"], e["text"]))
+    across.sort(key=lambda e: (-e["count"], e["text"]))
+    return {
+        "within": within,
+        "across": across,
+        "scanned_tests": len(by_test),
+        "scanned_questions": len(questions),
+    }
+
+
+# ------------------------------------------------------------------- export
+
+@router.get("/tests/{test_id}/questions/export")
+def export_questions(
+    test_id: int,
+    district: str = Query("jalna", description="District slug"),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """The test's questions in the SAME column order the upload expects.
+
+    So the round trip works: export, edit in Excel, upload back. A different
+    column order here would make that quietly wrong.
+    """
+    db_test = db.query(Test).filter(Test.id == test_id).first()
+    if not db_test:
+        raise HTTPException(status_code=404, detail="Test not found")
+    questions = (
+        db.query(Question)
+        .filter(Question.test_id == test_id)
+        .order_by(Question.order_index, Question.id)
+        .all()
+    )
+    rows = []
+    for q in questions:
+        by_label = {(o.label or "").upper(): o for o in q.options}
+        correct = next(((o.label or "").upper() for o in q.options if o.is_correct), "")
+        row = {"Question Text": q.text}
+        for label in OPTION_LABELS:
+            opt = by_label.get(label)
+            row[f"Option {label}"] = opt.text if opt else ""
+        row["Correct Answer"] = correct
+        row["Marks"] = q.marks
+        row["Question Image URL"] = q.image_url or ""
+        row["Topic"] = q.topic or ""
+        row["Subtopic"] = q.subtopic or ""
+        rows.append(row)
+    return {"test_title": db_test.title, "rows": rows}
+
+
 @router.post("/tests/{test_id}/upload-questions")
 def upload_questions(
     test_id: int,
     questions: List[Dict[str, Any]],
     district: str = Query("jalna", description="District slug"),
+    mode: str = Query("replace", description="'replace' | 'append'"),
     db: Session = Depends(get_db),
     admin_email: str = Depends(get_admin_email),
 ):
-    """Replace a test's questions with parsed rows (from the frontend Excel/CSV parse)."""
+    """Load parsed sheet rows into a test.
+
+    'replace' swaps the whole paper; 'append' adds the rows after what is
+    already there. Only replacing needs the submitted-attempts guard — an
+    append deletes nothing, so it cannot destroy anyone's answer history.
+    """
+    mode = (mode or "replace").lower()
+    if mode not in ("replace", "append"):
+        raise HTTPException(status_code=400, detail="mode must be 'replace' or 'append'")
     db_test = db.query(Test).filter(Test.id == test_id).first()
     if not db_test:
         raise HTTPException(status_code=404, detail="Test not found")
-    _guard_questions_replaceable(db, db_test)
-    _replace_questions(db, db_test, questions)
+    if mode == "replace":
+        _guard_questions_replaceable(db, db_test)
+    _replace_questions(db, db_test, questions, mode=mode)
     db.commit()
     db.refresh(db_test)
     stages = _district_stages(db, district)

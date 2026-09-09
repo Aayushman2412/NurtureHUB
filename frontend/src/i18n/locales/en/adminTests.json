@@ -13,7 +13,8 @@
   },
   "testType": {
     "formative": "Formative",
-    "screening": "Screening"
+    "screening": "Screening",
+    "summative_theory": "Summative assessment (theory)"
   },
   "card": {
     "stage": "Stage {{n}}",
@@ -142,5 +143,50 @@
   "danger": {
     "deleteTest": "Delete test",
     "deleteHint": "Deleting removes the test and every question in it. This cannot be undone."
+  },
+  "exportQuestions": "Export questions",
+  "exportEmpty": "There are no questions to export yet.",
+  "shuffle": {
+    "heading": "Randomise",
+    "questions": "Shuffle question order",
+    "options": "Shuffle answer order",
+    "hint": "Presentation only — marking is unaffected. Each candidate gets a stable order for their attempt."
+  },
+  "bulk": {
+    "selectAll": "Select all",
+    "selectOne": "Select this question",
+    "selected": "{{count}} selected",
+    "hint": "Tick questions to delete, reorder, or set marks and topic in one go.",
+    "moveTop": "Move to top",
+    "moveBottom": "Move to bottom",
+    "setMarks": "Marks",
+    "setTopic": "Topic",
+    "topicPlaceholder": "e.g. Breastfeeding",
+    "apply": "Apply",
+    "delete": "Delete",
+    "confirmDelete": "Delete {{count}} question(s)? This cannot be undone.",
+    "failed": "That bulk action could not be applied."
+  },
+  "uploadMode": {
+    "title": "This test already has questions",
+    "body": "Your sheet holds {{incoming}} question(s). This test currently has {{existing}}.",
+    "appendTitle": "Add to the existing questions",
+    "appendBody": "Keeps what is there and appends the new rows — {{total}} in total.",
+    "replaceTitle": "Replace all questions",
+    "replaceBody": "Deletes the {{existing}} question(s) already in this test first.",
+    "cancel": "Cancel"
+  },
+  "duplicates": {
+    "button": "Find duplicates",
+    "title": "Duplicate questions",
+    "close": "Close",
+    "failed": "The duplicate scan could not run.",
+    "scanned": "Scanned {{questions}} questions across {{tests}} test(s).",
+    "withinTitle": "Repeated within one test type",
+    "withinHint": "Usually an upload mistake — it also quietly doubles that topic's weight in the score.",
+    "acrossTitle": "Shared between different test types",
+    "acrossHint": "May be deliberate (measuring change between formative and screening) or may leak the screening paper into practice.",
+    "timesIn": "Appears {{count}} times in {{type}} tests",
+    "none": "None found."
   }
 }

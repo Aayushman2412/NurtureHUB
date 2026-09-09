@@ -1,3 +1,5 @@
+import random
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import update
 from sqlalchemy.orm import Session, selectinload
@@ -165,11 +167,31 @@ def start_test_attempt(id: int, current_user: User = Depends(get_verified_user),
         selectinload(Question.options)
     ).filter(Question.test_id == id).order_by(Question.order_index).all()
 
+    # Presentation-only randomisation. Seeded from the attempt id, so the paper
+    # is stable for THIS attempt — a reload, a dropped connection or a resumed
+    # session shows the same order rather than reshuffling under the candidate,
+    # while two candidates get different papers.
+    #
+    # Safe by construction: submit scores by matching the selected option's ID
+    # against is_correct (see below), never by position, so no amount of
+    # shuffling can change a mark. Option LABELS travel with their option, so
+    # "A" is whatever A now says.
+    option_order = {q.id: sorted(q.options, key=lambda o: (o.label or ""))
+                    for q in questions}
+    if test.shuffle_questions or test.shuffle_options:
+        rng = random.Random(new_attempt.id)
+        if test.shuffle_questions:
+            rng.shuffle(questions)
+        if test.shuffle_options:
+            for opts in option_order.values():
+                rng.shuffle(opts)
+
     questions_out = []
     for q in questions:
+        ordered_options = option_order[q.id]
         options_out = [
             QuestionOptionOut(id=opt.id, label=opt.label, text=opt.text, image_url=opt.image_url)
-            for opt in sorted(q.options, key=lambda o: (o.label or ""))
+            for opt in ordered_options
         ]
         questions_out.append(
             QuestionOut(

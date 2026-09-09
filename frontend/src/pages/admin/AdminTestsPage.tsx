@@ -7,10 +7,11 @@ import * as XLSX from 'xlsx';
 import {
   Trash2, Save, Upload, Play, Square, Download, ChevronDown, ChevronUp, FileSpreadsheet, ClipboardList,
   AlertCircle, Radio, CalendarClock, Plus, Pencil, ArrowUp, ArrowDown, Image as ImageIcon,
+  FileDown, CopyCheck, Layers, PlusCircle,
 } from 'lucide-react';
 import {
-  Alert, Badge, Button, Card, EmptyState, Input, Modal, NumberInput, PageHeader, PageLoader, Select,
-  Spinner, Table, TBody, Td, Th, THead, Tr, FieldLabel,
+  Alert, Badge, Button, Card, Checkbox, EmptyState, Input, Modal, NumberInput, PageHeader,
+  PageLoader, Select, Spinner, Table, TBody, Td, Th, THead, Tr, FieldLabel,
 } from '../../components/ui';
 import { inputClasses } from '../../components/ui/Input';
 import { cn } from '../../utils/cn';
@@ -34,12 +35,44 @@ interface Test {
   max_attempts: number;
   default_marks: number;
   status: string;
-  test_type: 'formative' | 'screening' | null;
+  test_type: TestType | null;
+  shuffle_questions: boolean;
+  shuffle_options: boolean;
   scheduled_at: string | null;
   started_at: string | null;
   ended_at: string | null;
   has_submitted_attempts: boolean;
   questions: Question[];
+}
+
+type TestType = 'formative' | 'screening' | 'summative_theory';
+
+/** The order of the values is the order they appear in every picker. */
+const TEST_TYPES: TestType[] = ['formative', 'screening', 'summative_theory'];
+
+type UploadMode = 'replace' | 'append';
+
+interface PendingUpload {
+  testId: number;
+  questions: Record<string, unknown>[];
+  existing: number;
+}
+
+interface DuplicateOccurrence {
+  question_id: number;
+  test_id: number;
+  test_title: string;
+  test_type: string;
+  position: number;
+  text: string;
+  topic: string;
+}
+
+interface DuplicateReport {
+  within: { text: string; count: number; test_type: string; occurrences: DuplicateOccurrence[] }[];
+  across: { text: string; count: number; test_types: string[]; occurrences: DuplicateOccurrence[] }[];
+  scanned_tests: number;
+  scanned_questions: number;
 }
 
 interface ResultData {
@@ -69,7 +102,7 @@ const toLocalInputValue = (iso: string | null): string => {
  *  optional — an old 6-column sheet still imports unchanged. */
 const QUESTION_SHEET_HEADERS = [
   'Question Text', 'Option A', 'Option B', 'Option C', 'Option D', 'Option E', 'Option F',
-  'Correct Answer', 'Marks', 'Question Image URL',
+  'Correct Answer', 'Marks', 'Question Image URL', 'Topic', 'Subtopic',
 ] as const;
 
 /** Header cells are matched ignoring case, spaces and punctuation. */
@@ -97,6 +130,14 @@ const AdminTestsPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadTargetTest, setUploadTargetTest] = useState<number | null>(null);
   const [uploadError, setUploadError] = useState('');
+  const [pendingUpload, setPendingUpload] = useState<PendingUpload | null>(null);
+  const [selection, setSelection] = useState<Record<number, number[]>>({});
+  const [bulkBusy, setBulkBusy] = useState<string | null>(null);
+  const [bulkMarks, setBulkMarks] = useState<number>(1);
+  const [bulkTopic, setBulkTopic] = useState('');
+  const [showDuplicates, setShowDuplicates] = useState(false);
+  const [duplicates, setDuplicates] = useState<DuplicateReport | null>(null);
+  const [dupLoading, setDupLoading] = useState(false);
 
   // Question authoring: which question is open in the editor (0 = the new one)
   const [editingQuestion, setEditingQuestion] = useState<{ testId: number; id: number } | null>(null);
@@ -308,6 +349,99 @@ const AdminTestsPage: React.FC = () => {
     XLSX.writeFile(wb, `test_${testId}_results.xlsx`);
   };
 
+  /** POST parsed rows, either replacing the paper or adding to it. */
+  const sendQuestions = async (
+    testId: number,
+    questions: Record<string, unknown>[],
+    mode: UploadMode,
+  ) => {
+    setUploadError('');
+    try {
+      await client.post(
+        `/api/admin/tests/${testId}/upload-questions?district=${getProjectSlug() ?? ''}&mode=${mode}`,
+        questions,
+      );
+      setPendingUpload(null);
+      await fetchTests();
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setUploadError(detail || t('upload.failed'));
+      setPendingUpload(null);
+    }
+  };
+
+  /** Tick state is per test, so switching tests cannot carry a selection into
+   *  a paper it does not belong to. */
+  const selectedIn = (testId: number) => selection[testId] ?? [];
+
+  const toggleQuestion = (testId: number, questionId: number) =>
+    setSelection(prev => {
+      const current = prev[testId] ?? [];
+      const next = current.includes(questionId)
+        ? current.filter(id => id !== questionId)
+        : [...current, questionId];
+      return { ...prev, [testId]: next };
+    });
+
+  const toggleAllQuestions = (testId: number, ids: number[]) =>
+    setSelection(prev => {
+      const current = prev[testId] ?? [];
+      return { ...prev, [testId]: current.length === ids.length ? [] : ids };
+    });
+
+  const runBulk = async (testId: number, action: string, value?: string | number) => {
+    const ids = selectedIn(testId);
+    if (ids.length === 0) return;
+    if (action === 'delete' && !window.confirm(t('bulk.confirmDelete', { count: ids.length }))) return;
+    setBulkBusy(`${testId}:${action}`);
+    setUploadError('');
+    try {
+      await client.post(
+        `/api/admin/tests/${testId}/questions/bulk?district=${getProjectSlug() ?? ''}`,
+        { action, question_ids: ids, value },
+      );
+      setSelection(prev => ({ ...prev, [testId]: [] }));
+      await fetchTests();
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setUploadError(detail || t('bulk.failed'));
+    } finally {
+      setBulkBusy(null);
+    }
+  };
+
+  /** Export in the SAME column order the upload expects, so the round trip
+   *  (export -> edit in Excel -> upload back) works. */
+  const exportQuestions = async (testId: number, title: string) => {
+    try {
+      const res = await client.get(
+        `/api/admin/tests/${testId}/questions/export?district=${getProjectSlug() ?? ''}`,
+      );
+      const rows = (res.data?.rows ?? []) as Record<string, unknown>[];
+      if (rows.length === 0) { setUploadError(t('exportEmpty')); return; }
+      const ws = XLSX.utils.json_to_sheet(rows, { header: [...QUESTION_SHEET_HEADERS] });
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Questions');
+      XLSX.writeFile(wb, `${title.replace(/[^A-Za-z0-9_-]+/g, '_')}_questions.xlsx`);
+    } catch {
+      setUploadError(t('upload.failed'));
+    }
+  };
+
+  const loadDuplicates = async () => {
+    setDupLoading(true);
+    try {
+      const res = await client.get(
+        `/api/admin/tests/duplicates?district=${getProjectSlug() ?? ''}`,
+      );
+      setDuplicates(res.data);
+    } catch {
+      setDuplicates(null);
+    } finally {
+      setDupLoading(false);
+    }
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     const targetTest = uploadTargetTest;
@@ -347,6 +481,10 @@ const AdminTestsPage: React.FC = () => {
             // Blank / non-numeric Marks => the test's default marks decide.
             marks: Number.isFinite(parsedMarks) && parsedMarks > 0 ? parsedMarks : 0,
             image_url: named('questionimageurl') ?? '',
+            // Syllabus classification, so results can say WHERE a cohort is
+            // weak. Optional: an older sheet without these columns still loads.
+            topic: named('topic') ?? '',
+            subtopic: named('subtopic') ?? '',
           };
         }).filter(q => q.text);
 
@@ -354,11 +492,15 @@ const AdminTestsPage: React.FC = () => {
           setUploadError(t('upload.emptySheet'));
           return;
         }
-        client
-          .post(`/api/admin/tests/${targetTest}/upload-questions?district=${(getProjectSlug() ?? '')}`, questions)
-          .then(fetchTests)
-          .catch((err: { response?: { data?: { detail?: string } } }) =>
-            setUploadError(err?.response?.data?.detail || t('upload.failed')));
+        // An empty test has nothing to lose, so load straight in. Otherwise ask
+        // first — replacing a paper someone spent an afternoon on because the
+        // sheet held the next ten questions is not a recoverable mistake.
+        const existing = tests.find(x => x.id === targetTest)?.questions.length ?? 0;
+        if (existing === 0) {
+          void sendQuestions(targetTest, questions, 'replace');
+        } else {
+          setPendingUpload({ testId: targetTest, questions, existing });
+        }
       } catch {
         setUploadError(t('upload.parseError'));
       }
@@ -398,9 +540,18 @@ const AdminTestsPage: React.FC = () => {
         title={t('header.title')}
         description={t('header.description')}
         actions={
-          <Button iconLeft={<ClipboardList className="size-4" />} onClick={() => setShowAddTest(true)}>
-            {t('header.createTest')}
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              iconLeft={<CopyCheck className="size-4" />}
+              onClick={() => { setShowDuplicates(true); void loadDuplicates(); }}
+            >
+              {t('duplicates.button')}
+            </Button>
+            <Button iconLeft={<ClipboardList className="size-4" />} onClick={() => setShowAddTest(true)}>
+              {t('header.createTest')}
+            </Button>
+          </>
         }
       />
 
@@ -422,7 +573,7 @@ const AdminTestsPage: React.FC = () => {
                   </span>
                   {test.test_type && (
                     <Badge variant="info">
-                      {test.test_type === 'formative' ? t('testType.formative') : t('testType.screening')}
+                      {t(`testType.${test.test_type}`)}
                     </Badge>
                   )}
                   {statusBadge(test.status)}
@@ -573,10 +724,30 @@ const AdminTestsPage: React.FC = () => {
                       onChange={e => updateTest(test.id, { test_type: (e.target.value || null) as Test['test_type'] })}
                     >
                       <option value="">—</option>
-                      <option value="formative">{t('testType.formative')}</option>
-                      <option value="screening">{t('testType.screening')}</option>
+                      {TEST_TYPES.map(tt => (
+                        <option key={tt} value={tt}>{t(`testType.${tt}`)}</option>
+                      ))}
                     </Select>
                   </div>
+                </div>
+
+                {/* Randomisation. Presentation only — marking matches on the
+                    option itself, so a shuffled paper scores identically. */}
+                <div className="mt-3 flex flex-wrap items-center gap-5 rounded-xl border border-border bg-surface-sunken px-4 py-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">
+                    {t('shuffle.heading')}
+                  </span>
+                  <Checkbox
+                    label={t('shuffle.questions')}
+                    checked={test.shuffle_questions}
+                    onChange={e => updateTest(test.id, { shuffle_questions: e.target.checked })}
+                  />
+                  <Checkbox
+                    label={t('shuffle.options')}
+                    checked={test.shuffle_options}
+                    onChange={e => updateTest(test.id, { shuffle_options: e.target.checked })}
+                  />
+                  <span className="text-[11px] text-ink-faint">{t('shuffle.hint')}</span>
                 </div>
 
                 {/* Question toolbar */}
@@ -604,6 +775,15 @@ const AdminTestsPage: React.FC = () => {
                   >
                     {t('upload.template')}
                   </Button>
+                  {test.questions.length > 0 && (
+                    <Button
+                      variant="outline"
+                      iconLeft={<FileDown className="size-4" />}
+                      onClick={() => void exportQuestions(test.id, test.title)}
+                    >
+                      {t('exportQuestions')}
+                    </Button>
+                  )}
                 </div>
                 <Alert variant="info">
                   <span className="flex items-start gap-2">
@@ -636,6 +816,91 @@ const AdminTestsPage: React.FC = () => {
                 {/* Questions */}
                 {test.questions.length > 0 ? (
                   <div className="mt-4 flex flex-col gap-2">
+                    {/* Select-all + batch actions. Reviewing a 100-question
+                        paper happens in batches, and one request per question
+                        would leave the paper half-changed if the tab closes. */}
+                    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface-sunken px-3 py-2">
+                      <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
+                        <input
+                          type="checkbox"
+                          className="size-4 cursor-pointer accent-primary"
+                          checked={selectedIn(test.id).length === test.questions.length}
+                          // Partly-selected shows the dash rather than an empty
+                          // box, so "some" never reads as "none".
+                          ref={(el: HTMLInputElement | null) => {
+                            if (el) {
+                              const n = selectedIn(test.id).length;
+                              el.indeterminate = n > 0 && n < test.questions.length;
+                            }
+                          }}
+                          onChange={() => toggleAllQuestions(test.id, test.questions.map(q => q.id))}
+                        />
+                        {t('bulk.selectAll')}
+                      </label>
+                      {selectedIn(test.id).length > 0 ? (
+                        <>
+                          <span className="text-sm font-semibold text-ink">
+                            {t('bulk.selected', { count: selectedIn(test.id).length })}
+                          </span>
+                          <Button
+                            size="sm" variant="outline"
+                            loading={bulkBusy === `${test.id}:move_top`}
+                            onClick={() => void runBulk(test.id, 'move_top')}
+                          >
+                            {t('bulk.moveTop')}
+                          </Button>
+                          <Button
+                            size="sm" variant="outline"
+                            loading={bulkBusy === `${test.id}:move_bottom`}
+                            onClick={() => void runBulk(test.id, 'move_bottom')}
+                          >
+                            {t('bulk.moveBottom')}
+                          </Button>
+                          <span className="flex items-center gap-1.5">
+                            <span className="text-xs text-ink-muted">{t('bulk.setMarks')}</span>
+                            <div className="w-20">
+                              <NumberInput min={1} value={bulkMarks} fallback={1} onChange={v => setBulkMarks(v)} />
+                            </div>
+                            <Button
+                              size="sm" variant="secondary"
+                              loading={bulkBusy === `${test.id}:set_marks`}
+                              onClick={() => void runBulk(test.id, 'set_marks', bulkMarks)}
+                            >
+                              {t('bulk.apply')}
+                            </Button>
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <span className="text-xs text-ink-muted">{t('bulk.setTopic')}</span>
+                            <div className="w-40">
+                              <Input
+                                value={bulkTopic}
+                                placeholder={t('bulk.topicPlaceholder')}
+                                onChange={e => setBulkTopic(e.target.value)}
+                              />
+                            </div>
+                            <Button
+                              size="sm" variant="secondary"
+                              loading={bulkBusy === `${test.id}:set_topic`}
+                              onClick={() => void runBulk(test.id, 'set_topic', bulkTopic)}
+                            >
+                              {t('bulk.apply')}
+                            </Button>
+                          </span>
+                          <Button
+                            size="sm" variant="ghost"
+                            iconLeft={<Trash2 className="size-4 text-error-600" />}
+                            loading={bulkBusy === `${test.id}:delete`}
+                            disabled={test.has_submitted_attempts}
+                            title={test.has_submitted_attempts ? t('editor.attemptsWarning') : undefined}
+                            onClick={() => void runBulk(test.id, 'delete')}
+                          >
+                            {t('bulk.delete')}
+                          </Button>
+                        </>
+                      ) : (
+                        <span className="text-xs text-ink-faint">{t('bulk.hint')}</span>
+                      )}
+                    </div>
                     {test.questions.map((q, idx) =>
                       editingQuestion?.testId === test.id && editingQuestion.id === q.id ? (
                         <TestQuestionEditor
@@ -652,6 +917,13 @@ const AdminTestsPage: React.FC = () => {
                       ) : (
                         <div key={q.id} className="rounded-xl border border-border p-3">
                           <div className="flex items-start gap-3">
+                            <input
+                              type="checkbox"
+                              className="mt-1 size-4 shrink-0 cursor-pointer accent-primary"
+                              checked={selectedIn(test.id).includes(q.id)}
+                              onChange={() => toggleQuestion(test.id, q.id)}
+                              aria-label={t('bulk.selectOne')}
+                            />
                             <span className="mt-0.5 w-6 shrink-0 text-center text-xs font-bold text-ink-faint">
                               {idx + 1}
                             </span>
@@ -660,6 +932,11 @@ const AdminTestsPage: React.FC = () => {
                                 {q.text}
                                 {q.image_url && <ImageIcon className="ml-1.5 inline size-3.5 text-ink-faint" />}
                               </p>
+                              {(q.topic || q.subtopic) && (
+                                <span className="mt-1 inline-flex items-center gap-1 rounded bg-surface-sunken px-1.5 py-0.5 text-[11px] font-semibold text-ink-muted">
+                                  {[q.topic, q.subtopic].filter(Boolean).join(' › ')}
+                                </span>
+                              )}
                               {q.image_url && (
                                 <img
                                   src={resolveAssetUrl(q.image_url)}
@@ -821,8 +1098,9 @@ const AdminTestsPage: React.FC = () => {
             <FieldLabel size="sm">{t('fields.testType')}</FieldLabel>
             <Select value={newTest.test_type} onChange={e => setNewTest({ ...newTest, test_type: e.target.value })}>
               <option value="">—</option>
-              <option value="formative">{t('testType.formative')}</option>
-              <option value="screening">{t('testType.screening')}</option>
+              {TEST_TYPES.map(tt => (
+                <option key={tt} value={tt}>{t(`testType.${tt}`)}</option>
+              ))}
             </Select>
           </div>
         </div>
@@ -839,6 +1117,139 @@ const AdminTestsPage: React.FC = () => {
       </Modal>
 
       {/* Schedule modal */}
+      {/* Replace or add? Only asked when the test already has questions —
+          replacing a paper by accident is not a recoverable mistake. */}
+      <Modal
+        open={pendingUpload !== null}
+        onClose={() => setPendingUpload(null)}
+        title={t('uploadMode.title')}
+        footer={
+          <Button variant="outline" onClick={() => setPendingUpload(null)}>
+            {t('uploadMode.cancel')}
+          </Button>
+        }
+      >
+        {pendingUpload && (
+          <div className="flex flex-col gap-3">
+            <p className="m-0 text-sm text-ink-muted">
+              {t('uploadMode.body', {
+                incoming: pendingUpload.questions.length,
+                existing: pendingUpload.existing,
+              })}
+            </p>
+            <button
+              type="button"
+              className="flex items-start gap-3 rounded-xl border border-border p-3 text-left hover:border-primary hover:bg-surface-sunken"
+              onClick={() => void sendQuestions(pendingUpload.testId, pendingUpload.questions, 'append')}
+            >
+              <PlusCircle className="mt-0.5 size-5 shrink-0 text-success-600" />
+              <span>
+                <span className="block font-semibold text-ink">{t('uploadMode.appendTitle')}</span>
+                <span className="block text-xs text-ink-muted">
+                  {t('uploadMode.appendBody', {
+                    total: pendingUpload.existing + pendingUpload.questions.length,
+                  })}
+                </span>
+              </span>
+            </button>
+            <button
+              type="button"
+              className="flex items-start gap-3 rounded-xl border border-border p-3 text-left hover:border-error-500 hover:bg-error-50 dark:hover:bg-error-500/10"
+              onClick={() => void sendQuestions(pendingUpload.testId, pendingUpload.questions, 'replace')}
+            >
+              <Layers className="mt-0.5 size-5 shrink-0 text-error-600" />
+              <span>
+                <span className="block font-semibold text-ink">{t('uploadMode.replaceTitle')}</span>
+                <span className="block text-xs text-ink-muted">
+                  {t('uploadMode.replaceBody', { existing: pendingUpload.existing })}
+                </span>
+              </span>
+            </button>
+          </div>
+        )}
+      </Modal>
+
+      {/* Duplicate scan across the project's tests. */}
+      <Modal
+        open={showDuplicates}
+        onClose={() => setShowDuplicates(false)}
+        title={t('duplicates.title')}
+        size="lg"
+        footer={
+          <Button variant="outline" onClick={() => setShowDuplicates(false)}>
+            {t('duplicates.close')}
+          </Button>
+        }
+      >
+        {dupLoading ? (
+          <div className="flex justify-center py-8"><Spinner /></div>
+        ) : !duplicates ? (
+          <Alert variant="error">{t('duplicates.failed')}</Alert>
+        ) : (
+          <div className="flex flex-col gap-5">
+            <p className="m-0 text-xs text-ink-muted">
+              {t('duplicates.scanned', {
+                questions: duplicates.scanned_questions,
+                tests: duplicates.scanned_tests,
+              })}
+            </p>
+
+            <section>
+              <h4 className="m-0 mb-1 font-display text-sm font-bold text-ink">
+                {t('duplicates.withinTitle')}{' '}
+                <span className="font-normal text-ink-muted">({duplicates.within.length})</span>
+              </h4>
+              <p className="m-0 mb-2 text-xs text-ink-muted">{t('duplicates.withinHint')}</p>
+              {duplicates.within.length === 0 ? (
+                <p className="m-0 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-ink-muted">
+                  {t('duplicates.none')}
+                </p>
+              ) : duplicates.within.map((group, i) => (
+                <div key={`w${i}`} className="mb-2 rounded-xl border border-border p-3">
+                  <p className="m-0 text-sm font-semibold text-ink">{group.text}</p>
+                  <p className="m-0 mt-1 text-xs text-ink-muted">
+                    {t('duplicates.timesIn', {
+                      count: group.count,
+                      type: t(`testType.${group.test_type}`, { defaultValue: group.test_type }),
+                    })}
+                  </p>
+                  <ul className="m-0 mt-1.5 list-none p-0 text-xs text-ink-faint">
+                    {group.occurrences.map(o => (
+                      <li key={o.question_id}>{o.test_title} — Q{o.position}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </section>
+
+            <section>
+              <h4 className="m-0 mb-1 font-display text-sm font-bold text-ink">
+                {t('duplicates.acrossTitle')}{' '}
+                <span className="font-normal text-ink-muted">({duplicates.across.length})</span>
+              </h4>
+              <p className="m-0 mb-2 text-xs text-ink-muted">{t('duplicates.acrossHint')}</p>
+              {duplicates.across.length === 0 ? (
+                <p className="m-0 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-ink-muted">
+                  {t('duplicates.none')}
+                </p>
+              ) : duplicates.across.map((group, i) => (
+                <div key={`a${i}`} className="mb-2 rounded-xl border border-warning-500/40 bg-warning-50 p-3 dark:bg-warning-500/10">
+                  <p className="m-0 text-sm font-semibold text-ink">{group.text}</p>
+                  <p className="m-0 mt-1 text-xs text-ink-muted">
+                    {group.test_types.map(tt => t(`testType.${tt}`, { defaultValue: tt })).join(' + ')}
+                  </p>
+                  <ul className="m-0 mt-1.5 list-none p-0 text-xs text-ink-faint">
+                    {group.occurrences.map(o => (
+                      <li key={o.question_id}>{o.test_title} — Q{o.position}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </section>
+          </div>
+        )}
+      </Modal>
+
       <Modal
         open={scheduleTest !== null}
         onClose={() => setScheduleTest(null)}

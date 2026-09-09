@@ -307,7 +307,13 @@ class Test(Base):
     # Lifecycle: draft -> (scheduled_at set) -> active (admin starts) -> ended (admin ends).
     # Students may only start attempts while status == 'active'.
     status = Column(String, nullable=False, default="draft")
-    test_type = Column(String, nullable=True)  # 'formative' | 'screening'
+    test_type = Column(String, nullable=True)  # 'formative' | 'screening' | 'summative_theory'
+    # Presentation-only randomisation, applied when an attempt starts. Scoring
+    # matches on option ID, never on position, so shuffling cannot change a
+    # mark. The order is seeded from the attempt id, so reloading mid-test
+    # shows the same paper rather than reshuffling under the candidate.
+    shuffle_questions = Column(Boolean, nullable=False, default=False)
+    shuffle_options = Column(Boolean, nullable=False, default=False)
     scheduled_at = Column(DateTime(timezone=True), nullable=True)  # tentative go-live shown to users
     started_at = Column(DateTime(timezone=True), nullable=True)
     ended_at = Column(DateTime(timezone=True), nullable=True)
@@ -329,6 +335,11 @@ class Question(Base):
     # Optional picture shown above the options (diagram, growth chart, photo).
     # Stored as an /uploads/... or R2 CDN URL — see app/storage.py.
     image_url = Column(String, nullable=True)
+    # Syllabus classification, set from the upload sheet. Free text rather than
+    # a lookup table: the topic list is still being settled with the programme
+    # team, and a wrong-but-editable label beats blocking an upload.
+    topic = Column(String, nullable=True, index=True)
+    subtopic = Column(String, nullable=True)
 
     # Relationships
     test = relationship("Test", back_populates="questions")

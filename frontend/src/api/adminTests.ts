@@ -20,6 +20,9 @@ export interface AdminQuestion {
   marks: number;
   order_index: number;
   image_url: string;
+  /** Syllabus classification, set from the upload sheet or the bulk action. */
+  topic?: string;
+  subtopic?: string;
   option_a: string;
   option_b: string;
   option_c: string;
@@ -55,6 +58,8 @@ export const emptyQuestionDraft = (): AdminQuestion => ({
   marks: 0,
   order_index: 0,
   image_url: '',
+  topic: '',
+  subtopic: '',
   option_a: '', option_b: '', option_c: '', option_d: '', option_e: '', option_f: '',
   option_a_image: '', option_b_image: '', option_c_image: '',
   option_d_image: '', option_e_image: '', option_f_image: '',
