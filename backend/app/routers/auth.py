@@ -263,6 +263,34 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # An administrator's credentials must not open a learner session. Admins sign
+    # in at /api/admin/login; keeping the surfaces apart is what lets the audit
+    # trail say which one a session came from.
+    #
+    # The check runs AFTER the password verification deliberately. Refusing
+    # before it would answer instantly for administrators and only after ~300ms
+    # of bcrypt for everyone else — enough of a timing difference to enumerate
+    # who the administrators are. The message stays the generic one for the same
+    # reason. It is NOT counted as a lockout attempt: the password was correct,
+    # so this is a wrong-door mistake, not a credential guess, and counting it
+    # would let an admin lock themselves out of the console by habit.
+    if user_is_admin:
+        audit.record(
+            audit.Action.LOGIN_FAILURE,
+            resource_type="account",
+            resource_id=norm_email,
+            outcome="denied",
+            is_phi=False,
+            record_count=0,
+            detail={"principal": norm_email, "surface": "learner",
+                    "reason": "admin_credentials_on_learner_surface"},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     # Profile is considered complete once a role/designation has been set, or if user is admin
     is_complete = bool(user_role is not None or user_is_admin)
 
@@ -299,7 +327,11 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
         "token_type": "bearer",
         "is_verified": user_is_verified,
         "is_profile_complete": is_complete,
-        "is_admin": bool(user.is_admin)
+        # user_is_admin, not user.is_admin: the row was expired by the commit
+        # above, so touching the ORM object here issues a refresh SELECT — the
+        # exact per-sign-in round-trip the read-then-commit dance avoids.
+        # (Always False now; admins are refused above.)
+        "is_admin": user_is_admin,
     }
 
 
@@ -602,6 +634,26 @@ def google_auth(request: Request, google_request: GoogleLoginRequest, db: Sessio
             user.google_id = payload["google_id"]
             user.is_verified = True
             db.commit()
+
+    # An administrator's account does not open a learner session, whichever door
+    # it knocks on. Unlike the password path this message can be specific: a valid
+    # Google ID token proves the caller owns the address, so naming the right door
+    # tells them nothing they did not already know.
+    if user.is_admin:
+        audit.record(
+            audit.Action.LOGIN_FAILURE,
+            resource_type="account",
+            resource_id=user.email,
+            outcome="denied",
+            is_phi=False,
+            record_count=0,
+            detail={"principal": user.email, "surface": "google",
+                    "reason": "admin_credentials_on_learner_surface"},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="This is an administrator account — sign in through the admin console.",
+        )
 
     is_complete = bool(user.role is not None or user.is_admin)
     access_token = _issue(db, user, request)
