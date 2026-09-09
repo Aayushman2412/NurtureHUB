@@ -16,7 +16,7 @@
  * by the in-app IndexedDB queue (src/offline/), not by the service worker, so
  * queue behaviour is identical on iOS (which lacks Background Sync).
  */
-import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from 'workbox-precaching';
+import { cleanupOutdatedCaches, matchPrecache, precacheAndRoute } from 'workbox-precaching';
 import type { PrecacheEntry } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies';
@@ -35,11 +35,45 @@ clientsClaim();
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
-// SPA navigation fallback — never for API/WS/uploads/docs URLs.
+// SPA navigation: network-first, precache as the offline fallback.
+//
+// This used to serve the precached index.html unconditionally. That is the
+// offline-first ideal and it made every deploy invisible: a browser kept
+// rendering the previous shell until the worker happened to update, and because
+// a cached response carries the headers it was stored with, it kept serving the
+// PREVIOUS Content-Security-Policy too — so a CSP fix shipped to the server had
+// no effect on anyone who did not hard-reload. The reports were "the site only
+// loads after Ctrl+Shift+R" and "the Google button is gone", which are the same
+// bug wearing two hats.
+//
+// Online, the shell now comes from the network, so a deploy lands on the next
+// ordinary navigation. Offline, the network attempt fails (or times out on a
+// weak connection) and we fall back to nh-shell, then to the precached copy —
+// so an app that has been opened once still opens on no signal at all, which is
+// the property field workers actually depend on.
+const shellHandler = new NetworkFirst({
+  cacheName: 'nh-shell',
+  // Field connections are often slow rather than absent; do not make someone
+  // wait out a long timeout before showing the shell we already hold.
+  networkTimeoutSeconds: 3,
+  plugins: [new CacheableResponsePlugin({ statuses: [200] })],
+});
+
 registerRoute(
-  new NavigationRoute(createHandlerBoundToURL('index.html'), {
-    denylist: [/^\/api\//, /^\/ws\//, /^\/uploads\//, /^\/docs/, /^\/openapi/],
-  }),
+  new NavigationRoute(
+    async (options) => {
+      try {
+        const fresh = await shellHandler.handle(options);
+        if (fresh) return fresh;
+      } catch {
+        // Offline with nothing in nh-shell yet — fall through to the precache.
+      }
+      return (await matchPrecache('index.html')) ?? Response.error();
+    },
+    {
+      denylist: [/^\/api\//, /^\/ws\//, /^\/uploads\//, /^\/docs/, /^\/openapi/],
+    },
+  ),
 );
 
 // Learner/API reads. Matches same-origin prod (/api via nginx) and the
