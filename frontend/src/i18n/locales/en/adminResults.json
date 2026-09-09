@@ -46,7 +46,9 @@
     "selectedNotified": "Selected & notified:",
     "alreadySelected": "Already selected:",
     "noMatch": "No matching user:",
-    "unmatchedEmails": "Unmatched emails: {{emails}}"
+    "unmatchedEmails": "Unmatched emails: {{emails}}",
+    "selectionTemplate": "Download template",
+    "selectionTemplateHint": "One column of email addresses — any extra columns are ignored."
   },
   "selectionTable": {
     "colUser": "User",

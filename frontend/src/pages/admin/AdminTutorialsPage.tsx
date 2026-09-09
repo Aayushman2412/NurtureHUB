@@ -102,6 +102,21 @@ const SHEET_COLUMN_KEYS = [
 ] as const;
 const SHEET_REQUIRED = new Set(['phase', 'title', 'link']);
 
+/** One sheet carries every video's quiz for a phase; the first two columns
+ *  say which video each question belongs to (matched like the tutorial sheet:
+ *  phase number + title, case-insensitively). */
+const QUIZ_SHEET_HEADERS = [
+  'Phase', 'Video Title', 'Question Text',
+  'Option A', 'Option B', 'Option C', 'Option D', 'Correct Answer',
+] as const;
+
+interface QuizSheetResult {
+  videos_updated: number;
+  questions_written: number;
+  applied: { tutorial_id: number; video_title: string; questions: number }[];
+  errors: { row: number; error: string }[];
+}
+
 /** Header cells are matched ignoring case/spaces/punctuation. */
 const normalizeHeader = (h: string) => h.toLowerCase().replace(/[^a-z]/g, '');
 
@@ -162,6 +177,10 @@ const AdminTutorialsPage: React.FC = () => {
   const [quizTutorial, setQuizTutorial] = useState<Tutorial | null>(null);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestionForm[]>([]);
   const [quizSaving, setQuizSaving] = useState(false);
+  const quizSheetRef = useRef<HTMLInputElement>(null);
+  const [showQuizSheet, setShowQuizSheet] = useState(false);
+  const [quizSheetBusy, setQuizSheetBusy] = useState(false);
+  const [quizSheetResult, setQuizSheetResult] = useState<QuizSheetResult | null>(null);
 
   // Bulk sheet upload state
   const [showBulkUpload, setShowBulkUpload] = useState(false);
@@ -370,6 +389,90 @@ const AdminTutorialsPage: React.FC = () => {
     XLSX.writeFile(wb, 'nurturehub_tutorials_template.xlsx');
   };
 
+  /** A worked example, not just headers — the two-row-per-video shape is the
+   *  thing people get wrong, so the template shows it. */
+  const downloadQuizTemplate = () => {
+    const ws = XLSX.utils.aoa_to_sheet([
+      [...QUIZ_SHEET_HEADERS],
+      ['1', 'Introduction to Breastfeeding', 'When should breastfeeding begin?',
+        'Within 1 hour', 'Within 6 hours', 'Within a day', '', 'A'],
+      ['1', 'Introduction to Breastfeeding', 'What is colostrum?',
+        'The first milk', 'Formula', '', '', 'A'],
+      ['1', 'Correct Latching', 'Which is a sign of a good latch?',
+        'Wide open mouth', 'Clicking sound', '', '', 'A'],
+    ]);
+    ws['!cols'] = QUIZ_SHEET_HEADERS.map(h => ({ wch: Math.max(h.length + 4, 18) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Quiz');
+    XLSX.writeFile(wb, 'nurturehub_quiz_template.xlsx');
+  };
+
+  /** Export every quiz in the project in the upload sheet's own columns, so it
+   *  doubles as a worksheet for authoring the missing ones. */
+  const exportQuizzes = async () => {
+    setQuizSheetBusy(true);
+    try {
+      const res = await client.get(`/api/admin/quiz/export?district=${getProjectSlug() ?? ''}`);
+      const rows = (res.data?.rows ?? []) as Record<string, unknown>[];
+      const ws = XLSX.utils.json_to_sheet(rows, { header: [...QUIZ_SHEET_HEADERS] });
+      ws['!cols'] = QUIZ_SHEET_HEADERS.map(h => ({ wch: Math.max(h.length + 4, 18) }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Quiz');
+      XLSX.writeFile(wb, `nurturehub_quiz_${getProjectSlug() ?? 'project'}.xlsx`);
+    } finally {
+      setQuizSheetBusy(false);
+    }
+  };
+
+  const handleQuizSheetFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setQuizSheetBusy(true);
+    setQuizSheetResult(null);
+    const reader = new FileReader();
+    reader.onload = async evt => {
+      try {
+        const wb = XLSX.read(new Uint8Array(evt.target?.result as ArrayBuffer), { type: 'array' });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const json: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, { raw: false, defval: '' });
+        const rows = json.map(row => {
+          const keys = Object.keys(row);
+          const named = (want: string) => {
+            const key = keys.find(h => normalizeHeader(h) === want);
+            return key ? String(row[key] ?? '').trim() : '';
+          };
+          const phaseRaw = parseInt(named('phase'), 10);
+          return {
+            phase: Number.isFinite(phaseRaw) ? phaseRaw : null,
+            video_title: named('videotitle'),
+            text: named('questiontext'),
+            option_a: named('optiona'),
+            option_b: named('optionb'),
+            option_c: named('optionc'),
+            option_d: named('optiond'),
+            correct_answer: (named('correctanswer') || 'A').toUpperCase(),
+          };
+        });
+        const res = await client.post(
+          `/api/admin/quiz/bulk-upload?district=${getProjectSlug() ?? ''}`,
+          { rows },
+        );
+        setQuizSheetResult(res.data);
+        await fetchStages();
+      } catch (err) {
+        const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+        setQuizSheetResult({
+          videos_updated: 0, questions_written: 0, applied: [],
+          errors: [{ row: 0, error: detail || t('quizSheet.parseError') }],
+        });
+      } finally {
+        setQuizSheetBusy(false);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
   const handleBulkFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -485,6 +588,13 @@ const AdminTutorialsPage: React.FC = () => {
             >
               {t('bulk.button')}
             </Button>
+            <Button
+              variant="outline"
+              iconLeft={<HelpCircle className="size-4" />}
+              onClick={() => { setQuizSheetResult(null); setShowQuizSheet(true); }}
+            >
+              {t('quizSheet.button')}
+            </Button>
             <Button iconLeft={<Layers className="size-4" />} onClick={() => setShowAddStage(true)}>
               {t('header.addPhase')}
             </Button>
@@ -493,6 +603,7 @@ const AdminTutorialsPage: React.FC = () => {
       />
 
       <input ref={bulkFileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleBulkFile} />
+      <input ref={quizSheetRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleQuizSheetFile} />
 
 
       {/* The player for a preview opened from OUTSIDE a row (the add-video
@@ -1091,6 +1202,111 @@ const AdminTutorialsPage: React.FC = () => {
       </Modal>
 
       {/* Quiz editor modal */}
+      {/* One sheet for every video's quiz in the project. */}
+      <Modal
+        open={showQuizSheet}
+        onClose={() => setShowQuizSheet(false)}
+        size="lg"
+        title={
+          <span className="flex items-center gap-2">
+            <HelpCircle className="size-4" /> {t('quizSheet.modalTitle')}
+          </span>
+        }
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setShowQuizSheet(false)}>
+              {t('quizSheet.close')}
+            </Button>
+            <Button
+              variant="secondary"
+              iconLeft={<Download className="size-4" />}
+              onClick={downloadQuizTemplate}
+            >
+              {t('quizSheet.downloadTemplate')}
+            </Button>
+            <Button
+              variant="secondary"
+              iconLeft={<FileSpreadsheet className="size-4" />}
+              loading={quizSheetBusy}
+              onClick={() => void exportQuizzes()}
+            >
+              {t('quizSheet.export')}
+            </Button>
+            <Button
+              iconLeft={<Upload className="size-4" />}
+              loading={quizSheetBusy}
+              disabled={quizSheetBusy}
+              onClick={() => quizSheetRef.current?.click()}
+            >
+              {t('quizSheet.upload')}
+            </Button>
+          </>
+        }
+      >
+        <p className="mt-0 text-[13px] text-ink-muted">{t('quizSheet.intro')}</p>
+
+        <div className="mt-3 overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-surface-sunken">
+              <tr>
+                {QUIZ_SHEET_HEADERS.map(h => (
+                  <th key={h} className="whitespace-nowrap px-2.5 py-2 font-bold text-ink">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t border-border text-ink-muted">
+                <td className="px-2.5 py-2">1</td>
+                <td className="whitespace-nowrap px-2.5 py-2">Introduction to Breastfeeding</td>
+                <td className="px-2.5 py-2">When should breastfeeding begin?</td>
+                <td className="px-2.5 py-2">Within 1 hour</td>
+                <td className="px-2.5 py-2">Within 6 hours</td>
+                <td className="px-2.5 py-2">Within a day</td>
+                <td className="px-2.5 py-2" />
+                <td className="px-2.5 py-2">A</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-2 text-[12px] text-ink-faint">{t('quizSheet.rules')}</p>
+
+        {quizSheetResult && (
+          <div className="mt-4">
+            {quizSheetResult.videos_updated > 0 && (
+              <Alert variant="success">
+                {t('quizSheet.applied', {
+                  videos: quizSheetResult.videos_updated,
+                  questions: quizSheetResult.questions_written,
+                })}
+              </Alert>
+            )}
+            {quizSheetResult.applied.length > 0 && (
+              <ul className="mt-2 list-none p-0 text-xs text-ink-muted">
+                {quizSheetResult.applied.map(a => (
+                  <li key={a.tutorial_id}>
+                    {a.video_title} — {t('quizSheet.questionCount', { n: a.questions })}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {quizSheetResult.errors.length > 0 && (
+              <Alert variant="warning" className="mt-2">
+                <span className="block font-semibold">
+                  {t('quizSheet.rowsSkipped', { n: quizSheetResult.errors.length })}
+                </span>
+                <ul className="mt-1 list-none p-0 text-xs">
+                  {quizSheetResult.errors.slice(0, 12).map((e, i) => (
+                    <li key={i}>
+                      {e.row > 0 ? t('quizSheet.rowLabel', { n: e.row }) + ' ' : ''}{e.error}
+                    </li>
+                  ))}
+                </ul>
+              </Alert>
+            )}
+          </div>
+        )}
+      </Modal>
+
       <Modal
         open={!!quizTutorial}
         onClose={() => setQuizTutorial(null)}

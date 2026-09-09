@@ -1792,6 +1792,14 @@ def replace_tutorial_quiz_questions(tutorial_id: int, payload: Dict[str, Any], d
         raise HTTPException(status_code=404, detail="Tutorial not found")
 
     questions = payload.get("questions", [])
+    _write_quiz_questions(db, tutorial_id, questions)
+    db.commit()
+    return get_tutorial_quiz_questions(tutorial_id, db=db, admin_email=admin_email)
+
+
+def _write_quiz_questions(db: Session, tutorial_id: int, questions: List[Dict[str, Any]]):
+    """Replace one tutorial's quiz questions. Shared by the per-video editor
+    and the phase-wide sheet upload."""
     # Old responses reference deleted question rows; drop them with the questions.
     old_ids = [q.id for q in db.query(TutorialQuestion).filter(
         TutorialQuestion.tutorial_id == tutorial_id
@@ -1854,8 +1862,185 @@ def replace_tutorial_quiz_questions(tutorial_id: int, payload: Dict[str, Any], d
         synchronize_session=False,
     )
 
+    # No commit here: the sheet upload writes many videos and commits once, so a
+    # failure part-way leaves the phase untouched rather than half-updated.
+    db.flush()
+
+
+# ------------------------------------------------------- quiz sheet upload
+# The per-video editor is fine for a correction, but authoring quizzes for a
+# whole phase means opening each video in turn. These take one sheet holding
+# every video's questions, matched the same way the tutorial sheet matches:
+# by phase number + video title, case-insensitively.
+
+QUIZ_SHEET_COLUMNS = [
+    "Phase", "Video Title", "Question Text",
+    "Option A", "Option B", "Option C", "Option D", "Correct Answer",
+]
+
+
+class QuizBulkRow(BaseModel):
+    phase: Optional[int] = None
+    video_title: str = ""
+    text: str = ""
+    option_a: str = ""
+    option_b: str = ""
+    option_c: str = ""
+    option_d: str = ""
+    correct_answer: str = "A"
+
+
+class QuizBulkUpload(BaseModel):
+    rows: List[QuizBulkRow] = []
+
+
+@router.post("/quiz/bulk-upload")
+def bulk_upload_quizzes(
+    payload: QuizBulkUpload,
+    district: str = Query("jalna", description="District slug"),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Load post-video quiz questions for many videos from one sheet.
+
+    Rows are grouped by (phase, video title); each video's quiz is REPLACED by
+    the rows naming it. Replacing rather than appending is deliberate: a video
+    quiz is a handful of questions shown in a popup, so "here is this video's
+    quiz" is what an admin means by a sheet — and appending would silently grow
+    past what the popup can sensibly show.
+
+    A video that the sheet does not mention is left completely alone, so one
+    phase's sheet cannot wipe another's. Rows that cannot be matched come back
+    as errors while every good row is still applied.
+    """
+    pd = _content_project_or_404(db, district)
+    stages = (
+        db.query(Stage)
+        .filter(Stage.program_district_id == pd.id)
+        .order_by(Stage.order_index)
+        .all()
+    )
+    # "Phase N" in the manager is order_index + 1; test phases keep their slot.
+    stage_by_phase = {s.order_index + 1: s for s in stages}
+
+    # (phase, lowercase title) -> tutorial
+    tutorials_by_key: Dict[tuple, Tutorial] = {}
+    for stage in stages:
+        phase_no = (stage.order_index or 0) + 1
+        for tut in db.query(Tutorial).filter(Tutorial.stage_id == stage.id).all():
+            tutorials_by_key[(phase_no, (tut.title or "").strip().lower())] = tut
+
+    grouped: Dict[int, List[QuizBulkRow]] = {}
+    errors: List[Dict[str, Any]] = []
+
+    for i, row in enumerate(payload.rows, start=2):   # row 1 is the header
+        title = (row.video_title or "").strip()
+        if not title and not (row.text or "").strip():
+            continue                                   # blank spacer row
+        if row.phase is None or not title:
+            errors.append({"row": i, "error": "Phase and Video Title are both required"})
+            continue
+        if row.phase not in stage_by_phase:
+            errors.append({"row": i, "error": f"No phase {row.phase} in this project"})
+            continue
+        tut = tutorials_by_key.get((row.phase, title.lower()))
+        if not tut:
+            errors.append({
+                "row": i,
+                "error": f"No video titled '{title}' in phase {row.phase}",
+            })
+            continue
+        if not (row.text or "").strip():
+            errors.append({"row": i, "error": "Question Text is empty"})
+            continue
+        if not (row.option_a or "").strip() or not (row.option_b or "").strip():
+            errors.append({"row": i, "error": "Options A and B are both required"})
+            continue
+        grouped.setdefault(tut.id, []).append(row)
+
+    applied = []
+    for tutorial_id, rows in grouped.items():
+        questions = [{
+            "text": r.text.strip(),
+            "option_a": r.option_a.strip(),
+            "option_b": r.option_b.strip(),
+            "option_c": (r.option_c or "").strip(),
+            "option_d": (r.option_d or "").strip(),
+            "correct_answer": (r.correct_answer or "A").strip().upper() or "A",
+        } for r in rows]
+        _write_quiz_questions(db, tutorial_id, questions)
+        tut = db.query(Tutorial).filter(Tutorial.id == tutorial_id).first()
+        applied.append({
+            "tutorial_id": tutorial_id,
+            "video_title": tut.title if tut else "",
+            "questions": len(questions),
+        })
+
     db.commit()
-    return get_tutorial_quiz_questions(tutorial_id, db=db, admin_email=admin_email)
+    return {
+        "videos_updated": len(applied),
+        "questions_written": sum(a["questions"] for a in applied),
+        "applied": applied,
+        "errors": errors,
+    }
+
+
+@router.get("/quiz/export")
+def export_quizzes(
+    district: str = Query("jalna", description="District slug"),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Every video quiz in the project, in the upload sheet's own column order.
+
+    So the round trip works: export, edit in Excel, upload back. Videos with no
+    quiz yet are included as an empty row, which turns the export into a
+    ready-made worksheet for authoring the missing ones.
+    """
+    pd = _content_project_or_404(db, district)
+    stages = (
+        db.query(Stage)
+        .filter(Stage.program_district_id == pd.id)
+        .order_by(Stage.order_index)
+        .all()
+    )
+    rows: List[Dict[str, Any]] = []
+    for stage in stages:
+        phase_no = (stage.order_index or 0) + 1
+        tutorials = (
+            db.query(Tutorial)
+            .filter(Tutorial.stage_id == stage.id)
+            .order_by(Tutorial.order_index, Tutorial.id)
+            .all()
+        )
+        for tut in tutorials:
+            questions = (
+                db.query(TutorialQuestion)
+                .filter(TutorialQuestion.tutorial_id == tut.id)
+                .order_by(TutorialQuestion.order_index)
+                .all()
+            )
+            if not questions:
+                rows.append({
+                    "Phase": phase_no, "Video Title": tut.title,
+                    "Question Text": "", "Option A": "", "Option B": "",
+                    "Option C": "", "Option D": "", "Correct Answer": "",
+                })
+                continue
+            for q in questions:
+                by_label = {(o.label or "").upper(): o.text for o in q.options}
+                correct = next(((o.label or "").upper() for o in q.options if o.is_correct), "A")
+                rows.append({
+                    "Phase": phase_no,
+                    "Video Title": tut.title,
+                    "Question Text": q.text,
+                    "Option A": by_label.get("A", ""),
+                    "Option B": by_label.get("B", ""),
+                    "Option C": by_label.get("C", ""),
+                    "Option D": by_label.get("D", ""),
+                    "Correct Answer": correct,
+                })
+    return {"columns": QUIZ_SHEET_COLUMNS, "rows": rows}
 
 
 @router.put("/tutorials/{tutorial_id}/quiz-enabled")

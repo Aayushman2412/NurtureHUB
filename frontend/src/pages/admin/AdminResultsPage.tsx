@@ -235,6 +235,21 @@ const AdminResultsPage: React.FC = () => {
     e.target.value = '';
   };
 
+  /** The selection sheet is one column of emails. Pre-filled with the learners
+   *  currently listed, so it starts as a shortlist to trim rather than a blank
+   *  page — the upload ignores any extra columns you keep alongside. */
+  const downloadSelectionTemplate = () => {
+    const rows = (data?.users ?? []).map(u => [u.email, u.name]);
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Email', 'Name (ignored on upload)'],
+      ...(rows.length > 0 ? rows : [['learner@example.org', 'Example Learner']]),
+    ]);
+    ws['!cols'] = [{ wch: 34 }, { wch: 28 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Selection');
+    XLSX.writeFile(wb, `face_to_face_selection_${data?.district ?? 'project'}.xlsx`);
+  };
+
   const removeSelection = (userId: number) => {
     if (!confirm(t('confirm.removeSelection'))) return;
     client.delete(`/api/admin/results/face-to-face/${userId}`)
@@ -371,6 +386,13 @@ const AdminResultsPage: React.FC = () => {
         description={t('f2f.description')}
         actions={
           <>
+            <Button
+              variant="secondary"
+              iconLeft={<Download className="size-4" />}
+              onClick={downloadSelectionTemplate}
+            >
+              {t('upload.selectionTemplate')}
+            </Button>
             <Button
               iconLeft={<Upload className="size-4" />}
               loading={uploading}

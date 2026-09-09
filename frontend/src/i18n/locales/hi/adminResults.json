@@ -46,7 +46,9 @@
     "selectedNotified": "चयनित और सूचित:",
     "alreadySelected": "पहले से चयनित:",
     "noMatch": "कोई मिलान उपयोगकर्ता नहीं:",
-    "unmatchedEmails": "बेमेल ईमेल: {{emails}}"
+    "unmatchedEmails": "बेमेल ईमेल: {{emails}}",
+    "selectionTemplate": "टेम्पलेट डाउनलोड करें",
+    "selectionTemplateHint": "ईमेल पतों का एक कॉलम — बाकी कॉलम अनदेखे किए जाते हैं।"
   },
   "selectionTable": {
     "colUser": "उपयोगकर्ता",

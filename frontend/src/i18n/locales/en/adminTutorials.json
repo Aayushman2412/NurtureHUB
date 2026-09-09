@@ -140,5 +140,20 @@
     "failed": "The copy failed.",
     "stateLabel": "state",
     "note": "This is a copy, not a live link — each project can then edit its copy independently. Tests are not copied (they carry their own schedules and results). For a permanently shared syllabus, set the district to inherit its state's content on the Projects screen instead."
+  },
+  "quizSheet": {
+    "button": "Quiz Sheet",
+    "modalTitle": "Quiz questions by sheet",
+    "intro": "One sheet carries the post-video quiz for every video in the project. Rows are matched to a video by Phase number and Video Title, so you can author a whole phase at once.",
+    "rules": "Phase, Video Title, Question Text and Options A and B are required; C and D are optional. Each video's quiz is replaced by the rows naming it — a video the sheet does not mention is left untouched.",
+    "downloadTemplate": "Download template",
+    "export": "Export current quizzes",
+    "upload": "Upload sheet",
+    "close": "Close",
+    "applied": "Updated {{videos}} video(s) — {{questions}} question(s) written.",
+    "questionCount": "{{n}} question(s)",
+    "rowsSkipped": "{{n}} row(s) skipped",
+    "rowLabel": "Row {{n}}:",
+    "parseError": "That file could not be read as a quiz sheet."
   }
 }
