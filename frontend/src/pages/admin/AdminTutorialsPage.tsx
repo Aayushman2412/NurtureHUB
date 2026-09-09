@@ -125,6 +125,10 @@ const AdminTutorialsPage: React.FC = () => {
   const [showAddStage, setShowAddStage] = useState(false);
   const [showAddTutorial, setShowAddTutorial] = useState<number | null>(null);
   const [previewVideoId, setPreviewVideoId] = useState<string>('');
+  // Which row the player belongs under. The player used to sit above every
+  // phase, so on a long page you clicked a video near the bottom and the
+  // preview appeared off-screen at the top.
+  const [previewTutorialId, setPreviewTutorialId] = useState<number | null>(null);
   const [previewStart, setPreviewStart] = useState(0);
   const [previewEnd, setPreviewEnd] = useState(0);
 
@@ -338,7 +342,8 @@ const AdminTutorialsPage: React.FC = () => {
     }
   };
 
-  const openPreview = (url: string, start: number, end: number) => {
+  const openPreview = (url: string, start: number, end: number, tutorialId: number | null = null) => {
+    setPreviewTutorialId(tutorialId);
     const videoId = extractYouTubeId(url);
     if (videoId) {
       setPreviewVideoId(videoId);
@@ -430,6 +435,39 @@ const AdminTutorialsPage: React.FC = () => {
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{fields}</div>
   );
 
+  /** The YouTube clip player. Rendered inline under the row it was opened
+   *  from, so a preview never appears off-screen at the top of a long page. */
+  const previewPlayer = (extraClass = '') => (
+    <Card className={`p-5 ${extraClass}`}>
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="flex items-center gap-2 font-display font-bold text-ink">
+          <Play className="size-4 text-coral-600 dark:text-coral-300" /> {t('preview.title')}
+        </h3>
+        <button
+          className={iconBtn}
+          onClick={() => { setPreviewVideoId(''); setPreviewTutorialId(null); }}
+        >
+          <X className="size-4.5" />
+        </button>
+      </div>
+      <div className="aspect-video overflow-hidden rounded-lg bg-black">
+        <iframe
+          src={`https://www.youtube.com/embed/${previewVideoId}?start=${previewStart}&end=${previewEnd}&autoplay=1`}
+          allow="autoplay; encrypted-media"
+          allowFullScreen
+          className="size-full"
+        />
+      </div>
+      <p className="mt-2 text-[13px] text-ink-muted">
+        {t('preview.clip', {
+          start: formatTime(previewStart),
+          end: formatTime(previewEnd),
+          duration: formatTime(previewEnd - previewStart),
+        })}
+      </p>
+    </Card>
+  );
+
   return (
     <div>
       <PageHeader
@@ -456,34 +494,10 @@ const AdminTutorialsPage: React.FC = () => {
 
       <input ref={bulkFileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleBulkFile} />
 
-      {/* Video preview */}
-      {previewVideoId && (
-        <Card className="mb-6 p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="flex items-center gap-2 font-display font-bold text-ink">
-              <Play className="size-4 text-coral-600 dark:text-coral-300" /> {t('preview.title')}
-            </h3>
-            <button className={iconBtn} onClick={() => setPreviewVideoId('')}>
-              <X className="size-4.5" />
-            </button>
-          </div>
-          <div className="aspect-video overflow-hidden rounded-lg bg-black">
-            <iframe
-              src={`https://www.youtube.com/embed/${previewVideoId}?start=${previewStart}&end=${previewEnd}&autoplay=1`}
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-              className="size-full"
-            />
-          </div>
-          <p className="mt-2 text-[13px] text-ink-muted">
-            {t('preview.clip', {
-              start: formatTime(previewStart),
-              end: formatTime(previewEnd),
-              duration: formatTime(previewEnd - previewStart),
-            })}
-          </p>
-        </Card>
-      )}
+
+      {/* The player for a preview opened from OUTSIDE a row (the add-video
+          form). Row previews render inline, under the row itself. */}
+      {previewVideoId && previewTutorialId === null && previewPlayer('mb-6')}
 
       <Alert variant="info" className="mb-4">{t('stage.orderNote')}</Alert>
 
@@ -661,7 +675,7 @@ const AdminTutorialsPage: React.FC = () => {
                         {tut.youtube_url && (
                           <button
                             className={iconBtn}
-                            onClick={() => openPreview(tut.youtube_url, tut.start_seconds, tut.end_seconds)}
+                            onClick={() => openPreview(tut.youtube_url, tut.start_seconds, tut.end_seconds, tut.id)}
                             title={t('tutorial.preview')}
                           >
                             <Play className="size-3.5" />
@@ -679,6 +693,10 @@ const AdminTutorialsPage: React.FC = () => {
                         </button>
                       </div>
                     </div>
+
+                    {previewVideoId && previewTutorialId === tut.id && (
+                      <div className="mt-3">{previewPlayer()}</div>
+                    )}
 
                     {editingTutorial === tut.id && (
                       <div className="mt-4 border-t border-border pt-4">
