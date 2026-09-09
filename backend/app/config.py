@@ -365,10 +365,14 @@ class Settings(BaseSettings):
             errors.append("RAW_EXPORT_MOCK must be false in production — it fabricates data.")
         if self.SEED_DEMO_DATA:
             errors.append("SEED_DEMO_DATA must be false in production.")
-        if self.DPO_EMAIL == "privacy@nurturehub.org":
+        # Empty counts as unset, not as "not the placeholder". docker-compose passes
+        # ${DPO_EMAIL:-}, so an unconfigured deployment arrives here with "" rather
+        # than the default — which used to sail past this check and publish a blank
+        # contact on /privacy.
+        if not self.DPO_EMAIL.strip() or self.DPO_EMAIL.strip() == "privacy@nurturehub.org":
             errors.append(
-                "DPO_EMAIL is still the placeholder. The DPDP Act requires a published contact "
-                "for the person answering data-principal requests."
+                "DPO_EMAIL is unset or still the placeholder. The DPDP Act requires a published "
+                "contact for the person answering data-principal requests."
             )
         if "*" in self.cors_origins_list:
             errors.append("CORS_ORIGINS must not contain '*' — name the real frontend origins.")
