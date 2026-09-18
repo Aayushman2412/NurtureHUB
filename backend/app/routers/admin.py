@@ -395,10 +395,13 @@ def list_projects(db: Session = Depends(get_db), admin_email: str = Depends(get_
     for row in all_rows:
         if row.parent_id:
             continue  # emitted inside its parent
+        kids = sorted(children_by_parent.get(row.id, []), key=lambda c: (c.name or "").lower())
+        child_sum = sum(counts.get(child.id, 0) for child in kids)
+        total_user_count = counts.get(row.id, 0) + child_sum if row.is_state else counts.get(row.id, 0)
         data = projects.serialize(
             db, row,
-            user_count=counts.get(row.id, 0),
-            children=sorted(children_by_parent.get(row.id, []), key=lambda c: (c.name or "").lower()),
+            user_count=total_user_count,
+            children=kids,
         )
         for child in data.get("children", []):
             child["user_count"] = counts.get(child["id"], 0)

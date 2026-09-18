@@ -210,18 +210,56 @@ def _ensure_geography(db: Session, district_slug: str) -> Tuple[int, int, List[i
 
 
 def _get_or_create_program_district(db: Session, slug: str) -> ProgramDistrict:
+    # If slug is meghalaya or khasi, ensure both parent state Meghalaya and child district Khasi exist.
+    # Learners belong to the concrete district Khasi (East Khasi Hills).
+    if slug in ("meghalaya", "khasi"):
+        state_pd = db.query(ProgramDistrict).filter(ProgramDistrict.slug == "meghalaya").first()
+        if not state_pd:
+            state_pd = ProgramDistrict(
+                name="Meghalaya",
+                slug="meghalaya",
+                code="ML",
+                state_prefix="ML",
+                level="state",
+                is_active=True,
+            )
+            db.add(state_pd)
+            db.commit()
+
+        district_pd = (
+            db.query(ProgramDistrict)
+            .filter((ProgramDistrict.slug == "khasi") | (func.lower(ProgramDistrict.name) == "khasi"))
+            .first()
+        )
+        if not district_pd:
+            district_pd = ProgramDistrict(
+                name="Khasi",
+                slug="khasi",
+                code="KH",
+                state_prefix="ML",
+                level="district",
+                parent_id=state_pd.id,
+                inherits_content=True,
+                is_active=True,
+            )
+            db.add(district_pd)
+            db.commit()
+        elif not district_pd.parent_id:
+            district_pd.parent_id = state_pd.id
+            db.commit()
+        return district_pd
+
     pd = db.query(ProgramDistrict).filter(ProgramDistrict.slug == slug).first()
     if not pd:
-        name_map = {"jalna": "Jalna", "ujjain": "Ujjain", "meghalaya": "Meghalaya"}
-        code_map = {"jalna": "JL", "ujjain": "UJ", "meghalaya": "ML"}
-        prefix_map = {"jalna": "MH", "ujjain": "MP", "meghalaya": "ML"}
-        level_map = {"jalna": "district", "ujjain": "district", "meghalaya": "state"}
+        name_map = {"jalna": "Jalna", "ujjain": "Ujjain"}
+        code_map = {"jalna": "JL", "ujjain": "UJ"}
+        prefix_map = {"jalna": "MH", "ujjain": "MP"}
         pd = ProgramDistrict(
             name=name_map.get(slug, slug.capitalize()),
             slug=slug,
             code=code_map.get(slug, slug[:2].upper()),
             state_prefix=prefix_map.get(slug, slug[:2].upper()),
-            level=level_map.get(slug, "district"),
+            level="district",
             is_active=True,
         )
         db.add(pd)
@@ -238,7 +276,10 @@ def remove_mock_data(db: Session, districts: Optional[List[str]] = None):
     print("Purging existing mock learners...")
     query = db.query(User).filter(User.email.like(f"%@{MOCK_EMAIL_DOMAIN}"))
     if districts:
-        pds = db.query(ProgramDistrict).filter(ProgramDistrict.slug.in_(districts)).all()
+        expanded_districts = list(districts)
+        if "meghalaya" in expanded_districts and "khasi" not in expanded_districts:
+            expanded_districts.append("khasi")
+        pds = db.query(ProgramDistrict).filter(ProgramDistrict.slug.in_(expanded_districts)).all()
         pd_ids = [p.id for p in pds]
         if pd_ids:
             query = query.filter(User.program_district_id.in_(pd_ids))
