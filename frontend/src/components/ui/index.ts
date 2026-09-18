@@ -41,3 +41,5 @@ export { default as Alert } from './Alert';
 export { default as Dropdown } from './Dropdown';
 export { default as Skeleton } from './Skeleton';
 export { default as Stepper } from './Stepper';
+export { Pagination, default as PaginationDefault } from './Pagination';
+export type { PaginationProps } from './Pagination';

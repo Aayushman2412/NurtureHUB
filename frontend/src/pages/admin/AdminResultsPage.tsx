@@ -10,7 +10,7 @@ import { getProjectSlug, PROJECT_EVENT } from '../../lib/adminProject';
 import * as XLSX from 'xlsx';
 import {
   Badge, Button, Card, EmptyState, Input, PageHeader, PageLoader,
-  Table, TBody, Td, Th, THead, Tr,
+  Pagination, Table, TBody, Td, Th, THead, Tr,
 } from '../../components/ui';
 import { useToast } from '../../context/ToastContext';
 import { cn } from '../../utils/cn';
@@ -41,21 +41,21 @@ interface TestResult {
   attempts_count: number;
   best_score: number | null;
   is_passed: boolean;
-  last_submitted_at: string | null;
   max_risk_score: number;
+  was_flagged: boolean;
   tab_switches: number;
   fullscreen_exits: number;
   copy_paste_events: number;
-  was_flagged: boolean;
 }
 
-interface UserRow {
+interface UserResultRow {
   user_id: number;
   name: string;
   email: string;
+  completed_flow: boolean;
   summary: {
-    tutorials_completed: number;
     total_tutorials: number;
+    tutorials_completed: number;
     avg_watch_pct: number;
     quizzes_completed: number;
     quizzes_skipped: number;
@@ -63,8 +63,11 @@ interface UserRow {
     performance_score: number;
   };
   tests: Record<string, TestResult>;
-  completed_flow: boolean;
-  face_to_face: { selected: boolean; selected_at: string | null; notified: boolean };
+  face_to_face: {
+    selected: boolean;
+    selected_at: string | null;
+    uploaded_by: string | null;
+  };
 }
 
 interface ResultsData {
@@ -72,31 +75,30 @@ interface ResultsData {
   district_name: string;
   tutorials: TutorialMeta[];
   tests: TestMeta[];
-  users: UserRow[];
+  users: UserResultRow[];
 }
 
 interface Selection {
+  id: number;
   user_id: number;
   name: string;
   email: string;
-  uploaded_by: string;
-  notified: boolean;
   selected_at: string | null;
+  uploaded_by: string | null;
+  notified: boolean;
 }
 
 interface UploadSummary {
   matched: string[];
-  unmatched: string[];
   already_selected: string[];
+  unmatched: string[];
 }
 
-const testLabel = (test: TestMeta, t: TFunction) =>
-  test.test_type === 'formative'
-    ? t('testType.formative')
-    : test.test_type === 'screening'
-      ? t('testType.screening')
-      : test.title;
-
+function testLabel(test: TestMeta, t: TFunction): string {
+  if (test.test_type === 'formative') return t('testType.formative');
+  if (test.test_type === 'screening') return t('testType.screening');
+  return test.title;
+}
 
 const scoreColor = (score: number) =>
   score >= 75 ? 'text-success-600' : score >= 45 ? 'text-amber-600' : 'text-error-600';
@@ -108,6 +110,10 @@ const AdminResultsPage: React.FC = () => {
   const [selections, setSelections] = useState<Selection[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [resultsPage, setResultsPage] = useState(1);
+  const [resultsPageSize, setResultsPageSize] = useState(25);
+  const [f2fPage, setF2fPage] = useState(1);
+  const [f2fPageSize, setF2fPageSize] = useState(10);
   const [uploadSummary, setUploadSummary] = useState<UploadSummary | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -131,7 +137,11 @@ const AdminResultsPage: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-    const handleDistrictChange = () => fetchData();
+    const handleDistrictChange = () => {
+      setResultsPage(1);
+      setF2fPage(1);
+      fetchData();
+    };
     window.addEventListener(PROJECT_EVENT, handleDistrictChange);
     return () => window.removeEventListener(PROJECT_EVENT, handleDistrictChange);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -141,6 +151,16 @@ const AdminResultsPage: React.FC = () => {
     !search ||
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const paginatedUsers = filteredUsers.slice(
+    (resultsPage - 1) * resultsPageSize,
+    resultsPage * resultsPageSize,
+  );
+
+  const paginatedSelections = selections.slice(
+    (f2fPage - 1) * f2fPageSize,
+    f2fPage * f2fPageSize,
   );
 
   const downloadExcel = () => {
@@ -289,7 +309,10 @@ const AdminResultsPage: React.FC = () => {
           leftIcon={<Search className="size-4" />}
           placeholder={t('searchPlaceholder')}
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => {
+            setSearch(e.target.value);
+            setResultsPage(1);
+          }}
         />
       </div>
 
@@ -301,7 +324,7 @@ const AdminResultsPage: React.FC = () => {
           description={t('empty.usersBody')}
         />
       ) : (
-        <div className="mb-8">
+        <div className="mb-8 space-y-3">
           <Table density="compact">
             <THead>
               <Tr>
@@ -316,7 +339,7 @@ const AdminResultsPage: React.FC = () => {
               </Tr>
             </THead>
             <TBody>
-              {filteredUsers.map(u => (
+              {paginatedUsers.map(u => (
                 <Tr key={u.user_id}>
                   <Td className="sticky left-0 z-10 whitespace-nowrap bg-surface">
                     <div className="font-semibold text-ink">{u.name}</div>
@@ -372,6 +395,15 @@ const AdminResultsPage: React.FC = () => {
               ))}
             </TBody>
           </Table>
+          <Pagination
+            currentPage={resultsPage}
+            totalItems={filteredUsers.length}
+            pageSize={resultsPageSize}
+            onPageChange={setResultsPage}
+            onPageSizeChange={setResultsPageSize}
+            pageSizeOptions={[10, 25, 50, 100]}
+            itemLabel="learners"
+          />
         </div>
       )}
 
@@ -439,41 +471,52 @@ const AdminResultsPage: React.FC = () => {
           description={t('empty.selectionsBody')}
         />
       ) : (
-        <Table density="compact">
-          <THead>
-            <Tr>
-              <Th>{t('selectionTable.colUser')}</Th>
-              <Th>{t('selectionTable.colEmail')}</Th>
-              <Th>{t('selectionTable.colSelectedAt')}</Th>
-              <Th>{t('selectionTable.colUploadedBy')}</Th>
-              <Th>{t('selectionTable.colNotified')}</Th>
-              <Th className="w-16 text-center">{t('selectionTable.colRemove')}</Th>
-            </Tr>
-          </THead>
-          <TBody>
-            {selections.map(sel => (
-              <Tr key={sel.user_id}>
-                <Td className="font-semibold text-ink">{sel.name}</Td>
-                <Td className="text-ink-muted">{sel.email}</Td>
-                <Td className="text-ink-muted">{sel.selected_at ? new Date(sel.selected_at).toLocaleString() : '—'}</Td>
-                <Td className="text-ink-muted">{sel.uploaded_by || '—'}</Td>
-                <Td>{sel.notified ? <span className="text-success-600">{t('selectionTable.yes')}</span> : t('selectionTable.no')}</Td>
-                <Td className="text-center">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label={t('selectionTable.removeAria')}
-                    title={t('selectionTable.removeAria')}
-                    className="text-error-600 hover:text-error-600"
-                    onClick={() => removeSelection(sel.user_id)}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </Td>
+        <div className="space-y-3">
+          <Table density="compact">
+            <THead>
+              <Tr>
+                <Th>{t('selectionTable.colUser')}</Th>
+                <Th>{t('selectionTable.colEmail')}</Th>
+                <Th>{t('selectionTable.colSelectedAt')}</Th>
+                <Th>{t('selectionTable.colUploadedBy')}</Th>
+                <Th>{t('selectionTable.colNotified')}</Th>
+                <Th className="w-16 text-center">{t('selectionTable.colRemove')}</Th>
               </Tr>
-            ))}
-          </TBody>
-        </Table>
+            </THead>
+            <TBody>
+              {paginatedSelections.map(sel => (
+                <Tr key={sel.user_id}>
+                  <Td className="font-semibold text-ink">{sel.name}</Td>
+                  <Td className="text-ink-muted">{sel.email}</Td>
+                  <Td className="text-ink-muted">{sel.selected_at ? new Date(sel.selected_at).toLocaleString() : '—'}</Td>
+                  <Td className="text-ink-muted">{sel.uploaded_by || '—'}</Td>
+                  <Td>{sel.notified ? <span className="text-success-600">{t('selectionTable.yes')}</span> : t('selectionTable.no')}</Td>
+                  <Td className="text-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={t('selectionTable.removeAria')}
+                      title={t('selectionTable.removeAria')}
+                      className="text-error-600 hover:text-error-600"
+                      onClick={() => removeSelection(sel.user_id)}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </Td>
+                </Tr>
+              ))}
+            </TBody>
+          </Table>
+          <Pagination
+            currentPage={f2fPage}
+            totalItems={selections.length}
+            pageSize={f2fPageSize}
+            onPageChange={setF2fPage}
+            onPageSizeChange={setF2fPageSize}
+            pageSizeOptions={[10, 25, 50]}
+            itemLabel="selections"
+          />
+        </div>
       )}
     </div>
   );

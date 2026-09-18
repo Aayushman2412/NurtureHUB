@@ -11,6 +11,7 @@ import {
   Input,
   PageHeader,
   PageLoader,
+  Pagination,
   Table,
   THead,
   TBody,
@@ -97,7 +98,8 @@ const AdminTutorialTrackingPage: React.FC = () => {
   const [data, setData] = useState<TrackingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const fetchData = () => {
     setLoading(true);
@@ -112,7 +114,10 @@ const AdminTutorialTrackingPage: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-    const handleDistrictChange = () => fetchData();
+    const handleDistrictChange = () => {
+      setPage(1);
+      fetchData();
+    };
     window.addEventListener(PROJECT_EVENT, handleDistrictChange);
     return () => window.removeEventListener(PROJECT_EVENT, handleDistrictChange);
   }, []);
@@ -122,6 +127,11 @@ const AdminTutorialTrackingPage: React.FC = () => {
       !search ||
       u.name.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const paginatedUsers = filteredUsers.slice(
+    (page - 1) * pageSize,
+    page * pageSize,
   );
 
   const downloadExcel = () => {
@@ -199,7 +209,10 @@ const AdminTutorialTrackingPage: React.FC = () => {
           leftIcon={<Search className="size-4" />}
           placeholder={t('tracking.searchPlaceholder')}
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
         />
       </div>
 
@@ -210,66 +223,77 @@ const AdminTutorialTrackingPage: React.FC = () => {
           description={t('tracking.emptyBody')}
         />
       ) : (
-        <Table
-          density="compact"
-          className="min-w-max"
-          style={{ minWidth: `${520 + data!.tutorials.length * 160}px` }}
-        >
-          <THead>
-            <Tr>
-              <Th className="sticky left-0 z-10 bg-surface-sunken text-left">{t('tracking.colUser')}</Th>
-              {data!.tutorials.map((tut) => (
-                <Th key={tut.id} className="whitespace-nowrap text-center" title={`${tut.stage_title} — ${tut.title}`}>
-                  {tut.module_number || tut.title}
-                  {tut.has_quiz && <span className="text-primary-ink"> ?</span>}
-                </Th>
-              ))}
-              <Th className="text-center">{t('tracking.colAvgWatch')}</Th>
-              <Th className="text-center">{t('tracking.colQuizzes')}</Th>
-              <Th className="text-center">{t('tracking.colPerformance')}</Th>
-            </Tr>
-          </THead>
-          <TBody>
-            {filteredUsers.map((u) => (
-              <Tr key={u.user_id}>
-                <Td className="sticky left-0 z-10 whitespace-nowrap bg-surface">
-                  <div className="font-semibold text-ink">{u.name}</div>
-                  <div className="text-xs text-ink-faint">{u.email}</div>
-                </Td>
-                {data!.tutorials.map((tut) => {
-                  const p = u.tutorials[String(tut.id)];
-                  const pct = p?.watch_pct || 0;
-                  return (
-                    <Td key={tut.id} className="whitespace-nowrap text-center">
-                      <div className={`font-bold ${pctColorClass(pct)}`}>{Math.round(pct)}%</div>
-                      <div className="text-[0.7rem] text-ink-faint">
-                        {fmtWatchTime(p?.watch_time_seconds || 0)}
-                        {tut.has_quiz && <> • {p ? quizCell(p, tut, t) : t('tracking.pending')}</>}
-                      </div>
-                    </Td>
-                  );
-                })}
-                <Td className="text-center font-bold text-ink">{u.summary.avg_watch_pct}%</Td>
-                <Td className="whitespace-nowrap text-center text-[0.8125rem]">
-                  <span className="text-success-600" title={t('tracking.answered')}>
-                    <CheckCircle2 className="mb-0.5 inline size-3" /> {u.summary.quizzes_completed}
-                  </span>
-                  {' / '}
-                  <span className="text-error-600" title={t('tracking.skipped')}>
-                    <SkipForward className="mb-0.5 inline size-3" /> {u.summary.quizzes_skipped}
-                  </span>
-                  <div className="text-[0.7rem] text-ink-faint">{t('tracking.accuracy', { n: u.summary.quiz_accuracy_pct })}</div>
-                </Td>
-                <Td className="text-center">
-                  <span className={`font-display text-base font-extrabold ${scoreColorClass(u.summary.performance_score)}`}>
-                    {u.summary.performance_score}
-                  </span>
-                  <span className="text-[0.7rem] text-ink-faint"> {t('tracking.outOf100')}</span>
-                </Td>
+        <div className="space-y-3">
+          <Table
+            density="compact"
+            className="min-w-max"
+            style={{ minWidth: `${520 + data!.tutorials.length * 160}px` }}
+          >
+            <THead>
+              <Tr>
+                <Th className="sticky left-0 z-10 bg-surface-sunken text-left">{t('tracking.colUser')}</Th>
+                {data!.tutorials.map((tut) => (
+                  <Th key={tut.id} className="whitespace-nowrap text-center" title={`${tut.stage_title} — ${tut.title}`}>
+                    {tut.module_number || tut.title}
+                    {tut.has_quiz && <span className="text-primary-ink"> ?</span>}
+                  </Th>
+                ))}
+                <Th className="text-center">{t('tracking.colAvgWatch')}</Th>
+                <Th className="text-center">{t('tracking.colQuizzes')}</Th>
+                <Th className="text-center">{t('tracking.colPerformance')}</Th>
               </Tr>
-            ))}
-          </TBody>
-        </Table>
+            </THead>
+            <TBody>
+              {paginatedUsers.map((u) => (
+                <Tr key={u.user_id}>
+                  <Td className="sticky left-0 z-10 whitespace-nowrap bg-surface">
+                    <div className="font-semibold text-ink">{u.name}</div>
+                    <div className="text-xs text-ink-faint">{u.email}</div>
+                  </Td>
+                  {data!.tutorials.map((tut) => {
+                    const p = u.tutorials[String(tut.id)];
+                    const pct = p?.watch_pct || 0;
+                    return (
+                      <Td key={tut.id} className="whitespace-nowrap text-center">
+                        <div className={`font-bold ${pctColorClass(pct)}`}>{Math.round(pct)}%</div>
+                        <div className="text-[0.7rem] text-ink-faint">
+                          {fmtWatchTime(p?.watch_time_seconds || 0)}
+                          {tut.has_quiz && <> • {p ? quizCell(p, tut, t) : t('tracking.pending')}</>}
+                        </div>
+                      </Td>
+                    );
+                  })}
+                  <Td className="text-center font-bold text-ink">{u.summary.avg_watch_pct}%</Td>
+                  <Td className="whitespace-nowrap text-center text-[0.8125rem]">
+                    <span className="text-success-600" title={t('tracking.answered')}>
+                      <CheckCircle2 className="mb-0.5 inline size-3" /> {u.summary.quizzes_completed}
+                    </span>
+                    {' / '}
+                    <span className="text-error-600" title={t('tracking.skipped')}>
+                      <SkipForward className="mb-0.5 inline size-3" /> {u.summary.quizzes_skipped}
+                    </span>
+                    <div className="text-[0.7rem] text-ink-faint">{t('tracking.accuracy', { n: u.summary.quiz_accuracy_pct })}</div>
+                  </Td>
+                  <Td className="text-center">
+                    <span className={`font-display text-base font-extrabold ${scoreColorClass(u.summary.performance_score)}`}>
+                      {u.summary.performance_score}
+                    </span>
+                    <span className="text-[0.7rem] text-ink-faint"> {t('tracking.outOf100')}</span>
+                  </Td>
+                </Tr>
+              ))}
+            </TBody>
+          </Table>
+          <Pagination
+            currentPage={page}
+            totalItems={filteredUsers.length}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[10, 25, 50, 100]}
+            itemLabel="learners"
+          />
+        </div>
       )}
 
       <p className="mt-3 text-xs text-ink-faint">
