@@ -16,7 +16,7 @@ import client from '../../api/client';
 import {
   Button, Card, Badge, Modal, Table, THead, TBody, Tr, Th, Td,
   StatCard, Input, Select, Chip, EmptyState, PageHeader, Spinner, Avatar,
-  inputClasses,
+  inputClasses, Pagination,
 } from '../../components/ui';
 import type { BadgeVariant } from '../../components/ui';
 import { cn } from '../../utils/cn';
@@ -121,6 +121,11 @@ const AdminLiveMonitorPage: React.FC = () => {
   const [showActionModal, setShowActionModal] = useState<{ type: string; candidate: CandidateState } | null>(null);
   const [actionNotes, setActionNotes] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  // Only one page of candidates is drawn. At thousands of candidates, drawing
+  // every card on every live update would freeze the browser; sorted by risk
+  // (the default), page 1 is exactly the candidates that need watching.
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(60);
 
   // Stats from REST (polled every 10s for aggregate metrics)
   const [stats, setStats] = useState<any>(null);
@@ -179,6 +184,14 @@ const AdminLiveMonitorPage: React.FC = () => {
 
     return list;
   }, [candidateList, searchQuery, sortField, sortOrder, statusFilter]);
+
+  useEffect(() => { setPage(1); }, [searchQuery, sortField, sortOrder, statusFilter, pageSize]);
+  const pageCount = Math.max(1, Math.ceil(filteredCandidates.length / pageSize));
+  const safePage = Math.min(page, pageCount);
+  const pagedCandidates = useMemo(
+    () => filteredCandidates.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [filteredCandidates, safePage, pageSize],
+  );
 
   // ── Candidate detail ──
   const openCandidateDetail = useCallback((candidate: CandidateState) => {
@@ -461,7 +474,7 @@ const AdminLiveMonitorPage: React.FC = () => {
         />
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-          {filteredCandidates.map(candidate => (
+          {pagedCandidates.map(candidate => (
             <Card
               key={candidate.session_id}
               interactive
@@ -567,7 +580,7 @@ const AdminLiveMonitorPage: React.FC = () => {
                 </Tr>
               </THead>
               <TBody>
-                {filteredCandidates.map(candidate => (
+                {pagedCandidates.map(candidate => (
                   <Tr
                     key={candidate.session_id}
                     clickable
@@ -625,6 +638,18 @@ const AdminLiveMonitorPage: React.FC = () => {
             </Table>
           </div>
         </Card>
+      )}
+
+      {filteredCandidates.length > 0 && (
+        <Pagination
+          currentPage={safePage}
+          totalItems={filteredCandidates.length}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[30, 60, 120, 240]}
+          itemLabel="candidates"
+        />
       )}
 
       {/* ── Candidate Detail Modal ── */}

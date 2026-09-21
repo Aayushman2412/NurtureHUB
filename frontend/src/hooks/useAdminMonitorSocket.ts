@@ -177,6 +177,22 @@ export function useAdminMonitorSocket(testId: number): UseAdminMonitorSocketRetu
               break;
             }
 
+            // The server coalesces candidate updates into one batch per second
+            // (latest state per candidate). Applying the whole batch in ONE
+            // state update is what keeps the page responsive at thousands of
+            // candidates — one re-render a second instead of hundreds.
+            case 'CANDIDATE_BATCH': {
+              const batch = (msg.data || []) as CandidateState[];
+              if (batch.length === 0) break;
+              updateCandidates(map => {
+                for (const candidate of batch) {
+                  map.set(candidate.session_id, candidate);
+                }
+                return map;
+              });
+              break;
+            }
+
             case 'CANDIDATE_UPDATE':
             case 'CANDIDATE_CONNECTED': {
               const candidate = msg.data as CandidateState;

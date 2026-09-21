@@ -116,6 +116,11 @@ const ActiveTestPage: React.FC = () => {
   const [answers, setAnswers] = useState<AnswerState>(getPersistedAnswers);
   const [timeRemaining, setTimeRemaining] = useState(initialRemaining);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Set while a submission is being retried after a network or server error.
+  const [submitRetry, setSubmitRetry] = useState(0);
+  // One submission at a time: the timer, an admin force-submit and the button
+  // can all fire, and only the first should run.
+  const submittingRef = useRef(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const timerRef = useRef<any>(null);
@@ -199,6 +204,8 @@ const ActiveTestPage: React.FC = () => {
   };
 
   const performSubmission = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setIsSubmitting(true);
 
     // Format answers array
@@ -213,18 +220,50 @@ const ActiveTestPage: React.FC = () => {
 
     const timeUsed = duration_minutes * 60 - timeRemaining;
 
-    try {
-      const response = await submitAttempt(attempt_id, {
-        answers: formattedAnswers,
-        time_used_seconds: timeUsed,
-      });
+    const payload = { answers: formattedAnswers, time_used_seconds: timeUsed };
 
-      showToast(t('active.toastSubmitted'), 'success');
-      navigate(`/tests/${id}/submitted`, { state: { resultData: response, testTitle } });
-    } catch (err: any) {
-      showToast(t('active.toastSubmitError'), 'error');
-      setIsSubmitting(false);
-      setShowConfirm(false);
+    // A whole district submits within seconds of each other when the time runs
+    // out, so some tries WILL hit a busy server or a dropped signal. Retry with
+    // growing, randomised gaps (so thousands of devices don't retry in step),
+    // honouring the server's Retry-After. The answers stay saved on the device
+    // throughout, and the server's own safety net scores the live copy if the
+    // device never gets through at all.
+    const delays = [1, 2, 3, 5, 8, 12, 18, 25, 30, 40];
+    for (let attemptNo = 0; ; attemptNo++) {
+      try {
+        const response = await submitAttempt(attempt_id, payload);
+        setSubmitRetry(0);
+        showToast(t('active.toastSubmitted'), 'success');
+        navigate(`/tests/${id}/submitted`, { state: { resultData: response, testTitle } });
+        return;
+      } catch (err: any) {
+        const status: number | undefined = err?.response?.status;
+        const detail = String(err?.response?.data?.detail || '');
+
+        // An earlier try (whose reply we lost) or the server's safety net got
+        // there first: the paper IS in. Show the result rather than an error.
+        if (status === 400 && /already been submitted/i.test(detail)) {
+          setSubmitRetry(0);
+          showToast(t('active.toastSubmitted'), 'success');
+          navigate(`/results/${attempt_id}`);
+          return;
+        }
+
+        const retryable = status === undefined || status >= 500 || status === 429 || status === 408;
+        if (!retryable || attemptNo >= delays.length) {
+          setSubmitRetry(0);
+          showToast(t('active.toastSubmitError'), 'error');
+          setIsSubmitting(false);
+          setShowConfirm(false);
+          submittingRef.current = false;
+          return;
+        }
+
+        setSubmitRetry(attemptNo + 1);
+        const retryAfter = Number(err?.response?.headers?.['retry-after']);
+        const base = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : delays[attemptNo];
+        await new Promise(r => setTimeout(r, base * 1000 * (0.7 + Math.random() * 0.6)));
+      }
     }
   };
 
@@ -294,6 +333,18 @@ const ActiveTestPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Shown while a submission is being retried. The one instruction that
+          matters here is "don't close the page" — closing it is the only way
+          the device's copy of the answers could be lost. */}
+      {submitRetry > 0 && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed inset-x-0 bottom-0 z-50 border-t border-warning-500/40 bg-warning-50 px-4 py-3 text-center text-sm font-semibold text-ink shadow-lg dark:bg-warning-500/15"
+        >
+          {t('active.submitRetrying', { n: submitRetry })}
+        </div>
+      )}
       {/* Header — sticky so the countdown and Finish stay visible while the
           learner scrolls questions on a phone. Bleeds over AppLayout's main
           padding (keep the -mx/-mt values in sync with p-5 sm:p-6). */}

@@ -118,7 +118,8 @@
     "flaggedReview": "Flagged for Review:",
     "unanswered": "Unanswered:",
     "adminWarningTitle": "Administrator Warning",
-    "iUnderstand": "I Understand"
+    "iUnderstand": "I Understand",
+    "submitRetrying": "Saving your answers — the server is busy. Please keep this page open (try {{n}})…"
   },
   "submitted": {
     "toastNoDetails": "No submitted assessment details found.",
