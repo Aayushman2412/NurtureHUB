@@ -477,6 +477,21 @@ def seed_learners_for_district(db: Session, district_slug: str, count: int = 300
     db.commit()
     print(f"Ensured {len(seeded_users)} users in database for {pd.name}.")
 
+    # Re-runs (e.g. topping a project up from 300 to 6,000 for a load
+    # rehearsal) must not touch learners who already have history: their
+    # progress rows would collide with uq_user_tutorial, and they would be
+    # selected for face-to-face a second time. Only NEW learners get generated
+    # progress and selections.
+    user_ids = [u.id for u, _ in seeded_users]
+    already = set()
+    for start in range(0, len(user_ids), 1000):
+        chunk = user_ids[start:start + 1000]
+        already.update(uid for (uid,) in db.query(UserTutorialProgress.user_id)
+                       .filter(UserTutorialProgress.user_id.in_(chunk)).distinct().all())
+    if already:
+        print(f"Keeping existing history for {len(already)} learner(s); generating for the new ones only.")
+        seeded_users = [(u, c) for u, c in seeded_users if u.id not in already]
+
     # ─────────────────────────────────────────────────────────────────────────
     # Tutorial Progress & Quiz Responses
     # ─────────────────────────────────────────────────────────────────────────
