@@ -226,9 +226,17 @@ def _get_or_create_program_district(db: Session, slug: str) -> ProgramDistrict:
             db.add(state_pd)
             db.commit()
 
+        # Match on the code too: it is the column with the UNIQUE constraint the
+        # insert below would collide with, so an existing KH project named
+        # anything else ("east khasi", slug east-khasi) must be found, not
+        # re-created.
         district_pd = (
             db.query(ProgramDistrict)
-            .filter((ProgramDistrict.slug == "khasi") | (func.lower(ProgramDistrict.name) == "khasi"))
+            .filter(
+                (ProgramDistrict.slug == "khasi")
+                | (func.lower(ProgramDistrict.name) == "khasi")
+                | (ProgramDistrict.code == "KH")
+            )
             .first()
         )
         if not district_pd:
