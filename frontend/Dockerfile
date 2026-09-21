@@ -22,5 +22,8 @@ RUN npm run build
 # --- Stage 2: serve the static build with nginx ---
 FROM nginx:1.27-alpine AS runtime
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Main config: connection limits sized for thousands of live WebSockets
+# (the image default of 1024 per worker is not enough at exam scale).
+COPY nginx.main.conf /etc/nginx/nginx.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80

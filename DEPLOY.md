@@ -9,6 +9,11 @@ terminates TLS in front of it.
 > stop gate after each step. This file remains the reference for how the stack
 > works.
 
+> **Running a test for thousands of candidates at once?** Follow
+> [`deploy/LIVE_TESTING_AT_SCALE.md`](deploy/LIVE_TESTING_AT_SCALE.md): the
+> multi-process + Redis setup (`docker-compose.live.yml`), how to check it, a
+> 6,000-candidate rehearsal, and the exam-day checklist.
+
 > **Current rollout:** internal testing for team members (not public users yet).
 > The shipped `.env.production` runs in *relaxed* mode — simple secrets +
 > `CORS_ORIGINS=*` — which is fine for a trusted internal audience. Before a

@@ -1,0 +1,79 @@
+# Live-testing overlay: thousands of candidates writing at once, every one of
+# them visible on the admin live monitor.
+#
+# Use ON TOP of the base compose:
+#   docker compose -f docker-compose.yml -f docker-compose.live.yml up -d --build
+#
+# What it changes, and why:
+#   * redis     — the bus that lets several backend workers share live
+#                 monitoring. Without it an admin sees only the candidates on
+#                 their own worker. Holds nothing that needs keeping (pub/sub,
+#                 short leases, rate-limit counters), so persistence is off.
+#   * backend   — several uvicorn workers instead of one, so logins, starts,
+#                 live events and submissions spread across CPU cores.
+#   * db        — max_connections raised to fit every worker's pool.
+#   * ulimits   — thousands of open WebSockets need more file descriptors than
+#                 a default shell limit allows.
+#
+# Sizing (defaults below, override in .env):
+#   UVICORN_WORKERS x (DB_POOL_SIZE + DB_MAX_OVERFLOW) must stay under
+#   POSTGRES_MAX_CONNECTIONS, with some left for admin tools:
+#   12 x (10 + 20) = 360  <  400.
+#
+# Changing max_connections restarts Postgres (a few seconds) — apply this
+# overlay OUTSIDE test hours. Data lives on the db_data volume and is kept.
+
+services:
+  db:
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=${POSTGRES_MAX_CONNECTIONS:-400}"
+    # Docker's default /dev/shm is 64MB; with hundreds of connections Postgres
+    # can need more for parallel work, and running out there fails queries.
+    shm_size: 256mb
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no",
+              "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      # Rate-limit counters shared across workers (db 1, separate from the bus).
+      RATE_LIMIT_STORAGE_URI: redis://redis:6379/1
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+      DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-20}
+      # Per-ADDRESS sign-in ceiling. A whole venue on one Wi-Fi (or a mobile
+      # carrier's CGNAT) is one address, so this must fit a crowd, not a person:
+      # 6000/min lets 2,000 people behind one address in within ~20s. Guessing
+      # passwords is stopped per ACCOUNT by the lockout, not by this.
+      RATE_LIMIT_LOGIN: ${RATE_LIMIT_LOGIN:-6000/minute}
+      # Behind two nginx layers every request arrives from the frontend
+      # container's address. Without this, ALL candidates share one rate-limit
+      # bucket — the per-address ceiling above becomes a ceiling for everyone.
+      TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-true}
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000",
+              "--workers", "${UVICORN_WORKERS:-12}"]
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  frontend:
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
