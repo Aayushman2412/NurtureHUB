@@ -231,7 +231,8 @@ async def candidate_ws(websocket: WebSocket, attempt_id: int, token: str = Query
     question_map = ctx["question_map"]
 
     # ── Accept connection ──
-    if not await manager.connect_candidate(websocket, attempt_id):
+    conn_id = await manager.connect_candidate(websocket, attempt_id)
+    if not conn_id:
         # Client disconnected before we accepted; mark the just-created live
         # session disconnected and bail without noise.
         _hb_persisted.pop(session_id, None)
@@ -296,17 +297,22 @@ async def candidate_ws(websocket: WebSocket, attempt_id: int, token: str = Query
         pass
     finally:
         # ── Handle disconnection ──
-        await manager.disconnect_candidate(attempt_id)
+        # Only if this was still the CURRENT connection. A candidate whose phone
+        # dropped and reconnected (possibly to another worker) is already live
+        # on the new socket; this old socket's cleanup must neither deregister
+        # the new one nor flip their card to "disconnected".
+        is_current = await manager.disconnect_candidate(attempt_id, conn_id)
         _hb_persisted.pop(session_id, None)
-        try:
-            state = await run_in_threadpool(_candidate_mark_disconnected, session_id)
-            if state is not None:
-                await manager.broadcast_to_admins(test_id, {
-                    "type": "CANDIDATE_DISCONNECTED",
-                    "data": state,
-                })
-        except Exception:
-            pass
+        if is_current:
+            try:
+                state = await run_in_threadpool(_candidate_mark_disconnected, session_id)
+                if state is not None:
+                    await manager.broadcast_to_admins(test_id, {
+                        "type": "CANDIDATE_DISCONNECTED",
+                        "data": state,
+                    })
+            except Exception:
+                pass
 
 
 # ─────────────────────────────────────────
@@ -362,7 +368,7 @@ async def admin_monitor_ws(websocket: WebSocket, test_id: int, token: str = Quer
                 "test_title": test_title,
                 "total_questions": test_total_questions,
                 "duration_minutes": test_duration_minutes,
-                "admin_count": manager.get_admin_count(test_id),
+                "admin_count": await manager.get_admin_count(test_id),
             }
         })
     except Exception as e:

@@ -35,6 +35,7 @@ from app.security.middleware import (
 from app.security.redaction import install_log_redaction
 from app.models_live import LiveSession
 from app.ws_manager import manager
+from app.attempt_finalizer import finalize_overdue_attempts
 from app.event_processor import build_candidate_state_from_session
 
 # How often the sweeper runs, and how long a candidate can be silent before we
@@ -105,6 +106,11 @@ async def _security_sweeper():
     while True:
         try:
             await asyncio.sleep(interval)
+            # One runner across the deployment. With several workers each would
+            # otherwise run the detections itself and raise every alert N times.
+            # The lease outlives a cycle comfortably so a slow sweep keeps it.
+            if not await manager.try_lead("security_sweeper", ttl_seconds=int(interval * 3) + 30):
+                continue
             db = SessionLocal()
             try:
                 anomaly.run_detections(db)
@@ -118,6 +124,26 @@ async def _security_sweeper():
             break
         except Exception as exc:  # never let the sweeper kill the loop
             print(f"[security_sweeper] error: {exc}")
+
+
+async def _attempt_finalizer():
+    """Score attempts whose time ran out but whose browser never submitted.
+
+    See app/attempt_finalizer.py for why this exists and why it is safe. Runs on
+    ONE worker at a time; the scoring itself is off the event loop.
+    """
+    while True:
+        try:
+            await asyncio.sleep(30)
+            if not await manager.try_lead("attempt_finalizer", ttl_seconds=120):
+                continue
+            updates = await asyncio.to_thread(finalize_overdue_attempts)
+            for test_id, state in updates:
+                await manager.broadcast_to_admins(test_id, {"type": "CANDIDATE_UPDATE", "data": state})
+        except asyncio.CancelledError:
+            break
+        except Exception as exc:  # never let the loop die
+            print(f"[attempt_finalizer] error: {exc}")
 
 
 def run_migrations() -> None:
@@ -263,21 +289,29 @@ async def lifespan(app: FastAPI):
     except Exception as exc:  # never block boot on housekeeping
         print(f"WARNING: could not clean up stale pipeline runs: {exc}")
 
-    # 3. Start the live-monitoring stale-candidate sweeper
+    # 3. Live monitoring: connect to Redis when configured (required with more
+    # than one worker) and start the admin batch flusher.
+    await manager.start()
+
+    # 3b. Start the live-monitoring stale-candidate sweeper
     sweeper_task = asyncio.create_task(_stale_candidate_sweeper())
 
     # 4. Start the security sweeper (audit anchoring + detection rules)
     security_task = asyncio.create_task(_security_sweeper())
 
+    # 5. Score attempts whose time ran out but whose browser never submitted.
+    finalizer_task = asyncio.create_task(_attempt_finalizer())
+
     yield
 
     # Cleanup on shutdown
-    for task in (sweeper_task, security_task):
+    for task in (sweeper_task, security_task, finalizer_task):
         task.cancel()
         try:
             await task
         except asyncio.CancelledError:
             pass
+    await manager.stop()
 
     # Flush queued audit events before the process exits. Anything still in
     # flight goes to the spool and is re-ingested on next boot, so a restart

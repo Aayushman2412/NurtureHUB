@@ -47,6 +47,22 @@ class Settings(BaseSettings):
     # (last_heartbeat) only needs to be throttled — not done on every beat.
     WS_HEARTBEAT_PERSIST_SECONDS: int = Field(default=60, validation_alias="WS_HEARTBEAT_PERSIST_SECONDS")
 
+    # ── Live monitoring across processes ──
+    # Unset: every WebSocket lives in one process, which is exactly right for a
+    # single-worker deployment and needs nothing extra. Set (redis://host:6379/0)
+    # and each worker publishes candidate updates and admin pushes through Redis,
+    # so an admin sees every candidate no matter which worker holds their socket.
+    # REQUIRED as soon as the backend runs more than one worker — without it a
+    # monitor silently shows only the candidates on its own worker.
+    REDIS_URL: str = Field(default="", validation_alias="REDIS_URL")
+
+    # Admin screens receive candidate updates coalesced into one batch per this
+    # many seconds (latest state per candidate wins). At a few hundred candidates
+    # it is invisible; at thousands it is what keeps an admin's browser alive —
+    # hundreds of per-event messages a second, each forcing a re-render of the
+    # whole grid, would freeze the tab.
+    WS_ADMIN_BATCH_SECONDS: float = Field(default=1.0, validation_alias="WS_ADMIN_BATCH_SECONDS")
+
     # Password hashing work factor.
     #
     # This is the single biggest lever on how fast a cohort can sign in, because
