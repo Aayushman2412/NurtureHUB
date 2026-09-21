@@ -3,7 +3,7 @@ import random
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import update
 from sqlalchemy.orm import Session, selectinload
-from typing import List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 from datetime import datetime, timezone
 from app import projects
 from app.database import get_db
@@ -155,7 +155,10 @@ def start_test_attempt(id: int, current_user: User = Depends(get_verified_user),
         user_id=current_user.id,
         test_id=id,
         attempt_number=attempt_num,
-        started_at=datetime.utcnow()
+        # Timezone-aware: the column is timestamptz. A naive utcnow() is read
+        # in the DATABASE's timezone, which on a non-UTC server shifts every
+        # start time — and with it the candidate's timer.
+        started_at=datetime.now(timezone.utc)
     )
     db.add(new_attempt)
     db.commit()
@@ -234,7 +237,7 @@ def submit_test_attempt(
     # user submit) that previously both passed the read-only check above and each
     # wrote a full set of answer rows + duplicate notifications. The loser here
     # updates 0 rows and is rejected.
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     claimed = db.execute(
         update(TestAttempt)
         .where(TestAttempt.id == attempt_id, TestAttempt.submitted_at.is_(None))
@@ -245,73 +248,81 @@ def submit_test_attempt(
         raise HTTPException(status_code=400, detail="This test attempt has already been submitted")
 
     test = db.query(Test).filter(Test.id == attempt.test_id).first()
+    answers = {
+        a.question_id: (a.selected_option_id, bool(a.is_marked_for_review))
+        for a in submission.answers
+    }
+    result = score_attempt(db, attempt, test, answers, submission.time_used_seconds)
+    finish_attempt_notifications(db, current_user, test, attempt, result)
+
+    db.commit()
+    db.refresh(attempt)
+    return {"attempt_id": attempt.id, **result}
+
+
+# ─────────────────────────────────────────
+# Scoring, shared by the submit endpoint and the overdue finalizer
+# ─────────────────────────────────────────
+
+def score_attempt(db: Session, attempt: TestAttempt, test: Test,
+                  answers: Dict[int, Tuple[Optional[int], bool]],
+                  time_used_seconds: int) -> dict:
+    """Write the answer rows and the score onto an attempt.
+
+    The caller must already have CLAIMED the attempt (stamped submitted_at
+    atomically), so this can never run twice for one attempt. `answers` maps
+    question_id -> (selected_option_id, is_marked_for_review).
+    """
     questions = db.query(Question).options(
         selectinload(Question.options)
     ).filter(Question.test_id == test.id).all()
-    question_map = {q.id: q for q in questions}
-    
+
     total_marks = sum(q.marks for q in questions)
     score_earned = 0.0
     correct_count = 0
-    
-    # Process answers
-    submitted_answers_map = {ans.question_id: ans for ans in submission.answers}
-    
     for q in questions:
-        sub_ans = submitted_answers_map.get(q.id)
-        selected_option_id = sub_ans.selected_option_id if sub_ans else None
-        is_marked = sub_ans.is_marked_for_review if sub_ans else False
-        
-        is_correct = False
+        selected_option_id, is_marked = answers.get(q.id, (None, False))
         correct_option = next((opt for opt in q.options if opt.is_correct), None)
-        
-        if selected_option_id and correct_option and selected_option_id == correct_option.id:
-            is_correct = True
+        is_correct = bool(selected_option_id and correct_option
+                          and selected_option_id == correct_option.id)
+        if is_correct:
             score_earned += q.marks
             correct_count += 1
-            
-        # Create Answer record
-        answer_record = TestAnswer(
+        db.add(TestAnswer(
             attempt_id=attempt.id,
             question_id=q.id,
             selected_option_id=selected_option_id,
             is_correct=is_correct,
-            is_marked_for_review=is_marked
-        )
-        db.add(answer_record)
-        
-    # Calculate percentage score
+            is_marked_for_review=is_marked,
+        ))
+
     pct_score = (score_earned / total_marks * 100) if total_marks > 0 else 0.0
     is_passed = pct_score >= test.passing_score_pct
-    
-    # Update attempt (submitted_at already claimed atomically above)
-    attempt.submitted_at = now
     attempt.score = pct_score
     attempt.total_marks = total_marks
     attempt.is_passed = is_passed
-    attempt.time_used_seconds = submission.time_used_seconds
-    
-    # Send notification
-    status_str = "Passed" if is_passed else "Failed"
-    create_notification(
-        db,
-        current_user.id,
-        f"Test Attempt Completed: {status_str}",
-        f"You completed the test '{test.title}' with a score of {pct_score:.1f}% ({correct_count}/{len(questions)} correct).",
-        link=f"/results/{attempt.id}",
-    )
-
-    # If this was the last outstanding item, tell the user to wait for results.
-    ensure_awaiting_results_notification(db, current_user)
-
-    db.commit()
-    db.refresh(attempt)
-
+    attempt.time_used_seconds = time_used_seconds
     return {
-        "attempt_id": attempt.id,
         "score": pct_score,
         "total_marks": total_marks,
         "is_passed": is_passed,
         "correct_answers_count": correct_count,
-        "total_questions": len(questions)
+        "total_questions": len(questions),
     }
+
+
+def finish_attempt_notifications(db: Session, user: User, test: Test,
+                                 attempt: TestAttempt, result: dict,
+                                 auto: bool = False) -> None:
+    status_str = "Passed" if result["is_passed"] else "Failed"
+    how = " (submitted automatically when time ran out)" if auto else ""
+    create_notification(
+        db,
+        user.id,
+        f"Test Attempt Completed: {status_str}",
+        f"You completed the test '{test.title}'{how} with a score of "
+        f"{result['score']:.1f}% ({result['correct_answers_count']}/{result['total_questions']} correct).",
+        link=f"/results/{attempt.id}",
+    )
+    # If this was the last outstanding item, tell the user to wait for results.
+    ensure_awaiting_results_notification(db, user)
