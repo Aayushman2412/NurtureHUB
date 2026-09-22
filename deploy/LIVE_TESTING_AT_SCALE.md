@@ -181,7 +181,9 @@ docker stats --no-stream nurturehub-backend-1 nurturehub-db-1 nurturehub-redis-1
 Send me the script's output, the `docker stats` numbers and anything odd you saw.
 
 **e. Clean up afterwards** (removes the simulated attempts, and the result
-notifications they sent, and sets the test back to scheduled):
+notifications they sent, and sets the test back to scheduled). Papers written
+outside the simulation — e.g. by `scripts.complete_mock_pipeline`, the
+finished-pipeline demo on the Results page — are left alone:
 
 ```bash
 docker compose exec backend python -m scripts.simulate_live_demo --cleanup

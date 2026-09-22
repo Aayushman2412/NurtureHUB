@@ -54,7 +54,7 @@ from typing import Dict, List, Optional
 
 import websockets
 
-from sqlalchemy import String, cast, exists, select
+from sqlalchemy import String, cast, exists, or_, select
 
 from app.database import SessionLocal
 from app.flow import AWAITING_RESULTS_TITLE, is_awaiting_results
@@ -408,9 +408,18 @@ def _resolve_test(db, district: str, test_id: Optional[int]) -> Test:
 
 
 def _mock_attempt_ids(db, test_id: int) -> List[int]:
+    """The attempts this simulator made: mock learners' attempts that were
+    written live (they have a live session) or never got submitted.
+
+    A submitted attempt with no live session came through the plain test
+    endpoints — scripts.complete_mock_pipeline's finished-pipeline data, which
+    the Results page is demoed from. A rehearsal on the same test must leave
+    those alone, or its cleanup would wipe the demo."""
+    live = db.query(LiveSession.attempt_id).filter(LiveSession.test_id == test_id)
     return [a.id for a in (
         db.query(TestAttempt.id).join(User, TestAttempt.user_id == User.id)
-        .filter(TestAttempt.test_id == test_id, User.email.like(f"%{MOCK_SUFFIX}")).all()
+        .filter(TestAttempt.test_id == test_id, User.email.like(f"%{MOCK_SUFFIX}"),
+                or_(TestAttempt.id.in_(live), TestAttempt.submitted_at.is_(None))).all()
     )]
 
 
@@ -535,9 +544,17 @@ def cleanup(args):
         test = _resolve_test(db, args.district, args.test_id)
         removed = _purge_simulated(db, test.id)
         _purge_orphan_notifications(db, set())   # and any left by older runs
-        test.status = "scheduled" if test.scheduled_at else "draft"
-        test.started_at = None
-        test.ended_at = None
+        kept = db.query(TestAttempt).filter(TestAttempt.test_id == test.id,
+                                            TestAttempt.submitted_at.isnot(None)).count()
+        if kept:
+            # Other people's papers remain (e.g. the finished-pipeline demo):
+            # the test has been written, so it stays ended.
+            test.status = "ended"
+            test.ended_at = datetime.now(timezone.utc)
+        else:
+            test.status = "scheduled" if test.scheduled_at else "draft"
+            test.started_at = None
+            test.ended_at = None
         db.commit()
         print(f"Removed {removed} simulated attempt(s) from '{test.title}' and set it back to '{test.status}'.")
     finally:

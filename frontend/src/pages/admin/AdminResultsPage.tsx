@@ -120,6 +120,10 @@ const AdminResultsPage: React.FC = () => {
 
   const fetchData = () => {
     setLoading(true);
+    // A browser that has never picked a project has none yet on first render;
+    // the project switcher picks the default and fires PROJECT_EVENT, which
+    // fetches again. Asking now would only earn a 404 and a "failed" toast.
+    if (!getProjectSlug()) return;
     Promise.all([
       client.get(`/api/admin/results?district=${(getProjectSlug() ?? '')}`),
       client.get(`/api/admin/results/face-to-face?district=${(getProjectSlug() ?? '')}`),
