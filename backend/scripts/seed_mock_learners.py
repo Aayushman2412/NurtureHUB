@@ -388,6 +388,7 @@ def seed_learners_for_district(db: Session, district_slug: str, count: int = 300
 
     now = datetime.now(timezone.utc)
     seeded_users = []
+    existing_ids = set()
     face_to_face_candidates = []
 
     # Map district slug to short prefix
@@ -400,6 +401,7 @@ def seed_learners_for_district(db: Session, district_slug: str, count: int = 300
         existing = db.query(User).filter(User.email == email).first()
         if existing:
             seeded_users.append((existing, cohort_assignments[i - 1]))
+            existing_ids.add(existing.id)
             continue
 
         first_name = random.choice(names_pool["first_names"])
@@ -495,19 +497,15 @@ def seed_learners_for_district(db: Session, district_slug: str, count: int = 300
     print(f"Ensured {len(seeded_users)} users in database for {pd.name}.")
 
     # Re-runs (e.g. topping a project up from 300 to 6,000 for a load
-    # rehearsal) must not touch learners who already have history: their
-    # progress rows would collide with uq_user_tutorial, and they would be
-    # selected for face-to-face a second time. Only NEW learners get generated
-    # progress and selections.
-    user_ids = [u.id for u, _ in seeded_users]
-    already = set()
-    for start in range(0, len(user_ids), 1000):
-        chunk = user_ids[start:start + 1000]
-        already.update(uid for (uid,) in db.query(UserTutorialProgress.user_id)
-                       .filter(UserTutorialProgress.user_id.in_(chunk)).distinct().all())
-    if already:
-        print(f"Keeping existing history for {len(already)} learner(s); generating for the new ones only.")
-        seeded_users = [(u, c) for u, c in seeded_users if u.id not in already]
+    # rehearsal) must not touch learners who were already here — not even the
+    # ones with no history yet. "Inactive, never opened a video" is part of the
+    # cohort people demo with, and generating activity for them now would
+    # quietly rewrite it (and could not be undone by removing the top-up).
+    # Only learners created in THIS run get progress and selections.
+    if existing_ids:
+        print(f"Keeping {len(existing_ids)} existing learner(s) exactly as they are; "
+              "generating history for the new ones only.")
+        seeded_users = [(u, c) for u, c in seeded_users if u.id not in existing_ids]
 
     # ─────────────────────────────────────────────────────────────────────────
     # Tutorial Progress & Quiz Responses

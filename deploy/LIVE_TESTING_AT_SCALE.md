@@ -148,8 +148,18 @@ formative test → Monitor Live. Keep it open for the next step.
 typical finish ~8 minutes, with the full mix of behaviour (tab switching, copy
 paste, drop-outs, idle, speed-clicking):
 
+It runs **in the background on the server**, so a dropped SSH connection does
+not stop it (the jump host does drop idle sessions):
+
 ```bash
-docker compose exec backend python -m scripts.simulate_live_demo --reset --count 6000 --minutes 8 --ramp 120 --api http://localhost:8000 --ws ws://localhost:8000 --site https://nurturehub.edupyramids.org
+docker compose exec -d backend sh -c 'python -m scripts.simulate_live_demo --reset --count 6000 --minutes 8 --ramp 120 --api http://localhost:8000 --ws ws://localhost:8000 --site https://nurturehub.edupyramids.org > /tmp/rehearsal.log 2>&1'
+```
+
+Watch its progress (Ctrl+C stops the watching, not the run; after a dropped
+connection, reconnect and run this again):
+
+```bash
+docker compose exec backend tail -f /tmp/rehearsal.log
 ```
 
 It prints the monitor link at the start — open that if you are not already on
@@ -170,8 +180,8 @@ docker stats --no-stream nurturehub-backend-1 nurturehub-db-1 nurturehub-redis-1
 
 Send me the script's output, the `docker stats` numbers and anything odd you saw.
 
-**e. Clean up afterwards** (removes the simulated attempts from the test and
-sets it back to scheduled):
+**e. Clean up afterwards** (removes the simulated attempts, and the result
+notifications they sent, and sets the test back to scheduled):
 
 ```bash
 docker compose exec backend python -m scripts.simulate_live_demo --cleanup

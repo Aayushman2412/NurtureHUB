@@ -54,8 +54,11 @@ from typing import Dict, List, Optional
 
 import websockets
 
+from sqlalchemy import String, cast, exists, select
+
 from app.database import SessionLocal
-from app.models import ProgramDistrict, Question, Stage, Test, TestAnswer, TestAttempt, User
+from app.flow import AWAITING_RESULTS_TITLE, is_awaiting_results
+from app.models import Notification, ProgramDistrict, Question, Stage, Test, TestAnswer, TestAttempt, User
 from app.models_live import ActivityEvent, AdminAction, LiveSession, SuspiciousFlag
 from app.security import sessions
 
@@ -421,10 +424,32 @@ def _purge_simulated(db, test_id: int) -> int:
         for model in (AdminAction, SuspiciousFlag, ActivityEvent):
             db.query(model).filter(model.session_id.in_(session_ids)).delete(synchronize_session=False)
         db.query(LiveSession).filter(LiveSession.id.in_(session_ids)).delete(synchronize_session=False)
+    user_ids = {u for (u,) in db.query(TestAttempt.user_id).filter(TestAttempt.id.in_(attempt_ids)).all()}
     db.query(TestAnswer).filter(TestAnswer.attempt_id.in_(attempt_ids)).delete(synchronize_session=False)
     db.query(TestAttempt).filter(TestAttempt.id.in_(attempt_ids)).delete(synchronize_session=False)
+    db.flush()
+    _purge_orphan_notifications(db, user_ids)
     db.commit()
     return len(attempt_ids)
+
+
+def _purge_orphan_notifications(db, user_ids) -> None:
+    """Scoring an attempt notifies the learner ("Test Attempt Completed", and
+    "wait for your results" once everything is done). Removing the attempt
+    must take those with it — otherwise the learners the team demos with keep
+    notifications that point at results which no longer exist."""
+    mock = select(User.id).where(User.email.like(f"%{MOCK_SUFFIX}"))
+    points_at_attempt = exists().where(("/results/" + cast(TestAttempt.id, String)) == Notification.link)
+    db.query(Notification).filter(
+        Notification.user_id.in_(mock),
+        Notification.link.like("/results/%"),
+        ~points_at_attempt,
+    ).delete(synchronize_session=False)
+    for user in db.query(User).filter(User.id.in_(list(user_ids))).all() if user_ids else []:
+        if not is_awaiting_results(db, user):
+            db.query(Notification).filter(
+                Notification.user_id == user.id, Notification.title == AWAITING_RESULTS_TITLE,
+            ).delete(synchronize_session=False)
 
 
 def prepare(args) -> tuple:
@@ -509,6 +534,7 @@ def cleanup(args):
     try:
         test = _resolve_test(db, args.district, args.test_id)
         removed = _purge_simulated(db, test.id)
+        _purge_orphan_notifications(db, set())   # and any left by older runs
         test.status = "scheduled" if test.scheduled_at else "draft"
         test.started_at = None
         test.ended_at = None
