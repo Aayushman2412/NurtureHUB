@@ -61,6 +61,14 @@ services:
       # 6000/min lets 2,000 people behind one address in within ~20s. Guessing
       # passwords is stopped per ACCOUNT by the lockout, not by this.
       RATE_LIMIT_LOGIN: ${RATE_LIMIT_LOGIN:-6000/minute}
+      # The same crowd, on the other doors in: Google sign-in and OTP
+      # verification (RATE_LIMIT_OTP), sign-up and "forgot password"
+      # (RATE_LIMIT_REGISTER). Their defaults — 120/minute and 60/hour per
+      # address — are sized for one person; a hall registering or recovering
+      # passwords together would be refused after the 60th. Guessing codes is
+      # stopped per ACCOUNT (OTP attempt counter, resend throttle), not here.
+      RATE_LIMIT_OTP: ${RATE_LIMIT_OTP:-3000/minute}
+      RATE_LIMIT_REGISTER: ${RATE_LIMIT_REGISTER:-3000/hour}
       # Behind two nginx layers every request arrives from the frontend
       # container's address. Without this, ALL candidates share one rate-limit
       # bucket — the per-address ceiling above becomes a ceiling for everyone.

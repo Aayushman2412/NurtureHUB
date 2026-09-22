@@ -126,8 +126,9 @@ grep -rn "limit_req\|limit_conn" /etc/nginx/ 2>/dev/null
 Run this on a quiet day, at least a day before the exam. It uses **mock
 learners only** (`@nurturehub.mock`); real accounts are never touched.
 
-**a. Create 6,000 mock learners in Jalna** (takes a minute or two; learners that
-already exist keep their data):
+**a. Create 6,000 mock learners in Jalna** (takes a minute or two). The 300
+that are already there keep their data; this adds the other 5,700, and step f
+takes exactly those away again:
 
 ```bash
 docker compose exec backend python -m scripts.seed_mock_learners --districts jalna --count 6000
@@ -148,8 +149,11 @@ typical finish ~8 minutes, with the full mix of behaviour (tab switching, copy
 paste, drop-outs, idle, speed-clicking):
 
 ```bash
-docker compose exec backend python -m scripts.simulate_live_demo --reset --count 6000 --minutes 8 --ramp 120 --api http://localhost:8000 --ws ws://localhost:8000
+docker compose exec backend python -m scripts.simulate_live_demo --reset --count 6000 --minutes 8 --ramp 120 --api http://localhost:8000 --ws ws://localhost:8000 --site https://nurturehub.edupyramids.org
 ```
+
+It prints the monitor link at the start — open that if you are not already on
+it.
 
 While it runs, in a second server terminal, watch the load:
 
@@ -173,9 +177,19 @@ sets it back to scheduled):
 docker compose exec backend python -m scripts.simulate_live_demo --cleanup
 ```
 
+**f. Take away the 5,700 extra learners**, so Jalna is back to the original
+300 everyone demos with (learners numbered 301 and up go; 1–300 stay):
+
+```bash
+docker compose exec backend python -m scripts.seed_mock_learners --remove --districts jalna --above 300
+```
+
 ## 4. Exam day
 
 **Before the test**
+- Every candidate should **have an account before the day**. Sign-in is
+  cheap to scale; 6,000 sign-ups on the morning, each waiting for an email
+  code, depend on the email provider's own sending limits.
 - Run the §2 checks in the morning.
 - Tell candidates to **sign in 20–30 minutes before** the start. Sign-ins are
   the heaviest part (each is deliberately slow password hashing); spreading

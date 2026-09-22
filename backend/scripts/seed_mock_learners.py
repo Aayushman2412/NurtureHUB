@@ -14,10 +14,13 @@ and Meghalaya to visualize platform data landing prior to test taking:
 Usage:
   python -m scripts.seed_mock_learners [--districts jalna,ujjain] [--count 300]
   python -m scripts.seed_mock_learners --remove
+  # Undo a rehearsal top-up, keeping the original 300 per district
+  python -m scripts.seed_mock_learners --remove --districts jalna --above 300
 """
 
 import argparse
 import random
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
@@ -279,8 +282,19 @@ def _get_or_create_program_district(db: Session, slug: str) -> ProgramDistrict:
 # Seeding Execution
 # ─────────────────────────────────────────────────────────────────────────────
 
-def remove_mock_data(db: Session, districts: Optional[List[str]] = None):
-    """Remove all mock learners and their associated progress records."""
+def _learner_number(email: str) -> Optional[int]:
+    """learner.jl.301@nurturehub.mock -> 301 (None if not a numbered learner)."""
+    m = re.match(r"learner\.[a-z]+\.(\d+)@", email or "")
+    return int(m.group(1)) if m else None
+
+
+def remove_mock_data(db: Session, districts: Optional[List[str]] = None, above: Optional[int] = None):
+    """Remove mock learners and their associated progress records.
+
+    With `above`, only learners numbered above it go — so a rehearsal that
+    topped a district up to thousands can be undone without touching the
+    original cohort everyone demos with.
+    """
     print("Purging existing mock learners...")
     query = db.query(User).filter(User.email.like(f"%@{MOCK_EMAIL_DOMAIN}"))
     if districts:
@@ -293,6 +307,9 @@ def remove_mock_data(db: Session, districts: Optional[List[str]] = None):
             query = query.filter(User.program_district_id.in_(pd_ids))
 
     mock_users = query.all()
+    if above is not None:
+        mock_users = [u for u in mock_users if (_learner_number(u.email) or 0) > above]
+        print(f"Keeping learners numbered {above} and below.")
     user_ids = [u.id for u in mock_users]
     print(f"Found {len(user_ids)} mock users to delete.")
 
@@ -730,6 +747,12 @@ def main():
         action="store_true",
         help="Remove previously seeded mock data instead of seeding",
     )
+    parser.add_argument(
+        "--above",
+        type=int,
+        default=None,
+        help="With --remove: only remove learners numbered above this (e.g. 300 keeps the original cohort)",
+    )
 
     args = parser.parse_args()
     db = SessionLocal()
@@ -741,7 +764,7 @@ def main():
             district_slugs = list(GEO_DATA.keys()) if not args.remove else None
 
         if args.remove:
-            remove_mock_data(db, district_slugs)
+            remove_mock_data(db, district_slugs, above=args.above)
             return
 
         for dist_slug in district_slugs:

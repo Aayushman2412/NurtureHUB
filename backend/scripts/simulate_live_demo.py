@@ -557,7 +557,7 @@ async def run(args):
     print("  Behaviour mix:")
     for label, k in sorted(mix.items(), key=lambda kv: -kv[1]):
         print(f"    {k:>4}  {label}")
-    print(f"\n  Live monitor:  http://localhost:5173/admin/tests/{info['id']}/monitor")
+    print(f"\n  Live monitor:  {args.site.rstrip('/')}/admin/tests/{info['id']}/monitor")
     print("=" * 78 + "\n", flush=True)
 
     shared = Shared(t0=time.monotonic(), duration_s=info["duration"] * 60, candidates=cands)
@@ -592,6 +592,8 @@ def main():
     ap.add_argument("--ramp", type=float, default=45.0, help="seconds over which people join (default: 45)")
     ap.add_argument("--api", default="http://127.0.0.1:8010", help="backend base URL")
     ap.add_argument("--ws", default="ws://127.0.0.1:8010", help="backend WebSocket base URL")
+    ap.add_argument("--site", default="http://localhost:5173",
+                    help="site the admin opens, for the monitor link (e.g. https://nurturehub.edupyramids.org)")
     ap.add_argument("--seed", type=int, default=None, help="random seed, for a repeatable run")
     ap.add_argument("--reset", action="store_true", help="clear the previous simulated run first")
     ap.add_argument("--cleanup", action="store_true", help="remove simulated attempts and restore the test, then exit")
