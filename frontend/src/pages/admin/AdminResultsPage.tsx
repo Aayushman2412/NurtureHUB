@@ -3,79 +3,42 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import {
   Download, RefreshCw, Upload, Users, CheckCircle2, XCircle,
-  GraduationCap, AlertCircle, Trash2, Search, Bell,
+  GraduationCap, AlertCircle, Trash2, Search, Bell, BarChart3,
 } from 'lucide-react';
 import client from '../../api/client';
 import { getProjectSlug, PROJECT_EVENT } from '../../lib/adminProject';
 import * as XLSX from 'xlsx';
 import {
   Badge, Button, Card, EmptyState, Input, PageHeader, PageLoader,
-  Pagination, Table, TBody, Td, Th, THead, Tr,
+  Pagination, Table, TBody, Tabs, Td, Th, THead, Tr,
 } from '../../components/ui';
+import ResultsInsights from '../../components/results/ResultsInsights';
+import type { ResultsData, TestMeta } from '../../lib/resultsInsights';
 import { useToast } from '../../context/ToastContext';
 import { cn } from '../../utils/cn';
 
 /**
- * Admin: Results section.
- * One combined table per district — tutorial engagement, every test's score and
- * anti-cheat summary, flow completion — downloadable as Excel. Below it, the
- * face-to-face training selection: upload an Excel of selected users (emails)
- * and every matched user is notified to await further instructions.
+ * Admin: Results section, in three tabs.
+ *  - Insights: the whole project's results as a briefing for managers —
+ *    headline numbers, the learner journey, plain-language findings, groups
+ *    compared (cadre, block, experience …), each test, each video.
+ *  - All learners: one combined table per district — tutorial engagement,
+ *    every test's score and anti-cheat summary, flow completion —
+ *    downloadable as Excel.
+ *  - Face-to-face selection: upload an Excel of selected users (emails) and
+ *    every matched user is notified to await further instructions.
  */
 
-interface TutorialMeta {
-  id: number;
-  title: string;
-  module_number: string;
-  has_quiz: boolean;
-}
+type ResultsTab = 'insights' | 'learners' | 'selection';
+const TAB_KEY = 'nh_results_tab';
 
-interface TestMeta {
-  id: number;
-  title: string;
-  test_type: 'formative' | 'screening' | null;
-  status: string;
-}
-
-interface TestResult {
-  attempts_count: number;
-  best_score: number | null;
-  is_passed: boolean;
-  max_risk_score: number;
-  was_flagged: boolean;
-  tab_switches: number;
-  fullscreen_exits: number;
-  copy_paste_events: number;
-}
-
-interface UserResultRow {
-  user_id: number;
-  name: string;
-  email: string;
-  completed_flow: boolean;
-  summary: {
-    total_tutorials: number;
-    tutorials_completed: number;
-    avg_watch_pct: number;
-    quizzes_completed: number;
-    quizzes_skipped: number;
-    quiz_accuracy_pct: number;
-    performance_score: number;
-  };
-  tests: Record<string, TestResult>;
-  face_to_face: {
-    selected: boolean;
-    selected_at: string | null;
-    uploaded_by: string | null;
-  };
-}
-
-interface ResultsData {
-  district: string;
-  district_name: string;
-  tutorials: TutorialMeta[];
-  tests: TestMeta[];
-  users: UserResultRow[];
+function readTab(): ResultsTab {
+  try {
+    const v = localStorage.getItem(TAB_KEY);
+    return v === 'learners' || v === 'selection' ? v : 'insights';
+  } catch {
+    return 'insights';
+  }
 }
 
 interface Selection {
@@ -116,7 +79,13 @@ const AdminResultsPage: React.FC = () => {
   const [f2fPageSize, setF2fPageSize] = useState(10);
   const [uploadSummary, setUploadSummary] = useState<UploadSummary | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [tab, setTabState] = useState<ResultsTab>(readTab);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const setTab = (next: ResultsTab) => {
+    setTabState(next);
+    try { localStorage.setItem(TAB_KEY, next); } catch { /* private mode: just don't remember */ }
+  };
 
   const fetchData = () => {
     setLoading(true);
@@ -307,6 +276,30 @@ const AdminResultsPage: React.FC = () => {
         }
       />
 
+      <Tabs<ResultsTab>
+        className="mb-6"
+        value={tab}
+        onChange={setTab}
+        items={[
+          { value: 'insights', label: t('tabs.insights'), icon: <BarChart3 className="size-4" /> },
+          { value: 'learners', label: t('tabs.learners'), icon: <Users className="size-4" /> },
+          { value: 'selection', label: t('tabs.selection'), icon: <GraduationCap className="size-4" /> },
+        ]}
+      />
+
+      {tab === 'insights' && (
+        !data || data.users.length === 0 ? (
+          <EmptyState
+            icon={<BarChart3 className="size-10" />}
+            title={t('empty.usersTitle')}
+            description={t('empty.usersBody')}
+          />
+        ) : (
+          <ResultsInsights key={data.district} data={data} />
+        )
+      )}
+
+      {tab === 'learners' && (<>
       {/* Search */}
       <div className="mb-4 max-w-sm">
         <Input
@@ -410,7 +403,9 @@ const AdminResultsPage: React.FC = () => {
           />
         </div>
       )}
+      </>)}
 
+      {tab === 'selection' && (<>
       {/* ── Face-to-face selection section ── */}
       <PageHeader
         title={
@@ -522,6 +517,7 @@ const AdminResultsPage: React.FC = () => {
           />
         </div>
       )}
+      </>)}
     </div>
   );
 };

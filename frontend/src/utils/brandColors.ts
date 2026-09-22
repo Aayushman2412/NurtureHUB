@@ -41,3 +41,26 @@ export const GROWTH_SOURCE_COLORS = {
   growth_cf: '#BE185D', // pink — Check Growth + Complementary feeding
   growth_bf_cf: '#7C3AED', // violet — all three on one visit
 } as const;
+
+/**
+ * Categorical series for the Results insights charts (one colour per cadre,
+ * block, …). Brand coral / sage / amber first, then muted companions that
+ * stay distinguishable on both the cream and the dark surface.
+ */
+export const CHART_SERIES = [
+  '#E85D4C', // coral
+  '#5F7F5B', // sage
+  '#F59E0B', // amber
+  '#4F7CAC', // dusty blue
+  '#9A6FB0', // plum
+  '#2E9C95', // teal
+  '#C98B5B', // clay
+  '#D6679A', // rose
+  '#7C8A99', // slate
+  '#A3A847', // olive
+] as const;
+
+/** Traffic-light tones for "how good is this rate". */
+export const TONE_GOOD = '#2F9E56';
+export const TONE_OK = '#F59E0B';
+export const TONE_LOW = '#DC2F2F';

@@ -3624,6 +3624,30 @@ class FaceToFaceUploadRequest(BaseModel):
 FACE_TO_FACE_NOTIFICATION_TITLE = "Selected for Face-to-Face Training"
 
 
+def _learner_profile(u: Optional[User]) -> Dict[str, Any]:
+    """The professional attributes the Results insights compare learners by —
+    cadre, department, block, experience, schooling, age. Names and labels
+    only; contact details never leave through here."""
+    if u is None:
+        return {}
+    exp = u.experience_range
+    dept = u.department_ref
+    return {
+        "cadre": (u.designation_rel.name if u.designation_rel else None)
+        or u.designation_other or u.role or u.learner_category,
+        "department": (dept.name if dept else None) or u.department_other or u.department,
+        "block": u.block.name if u.block else None,
+        "experience": exp.label if exp else None,
+        "experience_order": exp.order_index if exp else None,
+        "qualification": u.qualification.qualification_name if u.qualification else None,
+        "age": u.age or None,
+        "gender": u.gender,
+        "internet_workplace": u.internet_workplace,
+        "nutrition_training": u.nutrition_training,
+        "years_service": u.years_service,
+    }
+
+
 @router.get("/results")
 def get_combined_results(
     district: str = Query("jalna", description="District slug"),
@@ -3670,6 +3694,14 @@ def get_combined_results(
         ).all()
     } if user_ids else {}
 
+    learners = {
+        u.id: u for u in db.query(User).options(
+            joinedload(User.designation_rel), joinedload(User.department_ref),
+            joinedload(User.block), joinedload(User.qualification),
+            joinedload(User.experience_range),
+        ).filter(User.id.in_(user_ids)).all()
+    } if user_ids else {}
+
     for row in user_rows:
         uid = row["user_id"]
         tests_out = {}
@@ -3679,9 +3711,12 @@ def get_combined_results(
             sessions = sessions_by_user_test.get((uid, t.id), [])
             if not atts:
                 all_submitted = False
+            first = min(atts, key=lambda a: (a.attempt_number or 0, a.id)) if atts else None
             tests_out[str(t.id)] = {
                 "attempts_count": len(atts),
                 "best_score": max((a.score or 0) for a in atts) if atts else None,
+                "first_score": first.score if first else None,
+                "passed_first_attempt": bool(first and first.is_passed),
                 "is_passed": any(a.is_passed for a in atts),
                 "last_submitted_at": max(
                     (a.submitted_at for a in atts), default=None
@@ -3700,6 +3735,7 @@ def get_combined_results(
         )
         selection = selections.get(uid)
         row["tests"] = tests_out
+        row["profile"] = _learner_profile(learners.get(uid))
         row["completed_flow"] = completed_flow
         row["face_to_face"] = {
             "selected": selection is not None,
@@ -3712,7 +3748,8 @@ def get_combined_results(
         "district_name": pd.name,
         "tutorials": tutorials_meta,
         "tests": [
-            {"id": t.id, "title": t.title, "test_type": t.test_type, "status": t.status}
+            {"id": t.id, "title": t.title, "test_type": t.test_type, "status": t.status,
+             "passing_score_pct": t.passing_score_pct, "max_attempts": t.max_attempts}
             for t in tests
         ],
         "users": user_rows,

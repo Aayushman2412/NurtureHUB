@@ -94,5 +94,10 @@
   },
   "confirm": {
     "removeSelection": "Remove this user from the face-to-face selection list?"
+  },
+  "tabs": {
+    "insights": "Insights",
+    "learners": "All learners",
+    "selection": "Face-to-face selection"
   }
 }

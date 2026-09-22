@@ -1,0 +1,176 @@
+{
+  "download": "Download summary (Excel)",
+  "notRecorded": "Not recorded",
+  "noTests": "No test has been written in this project yet. Test insights appear here as soon as learners take a test.",
+  "testName": {
+    "formative": "Formative test",
+    "screening": "Screening test"
+  },
+  "hero": {
+    "eyebrow": "Test results at a glance",
+    "sentence": "{{project}}: {{passed}} of {{n}} learners ({{pct}}%) passed the {{test}}, and {{selected}} are selected for face-to-face training.",
+    "noTests": "{{project}}: {{n}} learners registered — no test has been written yet.",
+    "hint": "Tip: click any group in a chart or table to see this whole page for that group only."
+  },
+  "focus": {
+    "showing": "Showing only {{group}} ({{dimName}}) — {{n}} learners.",
+    "clear": "Show everyone"
+  },
+  "kpi": {
+    "learners": "Learners",
+    "finishedVideos": "Finished all videos",
+    "passed": "Passed the {{test}}",
+    "selected": "Selected for face-to-face",
+    "avgScore": "Average score {{score}}%",
+    "nOfM": "<b>{{n}}</b> of {{m}}",
+    "nOfWrote": "<b>{{n}}</b> of {{m}} who wrote it"
+  },
+  "journey": {
+    "title": "The learner journey",
+    "subtitle": "How many learners reached each step, from registering to being selected.",
+    "registered": "Registered",
+    "finishedVideos": "Finished all videos",
+    "wroteTest": "Wrote the {{test}}",
+    "passedTest": "Passed the {{test}}",
+    "selected": "Selected for face-to-face",
+    "ofAll": "{{pct}} of all",
+    "lost": "−{{n}} at this step"
+  },
+  "findings": {
+    "title": "Key findings",
+    "subtitle": "What the numbers say, in plain words.",
+    "none": "Findings appear once learners have taken a test."
+  },
+  "finding": {
+    "headline": "{{passed}} of {{wrote}} learners ({{pct}}%) passed the {{test}}.",
+    "bestGroup": "{{group}} ({{dimName}}) did best in the {{test}}: {{pct}}% passed ({{passed}} of {{wrote}}), against {{overall}}% overall.",
+    "weakestGroup": "{{group}} ({{dimName}}) need the most support: only {{pct}}% passed the {{test}} ({{passed}} of {{wrote}}).",
+    "evenGroups": "Results in the {{test}} are similar in every {{dimName}} — no group is falling behind.",
+    "drop": {
+      "finishedVideos": "The biggest drop is before the tests: {{n}} learners ({{pct}}%) have not finished all the videos.",
+      "wroteTest": "The biggest drop: {{n}} learners ({{pct}}%) did not write the {{test}}.",
+      "passedTest": "The biggest drop is at the {{test}}: {{n}} learners ({{pct}}%) wrote it but did not pass.",
+      "selected": "{{n}} learners who passed are not (yet) selected for face-to-face training."
+    },
+    "retakes": "{{firstTry}}% passed the {{test}} on their first try. Across all tests, {{n}} passes came only after a retake.",
+    "quizPredicts": "The video quizzes predict the test: learners who scored 80%+ in the quizzes passed the {{test}} {{a}}% of the time, against {{b}}% of the rest.",
+    "quizNoPredict": "Learners with high video-quiz scores did not do better in the {{test}} ({{a}}% vs {{b}}% passed) — the quizzes may be too easy or not match the test.",
+    "hardestQuiz": "Hardest video quiz: “{{title}}” — only {{pct}}% of answers were correct. This topic may need a refresher.",
+    "selected": "{{n}} learners ({{pct}}%) are selected for face-to-face training.",
+    "quizzesFine": "The video quizzes went well — even the hardest one, “{{title}}”, had {{pct}}% of answers correct."
+  },
+  "compare": {
+    "title": "Compare groups",
+    "subtitle": "Choose how to split the learners. Click a group to see the whole page for that group.",
+    "subtitleWithin": "Within {{group}} only. Choose how to split them.",
+    "splitBy": "Split by:",
+    "who": "Who took part — by {{dim}}",
+    "learners": "learners",
+    "clickHint": "Click to see the whole page for this group (click again to undo)",
+    "show": "Show:",
+    "average": "Average for everyone: {{value}}",
+    "ofN": "of {{n}}",
+    "selectedWho": "Who was selected — by {{dim}}",
+    "selectedCenter": "selected",
+    "selectedExplain": "Each slice is the number of learners from that group selected for face-to-face training. Compare it with “Who took part” above: a group whose slice here is much smaller than there is being selected less often."
+  },
+  "measure": {
+    "pass": "{{test}}: % who passed",
+    "score": "{{test}}: average score",
+    "videos": "Finished all videos",
+    "quiz": "Video quizzes: % answers correct",
+    "selected": "Selected for face-to-face"
+  },
+  "scorecard": {
+    "title": "Scorecard — by {{dim}}",
+    "learners": "Learners",
+    "videos": "Finished videos",
+    "quiz": "Quiz answers correct",
+    "avg": "{{test}} avg. score",
+    "passed": "{{test}} passed",
+    "selected": "Selected",
+    "nOfM": "{{n}} of {{m}}",
+    "good": "75% and above",
+    "ok": "50–74%",
+    "low": "Below 50%"
+  },
+  "test": {
+    "subtitle": "“{{title}}” · pass mark {{mark}}%",
+    "wrote": "Wrote it",
+    "passed": "Passed",
+    "avgScore": "Average score",
+    "bandsTitle": "How the scores are spread",
+    "bandExcellent": "Excellent ({{from}}%+)",
+    "bandPassed": "Passed ({{from}}–{{to}}%)",
+    "bandNear": "Just missed ({{from}}–{{to}}%)",
+    "bandSupport": "Needs support (below {{below}}%)",
+    "attemptsTitle": "Attempts needed",
+    "firstTry": "Passed on first try",
+    "afterRetake": "Passed after a retake",
+    "notPassed": "Not passed"
+  },
+  "videos": {
+    "title": "Videos and quizzes",
+    "subtitle": "How many learners finished each video, and how well they answered its quiz.",
+    "video": "Video",
+    "finished": "Finished the video",
+    "quizCorrect": "Quiz answers correct",
+    "noQuiz": "No quiz",
+    "noAnswers": "No answers yet",
+    "answeredBy": "{{n}} answered"
+  },
+  "top": {
+    "title": "Top 10 performers",
+    "subtitle": "Ranked by average test score.",
+    "learner": "Learner",
+    "average": "Average",
+    "faceToFace": "Face-to-face",
+    "selected": "Selected"
+  },
+  "dim": {
+    "cadre": "Cadre / role",
+    "department": "Department",
+    "block": "Block",
+    "experience": "Experience",
+    "qualification": "Education",
+    "ageGroup": "Age group",
+    "internet": "Internet at work",
+    "priorTraining": "Earlier nutrition training"
+  },
+  "dimSingular": {
+    "cadre": "cadre",
+    "department": "department",
+    "block": "block",
+    "experience": "experience",
+    "qualification": "education",
+    "ageGroup": "age group",
+    "internet": "internet at work",
+    "priorTraining": "earlier nutrition training"
+  },
+  "age": {
+    "Under 25": "Under 25",
+    "25–34": "25–34 years",
+    "35–44": "35–44 years",
+    "45 and above": "45 and above"
+  },
+  "internet": {
+    "Always": "Always has internet",
+    "Often": "Often has internet",
+    "Sometimes": "Sometimes has internet",
+    "Rarely": "Rarely has internet",
+    "Never": "Never has internet"
+  },
+  "priorTraining": {
+    "Yes": "Trained before",
+    "No": "Not trained before"
+  },
+  "excel": {
+    "overviewSheet": "Overview",
+    "project": "Project",
+    "learners": "Learners",
+    "wrote": "Wrote the {{test}}",
+    "passed": "Passed the {{test}}",
+    "passRate": "{{test}} pass rate (%)",
+    "avgScore": "{{test}} average score (%)"
+  }
+}
