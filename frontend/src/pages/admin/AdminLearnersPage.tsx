@@ -15,6 +15,8 @@ import {
 import { listProjects } from '../../api/projects';
 import type { AdminProject } from '../../lib/adminProject';
 import { cn } from '../../utils/cn';
+import PasswordRules from '../../components/auth/PasswordRules';
+import { usePasswordCheck } from '../../hooks/usePasswordCheck';
 
 const PAGE_SIZE = 100;
 
@@ -109,6 +111,9 @@ const AdminLearnersPage: React.FC = () => {
   // Create-account flow. `created` holds the one-time password echo.
   const [showCreate, setShowCreate] = useState(false);
   const [newLearner, setNewLearner] = useState({ email: '', password: '', full_name: '', projectId: '' });
+  // The same rules the server applies to this (learner) account, shown and
+  // checked as the admin types — an edited suggestion can still break them.
+  const newPw = usePasswordCheck(newLearner.password, { email: newLearner.email, fullName: newLearner.full_name });
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
   const [created, setCreated] = useState<CreatedLearner | null>(null);
@@ -531,7 +536,7 @@ const AdminLearnersPage: React.FC = () => {
               <Button
                 iconLeft={<UserPlus className="size-4" />}
                 loading={creating}
-                disabled={creating || !newLearner.email.trim() || newLearner.password.length < PASSWORD_LENGTH}
+                disabled={creating || !newLearner.email.trim() || !newPw.ok}
                 onClick={() => void runCreate()}
               >
                 {t('learners.createConfirm')}
@@ -597,6 +602,13 @@ const AdminLearnersPage: React.FC = () => {
                 onChange={e => setNewLearner({ ...newLearner, full_name: e.target.value })}
               />
             </div>
+            <PasswordRules
+              className="sm:col-span-2"
+              password={newLearner.password}
+              policy={newPw.policy}
+              results={newPw.results}
+              showTip={false}
+            />
             <div className="sm:col-span-2">
               <FieldLabel size="sm">{t('learners.fieldProject')}</FieldLabel>
               <Select

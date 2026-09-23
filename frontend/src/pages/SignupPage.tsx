@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
 import GoogleButton from '../components/auth/GoogleButton';
+import PasswordRules from '../components/auth/PasswordRules';
+import { usePasswordCheck } from '../hooks/usePasswordCheck';
 import { Button, Divider, FieldLabel, Input, PasswordInput } from '../components/ui';
 
 const SignupPage: React.FC = () => {
@@ -13,6 +15,9 @@ const SignupPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  // The server's rules, ticked off as the person types (same numbers the
+  // server enforces — see backend/app/security/passwords.py).
+  const pw = usePasswordCheck(password, { email, fullName });
 
   const { register } = useAuth();
   const { showToast, updateToast } = useToast();
@@ -25,8 +30,9 @@ const SignupPage: React.FC = () => {
       return;
     }
 
-    if (password.length < 6) {
+    if (!pw.ok) {
       showToast(t('signup.toast.passwordMin'), 'warning');
+      document.getElementById('password-input')?.focus();
       return;
     }
 
@@ -78,12 +84,15 @@ const SignupPage: React.FC = () => {
           <FieldLabel htmlFor="password-input">{t('fields.password')}</FieldLabel>
           <PasswordInput
             id="password-input"
-            placeholder={t('fields.passwordMin')}
+            placeholder={t('fields.passwordMin', { n: pw.policy.min_length })}
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
             disabled={loading}
+            autoComplete="new-password"
+            aria-describedby="password-rules"
           />
+          <PasswordRules id="password-rules" className="mt-2.5" password={password} policy={pw.policy} results={pw.results} />
         </div>
 
         <Button type="submit" size="lg" fullWidth loading={loading} className="mt-2">
@@ -93,6 +102,7 @@ const SignupPage: React.FC = () => {
         <Divider label={t('signup.orSignUpWith')} className="my-1" />
 
         <GoogleButton />
+        <p className="-mt-1 text-center text-xs leading-relaxed text-ink-muted">{t('signup.googleNote')}</p>
 
         <p className="mt-4 text-center text-sm text-ink-muted">
           {t('signup.haveAccount')}{' '}

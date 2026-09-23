@@ -6,12 +6,16 @@ import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
 import OTPInput from '../components/auth/OTPInput';
 import { Button, FieldLabel, Input, PasswordInput } from '../components/ui';
+import PasswordRules from '../components/auth/PasswordRules';
+import { usePasswordCheck } from '../hooks/usePasswordCheck';
 
 const ForgotPasswordPage: React.FC = () => {
   const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  // A reset is a new password too: same rules, plus "not a recent one".
+  const pw = usePasswordCheck(newPassword, { email, includeHistory: true });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -47,8 +51,9 @@ const ForgotPasswordPage: React.FC = () => {
       return;
     }
 
-    if (newPassword.length < 6) {
+    if (!pw.ok) {
       showToast(t('forgot.toast.passwordMin'), 'warning');
+      document.getElementById('newpassword-input')?.focus();
       return;
     }
 
@@ -110,12 +115,15 @@ const ForgotPasswordPage: React.FC = () => {
             <FieldLabel htmlFor="newpassword-input">{t('fields.newPassword')}</FieldLabel>
             <PasswordInput
               id="newpassword-input"
-              placeholder={t('fields.passwordMin')}
+              placeholder={t('fields.passwordMin', { n: pw.policy.min_length })}
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
               required
               disabled={loading}
+              autoComplete="new-password"
+              aria-describedby="newpassword-rules"
             />
+            <PasswordRules id="newpassword-rules" className="mt-2.5" password={newPassword} policy={pw.policy} results={pw.results} />
           </div>
 
           <Button type="submit" size="lg" fullWidth loading={loading} disabled={code.length < 6} className="mt-2">

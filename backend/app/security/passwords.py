@@ -32,6 +32,12 @@ MIN_LENGTH_LEARNER = 10
 MIN_LENGTH_ADMIN = 12
 MAX_LENGTH = 128           # bcrypt truncates at 72 bytes; reject long inputs outright
 PASSWORD_HISTORY_DEPTH = 5
+MIN_CHARACTER_KINDS = 3    # of: lowercase, uppercase, digits, symbols …
+PASSPHRASE_LENGTH = 16     # … unless the password is at least this long
+MIN_DISTINCT_CHARACTERS = 5
+MAX_REPEAT = 3             # the same character 4+ times in a row is rejected
+KEYBOARD_RUN_LENGTH = 5    # shortest keyboard/number run that counts
+PERSONAL_TOKEN_LENGTH = 4  # name/email pieces this long or longer may not appear
 
 # The head of every credential-stuffing list, plus the ones this deployment will
 # actually see. Not a substitute for a breach-corpus check — it is the cheap,
@@ -66,14 +72,14 @@ def _tokens(*values: Optional[str]) -> set:
         if not value:
             continue
         for token in re.split(r"[^A-Za-z0-9]+", str(value).lower()):
-            if len(token) >= 4:
+            if len(token) >= PERSONAL_TOKEN_LENGTH:
                 out.add(token)
     return out
 
 
 def _has_keyboard_run(lowered: str) -> bool:
     for run in _KEYBOARD_RUNS:
-        for size in range(5, len(run) + 1):
+        for size in range(KEYBOARD_RUN_LENGTH, len(run) + 1):
             for start in range(len(run) - size + 1):
                 chunk = run[start:start + size]
                 if chunk in lowered or chunk[::-1] in lowered:
@@ -82,17 +88,38 @@ def _has_keyboard_run(lowered: str) -> bool:
 
 
 def describe_policy(is_admin: bool = False) -> dict:
-    """Machine-readable policy, so the UI states the rules instead of guessing."""
+    """Machine-readable policy, so the UI states — and checks as the person
+    types — every rule `validate` enforces, with the same numbers.
+
+    Everything here is built from the constants `validate` uses, so the two
+    cannot drift (tests/test_password_policy.py holds them to that). The
+    common-password list is included on purpose: it is the head of every
+    public credential-stuffing list, so publishing it costs nothing, and it
+    lets the form say "too common" before the person presses Create.
+    """
+    minimum = MIN_LENGTH_ADMIN if is_admin else MIN_LENGTH_LEARNER
     return {
-        "min_length": MIN_LENGTH_ADMIN if is_admin else MIN_LENGTH_LEARNER,
+        "min_length": minimum,
         "max_length": MAX_LENGTH,
         "history_depth": PASSWORD_HISTORY_DEPTH,
+        "min_character_kinds": MIN_CHARACTER_KINDS,
+        "passphrase_length": PASSPHRASE_LENGTH,
+        "min_distinct_characters": MIN_DISTINCT_CHARACTERS,
+        "max_repeat": MAX_REPEAT,
+        "keyboard_run_length": KEYBOARD_RUN_LENGTH,
+        "keyboard_runs": list(_KEYBOARD_RUNS),
+        "personal_token_length": PERSONAL_TOKEN_LENGTH,
+        "common_passwords": sorted(_COMMON),
         "rules": [
-            f"At least {MIN_LENGTH_ADMIN if is_admin else MIN_LENGTH_LEARNER} characters.",
-            "At least three different kinds of character, or 16+ characters of any kind.",
-            "Not a commonly used or previously breached password.",
+            f"Between {minimum} and {MAX_LENGTH} characters.",
+            f"At least {MIN_CHARACTER_KINDS} kinds of character (lowercase, uppercase, numbers, "
+            f"symbols), or {PASSPHRASE_LENGTH}+ characters of any kind.",
+            "Not a commonly used password.",
+            f"No keyboard runs such as 'qwerty' or '12345', no character {MAX_REPEAT + 1} or more "
+            f"times in a row, and at least {MIN_DISTINCT_CHARACTERS} different characters.",
             "Not based on your name or email address.",
-            "Not one of your last 5 passwords.",
+            "No space at the start or end.",
+            f"Not one of your last {PASSWORD_HISTORY_DEPTH} passwords.",
         ],
     }
 
@@ -133,15 +160,15 @@ def validate(
             re.compile(r"\d"), re.compile(r"[^A-Za-z0-9]"),
         )
     )
-    if len(password) < 16 and classes < 3:
+    if len(password) < PASSPHRASE_LENGTH and classes < MIN_CHARACTER_KINDS:
         raise PasswordPolicyError(
             "Use at least three of: lowercase, uppercase, numbers, symbols — "
-            "or make the password 16 characters or longer."
+            f"or make the password {PASSPHRASE_LENGTH} characters or longer."
         )
 
-    if len(set(lowered)) < 5:
+    if len(set(lowered)) < MIN_DISTINCT_CHARACTERS:
         raise PasswordPolicyError("Password repeats too few distinct characters.")
-    if re.search(r"(.)\1{3,}", password):
+    if re.search(r"(.)\1{%d,}" % MAX_REPEAT, password):
         raise PasswordPolicyError("Password contains a character repeated four or more times.")
     if _has_keyboard_run(lowered):
         raise PasswordPolicyError("Password contains a keyboard sequence such as 'qwerty' or '12345'.")
