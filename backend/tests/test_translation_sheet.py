@@ -72,6 +72,21 @@ def test_every_translation_namespace_has_a_home_in_the_sheet():
     )
 
 
+def test_marathi_drafts_keep_every_placeholder():
+    """A draft that dropped {{name}} would reach reviewers looking finished,
+    and a reviewer skimming Marathi will not notice a missing placeholder."""
+    from scripts.export_translation_sheet import MARATHI_DRAFTS, _tokens, load_drafts
+
+    drafts = load_drafts(MARATHI_DRAFTS)
+    if not drafts:
+        pytest.skip("no Marathi drafts in the repo")
+    english = {r[0]: r[2] for rows in collect_rows().values() for r in rows}
+    broken = [k for k, text in drafts.items() if k in english and _tokens(text) != _tokens(english[k])]
+    assert not broken, f"drafts whose placeholders do not match the English: {broken[:10]}"
+    unknown = [k for k in drafts if k not in english]
+    assert not unknown, f"drafts for sentences no longer in the app: {unknown[:10]} — remove or re-key them"
+
+
 def test_sheet_covers_every_english_string():
     def flatten(d, prefix=""):
         out = {}

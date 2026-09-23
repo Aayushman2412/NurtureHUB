@@ -1,6 +1,7 @@
 """
 Export every sentence NurtureHUB shows people into one Excel workbook for
-language review: English, the Hindi we use today, and an empty Marathi column.
+language review: English, the Hindi we use today, and Marathi — pre-filled from
+scripts/translation_drafts/mr.json when drafts exist, otherwise empty.
 
 What goes in:
   * every phrase in the app's translation files (frontend/src/i18n/locales),
@@ -23,7 +24,7 @@ import argparse
 import json
 import re
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -31,6 +32,10 @@ from openpyxl.utils import get_column_letter
 
 REPO = Path(__file__).resolve().parents[2]
 LOCALES = REPO / "frontend" / "src" / "i18n" / "locales"
+GLOSSARY = REPO / "frontend" / "src" / "i18n" / "glossary.md"
+# First-draft translations waiting for review, by row ID. Pre-filled into the
+# sheet so reviewers correct rather than write from scratch.
+MARATHI_DRAFTS = Path(__file__).resolve().parent / "translation_drafts" / "mr.json"
 
 # namespace -> (sheet, where it appears)
 AREAS: Dict[str, Tuple[str, str]] = {
@@ -149,9 +154,30 @@ def _placeholders(text: str) -> str:
     return "  ".join(out)
 
 
-def collect_rows() -> Dict[str, List[list]]:
-    """{sheet name: rows}, each row matching HEADERS."""
+def _tokens(text: str) -> List[str]:
+    return sorted(re.findall(r"\{\{[^}]+\}\}|\{[a-zA-Z_][^}]*\}|<[^>]+>", text or ""))
+
+
+def load_drafts(path: Optional[Path]) -> Dict[str, str]:
+    if not path or not path.exists():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def collect_rows(marathi: Optional[Dict[str, str]] = None) -> Dict[str, List[list]]:
+    """{sheet name: rows}, each row matching HEADERS.
+
+    `marathi` pre-fills the Marathi column with drafts. A draft whose
+    placeholders no longer match the current English (the sentence was reworded
+    since it was drafted) is left out rather than sent for review stale.
+    """
+    marathi = marathi or {}
     sheets: Dict[str, List[list]] = {"Learner app": [], "Admin panel": [], "Messages & email": []}
+
+    def draft(row_id: str, english: str) -> str:
+        text = marathi.get(row_id, "")
+        return text if text and _tokens(text) == _tokens(english) else ""
+
     for path in sorted((LOCALES / "en").glob("*.json")):
         ns = path.stem
         sheet, where = AREAS.get(ns, ("Admin panel", ns))
@@ -159,16 +185,63 @@ def collect_rows() -> Dict[str, List[list]]:
         hi_path = LOCALES / "hi" / path.name
         hi = _flatten(json.loads(hi_path.read_text(encoding="utf-8"))) if hi_path.exists() else {}
         for key, text in en.items():
+            row_id = f"{ns}:{key}"
             note = "" if str(hi.get(key, "")).strip() else "Hindi missing - please add"
-            sheets[sheet].append([f"{ns}:{key}", where, text, hi.get(key, ""), "", "", _placeholders(text), note])
+            sheets[sheet].append([row_id, where, text, hi.get(key, ""), "", draft(row_id, text),
+                                  _placeholders(text), note])
     for sid, where, text, note in BACKEND_STRINGS:
-        sheets["Messages & email"].append([sid, where, text, "", "", "", _placeholders(text), note])
+        sheets["Messages & email"].append([sid, where, text, "", "", draft(sid, text), _placeholders(text), note])
     return sheets
 
 
-def _write_sheet(wb: Workbook, title: str, rows: List[list]) -> None:
+def glossary_rows() -> List[List[str]]:
+    """The key-terms table from frontend/src/i18n/glossary.md: English, notes, Hindi, Marathi."""
+    rows = []
+    for line in GLOSSARY.read_text(encoding="utf-8").splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) != 4 or cells[0] in ("English", "") or set(cells[0]) <= set("-"):
+            continue
+        rows.append([cells[0], cells[1].replace("**", ""), cells[2], cells[3]])
+    return rows
+
+
+def _write_glossary(wb: Workbook, drafted: bool) -> None:
+    """Key terms, from glossary.md: fix a word here once, not in every row."""
+    ws = wb.create_sheet("Key terms", 1)
+    headers = [("English", 30), ("What it means here", 46), ("Hindi (in use now)", 30),
+               ("Marathi (draft - please correct)" if drafted else "Marathi (please fill in)", 30),
+               ("Reviewer notes", 30)]
+    ws.append([h for h, _ in headers])
+    for i, (_, width) in enumerate(headers, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = width
+        head = ws.cell(row=1, column=i)
+        head.font = Font(bold=True, color="FFFFFF", size=11)
+        head.fill = PatternFill("solid", fgColor=CORAL)
+        head.alignment = Alignment(vertical="center", wrap_text=True)
+    ws.row_dimensions[1].height = 30
+    for row in glossary_rows():
+        ws.append(row + [""])
+    for r in range(2, ws.max_row + 1):
+        confirm = "confirm" in str(ws.cell(row=r, column=2).value or "").lower()
+        for c in range(1, len(headers) + 1):
+            cell = ws.cell(row=r, column=c)
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+            cell.border = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
+            if c in (3, 4):
+                cell.font = Font(name="Nirmala UI", size=11)
+            if c == 4:
+                cell.fill = PatternFill("solid", fgColor="FFE08A" if confirm else "FFF8E1")
+            if c == 5:
+                cell.number_format = "@"
+    ws.freeze_panes = "B2"
+
+
+def _write_sheet(wb: Workbook, title: str, rows: List[list], drafted: bool = False) -> None:
     ws = wb.create_sheet(title)
-    ws.append([h[0] for h in HEADERS])
+    ws.append([
+        ("Marathi (draft - please correct)" if drafted else h[0]) if i == 5 else h[0]
+        for i, h in enumerate(HEADERS)
+    ])
     for cell in ws[1]:
         cell.font = Font(bold=True, color="FFFFFF", size=11)
         cell.fill = PatternFill("solid", fgColor=CORAL)
@@ -199,25 +272,38 @@ def _write_sheet(wb: Workbook, title: str, rows: List[list]) -> None:
     ws.auto_filter.ref = f"A1:{get_column_letter(len(HEADERS))}{ws.max_row}"
 
 
-def _write_readme(wb: Workbook, counts: Dict[str, int]) -> None:
+def _write_readme(wb: Workbook, counts: Dict[str, int], drafted: int = 0) -> None:
     ws = wb.create_sheet("Read me first", 0)
     ws.column_dimensions["A"].width = 4
     ws.column_dimensions["B"].width = 110
+    if drafted:
+        about = ("Every sentence NurtureHUB shows on screen, plus the messages and the verification "
+                 "email it sends. Each row is one sentence: the English in use now, the Hindi in use "
+                 f"now, and a FIRST DRAFT of the Marathi ({drafted} sentences) for you to check and correct.")
+        step3 = ("3. Read the Marathi draft in the yellow column and correct it in place wherever it is "
+                 "wrong, unnatural or not the word your team uses. If it is fine, leave it as it is. "
+                 "You do not need to mark what you changed.")
+    else:
+        about = ("Every sentence NurtureHUB shows on screen, plus the messages and the verification "
+                 "email it sends. Each row is one sentence: the English in use now, the Hindi in use "
+                 "now, and an empty Marathi column.")
+        step3 = "3. Write the Marathi in the yellow column 'Marathi (please fill in)'."
     lines: List[Tuple[str, str]] = [
         ("title", "NurtureHUB - language review"),
         ("", ""),
         ("h", "What this file is"),
-        ("p", "Every sentence NurtureHUB shows on screen, plus the messages and the verification "
-              "email it sends. Each row is one sentence: the English in use now, the Hindi in use "
-              "now, and an empty Marathi column."),
+        ("p", about),
         ("", ""),
         ("h", "What we would like you to do"),
         ("n", "1. Read the English and the Hindi side by side. If the Hindi is fine, leave the "
               "correction column empty."),
         ("n", "2. If the Hindi is wrong or unclear, write the better Hindi in the column "
               "'Hindi - correction'. Please do not edit the 'Hindi (in use now)' column."),
-        ("n", "3. Write the Marathi in the yellow column 'Marathi (please fill in)'."),
+        ("n", step3),
         ("n", "4. Use the last column for any note you want to leave us."),
+        ("n", "5. Start with the sheet 'Key terms': it lists the programme words (Anganwadi "
+              "Worker, adoption, growth monitoring, …) the translations use. Correcting a term "
+              "there tells us to change it everywhere, so you do not have to fix it row by row."),
         ("", ""),
         ("h", "Two things to keep exactly as they are"),
         ("n", "1. The ID column. We use it to put your words back into the app. Please do not "
@@ -240,11 +326,21 @@ def _write_readme(wb: Workbook, counts: Dict[str, int]) -> None:
         lines.append(("n", f"{name}: {n} sentences"))
     lines += [
         ("", ""),
+        ("h", "मराठीत थोडक्यात"),
+        ("p", "या फाइलमध्ये NurtureHUB मधील प्रत्येक वाक्य आहे - सध्या वापरात असलेले इंग्रजी आणि हिंदी, "
+              "आणि पिवळ्या स्तंभात मराठीचा पहिला मसुदा. मराठी चुकीचे किंवा अनैसर्गिक वाटल्यास "
+              "त्याच जागी दुरुस्त करा; योग्य असल्यास तसेच ठेवा. ID स्तंभ आणि {{ }} किंवा < > मधील "
+              "शब्द जसेच्या तसे ठेवा. आधी 'Key terms' शीट पहा - तिथे एखादा शब्द दुरुस्त केल्यास "
+              "तो सगळीकडे बदलला जाईल." if drafted else
+              "या फाइलमध्ये NurtureHUB मधील प्रत्येक वाक्य आहे. मराठी पिवळ्या स्तंभात लिहा. "
+              "ID स्तंभ आणि {{ }} किंवा < > मधील शब्द जसेच्या तसे ठेवा."),
+        ("", ""),
         ("h", "हिंदी में संक्षेप में"),
-        ("p", "इस फ़ाइल में NurtureHUB की हर पंक्ति है - अभी इस्तेमाल हो रही अंग्रेज़ी और हिंदी, "
-              "और मराठी के लिए खाली कॉलम। हिंदी ठीक हो तो कुछ न करें; सुधार चाहिए तो "
-              "'Hindi - correction' कॉलम में लिखें। मराठी पीले कॉलम में लिखें। "
-              "ID कॉलम और {{ }} या < > में लिखी चीज़ें बिलकुल वैसी ही रहने दें।"),
+        ("p", "इस फ़ाइल में NurtureHUB की हर पंक्ति है - अभी इस्तेमाल हो रही अंग्रेज़ी और हिंदी। "
+              "हिंदी ठीक हो तो कुछ न करें; सुधार चाहिए तो 'Hindi - correction' कॉलम में लिखें। "
+              + ("पीले कॉलम में मराठी का पहला मसौदा है - गलत हो तो वहीं सुधारें। " if drafted
+                 else "मराठी पीले कॉलम में लिखें। ")
+              + "ID कॉलम और {{ }} या < > में लिखी चीज़ें बिलकुल वैसी ही रहने दें।"),
         ("", ""),
         ("p", "Thank you - once we get this back, the corrections and the Marathi go straight "
               "into NurtureHUB."),
@@ -267,24 +363,36 @@ def _write_readme(wb: Workbook, counts: Dict[str, int]) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description="Export every NurtureHUB sentence for language review.")
     ap.add_argument("--out", default=str(REPO / "NurtureHUB_language_review.xlsx"))
+    ap.add_argument("--marathi-drafts", default=str(MARATHI_DRAFTS),
+                    help="JSON of row ID -> Marathi draft to pre-fill (default: scripts/translation_drafts/mr.json)")
+    ap.add_argument("--no-drafts", action="store_true", help="leave the Marathi column empty")
     args = ap.parse_args()
 
-    sheets = collect_rows()
+    drafts = {} if args.no_drafts else load_drafts(Path(args.marathi_drafts))
+    sheets = collect_rows(drafts)
+    total = sum(len(rows) for rows in sheets.values())
+    drafted = sum(1 for rows in sheets.values() for r in rows if str(r[5]).strip())
+    stale = sum(1 for rows in sheets.values() for r in rows if r[0] in drafts and not str(r[5]).strip()
+                and str(r[2]).strip())
+
     wb = Workbook()
     wb.remove(wb.active)
     counts = {name: len(rows) for name, rows in sheets.items()}
-    _write_readme(wb, counts)
+    _write_readme(wb, counts, drafted=drafted)
+    _write_glossary(wb, drafted=bool(drafted))
     for name, rows in sheets.items():
-        _write_sheet(wb, name, rows)
+        _write_sheet(wb, name, rows, drafted=bool(drafted))
     out = Path(args.out)
     wb.save(out)
 
-    total = sum(counts.values())
     missing_hi = sum(1 for rows in sheets.values() for r in rows if r[1] and not str(r[3]).strip() and not r[0].startswith("server:"))
     print(f"Wrote {out}")
     for name, n in counts.items():
         print(f"  {name:<20}{n:>6} sentences")
     print(f"  {'TOTAL':<20}{total:>6} sentences ({missing_hi} without Hindi today)")
+    if drafts:
+        print(f"  Marathi drafts pre-filled: {drafted} of {total}"
+              + (f" ({stale} left out: the English changed since they were drafted)" if stale else ""))
 
 
 if __name__ == "__main__":

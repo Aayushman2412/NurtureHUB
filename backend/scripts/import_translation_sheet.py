@@ -68,7 +68,7 @@ def read_sheet(path: Path) -> List[dict]:
     wb = load_workbook(path, read_only=True, data_only=True)
     rows: List[dict] = []
     for name in wb.sheetnames:
-        if name.strip().lower().startswith("read me"):
+        if name.strip().lower().startswith(("read me", "key terms")):
             continue
         ws = wb[name]
         for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
@@ -155,6 +155,13 @@ def main() -> None:
         if len(problems) > 25:
             print(f"      ... and {len(problems) - 25} more")
 
+    changed_terms = key_term_changes(Path(args.file))
+    if changed_terms:
+        print(f"\n  Key terms the reviewers changed ({len(changed_terms)}) — apply these across the")
+        print("  translations and in frontend/src/i18n/glossary.md, then re-export if needed:")
+        for english, before, after, note in changed_terms:
+            print(f"      {english}: {before or '(empty)'}  ->  {after or '(empty)'}" + (f"   [{note}]" if note else ""))
+
     if not args.apply:
         print("\nNothing written (add --apply to write the files).")
         return
@@ -189,6 +196,28 @@ def main() -> None:
     for w in written:
         print(f"  {w}")
     print("\nNext: cd frontend && npx tsc -b && npm run build, check the app, then commit.")
+
+
+def key_term_changes(path: Path) -> List[Tuple[str, str, str, str]]:
+    """(English, Marathi in the glossary, Marathi in the returned sheet, note)
+    for every key term the reviewers edited."""
+    from scripts.export_translation_sheet import glossary_rows
+
+    wb = load_workbook(path, read_only=True, data_only=True)
+    sheet = next((wb[n] for n in wb.sheetnames if n.strip().lower().startswith("key terms")), None)
+    if sheet is None:
+        return []
+    ours = {row[0]: row[3] for row in glossary_rows()}
+    out = []
+    for row in sheet.iter_rows(min_row=2, values_only=True):
+        if not row or not row[0]:
+            continue
+        english = str(row[0]).strip()
+        theirs = str(row[3] or "").strip() if len(row) > 3 else ""
+        note = str(row[4] or "").strip() if len(row) > 4 else ""
+        if english in ours and (theirs != ours[english].strip() or note):
+            out.append((english, ours[english], theirs, note))
+    return out
 
 
 def register_marathi() -> bool:
