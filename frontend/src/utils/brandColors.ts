@@ -64,3 +64,15 @@ export const CHART_SERIES = [
 export const TONE_GOOD = '#2F9E56';
 export const TONE_OK = '#F59E0B';
 export const TONE_LOW = '#DC2F2F';
+
+/** Score bands on the Results test pages: excellent / passed / just missed / needs support. */
+export const BAND_COLORS = {
+  excellent: '#2F9E56',
+  passed: '#7FC49A',
+  nearMiss: '#F59E0B',
+  support: '#DC2F2F',
+} as const;
+
+/** Two tests compared side by side: the first coral, the second dusty blue. */
+export const TEST_A_COLOR = '#E85D4C';
+export const TEST_B_COLOR = '#4F7CAC';

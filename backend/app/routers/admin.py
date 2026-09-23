@@ -3047,7 +3047,7 @@ def download_test_results_csv(
 # Live Monitoring REST Endpoints
 # ──────────────────────────────────────────────
 
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from app.models_live import LiveSession, ActivityEvent, SuspiciousFlag, AdminAction as AdminActionModel
 from app.event_processor import build_candidate_state_from_session
 
@@ -3754,6 +3754,84 @@ def get_combined_results(
         ],
         "users": user_rows,
     }
+
+
+@router.get("/results/questions")
+def get_results_questions(
+    district: str = Query("jalna", description="District slug"),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """
+    Question-by-question results for each of a project's tests: how many
+    answered each question correctly, how many left it blank, and the wrong
+    answer chosen most often.
+
+    Counted on each learner's FIRST submitted attempt — what they knew before
+    they had seen the paper. A retake after reading the questions says more
+    about memory than about the topic.
+    """
+    pd = _get_district_or_404(db, district)
+    stages = _district_stages(db, pd.slug)
+    tests = db.query(Test).join(Stage, Test.stage_id == Stage.id).filter(
+        Test.stage_id.in_([s.id for s in stages])
+    ).order_by(Stage.order_index).all() if stages else []
+    learner_ids = [uid for (uid,) in db.query(User.id).filter(
+        User.program_district_id == pd.id, User.is_admin == False,  # noqa: E712
+    ).all()]
+
+    out = []
+    for test in tests:
+        questions = db.query(Question).options(selectinload(Question.options)).filter(
+            Question.test_id == test.id).order_by(Question.order_index, Question.id).all()
+        first: Dict[int, int] = {}      # user -> first submitted attempt id
+        if learner_ids:
+            for att_id, uid in (
+                db.query(TestAttempt.id, TestAttempt.user_id)
+                .filter(TestAttempt.test_id == test.id, TestAttempt.submitted_at.isnot(None),
+                        TestAttempt.user_id.in_(learner_ids))
+                .order_by(TestAttempt.user_id, TestAttempt.attempt_number, TestAttempt.id).all()
+            ):
+                first.setdefault(uid, att_id)
+        attempt_ids = list(first.values())
+
+        # (question, option) -> count, one GROUP BY per chunk of attempts.
+        chosen: Dict[tuple, int] = {}
+        for i in range(0, len(attempt_ids), 1000):
+            chunk = attempt_ids[i:i + 1000]
+            for qid, oid, n in (
+                db.query(TestAnswer.question_id, TestAnswer.selected_option_id, sa_func.count())
+                .filter(TestAnswer.attempt_id.in_(chunk))
+                .group_by(TestAnswer.question_id, TestAnswer.selected_option_id).all()
+            ):
+                chosen[(qid, oid)] = chosen.get((qid, oid), 0) + n
+
+        rows = []
+        writers = len(attempt_ids)
+        for q in questions:
+            options = sorted(q.options, key=lambda o: o.label or "")
+            correct_ids = {o.id for o in options if o.is_correct}
+            answered = {o.id: chosen.get((q.id, o.id), 0) for o in options}
+            n_correct = sum(n for oid, n in answered.items() if oid in correct_ids)
+            n_answered = sum(answered.values())
+            wrong = [(n, o) for o in options if o.id not in correct_ids for n in [answered[o.id]] if n > 0]
+            top_wrong = max(wrong, key=lambda x: x[0]) if wrong else None
+            right = next((o for o in options if o.is_correct), None)
+            rows.append({
+                "id": q.id,
+                "number": len(rows) + 1,
+                "text": q.text,
+                "correct_label": right.label if right else None,
+                "correct_text": right.text if right else None,
+                "writers": writers,
+                "correct": n_correct,
+                "unanswered": max(0, writers - n_answered),
+                "top_wrong_label": top_wrong[1].label if top_wrong else None,
+                "top_wrong_text": top_wrong[1].text if top_wrong else None,
+                "top_wrong_count": top_wrong[0] if top_wrong else 0,
+            })
+        out.append({"test_id": test.id, "writers": writers, "questions": rows})
+    return {"district": pd.slug, "tests": out}
 
 
 @router.get("/results/face-to-face")

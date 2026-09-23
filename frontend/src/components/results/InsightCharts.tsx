@@ -194,7 +194,8 @@ export const BarList: React.FC<{
 export const StackedBar: React.FC<{
   parts: Slice[];
   height?: string;
-}> = ({ parts, height = 'h-5' }) => {
+  showLegend?: boolean;
+}> = ({ parts, height = 'h-5', showLegend = true }) => {
   const total = parts.reduce((a, p) => a + p.value, 0);
   return (
     <div>
@@ -207,7 +208,7 @@ export const StackedBar: React.FC<{
           />
         ))}
       </div>
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+      {showLegend && <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
         {parts.map(p => (
           <span key={p.key} className="inline-flex items-center gap-1.5 text-xs text-ink-muted">
             <span className="size-2.5 rounded-full" style={{ background: p.color }} aria-hidden />
@@ -216,6 +217,191 @@ export const StackedBar: React.FC<{
             <span className="tabular-nums text-ink-faint">({total > 0 ? fmtPct((p.value / total) * 100) : '0%'})</span>
           </span>
         ))}
+      </div>}
+    </div>
+  );
+};
+
+// ── Histogram: how the scores are spread ────────────────────────────────────
+
+/**
+ * One column per score (or score band), each with its count on top. Columns
+ * below the pass mark are red/amber, at or above it green, and a dashed line
+ * sits where passing starts — "most people are just under the line" reads at
+ * a glance.
+ */
+export const Histogram: React.FC<{
+  bars: { label: string; lo: number; hi: number; count: number }[];
+  passMark: number;
+  passLabel: string;
+  countLabel: (n: number, label: string) => string;
+}> = ({ bars, passMark, passLabel, countLabel }) => {
+  const max = Math.max(1, ...bars.map(b => b.count));
+  const firstPassing = bars.findIndex(b => b.lo >= passMark);
+  const linePct = firstPassing < 0 ? 100 : (firstPassing / Math.max(1, bars.length)) * 100;
+  return (
+    <div>
+      <div className="relative flex h-48 items-end gap-1.5 border-b border-border-strong pt-5 sm:gap-2">
+        {bars.map(b => {
+          const color = b.hi < passMark - 20 ? '#DC2F2F' : b.hi < passMark ? '#F59E0B' : '#2F9E56';
+          return (
+            <div key={b.label} className="flex h-full flex-1 flex-col items-center justify-end" title={countLabel(b.count, b.label)}>
+              <span className="mb-1 text-xs font-bold tabular-nums text-ink">{b.count > 0 ? b.count : ''}</span>
+              <span
+                className="w-full max-w-16 rounded-t-md"
+                style={{ height: `${(b.count / max) * 100}%`, minHeight: b.count > 0 ? 3 : 0, background: color, transition: 'height 500ms ease' }}
+              />
+            </div>
+          );
+        })}
+        <span
+          className="pointer-events-none absolute -top-1 bottom-0 border-l-2 border-dashed border-ink/60"
+          style={{ left: `${linePct}%` }}
+        >
+          <span className="absolute -top-1 left-1 whitespace-nowrap rounded bg-surface px-1 text-[0.7rem] font-semibold text-ink">
+            {passLabel}
+          </span>
+        </span>
+      </div>
+      <div className="mt-1.5 flex gap-1.5 sm:gap-2">
+        {bars.map(b => (
+          <span key={b.label} className="flex-1 text-center text-[0.65rem] tabular-nums text-ink-faint sm:text-xs">{b.label}</span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ── PairedBars: two tests, side by side, per group ──────────────────────────
+
+export interface PairedRow {
+  key: string;
+  label: string;
+  a: number;
+  b: number;
+  sub?: string;
+}
+
+export const PairedBars: React.FC<{
+  rows: PairedRow[];
+  colorA: string;
+  colorB: string;
+  labelA: string;
+  labelB: string;
+  changeLabel: (change: number) => string;
+  activeKey?: string | null;
+  onSelect?: (key: string) => void;
+  selectHint?: string;
+}> = ({ rows, colorA, colorB, labelA, labelB, changeLabel, activeKey, onSelect, selectHint }) => (
+  <div>
+    <div className="mb-3 flex flex-wrap gap-4 text-xs text-ink-muted">
+      <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm" style={{ background: colorA }} />{labelA}</span>
+      <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm" style={{ background: colorB }} />{labelB}</span>
+    </div>
+    <div className="space-y-3">
+      {rows.map(r => {
+        const change = r.b - r.a;
+        return (
+          <button
+            key={r.key}
+            type="button"
+            disabled={!onSelect}
+            onClick={onSelect ? () => onSelect(r.key) : undefined}
+            title={selectHint}
+            className={cn(
+              'grid w-full grid-cols-[minmax(6rem,11rem)_1fr_4.5rem] items-center gap-3 rounded-lg px-1.5 py-1.5 text-left',
+              onSelect && 'cursor-pointer hover:bg-surface-sunken',
+              activeKey === r.key && 'bg-surface-sunken ring-1 ring-border-strong',
+              activeKey && activeKey !== r.key && 'opacity-50',
+            )}
+          >
+            <span className="min-w-0">
+              <span className="block truncate text-sm text-ink" title={r.label}>{r.label}</span>
+              {r.sub && <span className="block text-xs text-ink-faint">{r.sub}</span>}
+            </span>
+            <span className="space-y-1">
+              {([[r.a, colorA], [r.b, colorB]] as [number, string][]).map(([v, c], i) => (
+                <span key={i} className="flex items-center gap-2">
+                  <span className="relative h-3 flex-1 rounded-full bg-surface-sunken">
+                    <span className="absolute inset-y-0 left-0 rounded-full"
+                      style={{ width: `${Math.max(0, Math.min(100, v))}%`, background: c, transition: 'width 500ms ease' }} />
+                  </span>
+                  <span className="w-9 text-right text-xs font-bold tabular-nums text-ink">{fmtPct(v)}</span>
+                </span>
+              ))}
+            </span>
+            <span
+              className={cn(
+                'justify-self-end rounded-full px-2 py-0.5 text-xs font-bold tabular-nums',
+                Math.abs(change) < 1 ? 'bg-surface-sunken text-ink-muted'
+                  : change > 0 ? 'bg-success-50 text-success-600 dark:bg-success-500/15'
+                    : 'bg-error-50 text-error-600 dark:bg-error-500/15',
+              )}
+            >
+              {changeLabel(change)}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  </div>
+);
+
+// ── HeatGrid: where each learner landed on both tests ───────────────────────
+
+/**
+ * Rows are score bands on the second test (highest on top), columns on the
+ * first. Each box holds how many learners scored that pair; darker = more.
+ * The diagonal (same band both times) is outlined, so boxes above it are
+ * people who did better the second time and boxes below it did worse.
+ */
+export const HeatGrid: React.FC<{
+  grid: number[][];               // [band of B][band of A]
+  bands: [number, number][];
+  labelA: string;
+  labelB: string;
+  color: string;
+  cellTitle: (count: number, bandA: string, bandB: string) => string;
+}> = ({ grid, bands, labelA, labelB, color, cellTitle }) => {
+  const max = Math.max(1, ...grid.flat());
+  const bandText = ([lo, hi]: [number, number]) => `${lo}–${hi}%`;
+  const rowsTopDown = bands.map((_, i) => bands.length - 1 - i);
+  return (
+    <div className="overflow-x-auto">
+      <div className="inline-grid min-w-full grid-cols-[auto_auto_repeat(5,minmax(3.25rem,1fr))] items-stretch gap-1">
+        <div className="row-span-6 flex items-center justify-center pr-1">
+          <span className="text-xs font-semibold text-ink-muted [writing-mode:vertical-rl] rotate-180">{labelB}</span>
+        </div>
+        {rowsTopDown.map(bi => (
+          <React.Fragment key={bi}>
+            <div className="flex items-center justify-end pr-2 text-xs tabular-nums text-ink-faint">{bandText(bands[bi])}</div>
+            {bands.map((_, ai) => {
+              const n = grid[bi][ai];
+              const strength = n / max;
+              return (
+                <div
+                  key={ai}
+                  title={cellTitle(n, bandText(bands[ai]), bandText(bands[bi]))}
+                  className={cn(
+                    'flex h-12 items-center justify-center rounded-md text-sm font-bold tabular-nums',
+                    ai === bi && 'ring-2 ring-ink/40',
+                    strength > 0.55 ? 'text-white' : 'text-ink',
+                  )}
+                  style={{ background: n > 0 ? `color-mix(in srgb, ${color} ${Math.round(12 + strength * 88)}%, transparent)` : 'var(--color-surface-sunken)' }}
+                >
+                  {n > 0 ? n : ''}
+                </div>
+              );
+            })}
+          </React.Fragment>
+        ))}
+        <div />
+        {bands.map((b, i) => (
+          <div key={i} className="pt-1 text-center text-xs tabular-nums text-ink-faint">{bandText(b)}</div>
+        ))}
+        <div />
+        <div />
+        <div className="col-span-5 pt-1 text-center text-xs font-semibold text-ink-muted">{labelA}</div>
       </div>
     </div>
   );

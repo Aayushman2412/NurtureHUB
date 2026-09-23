@@ -466,3 +466,266 @@ export function findings(
   }
   return out;
 }
+
+// ── One test on its own ─────────────────────────────────────────────────────
+
+export interface QuestionStat {
+  id: number;
+  number: number;
+  text: string;
+  correct_label: string | null;
+  correct_text: string | null;
+  writers: number;
+  correct: number;
+  unanswered: number;
+  top_wrong_label: string | null;
+  top_wrong_text: string | null;
+  top_wrong_count: number;
+}
+
+export interface TestQuestions {
+  test_id: number;
+  writers: number;
+  questions: QuestionStat[];
+}
+
+export interface ScoreBar {
+  label: string;          // "60%" or "60–69"
+  lo: number;             // lowest score the bar holds
+  hi: number;             // highest score the bar holds
+  count: number;
+}
+
+/**
+ * How the best scores are spread. A short paper can only produce a few
+ * scores (5 questions: 0, 20, 40 … 100%), and 10-point bands would leave every
+ * other bar empty — which reads as missing data. So: one bar per possible
+ * score when there are few, 10-point bands when there are many.
+ */
+export function scoreDistribution(users: UserResultRow[], test: ActiveTest, questionCount?: number): ScoreBar[] {
+  const scores = users
+    .map(u => u.tests[String(test.id)])
+    .filter(r => r && r.attempts_count > 0)
+    .map(r => Math.round((r.best_score ?? 0) * 10) / 10);
+  const distinct = new Set(scores);
+  if (questionCount && questionCount <= 12) {
+    for (let k = 0; k <= questionCount; k++) distinct.add(Math.round((k * 1000) / questionCount) / 10);
+  }
+  if (distinct.size <= 13) {
+    return [...distinct].sort((a, b) => a - b).map(v => ({
+      label: `${Math.round(v)}%`, lo: v, hi: v, count: scores.filter(s => s === v).length,
+    }));
+  }
+  const bars: ScoreBar[] = Array.from({ length: 10 }, (_, i) => ({
+    label: i === 9 ? '90+' : `${i * 10}–${i * 10 + 9}`, lo: i * 10, hi: i === 9 ? 100 : i * 10 + 9.99, count: 0,
+  }));
+  for (const s of scores) bars[Math.min(9, Math.floor(s / 10))].count += 1;
+  return bars;
+}
+
+export interface TestGroupRow {
+  group: string;
+  n: number;              // learners in the group
+  stats: TestStats;
+}
+
+export function testGroupStats(users: UserResultRow[], dim: DimensionKey, test: ActiveTest): TestGroupRow[] {
+  return groupStats(users, dim, [test]).map(g => ({ group: g.group, n: g.n, stats: g.tests[test.id] }));
+}
+
+const wroteIt = (u: UserResultRow, test: ActiveTest) => (u.tests[String(test.id)]?.attempts_count ?? 0) > 0;
+const bestOf = (u: UserResultRow, test: ActiveTest) => u.tests[String(test.id)]?.best_score ?? 0;
+
+/** Learners who wrote the test and did not pass, lowest score first. */
+export function lowestScorers(users: UserResultRow[], test: ActiveTest, limit = 10): UserResultRow[] {
+  return users
+    .filter(u => wroteIt(u, test) && !u.tests[String(test.id)].is_passed)
+    .sort((a, b) => bestOf(a, test) - bestOf(b, test) || a.name.localeCompare(b.name))
+    .slice(0, limit);
+}
+
+/** Highest score first; fewer attempts breaks a tie. */
+export function topScorers(users: UserResultRow[], test: ActiveTest, limit = 10): UserResultRow[] {
+  return users
+    .filter(u => wroteIt(u, test))
+    .sort((a, b) => bestOf(b, test) - bestOf(a, test)
+      || a.tests[String(test.id)].attempts_count - b.tests[String(test.id)].attempts_count
+      || a.name.localeCompare(b.name))
+    .slice(0, limit);
+}
+
+function shorten(text: string, max = 70): string {
+  const s = (text ?? '').replace(/\s+/g, ' ').trim();
+  return s.length > max ? `${s.slice(0, max - 1)}…` : s;
+}
+
+export function testFindings(
+  users: UserResultRow[], test: ActiveTest, dim: DimensionKey, groupLabel: (g: string) => string,
+  questions?: TestQuestions,
+): Finding[] {
+  const out: Finding[] = [];
+  const s = testStats(users, test);
+  if (s.wrote === 0) return out;
+  out.push({
+    tone: s.passRate >= 60 ? 'good' : 'watch', key: 'test.headline',
+    params: { passed: s.passed, wrote: s.wrote, pct: round(s.passRate), test: test.label, avg: round(s.avgScore) },
+  });
+  const groups = testGroupStats(users, dim, test).filter(g => g.group !== NOT_RECORDED && g.stats.wrote >= 5);
+  if (groups.length >= 2) {
+    const byRate = [...groups].sort((a, b) => b.stats.passRate - a.stats.passRate);
+    const best = byRate[0];
+    const worst = byRate[byRate.length - 1];
+    if (best.stats.passRate - worst.stats.passRate >= 5) {
+      out.push({ tone: 'good', key: 'bestGroup', params: {
+        group: groupLabel(best.group), pct: round(best.stats.passRate), test: test.label, overall: round(s.passRate),
+        passed: best.stats.passed, wrote: best.stats.wrote, dim } });
+      out.push({ tone: 'watch', key: 'weakestGroup', params: {
+        group: groupLabel(worst.group), pct: round(worst.stats.passRate), test: test.label,
+        passed: worst.stats.passed, wrote: worst.stats.wrote, dim } });
+    } else {
+      out.push({ tone: 'info', key: 'evenGroups', params: { test: test.label, dim } });
+    }
+  }
+  if (s.passed > 0) {
+    out.push({ tone: 'info', key: 'test.attempts', params: {
+      firstTry: s.firstTry, afterRetake: s.afterRetake, notPassed: s.notPassed, test: test.label } });
+  }
+  if (s.bands.nearMiss > 0) {
+    out.push({ tone: 'watch', key: 'test.nearMiss', params: { n: s.bands.nearMiss, mark: test.passMark } });
+  }
+  const notWritten = users.length - s.wrote;
+  if (notWritten > 0) {
+    out.push({ tone: 'watch', key: 'test.notWritten', params: { n: notWritten, test: test.label } });
+  }
+  const qs = (questions?.questions ?? []).filter(q => q.writers > 0);
+  if (qs.length >= 2) {
+    const share = (q: QuestionStat) => q.correct / q.writers;
+    const hardest = [...qs].sort((a, b) => share(a) - share(b))[0];
+    const easiest = [...qs].sort((a, b) => share(b) - share(a))[0];
+    out.push({ tone: share(hardest) < 0.6 ? 'watch' : 'info', key: 'test.hardestQuestion', params: {
+      n: hardest.number, text: shorten(hardest.text), pct: round(pct(hardest.correct, hardest.writers)),
+      wrong: hardest.top_wrong_label ?? '—' } });
+    out.push({ tone: 'good', key: 'test.easiestQuestion', params: {
+      n: easiest.number, text: shorten(easiest.text), pct: round(pct(easiest.correct, easiest.writers)) } });
+  }
+  return out;
+}
+
+// ── Two tests compared ──────────────────────────────────────────────────────
+
+/** A change smaller than this many points counts as "about the same". */
+export const SAME_BAND = 5;
+/** Score bands for the side-by-side grid. */
+export const GRID_BANDS: [number, number][] = [[0, 39], [40, 59], [60, 74], [75, 89], [90, 100]];
+
+export interface PairStats {
+  n: number;                    // wrote both
+  avgA: number;
+  avgB: number;
+  change: number;               // avgB - avgA, in points
+  improved: number;
+  same: number;
+  dropped: number;
+  passBoth: number;
+  passAOnly: number;
+  passBOnly: number;
+  passNeither: number;
+  passRateA: number;
+  passRateB: number;
+  correlation: number | null;   // Pearson r of the paired scores (null if too few)
+  grid: number[][];             // [band of B][band of A] counts, GRID_BANDS order
+}
+
+function bandIndex(score: number): number {
+  const i = GRID_BANDS.findIndex(([lo, hi]) => score >= lo && score <= hi);
+  return i < 0 ? GRID_BANDS.length - 1 : i;
+}
+
+/** Learners who wrote both tests, compared on their best score in each. */
+export function pairStats(users: UserResultRow[], a: ActiveTest, b: ActiveTest): PairStats {
+  const pairs = users
+    .map(u => ({ ra: u.tests[String(a.id)], rb: u.tests[String(b.id)] }))
+    .filter(({ ra, rb }) => ra && rb && ra.attempts_count > 0 && rb.attempts_count > 0);
+  const xs = pairs.map(p => p.ra.best_score ?? 0);
+  const ys = pairs.map(p => p.rb.best_score ?? 0);
+  const grid = GRID_BANDS.map(() => GRID_BANDS.map(() => 0));
+  let improved = 0, same = 0, dropped = 0, passBoth = 0, passAOnly = 0, passBOnly = 0, passNeither = 0;
+  pairs.forEach((p, i) => {
+    const d = ys[i] - xs[i];
+    if (d >= SAME_BAND) improved += 1; else if (d <= -SAME_BAND) dropped += 1; else same += 1;
+    const pa = p.ra.is_passed, pb = p.rb.is_passed;
+    if (pa && pb) passBoth += 1; else if (pa) passAOnly += 1; else if (pb) passBOnly += 1; else passNeither += 1;
+    grid[bandIndex(ys[i])][bandIndex(xs[i])] += 1;
+  });
+  const avgA = avg(xs), avgB = avg(ys);
+  let correlation: number | null = null;
+  if (pairs.length >= 10) {
+    const sx = Math.sqrt(xs.reduce((acc, x) => acc + (x - avgA) ** 2, 0));
+    const sy = Math.sqrt(ys.reduce((acc, y) => acc + (y - avgB) ** 2, 0));
+    const cov = xs.reduce((acc, x, i) => acc + (x - avgA) * (ys[i] - avgB), 0);
+    correlation = sx > 0 && sy > 0 ? cov / (sx * sy) : null;
+  }
+  return {
+    n: pairs.length, avgA, avgB, change: avgB - avgA, improved, same, dropped,
+    passBoth, passAOnly, passBOnly, passNeither,
+    passRateA: pct(passBoth + passAOnly, pairs.length), passRateB: pct(passBoth + passBOnly, pairs.length),
+    correlation, grid,
+  };
+}
+
+export interface PairGroupRow extends PairStats {
+  group: string;
+  members: number;
+}
+
+export function pairGroupStats(users: UserResultRow[], dim: DimensionKey, a: ActiveTest, b: ActiveTest): PairGroupRow[] {
+  // Same grouping and reading order as everywhere else, then paired per group.
+  const order = groupStats(users, dim, [a]).map(g => g.group);
+  return order.map(group => {
+    const members = users.filter(u => (groupOf(u, dim) ?? NOT_RECORDED) === group);
+    return { group, members: members.length, ...pairStats(members, a, b) };
+  });
+}
+
+export const signed = (x: number) => `${x >= 0 ? '+' : '−'}${Math.abs(Math.round(x))}`;
+
+export function compareFindings(
+  users: UserResultRow[], a: ActiveTest, b: ActiveTest, dim: DimensionKey, groupLabel: (g: string) => string,
+): Finding[] {
+  const out: Finding[] = [];
+  const s = pairStats(users, a, b);
+  if (s.n === 0) return out;
+  out.push({
+    tone: s.change >= 0 ? 'good' : 'info', key: s.change >= 0 ? 'cmp.up' : 'cmp.down',
+    params: { n: s.n, a: a.label, b: b.label, avgA: round(s.avgA), avgB: round(s.avgB), change: round(Math.abs(s.change)) },
+  });
+  if (s.correlation !== null) {
+    const r = s.correlation;
+    out.push({
+      tone: r >= 0.3 ? 'good' : 'info',
+      key: r >= 0.6 ? 'cmp.strongLink' : r >= 0.3 ? 'cmp.someLink' : 'cmp.weakLink',
+      params: { a: a.label, b: b.label },
+    });
+  }
+  const rows = pairGroupStats(users, dim, a, b).filter(g => g.group !== NOT_RECORDED && g.n >= 5);
+  if (rows.length >= 2) {
+    const byChange = [...rows].sort((x, y) => y.change - x.change);
+    const best = byChange[0];
+    const worst = byChange[byChange.length - 1];
+    if (best.change - worst.change >= 3) {
+      out.push({ tone: 'good', key: 'cmp.bestGroup', params: {
+        group: groupLabel(best.group), change: signed(best.change), avgA: round(best.avgA), avgB: round(best.avgB),
+        a: a.label, b: b.label, dim } });
+      out.push({ tone: 'watch', key: 'cmp.worstGroup', params: {
+        group: groupLabel(worst.group), change: signed(worst.change), avgA: round(worst.avgA), avgB: round(worst.avgB),
+        a: a.label, b: b.label, dim } });
+    }
+  }
+  if (s.passAOnly > 0) {
+    out.push({ tone: 'watch', key: 'cmp.passedAOnly', params: { n: s.passAOnly, a: a.label, b: b.label } });
+  }
+  if (s.passBOnly > 0) {
+    out.push({ tone: 'good', key: 'cmp.passedBOnly', params: { n: s.passBOnly, a: a.label, b: b.label } });
+  }
+  return out;
+}
