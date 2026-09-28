@@ -16,8 +16,13 @@ Checks before anything is written:
   * the English in the sheet must still match the English in the app. If a
     sentence was reworded after the sheet went out, the row is reported and
     skipped rather than pairing new English with old Hindi.
-  * server messages (IDs starting "server:") are reported, not applied —
-    those sentences live in Python and are English-only today.
+  * assessment-form text (IDs starting "form:") and server messages
+    ("server:") cannot be shown translated yet — forms and server messages
+    are English-only in the app. Their reviewed Hindi and Marathi are kept in
+    scripts/translation_drafts/{hi,mr}.json, ready for when they can be.
+
+Columns are found by their header, not their position, so this reads both the
+current layout and the older one (ID first, no context columns).
 
 Usage (from backend/):
   venv-win/Scripts/python.exe -m scripts.import_translation_sheet --file ../reviewed.xlsx
@@ -38,7 +43,14 @@ REPO = Path(__file__).resolve().parents[2]
 LOCALES = REPO / "frontend" / "src" / "i18n" / "locales"
 I18N_INDEX = REPO / "frontend" / "src" / "i18n" / "index.ts"
 
-COL_ID, COL_EN, COL_HI, COL_FIX, COL_MR = 1, 3, 4, 5, 6
+DRAFTS = Path(__file__).resolve().parent / "translation_drafts"
+
+# header (lower-case prefix) -> row field
+HEADER_FIELDS = [
+    ("id", "id"), ("english", "en"), ("hindi (in use", "hi"), ("hindi - correction", "fix"),
+    ("hindi (draft", "hi_draft"), ("marathi", "mr"), ("reviewer notes", "note"),
+]
+NOT_IN_APP_YET = ("form:", "server:")
 
 
 def _flatten(d: dict, prefix: str = "") -> Dict[str, str]:
@@ -61,7 +73,19 @@ def _nest(flat: Dict[str, str]) -> dict:
 
 
 def _tokens(text: str) -> List[str]:
-    return sorted(re.findall(r"\{\{[^}]+\}\}|<[^>]+>", text or ""))
+    return sorted(re.findall(r"\{\{[^}]+\}\}|\{[a-zA-Z_][^}]*\}|<[^>]+>", text or ""))
+
+
+def _columns(header_row) -> Dict[str, int]:
+    """row field -> 0-based column, from the sheet's own header row."""
+    cols: Dict[str, int] = {}
+    for i, value in enumerate(header_row):
+        head = str(value or "").strip().lower()
+        for prefix, field in HEADER_FIELDS:
+            if head.startswith(prefix) and field not in cols:
+                cols[field] = i
+                break
+    return cols
 
 
 def read_sheet(path: Path) -> List[dict]:
@@ -71,17 +95,44 @@ def read_sheet(path: Path) -> List[dict]:
         if name.strip().lower().startswith(("read me", "key terms")):
             continue
         ws = wb[name]
-        for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-            if not row or not row[COL_ID - 1]:
-                continue
+        it = ws.iter_rows(values_only=True)
+        cols = _columns(next(it, ()) or ())
+        if "id" not in cols:
+            continue
+        for i, row in enumerate(it, start=2):
             # Never strip: a few strings carry a deliberate leading or trailing
             # space (" - Test Phase", "Quiz: ") and losing it would join words.
-            get = lambda c: (str(row[c - 1]) if len(row) >= c and row[c - 1] is not None else "")  # noqa: E731
-            rows.append({
-                "sheet": name, "line": i, "id": get(COL_ID), "en": get(COL_EN),
-                "hi": get(COL_HI), "fix": get(COL_FIX), "mr": get(COL_MR),
-            })
+            def get(field: str) -> str:
+                c = cols.get(field)
+                return str(row[c]) if c is not None and c < len(row) and row[c] is not None else ""
+            if not row or not get("id").strip():
+                continue
+            rows.append({"sheet": name, "line": i, **{f: get(f) for _, f in HEADER_FIELDS}})
     return rows
+
+
+def _fit(value: str, english: str) -> str:
+    """Trim what the reviewer may have added, then restore the spacing the
+    English carries on purpose."""
+    value = value.strip()
+    if english[:1] == " ":
+        value = " " + value
+    if english[-1:] == " ":
+        value = value + " "
+    return value
+
+
+def _current_not_in_app() -> Tuple[Dict[str, str], bool]:
+    """English of the form and server rows as they are now, and whether the
+    forms could be read (they come from the database)."""
+    from scripts.export_translation_sheet import BACKEND_STRINGS, load_form_rows
+
+    current = {sid: text for sid, _, text, _ in BACKEND_STRINGS}
+    try:
+        current.update({r["id"]: r["en"] for r in load_form_rows()})
+        return current, True
+    except Exception:  # noqa: BLE001 - no database here; skip the form check, say so
+        return current, False
 
 
 def main() -> None:
@@ -99,13 +150,32 @@ def main() -> None:
     hi_updates: Dict[str, Dict[str, str]] = defaultdict(dict)
     mr_updates: Dict[str, Dict[str, str]] = defaultdict(dict)
     problems: List[str] = []
-    server_rows: List[dict] = []
+    # Reviewed text the app cannot show translated yet (forms, server messages).
+    kept: Dict[str, Dict[str, str]] = {"hi": {}, "mr": {}}
+    later_english, forms_checked = _current_not_in_app()
     unknown = stale = 0
 
     for r in rows:
-        if r["id"].startswith("server:"):
-            if r["fix"] or r["mr"]:
-                server_rows.append(r)
+        if r["id"].startswith(NOT_IN_APP_YET):
+            english = later_english.get(r["id"])
+            if english is None and (r["id"].startswith("server:") or forms_checked):
+                problems.append(f"{r['sheet']} line {r['line']}: {r['id']} is no longer in the app - skipped")
+                continue
+            english = english if english is not None else r["en"]
+            if r["en"].strip() and r["en"] != english:
+                problems.append(f"{r['sheet']} line {r['line']}: {r['id']} - the English changed since the "
+                                f"sheet went out. Skipped.")
+                continue
+            for lang, value in (("hi", r["hi_draft"] or r["fix"]), ("mr", r["mr"])):
+                if not value.strip():
+                    continue
+                value = _fit(value, english)
+                missing = [t for t in _tokens(english) if t not in value]
+                if missing and not args.force:
+                    problems.append(f"{r['sheet']} line {r['line']}: {r['id']} - {lang} is missing "
+                                    f"{' '.join(missing)} - skipped")
+                    continue
+                kept[lang][r["id"]] = value
             continue
         if ":" not in r["id"]:
             problems.append(f"{r['sheet']} line {r['line']}: ID '{r['id']}' is not in the expected form")
@@ -125,13 +195,7 @@ def main() -> None:
         for label, value, bucket in (("Hindi correction", r["fix"], hi_updates), ("Marathi", r["mr"], mr_updates)):
             if not value.strip():
                 continue
-            # Trim what the reviewer may have added, then restore the spacing
-            # the English carries on purpose.
-            value = value.strip()
-            if english[:1] == " ":
-                value = " " + value
-            if english[-1:] == " ":
-                value = value + " "
+            value = _fit(value, english)
             missing = [t for t in _tokens(english) if t not in value]
             if missing and not args.force:
                 problems.append(f"{r['sheet']} line {r['line']}: {r['id']} - {label} is missing "
@@ -142,12 +206,16 @@ def main() -> None:
     print(f"Read {len(rows)} rows from {args.file}")
     print(f"  Hindi corrections to apply : {sum(len(v) for v in hi_updates.values())}")
     print(f"  Marathi translations       : {sum(len(v) for v in mr_updates.values())}")
-    if server_rows:
-        print(f"  Server messages (not applied automatically): {len(server_rows)}")
-        for r in server_rows[:10]:
-            print(f"      {r['id']}")
-        print("      These live in Python and the server sends them in English today;")
-        print("      translating them needs a code change. Keep this sheet for that work.")
+    n_forms = sum(1 for lang in kept.values() for k in lang if k.startswith("form:"))
+    n_server = sum(1 for lang in kept.values() for k in lang if k.startswith("server:"))
+    if n_forms or n_server:
+        print(f"  Kept for later (the app shows these in English only today):")
+        print(f"      assessment forms : {n_forms} translations")
+        print(f"      server messages  : {n_server} translations")
+        print("      Saved to scripts/translation_drafts/{hi,mr}.json; showing them translated")
+        print("      needs the forms and the server to learn languages first (a code change).")
+    if not forms_checked:
+        print("  (No database here, so form rows were not checked against the current forms.)")
     if problems:
         print(f"\n  {len(problems)} row(s) need attention:")
         for p in problems[:25]:
@@ -167,6 +235,14 @@ def main() -> None:
         return
 
     written: List[str] = []
+    for lang, updates in kept.items():
+        if not updates:
+            continue
+        path = DRAFTS / f"{lang}.json"
+        drafts = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+        drafts.update(updates)
+        path.write_text(json.dumps(drafts, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+        written.append(f"scripts/translation_drafts/{lang}.json ({len(updates)} reviewed)")
     for ns, updates in hi_updates.items():
         path = LOCALES / "hi" / f"{ns}.json"
         flat = _flatten(json.loads(path.read_text(encoding="utf-8"))) if path.exists() else {}
