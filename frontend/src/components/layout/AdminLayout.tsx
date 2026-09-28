@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, FileText, Video, ClipboardList, LogOut, Shield, MapPin, ChevronDown, Building2, Sun, Moon,
   MonitorPlay, GraduationCap, Radio, Activity, Table2, FileSpreadsheet, Menu,
-  DatabaseZap, Users, ShieldCheck,
+  DatabaseZap, Users, ShieldCheck, ChartNoAxesCombined,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { defaultProject, groupProjects, listProjects, type ProjectGroups } from '../../api/projects';
@@ -28,6 +28,7 @@ const navItems = [
   { to: '/admin/tests', icon: Radio, key: 'liveMonitor', end: false },
   { to: '/admin/results', icon: GraduationCap, key: 'results', end: false },
   { to: '/admin/growth', icon: Activity, key: 'growthMonitor', end: false },
+  { to: '/admin/masd', icon: ChartNoAxesCombined, key: 'masd', end: false },
   { to: '/admin/data-protection', icon: ShieldCheck, key: 'dataProtection', end: false },
 ] as const;
 

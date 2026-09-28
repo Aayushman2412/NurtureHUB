@@ -21,6 +21,18 @@ export const monthsDays = (days: number | null): { m: number; d: number } | null
 export const adoptionCategory = (days: number | null): AdoptionCategory | null =>
   days == null ? null : days < 0 ? 'antenatal' : monthsDays(days)!.m < 5 ? 'under5m' : 'over5m';
 
+const TYPE_CATEGORY: Record<string, AdoptionCategory> = {
+  anc: 'antenatal', pnc_lt5: 'under5m', pnc_ge5: 'over5m',
+};
+
+/**
+ * A case's category: the server's adoption type when it has one — typed by
+ * the MASD programme rules (backend app/masd/rules.py: under / from 150 days),
+ * so the growth monitor and the MASD dashboard agree — else by age at adoption.
+ */
+export const caseCategory = (type: string | null | undefined, days: number | null): AdoptionCategory | null =>
+  (type ? TYPE_CATEGORY[type] : undefined) ?? adoptionCategory(days);
+
 // ── Excel-style spectrum cell fills ──────────────────────────────────────────
 // A 7-stop ramp (deep red → red → orange → amber → lime → green → deep green)
 // rather than a plain hue sweep: the extra stops and the stronger alpha make

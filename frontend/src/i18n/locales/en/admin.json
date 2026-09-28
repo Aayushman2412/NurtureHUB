@@ -18,6 +18,7 @@
       "liveMonitor": "Live Monitor",
       "results": "Results",
       "growthMonitor": "Growth Monitor",
+      "masd": "MASD Dashboard",
       "databaseSection": "Database",
       "crosstabsPipeline": "Crosstabs Pipeline",
       "masdPipeline": "MASD Pipeline",

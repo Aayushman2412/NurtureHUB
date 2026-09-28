@@ -460,9 +460,37 @@ class FaceToFaceSelection(Base):
     uploaded_by = Column(String, nullable=True)  # admin email
     notified = Column(Boolean, default=False, nullable=False)
     selected_at = Column(DateTime(timezone=True), server_default=func.now())
+    # After F2F training the strongest learners become Master Trainers or
+    # Facilitators ("MT+FL"), and the MASD outcome analysis compares them with
+    # everyone else. None = an ordinary F2F learner. See app/masd/rules.py.
+    trainer_role = Column(String, nullable=True)  # "master_trainer" | "facilitator"
 
     # Relationships
     user = relationship("User")
+    program_district = relationship("ProgramDistrict")
+
+
+class MasdProjectSettings(Base):
+    """One project's programme calendar and survey benchmarks for the MASD
+    (Member Activity Summary) dashboard.
+
+    The tranche rules decide how many adoptions and activities each learner is
+    expected to complete, so the dates are the analysts' to set per project —
+    the dashboard falls back to dates inferred from the data when they are empty.
+    """
+    __tablename__ = "masd_project_settings"
+
+    program_district_id = Column(
+        Integer, ForeignKey("program_districts.id", ondelete="CASCADE"), primary_key=True,
+    )
+    training_date = Column(Date, nullable=True)      # F2F training: adoptions start
+    tranche2_start = Column(Date, nullable=True)     # adoptions from here count to tranche 2
+    # {"label": "NFHS-5 Maharashtra", "age_bands": {"lt6": {...}, "m6_11": {...}},
+    #  "district_trend": {"label": ..., "rounds": [...], "stunting": [...], ...}}
+    benchmarks_json = Column(JSON, nullable=True)
+    updated_by = Column(String, nullable=True)       # admin email
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
     program_district = relationship("ProgramDistrict")
 
 

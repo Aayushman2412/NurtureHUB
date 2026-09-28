@@ -24,6 +24,8 @@ openpyxl==3.1.5
 # Data-analytics pipelines (admin "Database" section — backend/pipelines/)
 pandas==3.0.5
 numpy==2.4.6
+# MASD dashboard: the downloadable PowerPoint report (app/masd/pptx_export.py)
+python-pptx==1.0.2
 # Web push notifications (PWA)
 pywebpush>=2.0.0
 # Cloudflare R2 media storage (S3-compatible API) - app/storage.py

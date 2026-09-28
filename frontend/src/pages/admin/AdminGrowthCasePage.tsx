@@ -24,7 +24,7 @@ import {
   type GrowthSummaryRow,
 } from '../../api/growth';
 import type { FormKey, FormResponseDetail } from '../../lib/flowTypes';
-import { adoptionCategory, lapCellFill, monthsDays } from '../../lib/growthDisplay';
+import { caseCategory, lapCellFill, monthsDays } from '../../lib/growthDisplay';
 import { sexKeyForGender, type GrowthPoint } from '../../lib/growthChart';
 import GrowthChartGrid, { GrowthLegend } from '../../components/growth/GrowthChartGrid';
 import VisitDetailModal from '../../components/growth/VisitDetailModal';
@@ -302,7 +302,7 @@ const AdminGrowthCasePage: React.FC = () => {
     );
   }
 
-  const adoptCat = row ? adoptionCategory(row.case_details.age_of_adoption_days) : null;
+  const adoptCat = row ? caseCategory(row.case_details.adoption_type, row.case_details.age_of_adoption_days) : null;
   // null = gender unknown → the WHO charts cannot be plotted for this child.
   const sex = sexKeyForGender(detail.child.gender);
 

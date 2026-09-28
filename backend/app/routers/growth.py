@@ -29,6 +29,8 @@ from sqlalchemy.orm import Session
 
 from app import growth_summary_mock as gsm  # MOCK: summary-table demo values (removable)
 from app import models, projects
+from app.masd import rules as masd_rules
+from app.masd.engine import ChildIn, MotherIn, classify
 from app.database import get_db
 from app.config import settings
 from app.dependencies import get_verified_user, get_current_admin, require_phi_access
@@ -112,6 +114,7 @@ def _build_cases(
             models.User.id, models.User.full_name, models.User.email,
             models.User.role, models.User.department,
             models.ProgramDistrict.name,
+            models.Mother.adoption_date, models.Mother.lmp, models.User.program_district_id,
         )
         .join(models.Mother, models.Child.mother_id == models.Mother.id)
         .outerjoin(models.User, models.Mother.registered_by_user_id == models.User.id)
@@ -150,7 +153,7 @@ def _build_cases(
     for (child_id, child_uid, child_name, gender, dob, birth_weight, birth_length, adoption_date,
          mother_id, mother_uid, mother_name,
          l_user_id, learner_name, learner_email, learner_role, learner_department,
-         district_name) in rows:
+         district_name, mother_adopted, mother_lmp, project_id) in rows:
         cases[child_id] = {
             "child": {
                 "id": child_id,
@@ -162,7 +165,10 @@ def _build_cases(
                 "birth_length": birth_length,
                 "adoption_date": adoption_date.isoformat() if adoption_date else None,
             },
-            "mother": {"id": mother_id, "uid": mother_uid, "name": mother_name},
+            "mother": {"id": mother_id, "uid": mother_uid, "name": mother_name,
+                       "adoption_date": mother_adopted.isoformat() if mother_adopted else None,
+                       "lmp": mother_lmp.isoformat() if mother_lmp else None},
+            "project_id": project_id,
             "learner": (
                 {
                     "id": l_user_id,
@@ -326,18 +332,67 @@ def _z_triplet(child_id: int, sex: Optional[str], visits: List[Dict[str, Any]],
     }
 
 
-def _summary_rows(cases: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _tranche2_by_project(db: Session) -> Dict[int, date]:
+    """Each project's tranche-2 start, from its MASD calendar."""
+    return {
+        s.program_district_id: s.tranche2_start
+        for s in db.query(models.MasdProjectSettings).all()
+        if s.tranche2_start
+    }
+
+
+def _adoption(case: Dict[str, Any], tranche2: Optional[date], today: date) -> Dict[str, Any]:
+    """Adoption type, tranche and expected counts for one case, by the MASD
+    programme rules (app/masd/rules.py) — the same rules the MASD dashboard
+    applies, so the two screens agree on what a case "should" have had.
+
+    Expected counts are the rules' ideal for the adoption's type and tranche,
+    pro rata while its follow-up (2.5 / 1.5 months) is still running. An ANC
+    adoption's ideal is antenatal and protein checks (mother-level), so its
+    baby's growth, breastfeeding and complementary-feeding visits are extra.
+    """
+    child, mother, learner = case["child"], case["mother"], case["learner"]
+    d = lambda iso: date.fromisoformat(iso) if iso else None  # noqa: E731
+    m_in = MotherIn(id=mother["id"], learner_id=learner.get("id"),
+                    adoption_date=d(mother.get("adoption_date")) or d(child["adoption_date"]),
+                    lmp=d(mother.get("lmp")))
+    c_in = ChildIn(id=child["id"], mother_id=mother["id"], dob=d(child["dob"]),
+                   adoption_date=d(child["adoption_date"]))
+    atype, _ = classify(m_in, [c_in])
+    anchor = m_in.adoption_date
+    if atype == masd_rules.UNKNOWN or anchor is None:
+        return {"type": None, "tranche": None, "expected": None, "anchor": anchor}
+    tranche = 2 if (tranche2 is not None and anchor >= tranche2) else 1
+    is_nurse = masd_rules.role_group(learner.get("role")) == masd_rules.NURSING_STAFF
+    ideal = masd_rules.ideal_for_adoption(atype, tranche, is_nurse)
+    elapsed = max(0, (today - anchor).days)
+    span = 2 if is_nurse else masd_rules.FOLLOW_UP_DAYS[tranche]
+    due = min(1.0, elapsed / span)
+    expected = {"cg": round(ideal.get("gm", 0) * due), "bf": round(ideal.get("bf", 0) * due),
+                "cf": round(ideal.get("cf", 0) * due)}
+    return {"type": atype, "tranche": tranche, "expected": expected, "anchor": anchor}
+
+
+def _summary_rows(cases: List[Dict[str, Any]],
+                  tranche2: Optional[Dict[int, date]] = None) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     today = date.today()
+    tranche2 = tranche2 or {}
     for case in cases:
         child, mother, learner = case["child"], case["mother"], case["learner"]
         visits = case["visits"]
         child_id = child["id"]
         sex = _sex_key(child["gender"])
 
-        # Adoption timing — REAL, from stored dates.
+        # Adoption type, tranche and expected counts — REAL, by the MASD rules.
+        adoption = _adoption(case, tranche2.get(case.get("project_id")), today)
+
+        # Adoption timing — REAL, from stored dates. For an ANC adoption the
+        # case began before birth, so its age at adoption is negative.
         dob = date.fromisoformat(child["dob"]) if child["dob"] else None
         adopted = date.fromisoformat(child["adoption_date"]) if child["adoption_date"] else None
+        if adoption["type"] == masd_rules.ANC and dob and adoption["anchor"]:
+            adopted = adoption["anchor"]
         age_at_adoption = (adopted - dob).days if (dob and adopted) else None
         duration_days = (today - adopted).days if adopted else None
         timing_is_mock = False
@@ -352,12 +407,16 @@ def _summary_rows(cases: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         bf_actual = sum(1 for v in visits if "breastfeeding" in v["forms"])
         cf_actual = sum(1 for v in visits if "complementary_feeding" in v["forms"])
 
-        # Adoption type + expected counts — MOCK (null when disabled).
-        adoption_type = None
-        expected = {"cg": None, "bf": None, "cf": None}
-        if gsm.MOCK_ENABLED:
-            adoption_type = gsm.adoption_type(child_id, age_at_adoption)   # MOCK: adoption type
-            expected = gsm.expected_counts(child_id, adoption_type, duration_days)  # MOCK: expected rules
+        adoption_type = adoption["type"]
+        expected = adoption["expected"] or {"cg": None, "bf": None, "cf": None}
+        expected_is_mock = False
+        if adoption_type is None and gsm.MOCK_ENABLED:
+            # No dates to type the case by: the demo layer fills in (removable).
+            mock_type = gsm.adoption_type(child_id, age_at_adoption)   # MOCK: adoption type
+            expected = gsm.expected_counts(child_id, mock_type, duration_days)  # MOCK: expected rules
+            adoption_type = {gsm.ADOPTION_ANTENATAL: masd_rules.ANC, gsm.ADOPTION_NEWBORN: masd_rules.PNC_LT5,
+                             gsm.ADOPTION_OLDER: masd_rules.PNC_GE5}.get(mock_type, mock_type)
+            expected_is_mock = True
 
         cg, bf, cf = (_activity_block(expected["cg"], cg_actual),
                       _activity_block(expected["bf"], bf_actual),
@@ -386,6 +445,7 @@ def _summary_rows(cases: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             },
             "case_details": {
                 "adoption_type": adoption_type,
+                "tranche": adoption["tranche"],
                 "age_of_adoption_days": age_at_adoption,
                 "adoption_duration_days": duration_days,
             },
@@ -395,8 +455,8 @@ def _summary_rows(cases: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 "sex": sex,
                 "district": learner.get("district"),
                 "department": learner.get("department"),
-                "expected_is_mock": bool(gsm.MOCK_ENABLED),
-                "adoption_type_is_mock": bool(timing_is_mock),
+                "expected_is_mock": expected_is_mock,
+                "adoption_type_is_mock": bool(timing_is_mock or expected_is_mock),
                 "timing_is_mock": bool(timing_is_mock),
                 "z_is_mock": False,   # z-scores are always real or absent
             },
@@ -519,7 +579,10 @@ def _xlsx_columns() -> List[_ColSpec]:
         ("Identity", "Role", lambda r: r["identity"]["role_group"], None),
         ("Identity", "Mother", lambda r: r["identity"]["mother_name"], None),
         ("Identity", "Child ID", lambda r: r["identity"]["child_uid"], None),
-        ("Case details", "Adoption type", lambda r: r["case_details"]["adoption_type"], None),
+        ("Case details", "Adoption type",
+         lambda r: masd_rules.ADOPTION_TYPE_LABELS.get(r["case_details"]["adoption_type"],
+                                                       r["case_details"]["adoption_type"]), None),
+        ("Case details", "Tranche", lambda r: r["case_details"].get("tranche"), None),
         ("Case details", "Adopt age (mo)", lambda r: _months(r["case_details"]["age_of_adoption_days"]), None),
         ("Case details", "Duration (mo)", lambda r: _months(r["case_details"]["adoption_duration_days"]), None),
         *activity("Total activities", "total"),
@@ -688,7 +751,7 @@ def admin_growth_summary(
         department=department or None, learner_category=learner_category or None, learner_id=learner_id,
         learner_ids=_parse_learner_ids(learner_ids),
     )
-    rows = _summary_rows(cases)
+    rows = _summary_rows(cases, _tranche2_by_project(db))
     phi.log_list(
         resource_type="growth_summary",
         count=len(rows),
@@ -782,7 +845,7 @@ def admin_growth_summary_export(
         department=department or None, learner_category=learner_category or None, learner_id=learner_id,
         learner_ids=_parse_learner_ids(learner_ids),
     )
-    rows = _summary_rows(cases)
+    rows = _summary_rows(cases, _tranche2_by_project(db))
     buffer = _summary_xlsx(rows)
     # Written synchronously: at this moment the data leaves the platform's
     # custody, and under the MOU custody is what responsibility follows. The

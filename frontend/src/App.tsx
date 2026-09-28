@@ -53,6 +53,7 @@ import AdminProjectsPage from './pages/admin/AdminProjectsPage';
 import AdminLearnersPage from './pages/admin/AdminLearnersPage';
 import AdminLiveMonitorPage from './pages/admin/AdminLiveMonitorPage';
 import AdminGrowthMonitorPage from './pages/admin/AdminGrowthMonitorPage';
+import AdminMasdPage from './pages/admin/AdminMasdPage';
 import AdminGrowthCasePage from './pages/admin/AdminGrowthCasePage';
 import AdminRawDataPage from './pages/admin/AdminRawDataPage';
 import AdminCrosstabsPipelinePage from './pages/admin/AdminCrosstabsPipelinePage';
@@ -203,6 +204,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/admin/tests" element={<AdminRoute><AdminTestsPage /></AdminRoute>} />
       <Route path="/admin/tests/:testId/monitor" element={<AdminRoute><AdminLiveMonitorPage /></AdminRoute>} />
       <Route path="/admin/growth" element={<AdminRoute><AdminGrowthMonitorPage /></AdminRoute>} />
+      <Route path="/admin/masd" element={<AdminRoute><AdminMasdPage /></AdminRoute>} />
       <Route path="/admin/growth/cases/:childId" element={<AdminRoute><AdminGrowthCasePage /></AdminRoute>} />
       <Route path="/admin/data-protection" element={<AdminRoute><AdminDataProtectionPage /></AdminRoute>} />
       <Route path="/admin/database/rawdata" element={<AdminRoute><AdminRawDataPage /></AdminRoute>} />

@@ -75,7 +75,10 @@ export interface GrowthSummaryRow {
     child_uid: string;
   };
   case_details: {
+    /** 'anc' | 'pnc_lt5' | 'pnc_ge5' — typed by the MASD programme rules. */
     adoption_type: string | null;
+    /** 1 or 2: which round of adoption the case belongs to. */
+    tranche?: number | null;
     age_of_adoption_days: number | null;
     adoption_duration_days: number | null;
   };

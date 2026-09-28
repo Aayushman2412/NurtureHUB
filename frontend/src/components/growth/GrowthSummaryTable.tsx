@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { SlidersHorizontal, RotateCcw, Info, Download } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import type { ActivityBlock, GrowthSummaryRow, ZTriplet } from '../../api/growth';
-import { adoptionCategory, monthsDays, pctCellFill, zCellFill } from '../../lib/growthDisplay';
+import { caseCategory, monthsDays, pctCellFill, zCellFill } from '../../lib/growthDisplay';
 
 /** Toggleable column groups (Identity is always shown). */
 type GroupId = 'case' | 'total' | 'cg' | 'bf' | 'cf' | 'outcomes';
@@ -254,7 +254,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
             base: 96,
             align: 'left',
             render: r => {
-              const cat = adoptionCategory(r.case_details.age_of_adoption_days);
+              const cat = caseCategory(r.case_details.adoption_type, r.case_details.age_of_adoption_days);
               const isMock = cat == null ? r.meta.adoption_type_is_mock : r.meta.timing_is_mock;
               // Inner title wins over the Mockable one, so fold the demo hint in.
               const tip = [isMock ? demo : null, r.case_details.adoption_type]
