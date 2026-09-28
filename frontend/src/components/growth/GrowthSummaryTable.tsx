@@ -87,8 +87,22 @@ interface Props {
   onDownloadXlsx?: () => Promise<void> | void;
 }
 
+/** Rows drawn at first, and added each time the reader nears the bottom. */
+const ROW_BATCH = 100;
+
 const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloadXlsx }) => {
   const { t } = useTranslation('growth');
+
+  // A project can hold ~1,000 cases of ~35 filled cells each; drawing them all
+  // at once froze the page for seconds. Draw a batch, then the next as the
+  // reader scrolls the table. (The XLSX download always has every row.)
+  const [shown, setShown] = useState(ROW_BATCH);
+  useEffect(() => { setShown(ROW_BATCH); }, [rows]);
+  const showMore = () => setShown(n => Math.min(n + ROW_BATCH, rows.length));
+  const onTableScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (shown < rows.length && el.scrollTop + el.clientHeight > el.scrollHeight - 600) showMore();
+  };
 
   const [scale, setScale] = useState(1);
   const [dense, setDense] = useState(true);
@@ -443,7 +457,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
       )}
 
       {/* table */}
-      <div className="max-h-[70vh] overflow-auto rounded-xl border border-border bg-surface">
+      <div onScroll={onTableScroll} className="max-h-[70vh] overflow-auto rounded-xl border border-border bg-surface">
         <table className="border-collapse text-sm" style={{ tableLayout: 'fixed', width: 'max-content' }}>
           <colgroup>
             {flatCols.map(c => (
@@ -494,7 +508,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
           </thead>
 
           <tbody className="divide-y divide-border">
-            {rows.map((r, rowIndex) => (
+            {rows.slice(0, shown).map((r, rowIndex) => (
               <tr
                 key={r.case_id}
                 onClick={() => onRowClick?.(r)}
@@ -532,6 +546,15 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
           </tbody>
         </table>
 
+        {shown < rows.length && (
+          <div className="sticky left-0 flex items-center gap-3 px-4 py-3 text-xs text-ink-muted">
+            {t('summary.showing', { shown, total: rows.length })}
+            <button type="button" onClick={showMore}
+              className="cursor-pointer rounded-md border border-border px-2 py-1 font-semibold text-ink hover:bg-surface-sunken">
+              {t('summary.showMore')}
+            </button>
+          </div>
+        )}
         {rows.length === 0 && (
           <div className="px-4 py-10 text-center text-sm text-ink-muted">{t('admin.noCases')}</div>
         )}

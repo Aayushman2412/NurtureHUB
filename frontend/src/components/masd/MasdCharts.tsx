@@ -4,7 +4,7 @@
  * (teal = adoption, coral = activity, grey = the earlier date), and a dashed
  * line marks the 100% target wherever there is one.
  */
-import React from 'react';
+import React, { useState } from 'react';
 import { cn } from '../../utils/cn';
 import { MASD_COLORS, rateTone } from '../../lib/masdDisplay';
 
@@ -29,6 +29,7 @@ export const GroupedColumns: React.FC<{
   const top = Math.max(reference?.value ?? 0, ...all, 1);
   const max = top <= 10 ? Math.ceil(top) : Math.ceil(top / 20) * 20;
   const refPct = reference ? (reference.value / max) * 100 : null;
+  const dense = series.length >= 4 && categories.length >= 5;
   const minWidth = categories.length * Math.max(56, series.length * 22);
   return (
     <div>
@@ -59,7 +60,8 @@ export const GroupedColumns: React.FC<{
                     <div key={s.key} className="flex h-full max-w-9 flex-1 flex-col items-center justify-end"
                       title={`${c.label} · ${s.label}: ${v == null ? '—' : v.toFixed(1) + valueSuffix}`}>
                       {showValues && v != null && (
-                        <span className="mb-0.5 text-[0.62rem] font-semibold tabular-nums text-ink sm:text-[0.68rem]">
+                        <span className={cn('mb-0.5 font-semibold tabular-nums text-ink',
+                          dense ? 'text-[0.55rem] sm:text-[0.62rem]' : 'text-[0.62rem] sm:text-[0.68rem]')}>
                           {v >= 100 || valueSuffix === '' ? Math.round(v) : v.toFixed(0)}
                         </span>
                       )}
@@ -168,23 +170,39 @@ export const TrendLine: React.FC<{
   labelA: string;
   labelB: string;
 }> = ({ points, labelA, labelB }) => {
+  const [hover, setHover] = useState<number | null>(null);
   if (points.length < 2) return null;
   const W = 760, H = 230, L = 40, R = 12, T = 16, B = 34;
   const maxA = Math.max(...points.map(p => p.a), 1);
   const maxB = Math.max(...points.map(p => p.b), 1);
-  const px = (i: number) => L + (i / (points.length - 1)) * (W - L - R);
+  const step = (W - L - R) / (points.length - 1);
+  const px = (i: number) => L + i * step;
   const pyA = (v: number) => H - B - (v / maxA) * (H - T - B);
-  const barW = Math.max(4, (W - L - R) / points.length * 0.45);
+  const barH = (v: number) => (v / maxB) * (H - T - B) * 0.35;
+  const barW = Math.max(4, ((W - L - R) / points.length) * 0.45);
   const path = points.map((p, i) => `${i ? 'L' : 'M'}${px(i).toFixed(1)},${pyA(p.a).toFixed(1)}`).join(' ');
   const area = `${path} L${px(points.length - 1)},${H - B} L${px(0)},${H - B} Z`;
   const every = Math.ceil(points.length / 9);
+
+  // The hovered week's label: three lines, kept inside the chart.
+  const tip = hover == null ? null : (() => {
+    const p = points[hover];
+    const longest = Math.max(p.label.length, `${labelA}: ${p.a}`.length, `${labelB}: ${p.b}`.length);
+    const w = Math.max(150, 30 + longest * 7), h = 58;
+    const x = Math.min(Math.max(px(hover) - w / 2, L), W - R - w);
+    const above = pyA(p.a) - h - 12;
+    const y = above >= 2 ? above : Math.min(pyA(p.a) + 12, H - B - h);
+    return { p, x, y, w, h };
+  })();
+
   return (
     <div>
       <div className="mb-2 flex flex-wrap gap-4 text-xs text-ink-muted">
         <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-4 rounded" style={{ background: MASD_COLORS.activity }} />{labelA}</span>
         <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm" style={{ background: MASD_COLORS.adoption }} />{labelB}</span>
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label={labelA}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full touch-none select-none" role="img" aria-label={labelA}
+        onMouseLeave={() => setHover(null)}>
         {[0, 0.5, 1].map(f => (
           <g key={f}>
             <line x1={L} x2={W - R} y1={pyA(maxA * f)} y2={pyA(maxA * f)} className="stroke-border" />
@@ -192,23 +210,41 @@ export const TrendLine: React.FC<{
           </g>
         ))}
         {points.map((p, i) => (
-          <rect key={`b${i}`} x={px(i) - barW / 2} width={barW} y={H - B - (p.b / maxB) * (H - T - B) * 0.35}
-            height={(p.b / maxB) * (H - T - B) * 0.35} fill={MASD_COLORS.adoption} fillOpacity={0.55} rx={2}>
-            <title>{`${p.label}: ${p.b} ${labelB.toLowerCase()}`}</title>
-          </rect>
+          <rect key={`b${i}`} x={px(i) - barW / 2} width={barW} y={H - B - barH(p.b)} height={barH(p.b)}
+            fill={MASD_COLORS.adoption} fillOpacity={hover === i ? 0.9 : 0.55} rx={2} />
         ))}
         <path d={area} fill={MASD_COLORS.activity} fillOpacity={0.1} />
         <path d={path} fill="none" stroke={MASD_COLORS.activity} strokeWidth={2.5} strokeLinejoin="round" />
+        {hover != null && (
+          <line x1={px(hover)} x2={px(hover)} y1={T} y2={H - B} className="stroke-ink/40" strokeDasharray="4 3" />
+        )}
         {points.map((p, i) => (
           <g key={`p${i}`}>
-            <circle cx={px(i)} cy={pyA(p.a)} r={3.2} fill={MASD_COLORS.activity}>
-              <title>{`${p.label}: ${p.a} ${labelA.toLowerCase()}`}</title>
-            </circle>
+            <circle cx={px(i)} cy={pyA(p.a)} r={hover === i ? 5.5 : 3.2} fill={MASD_COLORS.activity}
+              stroke={hover === i ? 'white' : 'none'} strokeWidth={2} />
             {i % every === 0 && (
               <text x={px(i)} y={H - B + 16} textAnchor="middle" className="fill-ink-faint text-[11px]">{p.label}</text>
             )}
           </g>
         ))}
+        {/* One invisible column per week, so the whole column — not just the
+            small dot — brings up that week's numbers. */}
+        {points.map((p, i) => (
+          <rect key={`h${i}`} x={px(i) - step / 2} y={T} width={step} height={H - T - B} fill="transparent"
+            onMouseEnter={() => setHover(i)} onClick={() => setHover(i)}>
+            <title>{`${p.label} · ${labelA}: ${p.a} · ${labelB}: ${p.b}`}</title>
+          </rect>
+        ))}
+        {tip && (
+          <g pointerEvents="none">
+            <rect x={tip.x} y={tip.y} width={tip.w} height={tip.h} rx={8} className="fill-surface stroke-border-strong" strokeWidth={1} />
+            <text x={tip.x + 10} y={tip.y + 18} className="fill-ink text-[12px] font-semibold">{tip.p.label}</text>
+            <circle cx={tip.x + 14} cy={tip.y + 32} r={4} fill={MASD_COLORS.activity} />
+            <text x={tip.x + 24} y={tip.y + 36} className="fill-ink text-[12px]">{`${labelA}: ${tip.p.a.toLocaleString()}`}</text>
+            <rect x={tip.x + 10} y={tip.y + 42} width={8} height={8} rx={2} fill={MASD_COLORS.adoption} />
+            <text x={tip.x + 24} y={tip.y + 50} className="fill-ink text-[12px]">{`${labelB}: ${tip.p.b.toLocaleString()}`}</text>
+          </g>
+        )}
       </svg>
     </div>
   );

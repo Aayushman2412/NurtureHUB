@@ -28,7 +28,7 @@ def benchmarks_for(project: models.ProgramDistrict,
 
 
 def load(db: Session, project: models.ProgramDistrict) -> MasdData:
-    from app.routers.growth import GROWTH_FORM_KEY, _extract_metrics
+    from app.routers.growth import GROWTH_FORM_KEY, growth_metrics
 
     member_ids = projects.member_project_ids(db, project)
 
@@ -122,16 +122,9 @@ def load(db: Session, project: models.ProgramDistrict) -> MasdData:
                 growth_rows[rid] = (cid, on)
 
     growth: List[GrowthIn] = []
-    for start in range(0, len(growth_ids), 2000):
-        chunk = growth_ids[start:start + 2000]
-        for rid, answers in (
-            db.query(models.FormResponse.id, models.FormResponse.answers_json)
-            .filter(models.FormResponse.id.in_(chunk))
-            .all()
-        ):
-            metrics = _extract_metrics(answers)
-            cid, on = growth_rows[rid]
-            growth.append(GrowthIn(child_id=cid, on=on, weight=metrics["weight"], length=metrics["length"]))
+    for rid, metrics in growth_metrics(db, growth_ids).items():
+        cid, on = growth_rows[rid]
+        growth.append(GrowthIn(child_id=cid, on=on, weight=metrics["weight"], length=metrics["length"]))
 
     saved = settings_for(db, project)
     return MasdData(

@@ -76,6 +76,8 @@
     "reset": "Reset",
     "rowCount": "{{count}} cases",
     "clickHint": "click a row for full detail",
+    "showing": "Showing {{shown}} of {{total}} cases — scroll down for more",
+    "showMore": "Show more",
     "downloadXlsx": "Download XLSX",
     "downloading": "Preparing…",
     "mockBanner": "Demo values: adoption type, expected counts and z-score fall-backs are illustrative (GROWTH_SUMMARY_MOCK). Actual counts and computed z-scores are real.",

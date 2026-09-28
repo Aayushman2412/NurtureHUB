@@ -22,6 +22,7 @@ import GrowthSummaryTable from '../../components/growth/GrowthSummaryTable';
 import VisitDetailModal from '../../components/growth/VisitDetailModal';
 import { Button, EmptyState, MultiSelect, PageLoader, SearchableSelect, SelectField, Tabs } from '../../components/ui';
 import { downloadChartsCombined } from '../../lib/chartExport';
+import { getProjectSlug, onProjectChanged } from '../../lib/adminProject';
 import { sexKeyForGender, type GrowthPoint } from '../../lib/growthChart';
 
 interface ProgramDistrict {
@@ -45,13 +46,19 @@ const AdminGrowthMonitorPage: React.FC = () => {
   const { t } = useTranslation('growth');
 
   const [view, setView] = useState<'table' | 'charts'>('table');
-  const [filters, setFilters] = useState<GrowthFilters>({});
+  // Start on the project picked in the sidebar (and follow it, below): opening
+  // on every project at once meant computing every case in the system.
+  const [filters, setFilters] = useState<GrowthFilters>(() => ({ district: getProjectSlug() ?? undefined }));
   const [options, setOptions] = useState<GrowthSummaryFilterOptions>(EMPTY_OPTIONS);
   const [districts, setDistricts] = useState<ProgramDistrict[]>([]);
 
   const [rows, setRows] = useState<GrowthSummaryRow[]>([]);
   const [summaryMock, setSummaryMock] = useState(false);
   const [cases, setCases] = useState<GrowthCase[]>([]);
+  const [chartsLoading, setChartsLoading] = useState(false);
+  // Which filter set the chart cases were loaded for — the chart data is
+  // heavy, so it is fetched only when the Charts tab is open, once per filter.
+  const chartsFor = useRef<string | null>(null);
 
   const [alerts, setAlerts] = useState<ProteinAlert[]>([]);
   const [standards, setStandards] = useState<GrowthStandards | null>(null);
@@ -82,23 +89,26 @@ const AdminGrowthMonitorPage: React.FC = () => {
       .catch(() => {});
   }, [loadStandards]);
 
-  // Both views read the same filtered set; fetch both so switching tabs is instant.
-  // `active` guards against out-of-order responses when filters change quickly:
-  // only the latest request's results (and its blank-on-error) are applied.
+  // Follow the project picker in the sidebar, like every other admin page. A
+  // hand-picked learner set belongs to the old project, so it is cleared.
+  useEffect(() => onProjectChanged(() => {
+    setFilters(f => ({ ...f, district: getProjectSlug() ?? undefined, learnerIds: [] }));
+  }), []);
+
+  // The table's rows. `active` guards against out-of-order responses when
+  // filters change quickly: only the latest request's results (and its
+  // blank-on-error) are applied.
   useEffect(() => {
     let active = true;
     setDataLoading(true);
-    Promise.all([getAdminGrowthSummary(filters), getAdminGrowthMonitor(filters)])
-      .then(([summary, monitor]) => {
+    getAdminGrowthSummary(filters)
+      .then(summary => {
         if (!active) return;
         setRows(summary.rows);
         setSummaryMock(summary.mock);
-        setCases(monitor.cases);
       })
       .catch(() => {
-        if (!active) return;
-        setRows([]);
-        setCases([]);
+        if (active) setRows([]);
       })
       .finally(() => {
         if (!active) return;
@@ -109,6 +119,29 @@ const AdminGrowthMonitorPage: React.FC = () => {
       active = false;
     };
   }, [filters]);
+
+  // The charts' cases: only while the Charts tab is open.
+  useEffect(() => {
+    const key = JSON.stringify(filters);
+    if (view !== 'charts' || chartsFor.current === key) return;
+    let active = true;
+    setChartsLoading(true);
+    getAdminGrowthMonitor(filters)
+      .then(monitor => {
+        if (!active) return;
+        setCases(monitor.cases);
+        chartsFor.current = key;
+      })
+      .catch(() => {
+        if (active) setCases([]);
+      })
+      .finally(() => {
+        if (active) setChartsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [filters, view]);
 
   const patch = (p: Partial<GrowthFilters>) => setFilters(f => ({ ...f, ...p }));
   const resetFilters = () => setFilters({});
@@ -342,7 +375,9 @@ const AdminGrowthMonitorPage: React.FC = () => {
             </Button>
           </div>
 
-          {sexCases.length === 0 ? (
+          {chartsLoading ? (
+            <PageLoader label={t('admin.loading')} />
+          ) : sexCases.length === 0 ? (
             <EmptyState
               icon={<Activity className="size-8" />}
               title={t('admin.noCasesTitle')}

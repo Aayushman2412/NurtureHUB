@@ -18,6 +18,7 @@ Admin endpoints live under /api/admin/* because the frontend axios client
 attaches the admin JWT only to that prefix.
 """
 
+import threading
 from collections import defaultdict
 from datetime import date
 from io import BytesIO
@@ -25,6 +26,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app import growth_summary_mock as gsm  # MOCK: summary-table demo values (removable)
@@ -82,6 +84,89 @@ def _extract_metrics(answers_json: Any) -> Dict[str, Optional[float]]:
             if LENGTH_RANGE[0] <= value <= LENGTH_RANGE[1]:
                 metrics["length"] = value
     return metrics
+
+
+# Only the numeric answers of each growth response, pulled out in SQL: loading
+# and JSON-decoding every whole answer blob in Python was most of the growth
+# monitor's load time (~22k blobs → ~1.6 s of a ~3 s request).
+_NUMERIC_ANSWERS_SQL = text("""
+    SELECT fr.id, e->>'nodeId', e->>'question', e->>'questionType', e->>'value'
+    FROM form_responses fr
+    CROSS JOIN LATERAL json_array_elements(
+        CASE WHEN json_typeof(fr.answers_json) = 'array' THEN fr.answers_json ELSE '[]'::json END
+    ) AS e
+    WHERE fr.id = ANY(:ids)
+      AND COALESCE(e->>'questionType', 'number') = 'number'
+      AND COALESCE(e->>'value', '') <> ''
+""")
+
+
+# response id -> (edit stamp, metrics). A submitted response's weight and
+# length only change when the form is edited, which moves updated_at, so the
+# stamp alone keeps the cache honest. Per worker process; bounded.
+_METRICS_CACHE: Dict[int, Tuple[Any, Dict[str, Optional[float]]]] = {}
+_METRICS_CACHE_MAX = 250_000
+_METRICS_LOCK = threading.Lock()
+
+
+def _read_metrics(db: Session, response_ids: List[int]) -> Dict[int, Dict[str, Optional[float]]]:
+    """Weight/length straight from the answers. On Postgres only the numeric
+    answers leave the database; elsewhere (the SQLite tests) the whole blob is
+    read. Both go through _extract_metrics, so they cannot disagree."""
+    if db.bind is not None and db.bind.dialect.name == "postgresql":
+        snaps: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
+        for start in range(0, len(response_ids), 5000):
+            for rid, node, question, qtype, value in db.execute(
+                _NUMERIC_ANSWERS_SQL, {"ids": response_ids[start:start + 5000]}
+            ):
+                snaps[rid].append({"nodeId": node, "question": question, "questionType": qtype, "value": value})
+        return {rid: _extract_metrics(snaps.get(rid, [])) for rid in response_ids}
+    out: Dict[int, Dict[str, Optional[float]]] = {}
+    for start in range(0, len(response_ids), 2000):
+        for rid, answers in (
+            db.query(models.FormResponse.id, models.FormResponse.answers_json)
+            .filter(models.FormResponse.id.in_(response_ids[start:start + 2000]))
+            .all()
+        ):
+            out[rid] = _extract_metrics(answers)
+    return out
+
+
+def growth_metrics(db: Session, response_ids: List[int]) -> Dict[int, Dict[str, Optional[float]]]:
+    """Weight and length of each growth response, keyed by response id.
+
+    Reading them means parsing every growth form's answers — most of the growth
+    monitor's (and the MASD report's) load time — so they are cached per
+    response and re-read only for new or edited responses.
+    """
+    if not response_ids:
+        return {}
+    stamps: Dict[int, Any] = {}
+    for start in range(0, len(response_ids), 5000):
+        for rid, created, updated in (
+            db.query(models.FormResponse.id, models.FormResponse.created_at, models.FormResponse.updated_at)
+            .filter(models.FormResponse.id.in_(response_ids[start:start + 5000]))
+            .all()
+        ):
+            stamps[rid] = updated or created
+    out: Dict[int, Dict[str, Optional[float]]] = {}
+    missing: List[int] = []
+    for rid in response_ids:
+        hit = _METRICS_CACHE.get(rid)
+        if hit is not None and rid in stamps and hit[0] == stamps[rid]:
+            out[rid] = hit[1]
+        else:
+            missing.append(rid)
+    if missing:
+        fresh = _read_metrics(db, missing)
+        out.update(fresh)
+        with _METRICS_LOCK:
+            if len(_METRICS_CACHE) + len(fresh) > _METRICS_CACHE_MAX:
+                _METRICS_CACHE.clear()
+            for rid, metrics in fresh.items():
+                if rid in stamps:
+                    _METRICS_CACHE[rid] = (stamps[rid], metrics)
+    return out
 
 
 def _build_cases(
@@ -221,15 +306,8 @@ def _build_cases(
 
     # Weight/length come only from growth responses, so load answers_json for
     # just those rows (one narrow query) instead of every visit form.
-    metrics_by_response: Dict[int, Dict[str, Optional[float]]] = {}
     growth_ids = [rid for (_, _, fk, rid) in visit_rows if fk == GROWTH_FORM_KEY]
-    if growth_ids:
-        for rid, answers in (
-            db.query(models.FormResponse.id, models.FormResponse.answers_json)
-            .filter(models.FormResponse.id.in_(growth_ids))
-            .all()
-        ):
-            metrics_by_response[rid] = _extract_metrics(answers)
+    metrics_by_response = growth_metrics(db, growth_ids)
 
     # visit key = (child_id, assessment_date)
     visits: Dict[tuple, Dict[str, Any]] = defaultdict(lambda: {"forms": {}, "weight": None, "length": None})

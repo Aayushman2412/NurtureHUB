@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { downloadMasd, getMasdProjects, getMasdReport, type MasdProject, type MasdReport } from '../../api/masd';
 import { useToast } from '../../context/ToastContext';
-import { getProjectSlug } from '../../lib/adminProject';
+import { getProjectSlug, onProjectChanged, setProjectSlug } from '../../lib/adminProject';
 import { Button, DateInput, EmptyState, Field, PageLoader, SelectField } from '../../components/ui';
 import { SubNav } from '../../components/results/InsightParts';
 import MasdOverview from '../../components/masd/MasdOverview';
@@ -86,6 +86,22 @@ const AdminMasdPage: React.FC = () => {
 
   const reload = useCallback(() => setReloadKey(k => k + 1), []);
 
+  // Follow the project picker in the sidebar, like every other admin page.
+  useEffect(() => onProjectChanged(() => {
+    const slug = getProjectSlug();
+    if (slug && slug !== project && projects.some(p => p.slug === slug)) {
+      setProject(slug);
+      setCompare('');
+    }
+  }), [projects, project]);
+
+  // Picking a project here moves the sidebar too, so the two never disagree.
+  const pickProject = (slug: string) => {
+    setProject(slug);
+    setCompare('');
+    if (slug && slug !== getProjectSlug()) setProjectSlug(slug);
+  };
+
   const download = async (fmt: 'pptx' | 'xlsx') => {
     if (!project) return;
     setDownloading(fmt);
@@ -139,7 +155,7 @@ const AdminMasdPage: React.FC = () => {
           <SelectField
             label={t('project')}
             value={project}
-            onChange={v => { setProject(v); setCompare(''); }}
+            onChange={pickProject}
             placeholder={t('pickProject')}
             options={projects.map(p => ({ value: p.slug, label: `${p.name} (${t('f2fCount', { count: p.f2f_learners })})` }))}
           />

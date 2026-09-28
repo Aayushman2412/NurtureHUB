@@ -106,7 +106,6 @@ const MasdActivity: React.FC<{ report: MasdReport }> = ({ report }) => {
               key: k, label: t(`activities.${k}`), color: MASD_COLORS[k], values: groups.map(g => g.subtype_pct[k]),
             }))}
             reference={{ value: 100, label: t('activity.idealLine') }}
-            showValues={groups.length <= 5}
             valueSuffix="%"
           />
         </div>
