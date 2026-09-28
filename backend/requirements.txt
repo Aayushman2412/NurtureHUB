@@ -1,6 +1,12 @@
 fastapi>=0.110.0
-uvicorn[standard]>=0.28.0
-sqlalchemy>=2.0.0
+# Pinned after the 2026-09-29 deploy broke: a rebuild pulled SQLAlchemy 2.1, whose
+# default Postgres driver for a plain postgresql:// URL is psycopg 3 (not
+# installed; we use psycopg2), so the backend could not start. These four had
+# all released new versions that week; they are held at the versions production
+# last ran. Upgrade deliberately, with the tests and a local boot.
+uvicorn[standard]==0.53.0
+starlette==1.6.0
+sqlalchemy==2.0.54
 alembic>=1.13.0
 psycopg2-binary>=2.9.9
 pydantic[email]>=2.6.0
@@ -11,7 +17,7 @@ python-jose[cryptography]>=3.3.0
 cryptography>=42.0.0
 passlib[bcrypt]>=1.7.4
 python-multipart>=0.0.9
-google-auth>=2.28.0
+google-auth==2.58.0
 requests>=2.31.0
 aiosmtplib>=3.0.0
 slowapi>=0.1.9
