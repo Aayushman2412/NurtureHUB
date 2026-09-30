@@ -253,10 +253,13 @@ export const TrendLine: React.FC<{
 // ── Table cells ────────────────────────────────────────────────────────────
 
 /** A rate in a table cell, tinted green / amber / red. */
-export const RateCell: React.FC<{ value: number | null | undefined; lowerIsBetter?: boolean; className?: string }> = ({
-  value, lowerIsBetter = false, className,
-}) => {
-  if (value == null) return <td className={cn('px-3 py-2 text-center text-ink-faint', className)}>—</td>;
+export const RateCell: React.FC<{
+  value: number | null | undefined; lowerIsBetter?: boolean; className?: string;
+  /** Small grey line under the rate, e.g. the counts it comes from ("59/55"). */
+  sub?: React.ReactNode;
+}> = ({ value, lowerIsBetter = false, className, sub }) => {
+  const under = sub != null && <div className="mt-0.5 text-[0.68rem] tabular-nums text-ink-faint">{sub}</div>;
+  if (value == null) return <td className={cn('px-3 py-2 text-center text-ink-faint', className)}>—{under}</td>;
   const c = lowerIsBetter ? (value < 10 ? '#2F9E56' : value < 20 ? '#E0A11B' : '#DC2F2F') : rateTone(value);
   return (
     <td className={cn('px-2 py-1.5 text-center', className)}>
@@ -264,6 +267,7 @@ export const RateCell: React.FC<{ value: number | null | undefined; lowerIsBette
         style={{ background: `color-mix(in srgb, ${c} 15%, transparent)`, color: c }}>
         {value.toFixed(1)}%
       </span>
+      {under}
     </td>
   );
 };

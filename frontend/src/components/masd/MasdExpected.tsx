@@ -204,10 +204,8 @@ const MasdExpected: React.FC<{ report: MasdReport }> = ({ report }) => {
               <thead>
                 <tr>
                   <Th className="text-left">{word}</Th>
-                  <Th>{t('expected.adopted')}</Th>
-                  <Th>{t('table.fulfilment')}</Th>
-                  <Th>{t('expected.done')}</Th>
-                  <Th>{t('table.intensity')}</Th>
+                  <Th title={t('expected.adopted')}>{t('table.fulfilment')}</Th>
+                  <Th title={t('expected.done')}>{t('table.intensity')}</Th>
                 </tr>
               </thead>
               <tbody>
@@ -220,10 +218,8 @@ const MasdExpected: React.FC<{ report: MasdReport }> = ({ report }) => {
                         {g.key === best?.key && <span className="ml-1 text-success-600">▲</span>}
                         {g.key === worst?.key && <span className="ml-1 text-error-600">▼</span>}
                       </td>
-                      <td className="px-3 py-2 text-center tabular-nums">{v.adopted}<span className="text-xs text-ink-faint">/{v.target}</span></td>
-                      <RateCell value={v.adoption_pct} />
-                      <td className="px-3 py-2 text-center tabular-nums">{v.actual}<span className="text-xs text-ink-faint">/{v.expected}</span></td>
-                      <RateCell value={v.activity_pct} />
+                      <RateCell value={v.adoption_pct} sub={`${v.adopted} / ${v.target}`} />
+                      <RateCell value={v.activity_pct} sub={`${v.actual.toLocaleString()} / ${v.expected.toLocaleString()}`} />
                     </tr>
                   );
                 })}
