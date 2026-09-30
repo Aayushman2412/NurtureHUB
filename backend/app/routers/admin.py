@@ -3853,6 +3853,11 @@ def list_face_to_face_selections(
             "uploaded_by": sel.uploaded_by,
             "notified": sel.notified,
             "selected_at": sel.selected_at.isoformat() if sel.selected_at else None,
+            # The F2F batch the learner trained in (its last day starts their
+            # MASD follow-up); assigned on this page or the MASD dashboard.
+            "batch_id": sel.batch_id,
+            "batch": sel.batch.name if sel.batch else None,
+            "training_end": sel.batch.end_date.isoformat() if sel.batch else None,
         }
         for sel in selections
     ]

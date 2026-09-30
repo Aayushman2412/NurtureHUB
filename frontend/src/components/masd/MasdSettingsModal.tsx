@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getMasdSettings, INDICATORS, saveMasdSettings, type Band, type Benchmarks, type Indicator } from '../../api/masd';
+import { Plus, Trash2 } from 'lucide-react';
+import {
+  getMasdSettings, INDICATORS, saveMasdSettings,
+  type Band, type Benchmarks, type Indicator, type MasdBatch, type TargetStep,
+} from '../../api/masd';
 import { useToast } from '../../context/ToastContext';
-import { Button, DateInput, Field, Input, Modal } from '../ui';
+import { Button, DateInput, Field, Input, Modal, NumberInput } from '../ui';
 
 type Grid = Record<Band, Record<Indicator, string>>;
 const BANDS: Band[] = ['lt6', 'm6_11'];
+const TARGET_KEYS = ['anc', 'pnc_lt5', 'pnc_ge5', 'nurse'] as const;
 const emptyGrid = (): Grid => ({
   lt6: { stunting: '', underweight: '', wasting: '' },
   m6_11: { stunting: '', underweight: '', wasting: '' },
@@ -13,8 +18,10 @@ const emptyGrid = (): Grid => ({
 const num = (s: string) => (s.trim() === '' ? null : Number(s));
 
 /**
- * The project's programme calendar (which decides tranches, targets and the
- * ideal activities) and the NFHS benchmarks the outcomes are read against.
+ * The project's programme settings: the F2F training batches (each learner's
+ * follow-up starts from their own batch), the adoption targets and how they
+ * rise at each review, the calendar, and the NFHS benchmarks the outcomes are
+ * read against.
  */
 const MasdSettingsModal: React.FC<{ project: string | null; open: boolean; onClose: () => void; onSaved: () => void }> = ({
   project, open, onClose, onSaved,
@@ -27,6 +34,9 @@ const MasdSettingsModal: React.FC<{ project: string | null; open: boolean; onClo
   const [grid, setGrid] = useState<Grid>(emptyGrid());
   const [trend, setTrend] = useState<Benchmarks['district_trend']>(null);
   const [isDefault, setIsDefault] = useState(false);
+  const [batches, setBatches] = useState<MasdBatch[]>([]);
+  const [targets, setTargets] = useState<TargetStep[]>([]);
+  const [targetsDefault, setTargetsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -45,8 +55,16 @@ const MasdSettingsModal: React.FC<{ project: string | null; open: boolean; onClo
       setGrid(g);
       setTrend(s.benchmarks?.district_trend ?? null);
       setIsDefault(s.benchmarks_are_default);
+      setBatches(s.batches);
+      setTargets(s.targets.map(x => ({ ...x, from: x.from ?? '' })));
+      setTargetsDefault(s.targets_are_default);
     }).catch(() => setError(t('settings.loadFailed')));
   }, [open, project, t]);
+
+  const patchBatch = (i: number, patch: Partial<MasdBatch>) =>
+    setBatches(list => list.map((b, j) => (j === i ? { ...b, ...patch } : b)));
+  const patchStep = (i: number, patch: Partial<TargetStep>) =>
+    setTargets(list => list.map((s, j) => (j === i ? { ...s, ...patch } : s)));
 
   const save = async () => {
     if (!project) return;
@@ -59,6 +77,16 @@ const MasdSettingsModal: React.FC<{ project: string | null; open: boolean; onClo
       setError(t('settings.pctError'));
       return;
     }
+    const names = batches.map(b => b.name.trim().toLowerCase());
+    if (batches.some(b => !b.name.trim() || !b.end_date) || new Set(names).size !== names.length) {
+      setError(t('settings.batchError'));
+      return;
+    }
+    const days = targets.map(s => s.from);
+    if (targets.some(s => !s.from) || new Set(days).size !== days.length) {
+      setError(t('settings.targetError'));
+      return;
+    }
     const hasBench = !!label.trim() || values.some(v => v != null);
     const benchmarks: Benchmarks | null = hasBench ? {
       label: label.trim(),
@@ -68,7 +96,13 @@ const MasdSettingsModal: React.FC<{ project: string | null; open: boolean; onClo
     setSaving(true);
     setError('');
     try {
-      await saveMasdSettings(project, { training_date: training || null, tranche2_start: tranche2 || null, benchmarks });
+      await saveMasdSettings(project, {
+        training_date: training || null,
+        tranche2_start: tranche2 || null,
+        benchmarks,
+        targets,
+        batches: batches.map(b => ({ id: b.id, name: b.name.trim(), end_date: b.end_date })),
+      });
       showToast(t('settings.saved'), 'success');
       onSaved();
       onClose();
@@ -79,6 +113,7 @@ const MasdSettingsModal: React.FC<{ project: string | null; open: boolean; onClo
     }
   };
 
+  const small = 'text-xs font-semibold text-ink-muted';
   return (
     <Modal
       open={open}
@@ -92,7 +127,83 @@ const MasdSettingsModal: React.FC<{ project: string | null; open: boolean; onClo
         </div>
       }
     >
-      <div className="space-y-6">
+      <div className="space-y-7">
+        <section>
+          <h3 className="font-display text-sm font-bold text-ink">{t('settings.batches')}</h3>
+          <p className="mb-3 text-xs text-ink-muted">{t('settings.batchesHint')}</p>
+          {batches.length > 0 && (
+            <div className="space-y-2">
+              <div className="hidden grid-cols-[1fr_11rem_5rem_2.5rem] gap-2 sm:grid">
+                <span className={small}>{t('settings.batchName')}</span>
+                <span className={small}>{t('settings.batchEnd')}</span>
+                <span className={small}>{t('settings.batchLearners')}</span>
+                <span />
+              </div>
+              {batches.map((b, i) => (
+                <div key={b.id ?? `new-${i}`} className="grid grid-cols-[1fr_auto] items-center gap-2 sm:grid-cols-[1fr_11rem_5rem_2.5rem] [&>*]:min-w-0">
+                  <Input value={b.name} onChange={e => patchBatch(i, { name: e.target.value })} maxLength={80}
+                    aria-label={t('settings.batchName')} />
+                  <div className="col-span-2 row-start-2 sm:col-span-1 sm:row-start-auto">
+                    <DateInput value={b.end_date} onChange={v => patchBatch(i, { end_date: v })} />
+                  </div>
+                  <span className="hidden text-center text-sm tabular-nums text-ink-muted sm:block">{b.learners ?? 0}</span>
+                  <Button variant="ghost" size="sm" aria-label={t('settings.remove')} title={t('settings.remove')}
+                    onClick={() => setBatches(list => list.filter((_, j) => j !== i))}>
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          <Button variant="outline" size="sm" className="mt-3" iconLeft={<Plus className="size-4" />}
+            onClick={() => setBatches(list => [...list, { id: null, name: t('settings.batchDefault', { n: list.length + 1 }), end_date: training || '' }])}>
+            {t('settings.addBatch')}
+          </Button>
+        </section>
+
+        <section>
+          <h3 className="font-display text-sm font-bold text-ink">{t('settings.targets')}</h3>
+          <p className="mb-3 text-xs text-ink-muted">{targetsDefault ? t('settings.targetsDefault') : t('settings.targetsHint')}</p>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[34rem] text-sm">
+              <thead>
+                <tr>
+                  <th className={`pb-2 text-left ${small}`}>{t('settings.from')}</th>
+                  {TARGET_KEYS.map(k => <th key={k} className={`pb-2 text-center ${small}`}>{t(`settings.target.${k}`)}</th>)}
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {targets.map((s, i) => (
+                  <tr key={i}>
+                    <td className="py-1 pr-2"><DateInput value={s.from ?? ''} onChange={v => patchStep(i, { from: v })} /></td>
+                    {TARGET_KEYS.map(k => (
+                      <td key={k} className="px-1 py-1">
+                        <NumberInput value={s[k]} fallback={0} min={0} max={50} className="text-center"
+                          aria-label={`${t(`settings.target.${k}`)} ${s.from ?? ''}`}
+                          onChange={v => patchStep(i, { [k]: v } as Partial<TargetStep>)} />
+                      </td>
+                    ))}
+                    <td className="py-1 pl-1">
+                      <Button variant="ghost" size="sm" aria-label={t('settings.remove')} title={t('settings.remove')}
+                        onClick={() => setTargets(list => list.filter((_, j) => j !== i))}>
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Button variant="outline" size="sm" className="mt-3" iconLeft={<Plus className="size-4" />}
+            onClick={() => setTargets(list => {
+              const last = list[list.length - 1];
+              return [...list, { from: '', anc: last?.anc ?? 1, pnc_lt5: last?.pnc_lt5 ?? 1, pnc_ge5: last?.pnc_ge5 ?? 1, nurse: last?.nurse ?? 3 }];
+            })}>
+            {t('settings.addStep')}
+          </Button>
+        </section>
+
         <section>
           <h3 className="font-display text-sm font-bold text-ink">{t('settings.calendar')}</h3>
           <p className="mb-3 text-xs text-ink-muted">{t('settings.calendarHint')}</p>

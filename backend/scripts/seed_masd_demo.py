@@ -21,9 +21,17 @@ the growth monitor can be shown end to end:
 Every form answer goes through the same snapshot/validation code the API uses,
 so the stored payloads look exactly like real submissions.
 
+Adoptions follow each project's target steps (one of each type after
+training, more at each review — Jalna ends on 3 ANC · 5 PNC<5M · 3 PNC≥5M),
+and each case's forms are its expected forms (app/masd/rules.case_expected)
+scaled by how diligent its learner is. Pregnancies are taken on in the last
+trimester and checked every fortnight; some births are never entered, so the
+dashboard has overdue pregnancies to flag. Each project gets five F2F
+training batches, its learners split across them by block.
+
 Idempotent and removable. Every seeded mother and child has a UID starting
-``MASD-``; nothing else is touched except the learners' MT/FL mark and the
-three projects' MASD calendar.
+``MASD-``; nothing else is touched except the learners' MT/FL mark and batch,
+the three projects' MASD calendar and targets, and the batches it created.
 
   cd backend
   ./venv-win/Scripts/python.exe -m scripts.seed_masd_demo            # seed (skips if present)
@@ -46,6 +54,7 @@ import app.models_live  # noqa: F401  (registers every table)
 from app import models
 from app.database import SessionLocal
 from app.masd import rules as R
+from app.masd.data import expected_forms_for
 from app.routers.forms import AnswerIn, _snapshot_answers, _snapshot_flat_answers
 from app.seed_growth_demo import _flat_answers, _flow_answers, _format_number, _growth_answers
 from app.who_growth import value_for_z
@@ -54,14 +63,19 @@ MARK = "MASD-"
 SEEDED_BY = "seed_masd_demo"
 MOCK_DOMAIN = "@nurturehub.mock"
 
-# Programme calendar, counted back from today so the demo always shows a
-# programme that finished its follow-up: (days before today of the F2F
-# training, days from training to tranche 2).
+# Programme calendar, counted back from today: (days before today of the F2F
+# training, days from training to tranche 2). With the batches ending up to
+# eight days before it, every learner's follow-up counts as 90 days on the day
+# the demo is seeded — the figure agreed for 29 Sep 2026 — and the third target
+# step (tranche 2 + 45 days) is in force.
 PROJECTS = {
-    "jalna": {"training_days_ago": 120, "tranche2_after": 42, "state": "mh"},
-    "ujjain": {"training_days_ago": 116, "tranche2_after": 42, "state": "mp"},
-    "khasi": {"training_days_ago": 112, "tranche2_after": 42, "state": "ml"},
+    "jalna": {"training_days_ago": 106, "tranche2_after": 42, "state": "mh"},
+    "ujjain": {"training_days_ago": 106, "tranche2_after": 42, "state": "mp"},
+    "khasi": {"training_days_ago": 106, "tranche2_after": 42, "state": "ml"},
 }
+
+# The five F2F batches end this many days before the project's training date.
+BATCH_ENDS_BEFORE_TRAINING = (8, 6, 4, 2, 0)
 
 NAMES = {
     "mh": (["Sunita", "Kavita", "Pooja", "Swati", "Anjali", "Priyanka", "Sonali", "Ashwini", "Manisha",
@@ -78,9 +92,9 @@ NAMES = {
            ["Mawlai", "Nongthymmai", "Smit", "Mawkyrwat", "Sohra", "Mylliem", "Mawphlang"]),
 }
 
-# How each learner behaves. f = share of the ideal activities they file;
-# quiet = days of silence before today; extra/drop = adoptions above/below the
-# expected one-of-each-type per tranche.
+# How each learner behaves. f = share of their cases' expected activities
+# they file; quiet = days of silence before today; extra/drop = adoptions
+# above/below the targets.
 PROFILES = {
     "star":    {"weight": 12, "f": (0.95, 1.15), "quiet": (0, 3), "trend": 0.55, "extra": (1, 2)},
     "steady":  {"weight": 36, "f": (0.62, 0.86), "quiet": (0, 6), "trend": 0.35, "extra": (0, 2)},
@@ -128,6 +142,8 @@ class Ctx:
     defs: Dict[str, Tuple[dict, int]]      # form_key -> (schema, version_number)
     names: Tuple[list, list, list]
     project_slug: str
+    steps: List[Dict[str, object]] = field(default_factory=list)
+    table: Dict[str, object] = field(default_factory=R.default_expected_forms)
     counters: Dict[str, int] = field(default_factory=lambda: {"mothers": 0, "children": 0, "responses": 0})
     seq: int = 0
 
@@ -363,6 +379,8 @@ def child_visits(ctx: Ctx, learner: models.User, child: models.Child, start: dat
         visits = sorted(set(d for d in visits if d >= visits[0]))
     elif edge == "dob_vs_visit1" and child.dob:
         visits = [child.dob - timedelta(days=rng.randint(4, 9))] + visits
+    # Recent adoptions: no visit can be dated after today.
+    visits = sorted({d for d in visits if d <= ctx.today})
     haz0 = max(-3.4, min(1.8, rng.gauss(-0.8, 1.05)))
     whz0 = max(-3.4, min(1.8, rng.gauss(-0.55, 1.05)))
     d_h = trend * rng.uniform(0.5, 1.2) + rng.gauss(0, 0.25)
@@ -390,7 +408,7 @@ def child_visits(ctx: Ctx, learner: models.User, child: models.Child, start: dat
         age = (on - child.dob).days if child.dob else 60
         red = min(0.55, max(0.03, bf_quality + (0.15 if age <= 21 else 0) - 0.02 * k))
         ctx.db.add(flow_response(ctx, "breastfeeding", learner.id, on, red, child_id=child.id))
-    cf_days = [d for d in visits if child.dob and (d - child.dob).days >= R.FIVE_MONTHS_DAYS]
+    cf_days = [d for d in visits if child.dob and (d - child.dob).days >= R.CF_FIRST_AGE_DAYS]
     diet = rng.choice(["cf_diet_veg", "cf_diet_veg", "cf_diet_nonveg", "cf_diet_egg"])
     for on in cf_days[-n_cf:] if n_cf > 0 else []:
         ctx.db.add(flow_response(ctx, "complementary_feeding", learner.id, on, cf_quality,
@@ -404,35 +422,50 @@ def child_visits(ctx: Ctx, learner: models.User, child: models.Child, start: dat
 # ── One learner ────────────────────────────────────────────────────────────
 
 
-def _window(ctx: Ctx, tranche: int) -> Tuple[date, date]:
-    if tranche == 1:
-        return ctx.training + timedelta(days=1), min(ctx.training + timedelta(days=35), ctx.tranche2 - timedelta(days=1))
-    return ctx.tranche2, ctx.tranche2 + timedelta(days=20)
+def _windows(ctx: Ctx) -> List[Tuple[int, date, date, Dict[str, int]]]:
+    """One adoption window per target step: (tranche, from, to, adoptions it
+    adds per type). Learners take on the new ask in the weeks after each review."""
+    out = []
+    prev = {k: 0 for k in R.TARGET_KEYS}
+    steps = sorted(ctx.steps, key=lambda s: s["from"])
+    for i, step in enumerate(steps):
+        start = date.fromisoformat(step["from"]) + timedelta(days=1 if i == 0 else 0)
+        nxt = date.fromisoformat(steps[i + 1]["from"]) - timedelta(days=1) if i + 1 < len(steps) else None
+        end = start + timedelta(days=34 if i == 0 else 20)
+        if nxt is not None:
+            end = min(end, nxt)
+        end = min(end, ctx.today - timedelta(days=6))
+        if end < start:
+            break
+        adds = {k: max(0, int(step[k]) - prev[k]) for k in R.TARGET_KEYS}
+        tranche = 2 if start >= ctx.tranche2 else 1
+        out.append((tranche, start, end, adds))
+        prev = {k: int(step[k]) for k in R.TARGET_KEYS}
+    return out
 
 
 def plan_adoptions(ctx: Ctx, profile: str, nurse: bool) -> List[Plan]:
     rng = ctx.rng
     plans: List[Plan] = []
-    for tranche in (1, 2):
-        lo, hi = _window(ctx, tranche)
-        if nurse and tranche == 2:
-            # Nurses keep adopting newborns on the ward through the programme.
-            hi = ctx.today - timedelta(days=4)
-        types = [R.PNC_LT5] * 3 if nurse else [R.ANC, R.PNC_LT5, R.PNC_GE5]
+    windows = _windows(ctx)
+    for tranche, lo, hi, adds in windows:
+        if nurse:
+            types = [R.PNC_LT5] * adds["nurse"]
+        else:
+            types = [R.ANC] * adds["anc"] + [R.PNC_LT5] * adds["pnc_lt5"] + [R.PNC_GE5] * adds["pnc_ge5"]
         for t in types:
             plans.append(Plan(t, tranche, lo + timedelta(days=rng.randint(0, (hi - lo).days))))
     spec = PROFILES.get(profile, {})
-    if "extra" in spec:
+    if "extra" in spec and windows:
         for _ in range(rng.randint(*spec["extra"])):
-            tranche = rng.choice([1, 2])
-            lo, hi = _window(ctx, tranche)
+            tranche, lo, hi, _adds = rng.choice(windows)
             plans.append(Plan(rng.choice([R.PNC_LT5, R.PNC_LT5, R.PNC_GE5, R.ANC]), tranche,
                               lo + timedelta(days=rng.randint(0, (hi - lo).days))))
     if "drop" in spec:
         rng.shuffle(plans)
         plans = plans[: max(0, len(plans) - rng.randint(*spec["drop"]))]
     if nurse and profile == "nurse_low":
-        plans = plans[: rng.randint(3, 6)]
+        plans = plans[: max(2, round(len(plans) * rng.uniform(0.4, 0.7)))]
     if profile == "zero":
         plans = []
     return sorted(plans, key=lambda p: p.on)
@@ -461,28 +494,35 @@ def seed_learner(ctx: Ctx, learner: models.User, profile: str, block_factor: flo
                 edges.remove(edge)
         if edge == "pre_training":
             plan.on = ctx.training - timedelta(days=rng.randint(3, 8))
-        ideal = R.ideal_for_adoption(plan.type, plan.tranche, nurse)
         end = min(active_until, ctx.today)
+        expected: Dict[str, int] = {}
 
         def n(key: str, factor: float = 1.0) -> int:
-            return max(0, round(ideal.get(key, 0) * f * factor * rng.uniform(0.85, 1.15)))
+            return max(0, round(expected.get(key, 0) * f * factor * rng.uniform(0.85, 1.15)))
 
         if edge == "unknown_type":
             new_mother(ctx, learner, plan.on, None)
             continue
 
         if plan.type == R.ANC or edge == "anc_not_followed":
-            weeks = rng.randint(10, 34)
+            # Taken on in the last trimester (sometimes the sixth month).
+            weeks = rng.choice([rng.randint(24, 27)] + [rng.randint(28, 37)] * 4)
             lmp = plan.on - timedelta(weeks=weeks)
             mother = new_mother(ctx, learner, plan.on, lmp)
             edd = lmp + timedelta(days=280)
             born_on = edd + timedelta(days=rng.randint(-14, 7))
-            birth_end = min(born_on, end)
-            for on in _dates(rng, plan.on, birth_end, n("anc")):
+            birth_end = min(born_on - timedelta(days=1), end)
+            expected = R.case_expected(ctx.table, mother_adopted=plan.on, lmp=lmp,
+                                       dob=born_on if born_on <= end else None, baby_adopted=None, end=end)
+            checks = [plan.on + timedelta(days=15 * k + rng.randint(0, 3)) for k in range(expected["anc"])]
+            checks = [d for d in checks if d <= birth_end]
+            keep = sorted(rng.sample(checks, min(len(checks), n("anc")))) if checks else []
+            for on in keep:
                 ctx.db.add(antenatal_response(ctx, learner.id, mother, on, (mother.weight or 50) + rng.uniform(0, 6)))
-            for on in _dates(rng, plan.on + timedelta(days=2), birth_end, n("protein")):
-                ctx.db.add(protein_response(ctx, learner.id, mother, on, True,
+            for on in keep[: n("protein")]:
+                ctx.db.add(protein_response(ctx, learner.id, mother, on + timedelta(days=rng.randint(0, 1)), True,
                                             rng.choice(["pca_diet_veg", "pca_diet_egg", "pca_diet_nonveg"])))
+            # Some births are never entered — the pregnancy then shows as past its due date.
             followed = edge != "anc_not_followed" and rng.random() < 0.85
             if born_on <= end - timedelta(days=2) and followed and f > 0:
                 gender = rng.choice(["Male", "Female"])
@@ -490,7 +530,9 @@ def seed_learner(ctx: Ctx, learner: models.User, profile: str, block_factor: flo
                 adopted = born_on + timedelta(days=rng.randint(0, 2))
                 child = new_child(ctx, mother, born_on, adopted, gender, bw, bl)
                 ctx.db.flush()
-                child_visits(ctx, learner, child, adopted, end, max(1, round(9 * f)), round(4 * f), 0,
+                expected = R.case_expected(ctx.table, mother_adopted=plan.on, lmp=lmp, dob=born_on,
+                                           baby_adopted=adopted, end=end)
+                child_visits(ctx, learner, child, adopted, end, max(1, n("gm")), n("bf"), n("cf"),
                              0, mother, trend, None, 0.2, 0.15)
             continue
 
@@ -516,6 +558,10 @@ def seed_learner(ctx: Ctx, learner: models.User, profile: str, block_factor: flo
             child_adopted = plan.on - timedelta(days=rng.randint(4, 6))
         mother = new_mother(ctx, learner, mother_adopted, None)
         child = new_child(ctx, mother, dob, child_adopted, gender, bw, bl)
+        expected = R.case_expected(ctx.table, mother_adopted=mother_adopted, lmp=None, dob=dob,
+                                   baby_adopted=child_adopted or plan.on, end=end, is_nurse=nurse)
+        if nurse:
+            expected.update(R.NURSE_FLAT)     # the hospital stay's visits happen at once
         twin = None
         if edge == "twins":
             tw_bw, tw_bl, _, _ = _birth(rng, sex)
@@ -538,8 +584,8 @@ def seed_learner(ctx: Ctx, learner: models.User, profile: str, block_factor: flo
         visit_end = end - timedelta(days=15) if edge == "mother_after_lv" else end
         last_seen = None
         for kid in [child] + ([twin] if twin else []):
-            seen = child_visits(ctx, learner, kid, plan.on, visit_end, n("gm"), n("bf"),
-                                0 if no_cf else n("cf"), n("protein") if kid is child else 0,
+            seen = child_visits(ctx, learner, kid, plan.on, visit_end, max(1 if f > 0 else 0, n("gm")), n("bf"),
+                                0 if no_cf else n("cf"), 0,
                                 mother, trend, edge if kid is child else None,
                                 0.12 if trend > 0.3 else 0.28, 0.12 if trend > 0.3 else 0.3)
             if kid is child and seen:
@@ -570,8 +616,10 @@ def seed_project(db, slug: str, today: date) -> Dict[str, int]:
     training = today - timedelta(days=conf["training_days_ago"])
     tranche2 = training + timedelta(days=conf["tranche2_after"])
     rng = Random(f"masd-{slug}-2026")
+    steps = R.default_targets(slug, training, tranche2)
     ctx = Ctx(db=db, rng=rng, today=today, training=training, tranche2=tranche2,
-              defs=_definitions(db), names=NAMES[conf["state"]], project_slug=slug)
+              defs=_definitions(db), names=NAMES[conf["state"]], project_slug=slug,
+              steps=steps, table=expected_forms_for(db)[0])
 
     learners = (
         db.query(models.User)
@@ -619,13 +667,29 @@ def seed_project(db, slug: str, today: date) -> Dict[str, int]:
     for i, uid in enumerate(chosen):
         selections[uid].trainer_role = "master_trainer" if i % 3 == 0 else "facilitator"
 
+    # Five F2F batches ending over the fortnight up to the training date; a
+    # batch trains a block or two, so learners are split in block order.
+    batches = []
+    for i, back in enumerate(BATCH_ENDS_BEFORE_TRAINING):
+        batch = models.MasdTrainingBatch(program_district_id=project.id, name=f"Batch {i + 1}",
+                                         end_date=training - timedelta(days=back), updated_by=SEEDED_BY)
+        db.add(batch)
+        batches.append(batch)
+    db.flush()
+    ordered = sorted(f2f, key=lambda u: (u.block_id or 0, u.id))
+    size = math.ceil(len(ordered) / len(batches)) if ordered else 1
+    for i, u in enumerate(ordered):
+        selections[u.id].batch_id = batches[min(i // size, len(batches) - 1)].id
+
     settings = db.get(models.MasdProjectSettings, project.id)
     if settings is None:
         settings = models.MasdProjectSettings(program_district_id=project.id)
         db.add(settings)
     settings.training_date, settings.tranche2_start, settings.updated_by = training, tranche2, SEEDED_BY
+    settings.targets_json = steps
     db.commit()
-    return {**ctx.counters, "f2f": len(f2f), "mtfl": len(chosen), "edges_left": len(edges)}
+    return {**ctx.counters, "f2f": len(f2f), "mtfl": len(chosen), "batches": len(batches),
+            "edges_left": len(edges)}
 
 
 def remove(db) -> None:
@@ -644,12 +708,20 @@ def remove(db) -> None:
     mock_ids = [u for (u,) in db.query(models.User.id).filter(models.User.email.like(f"%{MOCK_DOMAIN}"))]
     if mock_ids:
         db.query(models.FaceToFaceSelection).filter(models.FaceToFaceSelection.user_id.in_(mock_ids)) \
-            .update({models.FaceToFaceSelection.trainer_role: None}, synchronize_session=False)
+            .update({models.FaceToFaceSelection.trainer_role: None, models.FaceToFaceSelection.batch_id: None},
+                    synchronize_session=False)
+    seeded_batches = [b for (b,) in db.query(models.MasdTrainingBatch.id)
+                      .filter(models.MasdTrainingBatch.updated_by == SEEDED_BY)]
+    if seeded_batches:
+        db.query(models.FaceToFaceSelection).filter(models.FaceToFaceSelection.batch_id.in_(seeded_batches)) \
+            .update({models.FaceToFaceSelection.batch_id: None}, synchronize_session=False)
+        db.query(models.MasdTrainingBatch).filter(models.MasdTrainingBatch.id.in_(seeded_batches)) \
+            .delete(synchronize_session=False)
     db.query(models.MasdProjectSettings).filter(models.MasdProjectSettings.updated_by == SEEDED_BY) \
         .delete(synchronize_session=False)
     db.commit()
     print(f"Removed {len(mother_ids)} mothers, {len(child_ids)} children, {n_resp} form responses "
-          f"(MASD demo); cleared MT/FL marks and seeded calendars.")
+          f"(MASD demo); cleared MT/FL marks, batches and seeded calendars/targets.")
 
 
 def main() -> None:

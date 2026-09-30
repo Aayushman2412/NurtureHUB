@@ -1,0 +1,300 @@
+import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Calculator, ChartColumn, ChartScatter, Layers3, ListChecks, Target, Timer } from 'lucide-react';
+import {
+  ACTIVITY_KEYS, ADOPTION_TYPES, OWN_BANDS,
+  type AdoptionType, type MasdGroup, type MasdReport, type OwnBand,
+} from '../../api/masd';
+import { BigNumber, ChipRow, Kpi, KpiRow, Section } from '../results/InsightParts';
+import { Ring, StackedBar } from '../results/InsightCharts';
+import MasdFindings from './MasdFindings';
+import { BubblePlot, DataTable, GroupedColumns, RateCell, Th } from './MasdCharts';
+import { fmt1, MASD_COLORS, rateTone } from '../../lib/masdDisplay';
+
+type Split = 'blocks' | 'departments' | 'roles';
+const MIN_FOR_RANK = 3;
+
+const BAND_COLORS: Record<OwnBand, string> = {
+  none: '#8E3B2F', b1_20: '#D6453D', b21_40: '#E0A11B', b41_60: '#C9B458', b61_80: '#7FB069', b81_100: '#2F9E56',
+};
+
+const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
+
+/**
+ * Expected activity — the method agreed on 29 Sep 2026. A learner is read
+ * against what was EXPECTED of them by the report date: their follow-up runs
+ * from the end of their own training batch plus a 15-day buffer, rounded down
+ * to 15 days, and the forms expected are the adoption targets in force × the
+ * expected-forms table at that follow-up. Then, within the cases they did
+ * adopt: how much of what those cases were due have they done?
+ */
+const MasdExpected: React.FC<{ report: MasdReport }> = ({ report }) => {
+  const { t } = useTranslation('masd');
+  const s = report.summary;
+  const cal = report.calendar;
+  const tn = cal.targets.now;
+  const [split, setSplit] = useState<Split>('blocks');
+  const [atype, setAtype] = useState<AdoptionType>('pnc_lt5');
+  const [bandSplit, setBandSplit] = useState<Split>('departments');
+
+  const groupsFor = (key: Split): MasdGroup[] =>
+    (key === 'departments' ? report.departments.filter(g => g.key !== 'total') : report[key]).filter(g => g.learners > 0);
+  const groups = groupsFor(split);
+  const word = t(`expected.split.${split}One`);
+
+  const ranked = groups.filter(g => g.learners >= MIN_FOR_RANK && g.by_type[atype].activity_pct != null);
+  const best = ranked.length >= 2 ? ranked.reduce((a, b) => (b.by_type[atype].activity_pct! > a.by_type[atype].activity_pct! ? b : a)) : null;
+  const worst = ranked.length >= 2 ? ranked.reduce((a, b) => (b.by_type[atype].activity_pct! < a.by_type[atype].activity_pct! ? b : a)) : null;
+
+  const example = cal.batches[0];
+  const exampleText = useMemo(() => {
+    if (!example) return null;
+    const com = example.expected.community;
+    const parts = ADOPTION_TYPES.filter(k => com.by_type[k]).map(k => {
+      const v = com.by_type[k]!;
+      const forms = ACTIVITY_KEYS.filter(a => (v.forms[a] ?? 0) > 0)
+        .map(a => `${v.forms[a]} ${t(`activities.${a}`).toLowerCase()}`).join(' + ');
+      return t('expected.exampleType', { n: v.adoptions, type: t(`types.${k}`), forms: forms || t('expected.nothingYet') });
+    });
+    return parts;
+  }, [example, t]);
+
+  const bandGroups = groupsFor(bandSplit).filter(g => g.own_banded > 0);
+
+  return (
+    <div className="space-y-5">
+      <KpiRow count={4}>
+        <Kpi
+          visual={<Ring value={Math.min(s.fulfilment_pct ?? 0, 100)} color={rateTone(s.fulfilment_pct ?? 0)}>{fmt1(s.fulfilment_pct)}</Ring>}
+          label={t('kpi.fulfilment')}
+          value={t('kpi.fulfilmentSub', { n: s.adoptions.toLocaleString(), target: s.target.toLocaleString() })}
+        />
+        <Kpi
+          visual={<Ring value={Math.min(s.intensity_pct ?? 0, 100)} color={rateTone(s.intensity_pct ?? 0)}>{fmt1(s.intensity_pct)}</Ring>}
+          label={t('kpi.intensity')}
+          value={t('kpi.intensitySub', { n: s.activities.toLocaleString(), ideal: Math.round(s.ideal).toLocaleString() })}
+        />
+        <Kpi
+          visual={<Ring value={Math.min(s.own_pct ?? 0, 100)} color={rateTone(s.own_pct ?? 0)}>{fmt1(s.own_pct)}</Ring>}
+          label={t('kpi.own')}
+          value={t('kpi.ownSub', { n: s.own_actual.toLocaleString(), expected: s.own_expected.toLocaleString() })}
+        />
+        <Kpi
+          visual={<BigNumber value={cal.fu_days == null ? '—' : `${cal.fu_days}d`} />}
+          label={t('kpi.fu')}
+          value={t('kpi.fuSub', { buffer: cal.buffer_days, step: cal.step_days })}
+        />
+      </KpiRow>
+
+      <Section icon={<Calculator />} title={t('expected.nowTitle')}
+        subtitle={t('expected.nowSub', { date: fmtDate(report.as_of), anc: tn.anc, lt5: tn.pnc_lt5, ge5: tn.pnc_ge5, nurse: tn.nurse })}>
+        {cal.batches.length === 0 ? (
+          <p className="text-sm text-ink-muted">{t('expected.noBatches')}</p>
+        ) : (
+          <>
+            <DataTable>
+              <thead>
+                <tr>
+                  <Th className="text-left">{t('expected.batch')}</Th>
+                  <Th>{t('expected.trainingEnded')}</Th>
+                  <Th>{t('table.learners')}</Th>
+                  <Th title={t('expected.fuTitle', { buffer: cal.buffer_days })}>{t('expected.fu')}</Th>
+                  {ACTIVITY_KEYS.map(k => <Th key={k}>{t(`activities.${k}`)}</Th>)}
+                  <Th>{t('expected.perLearner')}</Th>
+                  <Th>{t('expected.nurse')}</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {cal.batches.map(b => (
+                  <tr key={b.id ?? 'project'}>
+                    <td className="px-3 py-2 font-medium text-ink">{b.name ?? t('expected.projectDate')}</td>
+                    <td className="px-3 py-2 text-center text-ink-muted">{fmtDate(b.end_date)}</td>
+                    <td className="px-3 py-2 text-center tabular-nums">{b.learners}</td>
+                    <td className="px-3 py-2 text-center tabular-nums">
+                      {b.fu_raw ?? '—'} <span className="text-xs text-ink-faint">→ {b.fu_days ?? 0}</span>
+                    </td>
+                    {ACTIVITY_KEYS.map(k => (
+                      <td key={k} className="px-3 py-2 text-center tabular-nums">{b.expected.community.forms[k] || ''}</td>
+                    ))}
+                    <td className="px-3 py-2 text-center font-bold tabular-nums">{b.expected.community.total}</td>
+                    <td className="px-3 py-2 text-center tabular-nums text-ink-muted">{b.expected.nurse.total}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
+            {exampleText && example && (
+              <div className="mt-4 rounded-xl bg-surface-sunken p-4 text-sm text-ink">
+                <span className="font-semibold">{t('expected.exampleLead', { batch: example.name ?? t('expected.projectDate'), days: example.fu_days ?? 0 })}</span>{' '}
+                {exampleText.join('; ')}{' '}
+                <span className="font-semibold">= {t('expected.exampleTotal', { n: example.expected.community.total })}</span>
+              </div>
+            )}
+          </>
+        )}
+      </Section>
+
+      <Section icon={<Target />} title={t('expected.typeTitle')} subtitle={t('expected.typeSub')}>
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-5 [&>*]:min-w-0">
+          <div className="xl:col-span-3">
+            <GroupedColumns
+              categories={ADOPTION_TYPES.map(k => ({ key: k, label: t(`types.${k}`),
+                sub: t('expected.typeN', { adopted: s.by_type[k].adopted, target: s.by_type[k].target }) }))}
+              series={[
+                { key: 'adopt', label: t('activity.adoptionPct'), color: MASD_COLORS.adoption, values: ADOPTION_TYPES.map(k => s.by_type[k].adoption_pct) },
+                { key: 'act', label: t('activity.activityPct'), color: MASD_COLORS.activity, values: ADOPTION_TYPES.map(k => s.by_type[k].activity_pct) },
+              ]}
+              reference={{ value: 100, label: t('activity.targetLine') }}
+              valueSuffix="%"
+            />
+          </div>
+          <div className="xl:col-span-2">
+            <MasdFindings findings={report.insights.by_type} />
+          </div>
+        </div>
+      </Section>
+
+      <Section
+        icon={<ChartColumn />}
+        title={t('expected.byGroupTitle', { type: t(`types.${atype}`), what: word })}
+        subtitle={t('expected.byGroupSub')}
+      >
+        <div className="mb-4 flex flex-wrap gap-x-6 gap-y-2">
+          <ChipRow label={t('expected.typeLabel')} value={atype} onChange={v => setAtype(v as AdoptionType)}
+            items={ADOPTION_TYPES.map(k => ({ key: k, label: t(`types.${k}`) }))} />
+          <ChipRow label={t('split.label')} value={split} onChange={v => setSplit(v as Split)}
+            items={(['blocks', 'departments', 'roles'] as Split[]).map(k => ({ key: k, label: t(`expected.split.${k}`) }))} />
+        </div>
+        <GroupedColumns
+          categories={groups.map(g => ({ key: g.key, label: g.label.replace(' subtotal', ''), sub: `n=${g.learners}` }))}
+          series={[
+            { key: 'adopt', label: t('activity.adoptionPct'), color: MASD_COLORS.adoption, values: groups.map(g => g.by_type[atype].adoption_pct) },
+            { key: 'act', label: t('activity.activityPct'), color: MASD_COLORS.activity, values: groups.map(g => g.by_type[atype].activity_pct) },
+          ]}
+          reference={{ value: 100, label: t('activity.targetLine') }}
+          valueSuffix="%"
+        />
+        {best && worst && best.key !== worst.key && (
+          <div className="mt-4 flex flex-wrap gap-2 text-sm">
+            <span className="rounded-full bg-success-50 px-3 py-1 font-medium text-success-600 dark:bg-success-500/15">
+              {t('expected.best', { name: best.label.replace(' subtotal', ''), pct: fmt1(best.by_type[atype].activity_pct) })}
+            </span>
+            <span className="rounded-full bg-error-50 px-3 py-1 font-medium text-error-600 dark:bg-error-500/15">
+              {t('expected.worst', { name: worst.label.replace(' subtotal', ''), pct: fmt1(worst.by_type[atype].activity_pct) })}
+            </span>
+          </div>
+        )}
+        <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-5 [&>*]:min-w-0">
+          <div className="xl:col-span-3">
+            <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink"><ChartScatter className="size-4" />{t('expected.bubbleTitle')}</h4>
+            <BubblePlot
+              bubbles={groups.filter(g => g.by_type[atype].adoption_pct != null && g.by_type[atype].activity_pct != null).map(g => ({
+                key: g.key, label: g.label.replace(' subtotal', ''), x: g.by_type[atype].adoption_pct!, y: g.by_type[atype].activity_pct!, size: g.learners,
+              }))}
+              xLabel={t('activity.bubbleX')}
+              yLabel={t('activity.bubbleY')}
+              quadrant={{
+                topRight: t('activity.qTopRight'), topLeft: t('activity.qTopLeft'),
+                bottomRight: t('activity.qBottomRight'), bottomLeft: t('activity.qBottomLeft'),
+              }}
+              sizeLabel={n => t('activity.learnersN', { count: n })}
+            />
+          </div>
+          <div className="xl:col-span-2">
+            <DataTable>
+              <thead>
+                <tr>
+                  <Th className="text-left">{word}</Th>
+                  <Th>{t('expected.adopted')}</Th>
+                  <Th>{t('table.fulfilment')}</Th>
+                  <Th>{t('expected.done')}</Th>
+                  <Th>{t('table.intensity')}</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {groups.map(g => {
+                  const v = g.by_type[atype];
+                  return (
+                    <tr key={g.key}>
+                      <td className="px-3 py-2 font-medium text-ink">
+                        {g.label.replace(' subtotal', '')}
+                        {g.key === best?.key && <span className="ml-1 text-success-600">▲</span>}
+                        {g.key === worst?.key && <span className="ml-1 text-error-600">▼</span>}
+                      </td>
+                      <td className="px-3 py-2 text-center tabular-nums">{v.adopted}<span className="text-xs text-ink-faint">/{v.target}</span></td>
+                      <RateCell value={v.adoption_pct} />
+                      <td className="px-3 py-2 text-center tabular-nums">{v.actual}<span className="text-xs text-ink-faint">/{v.expected}</span></td>
+                      <RateCell value={v.activity_pct} />
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </DataTable>
+          </div>
+        </div>
+      </Section>
+
+      <Section icon={<Layers3 />} title={t('expected.ownTitle')} subtitle={t('expected.ownSub')}>
+        <ChipRow label={t('split.label')} value={bandSplit} onChange={v => setBandSplit(v as Split)}
+          items={(['departments', 'blocks', 'roles'] as Split[]).map(k => ({ key: k, label: t(`expected.split.${k}`) }))} />
+        <div className="mt-5 space-y-4">
+          {[...bandGroups, ...(bandSplit === 'departments' ? [] : [{ ...s, key: 'total', label: t('table.total') } as MasdGroup])].map(g => (
+            <div key={g.key} className="grid grid-cols-1 gap-2 sm:grid-cols-[11rem_1fr] sm:items-center [&>*]:min-w-0">
+              <div className="text-sm">
+                <span className="font-semibold text-ink">{g.label.replace(' subtotal', '')}</span>
+                <span className="ml-1.5 text-xs text-ink-faint">{t('expected.ownN', { n: g.own_banded, pct: fmt1(g.own_pct) })}</span>
+              </div>
+              <StackedBar
+                height="h-6"
+                showLegend={false}
+                parts={OWN_BANDS.map(b => ({ key: b, label: t(`bandsOwn.${b}`), value: g.own_bands[b], color: BAND_COLORS[b] }))}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1">
+          {OWN_BANDS.map(b => (
+            <span key={b} className="inline-flex items-center gap-1.5 text-xs text-ink-muted">
+              <span className="size-2.5 rounded-full" style={{ background: BAND_COLORS[b] }} aria-hidden />{t(`bandsOwn.${b}`)}
+            </span>
+          ))}
+        </div>
+        <DataTable className="mt-5">
+          <thead>
+            <tr>
+              <Th className="text-left">{t(`expected.split.${bandSplit}One`)}</Th>
+              <Th>{t('expected.banded')}</Th>
+              {OWN_BANDS.map(b => <Th key={b}>{t(`bandsOwn.${b}`)}</Th>)}
+              <Th>{t('expected.ownPct')}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {bandGroups.map(g => (
+              <tr key={g.key}>
+                <td className="px-3 py-2 font-medium text-ink">{g.label.replace(' subtotal', '')}</td>
+                <td className="px-3 py-2 text-center tabular-nums">{g.own_banded}</td>
+                {OWN_BANDS.map(b => (
+                  <td key={b} className="px-3 py-2 text-center tabular-nums">
+                    {g.own_banded ? `${Math.round((100 * g.own_bands[b]) / g.own_banded)}%` : '—'}
+                    <span className="ml-1 text-xs text-ink-faint">({g.own_bands[b]})</span>
+                  </td>
+                ))}
+                <RateCell value={g.own_pct} />
+              </tr>
+            ))}
+          </tbody>
+        </DataTable>
+        <MasdFindings className="mt-5" findings={report.insights.own_cases} />
+      </Section>
+
+      <Section icon={<ListChecks />} title={t('expected.howTitle')}>
+        <ul className="space-y-1.5 text-sm text-ink-muted">
+          <li className="flex gap-2"><Timer className="mt-0.5 size-4 shrink-0 text-ink-faint" />{t('expected.how1', { buffer: cal.buffer_days, step: cal.step_days })}</li>
+          <li className="flex gap-2"><Target className="mt-0.5 size-4 shrink-0 text-ink-faint" />{t('expected.how2')}</li>
+          <li className="flex gap-2"><Layers3 className="mt-0.5 size-4 shrink-0 text-ink-faint" />{t('expected.how3')}</li>
+        </ul>
+      </Section>
+    </div>
+  );
+};
+
+export default MasdExpected;

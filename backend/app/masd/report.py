@@ -15,13 +15,19 @@ from app.masd import insights as I
 
 
 def default_compare(report: Dict[str, Any]) -> Optional[date]:
-    """The day before tranche 2 opened: the tranche-1 interim, like the
-    analysts' "month-1" meeting."""
+    """The day before the targets were last raised — the review meeting, like
+    the analysts' interim — else the day before tranche 2 opened."""
+    as_of = date.fromisoformat(report["as_of"])
+    raises = [date.fromisoformat(s["from"]) for s in report["calendar"]["targets"]["steps"][1:] if s.get("from")]
+    raises = [d for d in raises if d <= as_of]
+    if raises:
+        d = max(raises) - timedelta(days=1)
+        return d if d < as_of else None
     t2 = report["calendar"]["tranche2_start"]
     if not t2:
         return None
     d = date.fromisoformat(t2) - timedelta(days=1)
-    return d if d < date.fromisoformat(report["as_of"]) else None
+    return d if d < as_of else None
 
 
 def build(db: Session, project: models.ProgramDistrict, as_of: date,

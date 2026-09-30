@@ -61,12 +61,17 @@ def overview(r: Dict[str, Any]) -> List[Dict[str, str]]:
     if it is not None:
         out.append(_finding(
             "good" if it >= 80 else "watch" if it < 60 else "info",
-            f"They completed {s['activities']:,} activities — {_f(it)} of the ideal "
-            f"{s['ideal']:,.0f} for this point in the programme."))
+            f"They completed {s['activities']:,} activities — {_f(it)} of the {s['ideal']:,} expected "
+            f"by now (the targets in force × the forms due at each learner's follow-up)."))
     if fl is not None and it is not None and fl - it >= 20:
         out.append(_finding("watch", "Adoption volume is running well ahead of follow-up: more cases "
                                      "are being taken on than are being visited as often as the "
                                      "programme expects."))
+    if s["own_pct"] is not None:
+        out.append(_finding(
+            "good" if s["own_pct"] >= 80 else "watch" if s["own_pct"] < 60 else "info",
+            f"On the cases they did adopt, learners filed {_f(s['own_pct'])} of the forms those cases were "
+            f"due by their own follow-up."))
     if s["no_activity"]:
         silent, nobody = s["no_activity"], s["zero_adoptions"]
         tail = f", and {nobody} adopted nobody" if nobody else ""
@@ -82,7 +87,7 @@ def blocks(r: Dict[str, Any]) -> List[Dict[str, str]]:
     if len(ranked) >= 2:
         best = max(ranked, key=lambda g: g["intensity_pct"])
         worst = min(ranked, key=lambda g: g["intensity_pct"])
-        out.append(_finding("info", f"{best['label']} leads on activity intensity ({_f(best['intensity_pct'])}"
+        out.append(_finding("info", f"{best['label']} leads on expected activity done ({_f(best['intensity_pct'])}"
                                     f"{_small(best['learners'])}); {worst['label']} is lowest "
                                     f"({_f(worst['intensity_pct'])}{_small(worst['learners'])})."))
     over = [g for g in groups if (g["fulfilment_pct"] or 0) >= 100]
@@ -122,7 +127,7 @@ def roles(r: Dict[str, Any]) -> List[Dict[str, str]]:
     nil_note = f", with {best['nil_days_avg']:.1f} nil-activity days" if best["nil_days_avg"] is not None else ""
     out.append(_finding("good", f"{best['label']} is the strongest cadre on follow-up among the larger groups — "
                                 f"{_f(best['fulfilment_pct'])} of the adoption target and {_f(best['intensity_pct'])} "
-                                f"of the ideal activities{nil_note}."))
+                                f"of the expected activities{nil_note}."))
     gaps = [g for g in ranked if g["fulfilment_pct"] is not None]
     if gaps:
         widest = max(gaps, key=lambda g: g["fulfilment_pct"] - g["intensity_pct"])
@@ -138,9 +143,10 @@ def roles(r: Dict[str, Any]) -> List[Dict[str, str]]:
                             f"({worst['nil_days_avg']:.1f}){_small(worst['learners'])}."))
     nurses = next((g for g in groups if g["key"] == R.NURSING_STAFF), None)
     if nurses:
-        out.append(_finding("info", f"Staff Nurses ({nurses['learners']}) are expected to adopt six PNC <5 month "
-                                    f"cases in the facility; they reach {_f(nurses['fulfilment_pct'])} of that and "
-                                    f"{_f(nurses['intensity_pct'])} of their 66 ideal activities."))
+        target = r["calendar"]["targets"]["now"]["nurse"]
+        out.append(_finding("info", f"Staff Nurses ({nurses['learners']}) are expected to adopt {target} PNC <5 month "
+                                    f"cases in the facility by now; they reach {_f(nurses['fulfilment_pct'])} of that "
+                                    f"and {_f(nurses['intensity_pct'])} of their expected activities."))
     return out
 
 
@@ -152,7 +158,7 @@ def subtypes(r: Dict[str, Any]) -> List[Dict[str, str]]:
     low = min(vals, key=vals.get)
     high = max(vals, key=vals.get)
     out = [_finding("watch" if vals[low] < 60 else "info",
-                    f"{R.ACTIVITY_LABELS[low]} lags the other activities ({_f(vals[low])} of ideal) — "
+                    f"{R.ACTIVITY_LABELS[low]} lags the other activities ({_f(vals[low])} of expected) — "
                     f"a priority area for supervision.")]
     if high != low:
         out.append(_finding("good", f"{R.ACTIVITY_LABELS[high]} is the most complete activity ({_f(vals[high])})."))
@@ -177,17 +183,17 @@ def progress(cmp: Dict[str, Any]) -> List[Dict[str, str]]:
         down = [b for b in ints if b["intensity_change"] < -2]
         worst = min(ints, key=lambda b: b["intensity_change"])
         if down:
-            out.append(_finding("watch", f"Activity intensity fell in {len(down)} of {len(ints)} blocks — most sharply "
+            out.append(_finding("watch", f"Expected activity done fell in {len(down)} of {len(ints)} blocks — most sharply "
                                          f"in {worst['label']} ({_f(worst['intensity_then'])} → "
                                          f"{_f(worst['intensity_now'])})."))
         best = max(ints, key=lambda b: b["intensity_change"])
         if best["intensity_change"] > 2:
-            out.append(_finding("good", f"{best['label']} improved the most on activity intensity "
+            out.append(_finding("good", f"{best['label']} improved the most on expected activity done "
                                         f"({_pts(best['intensity_change'])})."))
     if t["target_per_learner"] != n["target_per_learner"]:
         out.append(_finding("info", f"The target itself changed between the two dates "
                                     f"({t['target_per_learner']} → {n['target_per_learner']} adoptions per learner) "
-                                    f"as tranche 2 opened, so the figures reflect a second round of adoption, "
+                                    f"at the review, so the figures reflect a further round of adoption, "
                                     f"not the same cases counted twice."))
     return out
 
@@ -283,11 +289,11 @@ def takeaways(r: Dict[str, Any], cmp: Optional[Dict[str, Any]]) -> List[Dict[str
     if s["fulfilment_pct"] is not None:
         out.append(_finding("good" if s["fulfilment_pct"] >= 100 else "watch",
                             f"Adoption target fulfilment stands at {_f(s['fulfilment_pct'])} of the "
-                            f"{R.adoption_target(r['calendar']['tranches_in_force'])}-adoption target."))
+                            f"{_community_target(r)}-adoption target in force."))
     if blocks:
         lo = min(blocks, key=lambda b: b["intensity_pct"])
         hi = max(blocks, key=lambda b: b["intensity_pct"])
-        out.append(_finding("watch", f"Activity intensity runs {_f(lo['intensity_pct'])}–{_f(hi['intensity_pct'])} by "
+        out.append(_finding("watch", f"Expected activity done runs {_f(lo['intensity_pct'])}–{_f(hi['intensity_pct'])} by "
                                      f"block — adoption volume is there, completion per adoption has room to "
                                      f"improve, particularly in {lo['label']}."))
     sub = {k: v for k, v in s["subtype_pct"].items() if v is not None}
@@ -302,9 +308,93 @@ def takeaways(r: Dict[str, Any], cmp: Optional[Dict[str, Any]]) -> List[Dict[str
             out.append(_finding("good" if uw_m < uw_o else "info",
                                 f"MT+FL learners' cases cut underweight by {abs(uw_m):.0f}% (relative) against "
                                 f"{abs(uw_o):.0f}% for other learners."))
+    gap = _widest_type_gap(s)
+    if gap:
+        out.append(gap)
+    fl = r["flags"]["summary"]
+    if fl["edd_passed"]:
+        out.append(_finding("watch", f"{fl['edd_passed']} pregnant women are past their due date with no birth "
+                                     f"recorded — see Follow-up flags."))
     if r["attention"]:
         out.append(_finding("watch", f"{len(r['attention'])} learners need a supervisor's call — see the "
                                      f"'needs attention' list."))
+    return out
+
+
+def _community_target(r: Dict[str, Any]) -> int:
+    now = r["calendar"]["targets"]["now"]
+    return now["anc"] + now["pnc_lt5"] + now["pnc_ge5"]
+
+
+def _widest_type_gap(g: Dict[str, Any]) -> Optional[Dict[str, str]]:
+    typed = [(t, v) for t, v in g["by_type"].items()
+             if v["adoption_pct"] is not None and v["activity_pct"] is not None]
+    if not typed:
+        return None
+    t, v = max(typed, key=lambda x: x[1]["adoption_pct"] - x[1]["activity_pct"])
+    if v["adoption_pct"] - v["activity_pct"] < 20:
+        return None
+    return _finding("watch", f"{R.ADOPTION_TYPE_LABELS[t]} adoptions reach {_f(v['adoption_pct'])} of target but only "
+                             f"{_f(v['activity_pct'])} of the activity they were expected to generate — adopting is "
+                             f"not the same as following up.")
+
+
+def by_type(r: Dict[str, Any]) -> List[Dict[str, str]]:
+    """The adoption-type view: adoption met vs activity done, and which block
+    is best and worst for each type."""
+    s = r["summary"]
+    out = []
+    gap = _widest_type_gap(s)
+    if gap:
+        out.append(gap)
+    for t in R.ADOPTION_TYPES:
+        groups = [b for b in r["blocks"] if b["learners"] >= 3 and b["by_type"][t]["activity_pct"] is not None]
+        if len(groups) < 2:
+            continue
+        best = max(groups, key=lambda b: b["by_type"][t]["activity_pct"])
+        worst = min(groups, key=lambda b: b["by_type"][t]["activity_pct"])
+        out.append(_finding("info", f"{R.ADOPTION_TYPE_LABELS[t]}: {best['label']} does the most of its expected "
+                                    f"activity ({_f(best['by_type'][t]['activity_pct'])}), {worst['label']} the least "
+                                    f"({_f(worst['by_type'][t]['activity_pct'])})."))
+    return out
+
+
+def own_cases(r: Dict[str, Any]) -> List[Dict[str, str]]:
+    """Within the cases learners adopted: how active they are on them."""
+    s = r["summary"]
+    if not s["own_banded"]:
+        return []
+    labels = dict(R.OWN_BANDS)
+    bands = s["own_bands"]
+    top = max(bands, key=bands.get)
+    out = [_finding("info", f"The largest group of learners ({bands[top]} of {s['own_banded']}) sits at "
+                            f"{labels[top]} of the activity their own cases were due.")]
+    low = bands["none"] + bands["b1_20"] + bands["b21_40"]
+    if low:
+        out.append(_finding("watch", f"{low} learners have filed 40% or less of what their own cases needed "
+                                     f"({bands['none']} nothing at all)."))
+    depts = [d for d in r["departments"] if d["key"] != "total" and d["own_banded"]]
+    if len(depts) >= 2:
+        def share(d):
+            return 100.0 * (d["own_bands"]["b61_80"] + d["own_bands"]["b81_100"]) / d["own_banded"]
+        best = max(depts, key=share)
+        out.append(_finding("good", f"{best['key']} has the most learners above 60% of their cases' expected "
+                                    f"activity ({share(best):.0f}%)."))
+    return out
+
+
+def flags(r: Dict[str, Any]) -> List[Dict[str, str]]:
+    f = r["flags"]["summary"]
+    if not f["open_pregnancies"]:
+        return [_finding("info", "No pregnant woman is currently under follow-up.")]
+    out = [_finding("info", f"{f['open_pregnancies']} pregnant women are under follow-up; {f['flagged']} need attention.")]
+    if f["edd_passed"]:
+        out.append(_finding("watch", f"{f['edd_passed']} are past their expected delivery date with no birth "
+                                     f"entered — ask the learner whether the baby has come."))
+    if f["anc_behind"]:
+        out.append(_finding("watch", f"{f['anc_behind']} have missed two or more fortnightly antenatal checks."))
+    if f["no_lmp"]:
+        out.append(_finding("info", f"{f['no_lmp']} have no LMP recorded, so their due date cannot be tracked."))
     return out
 
 
@@ -315,6 +405,9 @@ def all_findings(r: Dict[str, Any], cmp: Optional[Dict[str, Any]]) -> Dict[str, 
         "blocks": blocks(r),
         "roles": roles(r),
         "subtypes": subtypes(r),
+        "by_type": by_type(r),
+        "own_cases": own_cases(r),
+        "flags": flags(r),
         "progress": progress(cmp) if cmp else [],
         "outcomes": outcomes(r),
         "overall": prevalence(p["overall"], "All analysed cases"),

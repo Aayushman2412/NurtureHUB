@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowDownUp, Search } from 'lucide-react';
-import { setTrainerRole, type MasdLearner, type MasdReport } from '../../api/masd';
+import { setLearnerBatch, setTrainerRole, type MasdLearner, type MasdReport } from '../../api/masd';
 import { useToast } from '../../context/ToastContext';
 import { Input } from '../ui';
 import { ChipRow } from '../results/InsightParts';
@@ -10,13 +10,15 @@ import { DataTable, RateCell, Th } from './MasdCharts';
 import { fmt1 } from '../../lib/masdDisplay';
 
 type Filter = 'f2f' | 'mtfl' | 'attention' | 'outside';
-type SortKey = 'name' | 'block' | 'role_group' | 'adoptions' | 'fulfilment' | 'activities' | 'intensity' | 'nil';
+type SortKey = 'name' | 'block' | 'role_group' | 'batch' | 'adoptions' | 'fulfilment' | 'activities' | 'intensity' | 'own' | 'nil';
 
 const sortValue = (l: MasdLearner, key: SortKey): number | string => {
   switch (key) {
     case 'name': return (l.name || '').toLowerCase();
     case 'block': return l.block.toLowerCase();
     case 'role_group': return l.role_group;
+    case 'batch': return `${l.batch ?? '~'} ${l.training_end ?? ''}`;
+    case 'own': return l.own.pct ?? -1;
     case 'adoptions': return l.adoptions.total;
     case 'fulfilment': return l.fulfilment_pct ?? -1;
     case 'activities': return l.activities.total;
@@ -36,6 +38,7 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
   const [shown, setShown] = useState(PAGE);
   const [saving, setSaving] = useState<number | null>(null);
   const attentionIds = useMemo(() => new Set(report.attention.map(a => a.id)), [report.attention]);
+  const batches = useMemo(() => report.calendar.batches.filter(b => b.id != null), [report.calendar.batches]);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -76,6 +79,19 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
     }
   };
 
+  const changeBatch = async (l: MasdLearner, value: string) => {
+    setSaving(l.id);
+    try {
+      await setLearnerBatch(l.id, value ? Number(value) : null);
+      showToast(t('learners.batchSaved', { name: l.name }), 'success');
+      onChanged();
+    } catch {
+      showToast(t('learners.roleFailed'), 'error');
+    } finally {
+      setSaving(null);
+    }
+  };
+
   const counts = {
     f2f: report.learners.filter(l => l.f2f).length,
     mtfl: report.learners.filter(l => l.mtfl).length,
@@ -107,10 +123,12 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
             {head('block', t('table.block'))}
             {head('role_group', t('table.cadre'))}
             <Th>{t('learners.mtfl')}</Th>
+            {head('batch', t('learners.batch'))}
             {head('adoptions', t('table.adoptions'))}
             {head('fulfilment', t('table.fulfilment'))}
             {head('activities', t('learners.activities'))}
             {head('intensity', t('table.intensity'))}
+            {head('own', t('learners.own'))}
             {head('nil', t('table.nilDays'))}
           </tr>
         </thead>
@@ -138,20 +156,40 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
                   </select>
                 ) : <span className="text-xs text-ink-faint">{t('learners.notF2f')}</span>}
               </td>
-              <td className="px-3 py-2 text-center tabular-nums" title={`ANC ${l.adoptions.anc} · <5M ${l.adoptions.pnc_lt5} · ≥5M ${l.adoptions.pnc_ge5}`}>
+              <td className="px-3 py-2 text-center">
+                {l.f2f ? (
+                  <div className="flex flex-col items-center gap-0.5">
+                    <select
+                      value={l.batch_id ?? ''}
+                      disabled={saving === l.id}
+                      onChange={e => changeBatch(l, e.target.value)}
+                      aria-label={t('learners.batchFor', { name: l.name })}
+                      className="max-w-36 cursor-pointer rounded-md border border-border bg-surface px-2 py-1 text-xs text-ink"
+                    >
+                      <option value="">{t('learners.projectDate')}</option>
+                      {batches.map(b => <option key={b.id} value={b.id!}>{b.name}</option>)}
+                    </select>
+                    {l.fu_days != null && <span className="text-[0.68rem] text-ink-faint">{t('learners.fuShort', { n: l.fu_days })}</span>}
+                  </div>
+                ) : <span className="text-xs text-ink-faint">—</span>}
+              </td>
+              <td className="px-3 py-2 text-center tabular-nums"
+                title={`ANC ${l.adoptions.anc}/${l.targets.anc} · <5M ${l.adoptions.pnc_lt5}/${l.targets.pnc_lt5} · ≥5M ${l.adoptions.pnc_ge5}/${l.targets.pnc_ge5}`}>
                 <span className="font-semibold">{l.adoptions.total}</span>
+                <span className="text-xs text-ink-faint">/{l.targets.total}</span>
                 <span className="ml-1 text-xs text-ink-faint">({l.adoptions.anc}·{l.adoptions.pnc_lt5}·{l.adoptions.pnc_ge5})</span>
               </td>
               <td className="px-3 py-2 text-center tabular-nums">{fmt1(l.fulfilment_pct)}</td>
               <td className="px-3 py-2 text-center tabular-nums">{l.activities.total} <span className="text-xs text-ink-faint">/ {Math.round(l.ideal.total)}</span></td>
               <RateCell value={l.intensity_pct} />
+              <RateCell value={l.own.pct} />
               <td className="px-3 py-2 text-center tabular-nums">
                 {l.nil_days == null ? <span className="text-ink-faint">{t('learners.never')}</span> : l.nil_days}
               </td>
             </tr>
           ))}
           {rows.length === 0 && (
-            <tr><td colSpan={9} className="px-3 py-8 text-center text-sm text-ink-muted">{t('learners.none')}</td></tr>
+            <tr><td colSpan={11} className="px-3 py-8 text-center text-sm text-ink-muted">{t('learners.none')}</td></tr>
           )}
         </tbody>
       </DataTable>

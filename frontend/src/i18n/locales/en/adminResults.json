@@ -40,7 +40,8 @@
     "title": "Face-to-Face Training Selection",
     "description": "Upload an Excel sheet containing the emails of selected users (any column). Every matched user immediately receives a notification that they are selected and should await further instructions.",
     "uploading": "Uploading…",
-    "uploadButton": "Upload Selection Excel"
+    "uploadButton": "Upload Selection Excel",
+    "batchHint": "Put each learner in their training batch — the MASD dashboard counts their follow-up from its last day."
   },
   "upload": {
     "selectedNotified": "Selected & notified:",
@@ -59,7 +60,12 @@
     "colRemove": "Remove",
     "yes": "Yes",
     "no": "No",
-    "removeAria": "Remove from selection"
+    "removeAria": "Remove from selection",
+    "colBatch": "Training batch",
+    "batchFor": "Training batch for {{name}}",
+    "projectDate": "Project training date",
+    "ended": "ended {{date}}",
+    "noBatches": "No batches yet"
   },
   "excel": {
     "sheet": "Combined Results",
@@ -90,7 +96,9 @@
     "selectedNotified": "Selected & notified {{n}} user(s).",
     "processFailed": "Failed to process the selection file.",
     "removed": "Removed from selection.",
-    "removeFailed": "Failed to remove selection."
+    "removeFailed": "Failed to remove selection.",
+    "batchSaved": "Training batch saved for {{name}}.",
+    "batchFailed": "Could not save the batch."
   },
   "confirm": {
     "removeSelection": "Remove this user from the face-to-face selection list?"

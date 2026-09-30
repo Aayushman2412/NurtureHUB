@@ -6,7 +6,9 @@ import type { ActivityBlock, GrowthSummaryRow, ZTriplet } from '../../api/growth
 import { caseCategory, monthsDays, pctCellFill, zCellFill } from '../../lib/growthDisplay';
 
 /** Toggleable column groups (Identity is always shown). */
-type GroupId = 'case' | 'total' | 'cg' | 'bf' | 'cf' | 'outcomes';
+type GroupId = 'case' | 'fu' | 'total' | 'cg' | 'bf' | 'cf' | 'anc' | 'protein' | 'outcomes';
+
+const EMPTY_BLOCK: ActivityBlock = { expected: null, actual: 0, incomplete: null, actual_pct: null, incomplete_pct: null };
 
 interface ColDef {
   key: string;
@@ -156,7 +158,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
     id: GroupId,
     label: string,
     title: string,
-    key: 'total' | 'cg' | 'bf' | 'cf',
+    key: 'total' | 'cg' | 'bf' | 'cf' | 'anc' | 'protein',
   ): GroupDef => ({
     id,
     label,
@@ -170,7 +172,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
         base: 44,
         align: 'center',
         render: r => (
-          <ExpectedCell block={r.activities[key]} mock={r.meta.expected_is_mock} demoLabel={demo} />
+          <ExpectedCell block={r.activities[key] ?? EMPTY_BLOCK} mock={r.meta.expected_is_mock} demoLabel={demo} />
         ),
       },
       {
@@ -180,8 +182,8 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
         title: t('summary.ac'),
         base: 62,
         align: 'center',
-        fill: r => pctCellFill(r.activities[key].actual_pct),
-        render: r => <CountPctCell count={r.activities[key].actual} pct={r.activities[key].actual_pct} />,
+        fill: r => pctCellFill((r.activities[key] ?? EMPTY_BLOCK).actual_pct),
+        render: r => <CountPctCell count={(r.activities[key] ?? EMPTY_BLOCK).actual} pct={(r.activities[key] ?? EMPTY_BLOCK).actual_pct} />,
       },
       {
         key: `${id}-ic`,
@@ -190,9 +192,9 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
         title: t('summary.ic'),
         base: 62,
         align: 'center',
-        fill: r => pctCellFill(r.activities[key].incomplete_pct, true),
+        fill: r => pctCellFill((r.activities[key] ?? EMPTY_BLOCK).incomplete_pct, true),
         render: r => (
-          <CountPctCell count={r.activities[key].incomplete} pct={r.activities[key].incomplete_pct} />
+          <CountPctCell count={(r.activities[key] ?? EMPTY_BLOCK).incomplete} pct={(r.activities[key] ?? EMPTY_BLOCK).incomplete_pct} />
         ),
       },
     ],
@@ -309,6 +311,26 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
           },
         ],
       },
+      {
+        id: 'fu',
+        label: t('summary.groups.fu'),
+        title: t('summary.groups.fuFull'),
+        tone: 'plain',
+        cols: ([
+          ['fu_pregnancy', 'fuPreg'], ['fu_baby', 'fuBaby'], ['fu_to_195', 'fuTo195'],
+          ['fu_from_195', 'fuFrom195'], ['fu_from_150', 'fuFrom150'],
+        ] as const).map(([field, code]) => ({
+          key: field,
+          code: t(`summary.${code}`),
+          title: t(`summary.${code}Full`),
+          base: 60,
+          align: 'center' as const,
+          render: (r: GrowthSummaryRow) => {
+            const v = r.case_details[field];
+            return <span className={cn('tabular-nums', v == null ? 'text-ink-faint' : 'text-ink')}>{v == null ? '—' : v}</span>;
+          },
+        })),
+      },
       activityGroup('total', t('summary.groups.total'), t('summary.groups.totalFull'), 'total'),
       {
         id: 'outcomes',
@@ -330,6 +352,8 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
       activityGroup('cg', 'CG', t('summary.groups.cg'), 'cg'),
       activityGroup('bf', 'BF', t('summary.groups.bf'), 'bf'),
       activityGroup('cf', 'CF', t('summary.groups.cf'), 'cf'),
+      activityGroup('anc', 'ANC', t('summary.groups.anc'), 'anc'),
+      activityGroup('protein', 'PC', t('summary.groups.protein'), 'protein'),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [t],
@@ -421,7 +445,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
 
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-ink-muted">{t('summary.columns')}:</span>
-            {(['case', 'total', 'outcomes', 'cg', 'bf', 'cf'] as GroupId[]).map(id => (
+            {(['case', 'fu', 'total', 'outcomes', 'cg', 'bf', 'cf', 'anc', 'protein'] as GroupId[]).map(id => (
               <button
                 key={id}
                 type="button"

@@ -56,6 +56,16 @@ def _log_read(report: dict, project: models.ProgramDistrict) -> None:
         detail={"scope": "aggregate_programme_report", "project": project.slug,
                 "as_of": report["as_of"], "fields": ["z_scores", "dates", "demographic_categories"]},
     )
+    flagged = report["flags"]["items"]
+    if flagged:
+        # The follow-up flags name pregnancies by record ID, with their dates.
+        phi.log_list(
+            resource_type="masd_pregnancy_flags",
+            count=len(flagged),
+            subject_type=phi.MOTHER,
+            detail={"project": project.slug, "as_of": report["as_of"],
+                    "fields": ["mother_uid", "adoption_date", "lmp", "edd", "antenatal_check_dates"]},
+        )
 
 
 @router.get("/projects")
@@ -188,25 +198,74 @@ class Benchmarks(BaseModel):
     district_trend: Optional[DistrictTrend] = None
 
 
+class TargetStep(BaseModel):
+    """Expected adoptions per learner from `from` onwards."""
+    from_: date = Field(..., alias="from")
+    anc: int = Field(0, ge=0, le=50)
+    pnc_lt5: int = Field(0, ge=0, le=50)
+    pnc_ge5: int = Field(0, ge=0, le=50)
+    nurse: int = Field(0, ge=0, le=50)
+
+    model_config = {"populate_by_name": True}
+
+    def stored(self) -> dict:
+        return {"from": self.from_.isoformat(), "anc": self.anc, "pnc_lt5": self.pnc_lt5,
+                "pnc_ge5": self.pnc_ge5, "nurse": self.nurse}
+
+
+class BatchIn(BaseModel):
+    id: Optional[int] = None          # None = a new batch
+    name: str = Field(..., min_length=1, max_length=80)
+    end_date: date
+
+
 class SettingsIn(BaseModel):
     training_date: Optional[date] = None
     tranche2_start: Optional[date] = None
     benchmarks: Optional[Benchmarks] = None
+    # None = leave as they are (older clients); [] = back to the default.
+    targets: Optional[List[TargetStep]] = Field(None, max_length=12)
+    batches: Optional[List[BatchIn]] = Field(None, max_length=30)
 
     @model_validator(mode="after")
     def _order(self):
         if self.training_date and self.tranche2_start and self.tranche2_start <= self.training_date:
             raise ValueError("Tranche 2 must start after the training date")
+        if self.targets:
+            days = [t.from_ for t in self.targets]
+            if len(set(days)) != len(days):
+                raise ValueError("Two target steps start on the same date")
+        if self.batches:
+            names = [b.name.strip().lower() for b in self.batches]
+            if len(set(names)) != len(names):
+                raise ValueError("Two batches have the same name")
         return self
 
 
-def _settings_out(p: models.ProgramDistrict, s: Optional[models.MasdProjectSettings]) -> dict:
+def _own_batches(db: Session, p: models.ProgramDistrict) -> List[models.MasdTrainingBatch]:
+    return (db.query(models.MasdTrainingBatch)
+            .filter(models.MasdTrainingBatch.program_district_id == p.id)
+            .order_by(models.MasdTrainingBatch.end_date, models.MasdTrainingBatch.name).all())
+
+
+def _settings_out(db: Session, p: models.ProgramDistrict, s: Optional[models.MasdProjectSettings]) -> dict:
+    training = s.training_date if s else None
+    tranche2 = s.tranche2_start if s else None
+    counts = dict(
+        db.query(models.FaceToFaceSelection.batch_id, func.count(models.FaceToFaceSelection.id))
+        .filter(models.FaceToFaceSelection.batch_id.isnot(None))
+        .group_by(models.FaceToFaceSelection.batch_id).all()
+    )
     return {
         "project": p.slug,
-        "training_date": s.training_date.isoformat() if s and s.training_date else None,
-        "tranche2_start": s.tranche2_start.isoformat() if s and s.tranche2_start else None,
+        "training_date": training.isoformat() if training else None,
+        "tranche2_start": tranche2.isoformat() if tranche2 else None,
         "benchmarks": masd_data.benchmarks_for(p, s),
         "benchmarks_are_default": not (s and s.benchmarks_json) and p.slug in R.DEFAULT_BENCHMARKS,
+        "targets": (s.targets_json if s and s.targets_json else R.default_targets(p.slug, training, tranche2)),
+        "targets_are_default": not (s and s.targets_json),
+        "batches": [{"id": b.id, "name": b.name, "end_date": b.end_date.isoformat(),
+                     "learners": counts.get(b.id, 0)} for b in _own_batches(db, p)],
         "updated_by": s.updated_by if s else None,
         "updated_at": s.updated_at.isoformat() if s and s.updated_at else None,
     }
@@ -215,7 +274,7 @@ def _settings_out(p: models.ProgramDistrict, s: Optional[models.MasdProjectSetti
 @router.get("/settings")
 def get_settings(project: str = Query(...), db: Session = Depends(get_db)):
     p = _project(db, project)
-    return _settings_out(p, masd_data.settings_for(db, p))
+    return _settings_out(db, p, masd_data.settings_for(db, p))
 
 
 @router.put("/settings")
@@ -233,6 +292,22 @@ def put_settings(
     s.training_date = payload.training_date
     s.tranche2_start = payload.tranche2_start
     s.benchmarks_json = payload.benchmarks.model_dump() if payload.benchmarks else None
+    if payload.targets is not None:
+        s.targets_json = sorted((t.stored() for t in payload.targets), key=lambda t: t["from"]) or None
+    if payload.batches is not None:
+        existing = {b.id: b for b in _own_batches(db, p)}
+        keep = set()
+        for b in payload.batches:
+            row = existing.get(b.id) if b.id is not None else None
+            if row is None:
+                row = models.MasdTrainingBatch(program_district_id=p.id)
+                db.add(row)
+            row.name, row.end_date, row.updated_by = b.name.strip(), b.end_date, admin_email
+            if b.id is not None:
+                keep.add(b.id)
+        for bid, row in existing.items():
+            if bid not in keep:
+                db.delete(row)        # its learners fall back to the project's training date
     s.updated_by = admin_email
     audit.record_sync(
         audit.Action.ADMIN_CONFIG_CHANGE,
@@ -240,11 +315,128 @@ def put_settings(
         resource_type="masd_settings",
         resource_id=p.slug,
         is_phi=False,
-        detail={"project": p.slug, "changes": payload.model_dump(mode="json"), "by": admin_email},
+        detail={"project": p.slug, "changes": payload.model_dump(mode="json", by_alias=True), "by": admin_email},
     )
     db.commit()
     db.refresh(s)
-    return _settings_out(p, s)
+    return _settings_out(db, p, s)
+
+
+# ── The expected-forms table (programme-wide) ──────────────────────────────
+
+
+class ExpectedFormsIn(BaseModel):
+    durations: List[int]
+    rows: Dict[str, Dict[str, List[int]]]
+
+
+@router.get("/expected-forms")
+def get_expected_forms(db: Session = Depends(get_db)):
+    table, is_default = masd_data.expected_forms_for(db)
+    row = db.get(models.MasdRuleTable, masd_data.EXPECTED_FORMS_KEY)
+    return {"table": table, "is_default": is_default, "default": R.default_expected_forms(),
+            "rows": R.EXPECTED_ROWS,
+            "updated_by": row.updated_by if row and not is_default else None,
+            "updated_at": row.updated_at.isoformat() if row and row.updated_at and not is_default else None}
+
+
+@router.put("/expected-forms")
+def put_expected_forms(
+    payload: ExpectedFormsIn,
+    admin_email: str = Depends(get_admin_email),
+    db: Session = Depends(get_db),
+):
+    """Replace the cumulative expected-forms table (e.g. with the analysts'
+    revised LAP sheet). Every project's expected activity follows it."""
+    table = payload.model_dump()
+    problem = R.validate_expected_forms(table)
+    if problem:
+        raise HTTPException(status_code=422, detail=problem)
+    row = db.get(models.MasdRuleTable, masd_data.EXPECTED_FORMS_KEY)
+    if row is None:
+        row = models.MasdRuleTable(key=masd_data.EXPECTED_FORMS_KEY, value_json=table)
+        db.add(row)
+    row.value_json, row.updated_by = table, admin_email
+    audit.record_sync(
+        audit.Action.ADMIN_CONFIG_CHANGE, db=db, resource_type="masd_rule_table",
+        resource_id=masd_data.EXPECTED_FORMS_KEY, is_phi=False,
+        detail={"table": masd_data.EXPECTED_FORMS_KEY, "by": admin_email},
+    )
+    db.commit()
+    return get_expected_forms(db)
+
+
+@router.delete("/expected-forms")
+def reset_expected_forms(admin_email: str = Depends(get_admin_email), db: Session = Depends(get_db)):
+    """Back to the default table."""
+    row = db.get(models.MasdRuleTable, masd_data.EXPECTED_FORMS_KEY)
+    if row is not None:
+        db.delete(row)
+        audit.record_sync(
+            audit.Action.ADMIN_CONFIG_CHANGE, db=db, resource_type="masd_rule_table",
+            resource_id=masd_data.EXPECTED_FORMS_KEY, is_phi=False,
+            detail={"table": masd_data.EXPECTED_FORMS_KEY, "reset": True, "by": admin_email},
+        )
+        db.commit()
+    return get_expected_forms(db)
+
+
+# ── Which batch an F2F learner trained in ──────────────────────────────────
+
+
+class BatchAssignIn(BaseModel):
+    batch_id: Optional[int] = None
+
+
+@router.put("/learners/{user_id}/batch")
+def put_learner_batch(
+    user_id: int,
+    payload: BatchAssignIn,
+    admin_email: str = Depends(get_admin_email),
+    db: Session = Depends(get_db),
+):
+    """Put an F2F learner in a training batch (or none: the project's training
+    date then starts their follow-up). The batch must belong to the learner's
+    project, or to the state project it sits under."""
+    selection = (db.query(models.FaceToFaceSelection)
+                 .filter(models.FaceToFaceSelection.user_id == user_id).first())
+    if selection is None:
+        raise HTTPException(status_code=404, detail="This learner is not selected for face-to-face training")
+    batch = None
+    if payload.batch_id is not None:
+        batch = db.get(models.MasdTrainingBatch, payload.batch_id)
+        user = db.get(models.User, user_id)
+        allowed = set()
+        if user is not None and user.program_district_id is not None:
+            allowed.add(user.program_district_id)
+            pd = db.get(models.ProgramDistrict, user.program_district_id)
+            if pd is not None and getattr(pd, "parent_id", None):
+                allowed.add(pd.parent_id)
+        if batch is None or batch.program_district_id not in allowed:
+            raise HTTPException(status_code=404, detail="Batch not found for this learner's project")
+    before = selection.batch_id
+    selection.batch_id = payload.batch_id
+    audit.record_sync(
+        audit.Action.ADMIN_USER_CHANGE, db=db, resource_type="user", resource_id=user_id, is_phi=False,
+        detail={"action": "f2f_batch", "from": before, "to": payload.batch_id, "by": admin_email},
+    )
+    db.commit()
+    return {"user_id": user_id, "batch_id": selection.batch_id,
+            "batch": batch.name if batch else None,
+            "end_date": batch.end_date.isoformat() if batch else None}
+
+
+@router.get("/batches")
+def list_batches(project: str = Query(...), db: Session = Depends(get_db)):
+    """A project's training batches (with those of the state it sits under),
+    for the batch pickers on the Results and MASD pages."""
+    p = _project(db, project)
+    ids = [p.id] + ([p.parent_id] if getattr(p, "parent_id", None) else [])
+    ids += projects.member_project_ids(db, p)
+    rows = (db.query(models.MasdTrainingBatch)
+            .filter(models.MasdTrainingBatch.program_district_id.in_(set(ids)))
+            .order_by(models.MasdTrainingBatch.end_date, models.MasdTrainingBatch.name).all())
+    return [{"id": b.id, "name": b.name, "end_date": b.end_date.isoformat()} for b in rows]
 
 
 class TrainerRoleIn(BaseModel):

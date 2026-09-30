@@ -1,9 +1,10 @@
 """The programme rules behind the MASD dashboard — one place, written down once.
 
 Everything here comes from the analysts' MASD & outcome report (the deck the
-team presents to the district): the ideal activity count per learner per
-tranche, the adoption target, how an adoption is typed, what counts as the
-minimum follow-up, and the survey benchmarks the outcomes are read against.
+team presents to the district) and the method agreed on 29 Sep 2026: how an
+adoption is typed, the adoption targets and how they rise, the forms expected
+at each follow-up duration, a case's expected forms from its own follow-up,
+and the survey benchmarks the outcomes are read against.
 The engine (app/masd/engine.py) and the growth monitor both read these, so the
 two screens can never disagree about what a learner "should" have done.
 
@@ -11,14 +12,17 @@ Terms (as the deck uses them)
   adoption / MCD   one mother (and her child, once born) a learner takes on
   ANC              adopted while pregnant
   PNC<5M / PNC≥5M  adopted after birth, the child younger / older than 5 months
-  tranche          the programme runs two rounds of adoption; tranche 1 needs
-                   at least 2.5 months of follow-up, tranche 2 at least 1.5
+  tranche          the programme runs rounds of adoption; the targets rise at
+                   each review
+  follow-up (FU)   days since the learner's F2F batch ended, less a 15-day
+                   buffer, rounded down to a multiple of 15
   BV / AV / LV     birth details / adoption visit / last visit
   MT+FL            Master Trainers + Facilitators
 """
 from __future__ import annotations
 
-from typing import Dict, Optional
+from datetime import date, timedelta
+from typing import Any, Dict, List, Optional, Tuple
 
 # ── Adoption types ─────────────────────────────────────────────────────────
 
@@ -56,85 +60,293 @@ ACTIVITY_LABELS = {
 }
 FORM_TO_ACTIVITY = {form: key for key, form in ACTIVITY_FORMS.items()}
 
-# ── Ideal activities per adoption, by tranche (deck: "Reference: Ideal
-#    Activity Count per Learner (by Tranche)") ─────────────────────────────
+# ── Expected activity (the method agreed on 2026-09-29) ────────────────────
+#
+# MASD no longer reads a learner against a flat ideal (the deck's 98 / 66). It
+# reads them against what was EXPECTED by the report date, two ways:
+#
+#  1. Against the adoption targets. A learner's follow-up runs from the last
+#     day of their F2F training batch, plus a 15-day buffer to settle into the
+#     community, to the report date — rounded DOWN to a multiple of 15 days
+#     (100 days counts as 90). The forms expected are the adoption targets in
+#     force × the cumulative expected-forms table at that duration.
+#  2. Within the learner's own cases. Each case's expected forms follow from
+#     its actual follow-up (case_expected below), so a learner who adopted
+#     fewer mothers is still asked: are you active on the ones you have?
+
+FU_BUFFER_DAYS = 15
+FU_STEP_DAYS = 15
+FU_MAX_DAYS = 270            # the table runs to nine months of follow-up
+EXPECTED_DURATIONS = list(range(FU_STEP_DAYS, FU_MAX_DAYS + 1, FU_STEP_DAYS))
 
 NURSE = "nurse_lt5"   # a Staff Nurse's PNC<5M adoption (facility-based)
 
-IDEAL_PER_ADOPTION: Dict[int, Dict[str, Dict[str, int]]] = {
-    1: {  # tranche 1 — at least 2.5 months of follow-up
-        ANC: {"anc": 5, "protein": 5},
-        PNC_LT5: {"protein": 2, "gm": 13, "bf": 5},
-        PNC_GE5: {"gm": 13, "bf": 5, "cf": 5},
-        # The deck gives 33 for a nurse's three tranche adoptions (GM 18, BF 15):
-        # six growth checks and five breastfeeding assessments per baby — two
-        # visits a day through the hospital stay.
-        NURSE: {"gm": 6, "bf": 5},
-    },
-    2: {  # tranche 2 — at least 1.5 months of follow-up
-        ANC: {"anc": 3, "protein": 3},
-        PNC_LT5: {"protein": 2, "gm": 12, "bf": 5},
-        PNC_GE5: {"gm": 12, "bf": 5, "cf": 3},
-        NURSE: {"gm": 6, "bf": 5},
-    },
+# The table's rows: which forms each adoption type is expected to generate.
+# Protein counts are held to ANC adoptions for now, as agreed.
+EXPECTED_ROWS = [
+    (ANC, "anc"), (ANC, "protein"),
+    (PNC_LT5, "gm"), (PNC_LT5, "bf"),
+    (PNC_GE5, "gm"), (PNC_GE5, "bf"), (PNC_GE5, "cf"),
+    (NURSE, "gm"), (NURSE, "bf"),
+]
+EXPECTED_ROW_TYPES = (ANC, PNC_LT5, PNC_GE5, NURSE)
+
+# The Learning Action Protocol (LAP) visit days, counted from the adoption,
+# that the DEFAULT table is built from. The real sheet replaces the table (an
+# admin edits it on the dashboard); these only seed it. They reproduce every
+# figure quoted when the method was agreed: growth checks 9 within 15 days,
+# 11 within 30, 14 at 90 and 15 at 105; all five breastfeeding assessments in
+# the first 15 days; complementary feeding every 15 days for the first 60 days
+# of a ≥5-month adoption and monthly after (4 at 75 days, 5 at 90).
+LAP_GM_DAYS = (0, 1, 2, 3, 4, 6, 8, 11, 14, 21, 28, 45, 60, 90, 105, 135, 165, 195, 225, 255)
+LAP_BF_DAYS = (0, 3, 7, 10, 14)
+LAP_CF_DAYS = (15, 30, 45, 60, 90, 120, 150, 180, 210, 240, 270)
+# Interim rule for ANC adoptions (taken in the last trimester): the antenatal
+# and protein checks of the pregnancy only — two, the adoption visit and one
+# 15 days later — whatever the follow-up. Visits after the birth are the
+# baby's, and this table does not yet count them for an ANC adoption.
+LAP_ANC_DAYS = (0, 15)
+# A Staff Nurse's hospital adoptions: two visits a day through the stay.
+NURSE_FLAT = {"gm": 6, "bf": 5}
+
+
+def _cumulative(days: Tuple[int, ...], upto: int) -> int:
+    return sum(1 for d in days if d <= upto)
+
+
+def default_expected_forms() -> Dict[str, Any]:
+    rows: Dict[str, Dict[str, List[int]]] = {t: {} for t in EXPECTED_ROW_TYPES}
+    schedule = {"anc": LAP_ANC_DAYS, "protein": LAP_ANC_DAYS, "gm": LAP_GM_DAYS,
+                "bf": LAP_BF_DAYS, "cf": LAP_CF_DAYS}
+    for atype, key in EXPECTED_ROWS:
+        if atype == NURSE:
+            rows[atype][key] = [NURSE_FLAT[key] for _ in EXPECTED_DURATIONS]
+        else:
+            rows[atype][key] = [_cumulative(schedule[key], d) for d in EXPECTED_DURATIONS]
+    return {"durations": list(EXPECTED_DURATIONS), "rows": rows}
+
+
+def validate_expected_forms(table: Dict[str, Any]) -> Optional[str]:
+    """Why an edited table cannot be used, or None. Counts are cumulative, so
+    they may never fall as the follow-up gets longer."""
+    if table.get("durations") != EXPECTED_DURATIONS:
+        return f"durations must be {EXPECTED_DURATIONS[0]}–{EXPECTED_DURATIONS[-1]} days in steps of {FU_STEP_DAYS}"
+    rows = table.get("rows") or {}
+    for atype, key in EXPECTED_ROWS:
+        values = (rows.get(atype) or {}).get(key)
+        if not isinstance(values, list) or len(values) != len(EXPECTED_DURATIONS):
+            return f"{ADOPTION_TYPE_LABELS.get(atype, atype)} · {ACTIVITY_LABELS[key]}: one value per duration"
+        if any(not isinstance(v, int) or isinstance(v, bool) or v < 0 or v > 999 for v in values):
+            return f"{ADOPTION_TYPE_LABELS.get(atype, atype)} · {ACTIVITY_LABELS[key]}: whole numbers 0–999"
+        if any(b < a for a, b in zip(values, values[1:])):
+            return f"{ADOPTION_TYPE_LABELS.get(atype, atype)} · {ACTIVITY_LABELS[key]}: cumulative counts cannot fall"
+    return None
+
+
+def round_follow_up(days: int) -> int:
+    """The nearest lower multiple of 15 days, within the table."""
+    return max(0, min(FU_MAX_DAYS, (days // FU_STEP_DAYS) * FU_STEP_DAYS))
+
+
+def learner_follow_up(training_end: Optional[date], as_of: date) -> Tuple[Optional[int], Optional[int]]:
+    """(actual, rounded) days of community follow-up a learner has had by
+    `as_of`: from their batch's last training day + the buffer."""
+    if training_end is None:
+        return None, None
+    raw = max(0, (as_of - (training_end + timedelta(days=FU_BUFFER_DAYS))).days)
+    return raw, round_follow_up(raw)
+
+
+def expected_at(table: Dict[str, Any], atype: str, days: Optional[int]) -> Dict[str, int]:
+    """Cumulative forms expected from ONE adoption of `atype` followed for
+    `days` (already rounded). Nothing is due before the first step."""
+    row = (table.get("rows") or {}).get(atype) or {}
+    if not days:
+        return {k: 0 for k in row}
+    durations = table["durations"]
+    idx = max((i for i, d in enumerate(durations) if d <= days), default=None)
+    return {k: (vals[idx] if idx is not None else 0) for k, vals in row.items()}
+
+
+# ── Adoption targets, raised as the programme goes on ───────────────────────
+#
+# Right after training a learner is asked for one adoption of each type; at
+# each review the ask rises (Jalna went 1·1·1 → 2·2·2 → 3·5·3). The step in
+# force on the report date is the target. Each project's steps are the
+# analysts' to set (Programme settings); these defaults stand in until they do,
+# dated from the project's training date and tranche-2 start. The last step of
+# each reproduces the targets agreed for 29 Sep 2026.
+
+TARGET_KEYS = ("anc", "pnc_lt5", "pnc_ge5", "nurse")
+_PLANS: Dict[str, List[Tuple[int, int, int, int]]] = {
+    #            ANC  <5M  ≥5M  Staff Nurse (<5M)
+    "jalna":     [(1, 1, 1, 3), (2, 2, 2, 6), (3, 5, 3, 9)],
+    "ujjain":    [(1, 1, 1, 3), (2, 2, 2, 6), (3, 3, 3, 10)],
+    "meghalaya": [(1, 1, 1, 5), (2, 2, 2, 10)],
+    "khasi":     [(1, 1, 1, 5), (2, 2, 2, 10)],
 }
+_GENERIC_PLAN = [(1, 1, 1, 3), (2, 2, 2, 6)]
+THIRD_STEP_AFTER_TRANCHE2_DAYS = 45
 
-# Each tranche expects one adoption of each type (three per learner per tranche,
-# six in all); a Staff Nurse is expected three PNC<5M adoptions per tranche.
-TARGET_MIX = {ANC: 1, PNC_LT5: 1, PNC_GE5: 1}
-NURSE_TARGET_PER_TRANCHE = 3
-ADOPTIONS_PER_TRANCHE = 3
-MIN_FOLLOW_UP_MONTHS = {1: 2.5, 2: 1.5}
 
-# Follow-up each tranche's adoptions need, in days (2.5 and 1.5 months), and
-# how long tranche 2's adoption window stays open.
-FOLLOW_UP_DAYS = {1: 76, 2: 46}
-TRANCHE2_WINDOW_DAYS = 21
+def default_targets(slug: str, training: Optional[date], tranche2: Optional[date]) -> List[Dict[str, Any]]:
+    plan = _PLANS.get(slug, _GENERIC_PLAN)
+    if training is None:
+        return [{"from": None, **dict(zip(TARGET_KEYS, plan[-1]))}]
+    t2 = tranche2 or training + timedelta(days=DEFAULT_TRANCHE2_OFFSET_DAYS)
+    starts = [training, t2, t2 + timedelta(days=THIRD_STEP_AFTER_TRANCHE2_DAYS)]
+    return [{"from": starts[i].isoformat(), **dict(zip(TARGET_KEYS, step))} for i, step in enumerate(plan)]
 
-# Defaults when a project has not set its calendar.
+
+def _step_date(step: Dict[str, Any]) -> date:
+    return date.fromisoformat(step["from"]) if step.get("from") else date.min
+
+
+def targets_in_force(steps: List[Dict[str, Any]], as_of: date) -> Tuple[Dict[str, int], Optional[int]]:
+    """The targets on `as_of` and which step (1-based) they are. Before the
+    first step nothing is expected yet."""
+    ordered = sorted(steps, key=_step_date)
+    current, number = None, None
+    for i, step in enumerate(ordered, 1):
+        if _step_date(step) <= as_of:
+            current, number = step, i
+    if current is None:
+        return {k: 0 for k in TARGET_KEYS}, None
+    return {k: int(current.get(k) or 0) for k in TARGET_KEYS}, number
+
+
+def learner_targets(targets: Dict[str, int], is_nurse: bool) -> Dict[str, int]:
+    """A Staff Nurse's target is all PNC<5M hospital adoptions."""
+    if is_nurse:
+        return {ANC: 0, PNC_LT5: targets["nurse"], PNC_GE5: 0}
+    return {ANC: targets["anc"], PNC_LT5: targets["pnc_lt5"], PNC_GE5: targets["pnc_ge5"]}
+
+
+def row_type(atype: str, is_nurse: bool) -> str:
+    """The table row an adoption is read against."""
+    return NURSE if (is_nurse and atype in (PNC_LT5, PNC_GE5)) else atype
+
+
+# ── One case's expected forms, from its actual follow-up ───────────────────
+#
+# The main-database rule. A case is expected to have:
+#   * in pregnancy — an antenatal and a protein check on the adoption day and
+#     every 15 days after, until the birth (a check due on or after the birth
+#     day is not expected) or, if the baby has not come, until the expected
+#     delivery date (LMP + 280 days);
+#   * from the baby's adoption (its first contact, whatever its age then) —
+#     growth checks and breastfeeding by the expected-forms table at the
+#     follow-up rounded down to 15 days; breastfeeding only for the follow-up
+#     before 195 days of age;
+#   * complementary-feeding assessments by AGE: at 195, 210, 225 and 240 days,
+#     then monthly. Counselling starts from 150 days but no form is filled
+#     before 195: feeding starts at 180 and needs 15 days to take hold before
+#     it can be assessed. A baby adopted after 195 days is assessed from its
+#     first visit.
+# Follow-up stops at the report date or at one year of age.
+
+ANC_VISIT_EVERY_DAYS = 15
+PREGNANCY_DAYS = 280                  # LMP → expected delivery date
+CF_FIRST_AGE_DAYS = 195
+CF_AGE_DAYS = (195, 210, 225, 240, 270, 300, 330, 360)
+BF_UNTIL_AGE_DAYS = 195
+COUNSELLING_FROM_AGE_DAYS = 150
+BABY_FOLLOW_UP_MAX_AGE_DAYS = 365
+
+
+def edd(lmp: Optional[date]) -> Optional[date]:
+    return lmp + timedelta(days=PREGNANCY_DAYS) if lmp else None
+
+
+def pregnancy_visits_due(adopted: date, stop: date, born: bool) -> int:
+    """Checks due every 15 days from `adopted`: up to `stop` inclusive while
+    the pregnancy is running, strictly before it once the baby is born."""
+    span = (stop - adopted).days
+    if span < 0 or (born and span == 0):
+        return 0
+    return (span - 1) // ANC_VISIT_EVERY_DAYS + 1 if born else span // ANC_VISIT_EVERY_DAYS + 1
+
+
+def case_expected(table: Dict[str, Any], *, mother_adopted: Optional[date], lmp: Optional[date],
+                  dob: Optional[date], baby_adopted: Optional[date], end: date,
+                  is_nurse: bool = False) -> Dict[str, Any]:
+    """Expected forms for one mother-child case, and the follow-up segments
+    they come from. Returns zeros where a phase has not happened."""
+    out: Dict[str, Any] = {k: 0 for k in ACTIVITY_KEYS}
+    out.update({"fu_pregnancy": None, "fu_baby": None, "fu_to_195": None,
+                "fu_from_195": None, "fu_from_150": None, "age_at_adoption": None})
+
+    # Pregnancy: only for a mother taken on before the birth.
+    if mother_adopted and mother_adopted <= end and (dob is None or mother_adopted < dob):
+        born = dob is not None and dob <= end
+        stop = dob if born else end
+        due_date = edd(lmp)
+        if not born and due_date is not None:
+            stop = min(stop, due_date)
+        out["fu_pregnancy"] = max(0, (stop - mother_adopted).days)
+        n = pregnancy_visits_due(mother_adopted, stop, born)
+        out["anc"] = out["protein"] = n
+
+    # The baby, from its first contact.
+    if dob is not None and dob <= end:
+        start = baby_adopted if (baby_adopted and baby_adopted >= dob) else \
+            (dob if (mother_adopted and mother_adopted < dob) else (mother_adopted or dob))
+        stop = min(end, dob + timedelta(days=BABY_FOLLOW_UP_MAX_AGE_DAYS))
+        age_start = (start - dob).days
+        out["age_at_adoption"] = age_start
+        if start <= stop:
+            fu = (stop - start).days
+            to195 = max(0, (min(stop, dob + timedelta(days=BF_UNTIL_AGE_DAYS)) - start).days)
+            from195 = max(0, (stop - max(start, dob + timedelta(days=CF_FIRST_AGE_DAYS))).days)
+            from150 = max(0, (stop - max(start, dob + timedelta(days=COUNSELLING_FROM_AGE_DAYS))).days)
+            out.update({"fu_baby": fu, "fu_to_195": to195 if age_start < BF_UNTIL_AGE_DAYS else 0,
+                        "fu_from_195": from195, "fu_from_150": from150})
+            atype = PNC_LT5 if age_start < FIVE_MONTHS_DAYS else PNC_GE5
+            row = row_type(atype, is_nurse)
+            out["gm"] = expected_at(table, row, round_follow_up(fu)).get("gm", 0)
+            if age_start < BF_UNTIL_AGE_DAYS:
+                out["bf"] = expected_at(table, row, round_follow_up(to195)).get("bf", 0)
+            if not is_nurse:
+                age_stop = (stop - dob).days
+                if age_start > CF_FIRST_AGE_DAYS:
+                    out["cf"] = 1 + sum(1 for a in CF_AGE_DAYS if age_start < a <= age_stop)
+                else:
+                    out["cf"] = sum(1 for a in CF_AGE_DAYS if age_start <= a <= age_stop)
+    out["total"] = sum(out[k] for k in ACTIVITY_KEYS)
+    return out
+
+
+# Learners' activity on their own cases, grouped as agreed: nothing yet, then
+# fifths of what their cases were expected to have (above 100% counts in the
+# top band).
+OWN_BANDS = [("none", "No activity"), ("b1_20", "1–20%"), ("b21_40", "21–40%"),
+             ("b41_60", "41–60%"), ("b61_80", "61–80%"), ("b81_100", "81–100%")]
+OWN_BAND_KEYS = [k for k, _ in OWN_BANDS]
+
+
+def own_band(actual: int, expected: float) -> Optional[str]:
+    if expected <= 0:
+        return None                       # nothing due yet: not banded
+    if actual == 0:
+        return "none"
+    pct = round(100.0 * actual / expected)
+    for upper, key in ((20, "b1_20"), (40, "b21_40"), (60, "b41_60"), (80, "b61_80")):
+        if pct <= upper:
+            return key
+    return "b81_100"
+
+
+# Tranche 2 still dates the second round of adoption (the growth monitor
+# shows it, and the default target steps use it).
 DEFAULT_TRANCHE2_OFFSET_DAYS = 42   # tranche 2 opens six weeks after training
 
-
-def ideal_for_tranche(is_nurse: bool, tranche: int) -> Dict[str, int]:
-    """Ideal activities per subtype for one learner in one tranche: 53 then 45
-    for most cadres, 33 and 33 for a Staff Nurse."""
-    totals = {k: 0 for k in ACTIVITY_KEYS}
-    table = IDEAL_PER_ADOPTION[tranche]
-    if is_nurse:
-        for key, n in table[NURSE].items():
-            totals[key] += n * NURSE_TARGET_PER_TRANCHE
-    else:
-        for atype, count in TARGET_MIX.items():
-            for key, n in table[atype].items():
-                totals[key] += n * count
-    return totals
-
-
-def ideal_for_learner(is_nurse: bool, tranches: int = 2) -> Dict[str, int]:
-    """Ideal activities per subtype over the first `tranches` tranches — 98 in
-    all for most cadres, 66 for a Staff Nurse (deck: "Both tranches combine to
-    a flat ideal of 98 … and 66 for Staff Nurse")."""
-    totals = {k: 0 for k in ACTIVITY_KEYS}
-    for tranche in range(1, tranches + 1):
-        for key, n in ideal_for_tranche(is_nurse, tranche).items():
-            totals[key] += n
-    return totals
-
-
-def adoption_target(tranches: int = 2) -> int:
-    """Adoptions expected per learner: 3 per tranche (6 over both) — the same
-    count for Staff Nurses, whose six are all PNC<5M."""
-    return ADOPTIONS_PER_TRANCHE * tranches
-
-
-def ideal_for_adoption(adoption_type: str, tranche: int, is_nurse: bool) -> Dict[str, int]:
-    """Ideal activities for ONE adoption — what the growth monitor calls the
-    expected count. An ANC adoption expects antenatal and protein checks only
-    (mother-level); its baby's growth checks after birth are extra."""
-    tranche = 2 if tranche == 2 else 1
-    if is_nurse and adoption_type in (PNC_LT5, PNC_GE5):
-        return dict(IDEAL_PER_ADOPTION[tranche][NURSE])
-    return dict(IDEAL_PER_ADOPTION[tranche].get(adoption_type, {}))
+# Pregnancies the dashboard flags for follow-up.
+FLAG_ANC_MISSED = 2                 # two or more fortnightly checks missed
+FLAG_REASONS = {
+    "edd_passed": "Expected delivery date has passed, no birth recorded",
+    "anc_behind": "Two or more fortnightly antenatal checks missed",
+    "no_lmp": "LMP not recorded, so the due date cannot be tracked",
+}
 
 
 # ── Cadres (role groups) and departments ───────────────────────────────────

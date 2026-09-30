@@ -464,10 +464,45 @@ class FaceToFaceSelection(Base):
     # Facilitators ("MT+FL"), and the MASD outcome analysis compares them with
     # everyone else. None = an ordinary F2F learner. See app/masd/rules.py.
     trainer_role = Column(String, nullable=True)  # "master_trainer" | "facilitator"
+    # The F2F batch the learner trained in. Its last day starts the learner's
+    # follow-up clock in the MASD expected-activity analysis; None = the
+    # project's training date. See MasdTrainingBatch.
+    batch_id = Column(Integer, ForeignKey("masd_training_batches.id", ondelete="SET NULL"), nullable=True)
 
     # Relationships
     user = relationship("User")
     program_district = relationship("ProgramDistrict")
+    batch = relationship("MasdTrainingBatch")
+
+
+class MasdTrainingBatch(Base):
+    """One face-to-face training batch of a project (a district usually runs
+    about five). Every learner trained in it starts community follow-up after
+    its last day, so the MASD dashboard measures each learner's expected
+    activity from their own batch rather than one date for the whole project."""
+    __tablename__ = "masd_training_batches"
+
+    id = Column(Integer, primary_key=True, index=True)
+    program_district_id = Column(
+        Integer, ForeignKey("program_districts.id", ondelete="CASCADE"), nullable=False, index=True,
+    )
+    name = Column(String, nullable=False)
+    end_date = Column(Date, nullable=False)          # last day of the batch's training
+    updated_by = Column(String, nullable=True)       # admin email
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class MasdRuleTable(Base):
+    """Programme-wide MASD rule tables an admin can edit, keyed by name. Today
+    one: "expected_forms" — the cumulative forms expected per adoption at each
+    follow-up duration (the analysts' LAP sheet). Absent = the default in
+    app/masd/rules.py."""
+    __tablename__ = "masd_rule_tables"
+
+    key = Column(String, primary_key=True)
+    value_json = Column(JSON, nullable=False)
+    updated_by = Column(String, nullable=True)       # admin email
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
 class MasdProjectSettings(Base):
@@ -488,6 +523,10 @@ class MasdProjectSettings(Base):
     # {"label": "NFHS-5 Maharashtra", "age_bands": {"lt6": {...}, "m6_11": {...}},
     #  "district_trend": {"label": ..., "rounds": [...], "stunting": [...], ...}}
     benchmarks_json = Column(JSON, nullable=True)
+    # Expected adoptions per learner, raised as the programme goes on:
+    # [{"from": "2026-06-07", "anc": 1, "pnc_lt5": 1, "pnc_ge5": 1, "nurse": 3}, ...]
+    # The step in force on the report date applies. None = rules default.
+    targets_json = Column(JSON, nullable=True)
     updated_by = Column(String, nullable=True)       # admin email
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

@@ -6,6 +6,7 @@ import {
   GraduationCap, AlertCircle, Trash2, Search, Bell, BarChart3,
 } from 'lucide-react';
 import client from '../../api/client';
+import { getMasdBatches, setLearnerBatch } from '../../api/masd';
 import { getProjectSlug, PROJECT_EVENT } from '../../lib/adminProject';
 import * as XLSX from 'xlsx';
 import {
@@ -49,6 +50,10 @@ interface Selection {
   selected_at: string | null;
   uploaded_by: string | null;
   notified: boolean;
+  /** The F2F training batch (its last day starts the MASD follow-up). */
+  batch_id: number | null;
+  batch: string | null;
+  training_end: string | null;
 }
 
 interface UploadSummary {
@@ -71,6 +76,8 @@ const AdminResultsPage: React.FC = () => {
   const { showToast } = useToast();
   const [data, setData] = useState<ResultsData | null>(null);
   const [selections, setSelections] = useState<Selection[]>([]);
+  const [batches, setBatches] = useState<{ id: number; name: string; end_date: string }[]>([]);
+  const [savingBatch, setSavingBatch] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [resultsPage, setResultsPage] = useState(1);
@@ -241,6 +248,32 @@ const AdminResultsPage: React.FC = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Selection');
     XLSX.writeFile(wb, `face_to_face_selection_${data?.district ?? 'project'}.xlsx`);
+  };
+
+  // The project's training batches, for the batch column. A failure only
+  // hides the pickers; the selection list itself still works.
+  useEffect(() => {
+    const load = () => {
+      const slug = getProjectSlug();
+      if (!slug) return;
+      getMasdBatches(slug).then(setBatches).catch(() => setBatches([]));
+    };
+    load();
+    window.addEventListener(PROJECT_EVENT, load);
+    return () => window.removeEventListener(PROJECT_EVENT, load);
+  }, []);
+
+  const changeBatch = (sel: Selection, value: string) => {
+    const batchId = value ? Number(value) : null;
+    setSavingBatch(sel.user_id);
+    setLearnerBatch(sel.user_id, batchId)
+      .then(res => {
+        setSelections(list => list.map(x => (x.user_id === sel.user_id
+          ? { ...x, batch_id: res.batch_id, batch: res.batch, training_end: res.end_date } : x)));
+        showToast(t('toasts.batchSaved', { name: sel.name }), 'success');
+      })
+      .catch(() => showToast(t('toasts.batchFailed'), 'error'))
+      .finally(() => setSavingBatch(null));
   };
 
   const removeSelection = (userId: number) => {
@@ -414,7 +447,7 @@ const AdminResultsPage: React.FC = () => {
             {t('f2f.title')}
           </span>
         }
-        description={t('f2f.description')}
+        description={`${t('f2f.description')} ${t('f2f.batchHint')}`}
         actions={
           <>
             <Button
@@ -478,6 +511,7 @@ const AdminResultsPage: React.FC = () => {
                 <Th>{t('selectionTable.colEmail')}</Th>
                 <Th>{t('selectionTable.colSelectedAt')}</Th>
                 <Th>{t('selectionTable.colUploadedBy')}</Th>
+                <Th>{t('selectionTable.colBatch')}</Th>
                 <Th>{t('selectionTable.colNotified')}</Th>
                 <Th className="w-16 text-center">{t('selectionTable.colRemove')}</Th>
               </Tr>
@@ -489,6 +523,27 @@ const AdminResultsPage: React.FC = () => {
                   <Td className="text-ink-muted">{sel.email}</Td>
                   <Td className="text-ink-muted">{sel.selected_at ? new Date(sel.selected_at).toLocaleString() : '—'}</Td>
                   <Td className="text-ink-muted">{sel.uploaded_by || '—'}</Td>
+                  <Td>
+                    {batches.length > 0 ? (
+                      <div className="flex flex-col gap-0.5">
+                        <select
+                          value={sel.batch_id ?? ''}
+                          disabled={savingBatch === sel.user_id}
+                          onChange={e => changeBatch(sel, e.target.value)}
+                          aria-label={t('selectionTable.batchFor', { name: sel.name })}
+                          className="max-w-44 cursor-pointer rounded-md border border-border bg-surface px-2 py-1 text-xs text-ink"
+                        >
+                          <option value="">{t('selectionTable.projectDate')}</option>
+                          {batches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                        </select>
+                        {sel.training_end && (
+                          <span className="text-[0.68rem] text-ink-faint">
+                            {t('selectionTable.ended', { date: new Date(sel.training_end).toLocaleDateString() })}
+                          </span>
+                        )}
+                      </div>
+                    ) : <span className="text-xs text-ink-faint">{t('selectionTable.noBatches')}</span>}
+                  </Td>
                   <Td>{sel.notified ? <span className="text-success-600">{t('selectionTable.yes')}</span> : t('selectionTable.no')}</Td>
                   <Td className="text-center">
                     <Button

@@ -26,7 +26,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
-from sqlalchemy import text
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from app import growth_summary_mock as gsm  # MOCK: summary-table demo values (removable)
@@ -419,15 +419,47 @@ def _tranche2_by_project(db: Session) -> Dict[int, date]:
     }
 
 
-def _adoption(case: Dict[str, Any], tranche2: Optional[date], today: date) -> Dict[str, Any]:
+MOTHER_FORM_KEYS = {masd_rules.ACTIVITY_FORMS["anc"]: "anc", masd_rules.ACTIVITY_FORMS["protein"]: "protein"}
+
+
+def _mother_form_counts(db: Session, mother_ids: List[int]) -> Dict[int, Dict[str, int]]:
+    """Submitted antenatal and protein checks per mother (mother-level forms,
+    so they are not among a child's visits)."""
+    out: Dict[int, Dict[str, int]] = defaultdict(lambda: {"anc": 0, "protein": 0})
+    for start in range(0, len(mother_ids), 1000):
+        chunk = mother_ids[start:start + 1000]
+        for mid, key, n in (
+            db.query(models.FormResponse.mother_id, models.FormResponse.form_key,
+                     func.count(models.FormResponse.id))
+            .filter(models.FormResponse.mother_id.in_(chunk),
+                    models.FormResponse.status == "submitted",
+                    models.FormResponse.form_key.in_(tuple(MOTHER_FORM_KEYS)))
+            .group_by(models.FormResponse.mother_id, models.FormResponse.form_key)
+        ):
+            out[mid][MOTHER_FORM_KEYS[key]] += n
+    return out
+
+
+def _rules_context(db: Session, cases: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """What the summary rows need beyond the cases: each project's tranche-2
+    date, the expected-forms table and the mothers' own checks."""
+    from app.masd.data import expected_forms_for
+    mother_ids = sorted({c["mother"]["id"] for c in cases if c.get("mother")})
+    return {"tranche2": _tranche2_by_project(db), "table": expected_forms_for(db)[0],
+            "mother_counts": _mother_form_counts(db, mother_ids)}
+
+
+def _adoption(case: Dict[str, Any], tranche2: Optional[date], today: date,
+              table: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Adoption type, tranche and expected counts for one case, by the MASD
     programme rules (app/masd/rules.py) — the same rules the MASD dashboard
     applies, so the two screens agree on what a case "should" have had.
 
-    Expected counts are the rules' ideal for the adoption's type and tranche,
-    pro rata while its follow-up (2.5 / 1.5 months) is still running. An ANC
-    adoption's ideal is antenatal and protein checks (mother-level), so its
-    baby's growth, breastfeeding and complementary-feeding visits are extra.
+    Expected counts follow the case's OWN follow-up (masd_rules.case_expected):
+    antenatal and protein checks every 15 days while pregnant, growth and
+    breastfeeding by the expected-forms table from the baby's adoption (breast-
+    feeding only before 195 days of age), complementary feeding by age from 195
+    days. The follow-up segments come back too.
     """
     child, mother, learner = case["child"], case["mother"], case["learner"]
     d = lambda iso: date.fromisoformat(iso) if iso else None  # noqa: E731
@@ -439,23 +471,24 @@ def _adoption(case: Dict[str, Any], tranche2: Optional[date], today: date) -> Di
     atype, _ = classify(m_in, [c_in])
     anchor = m_in.adoption_date
     if atype == masd_rules.UNKNOWN or anchor is None:
-        return {"type": None, "tranche": None, "expected": None, "anchor": anchor}
+        return {"type": None, "tranche": None, "expected": None, "anchor": anchor, "segments": {}}
     tranche = 2 if (tranche2 is not None and anchor >= tranche2) else 1
     is_nurse = masd_rules.role_group(learner.get("role")) == masd_rules.NURSING_STAFF
-    ideal = masd_rules.ideal_for_adoption(atype, tranche, is_nurse)
-    elapsed = max(0, (today - anchor).days)
-    span = 2 if is_nurse else masd_rules.FOLLOW_UP_DAYS[tranche]
-    due = min(1.0, elapsed / span)
-    expected = {"cg": round(ideal.get("gm", 0) * due), "bf": round(ideal.get("bf", 0) * due),
-                "cf": round(ideal.get("cf", 0) * due)}
-    return {"type": atype, "tranche": tranche, "expected": expected, "anchor": anchor}
+    e = masd_rules.case_expected(
+        table or masd_rules.default_expected_forms(), mother_adopted=anchor, lmp=m_in.lmp,
+        dob=c_in.dob, baby_adopted=c_in.adoption_date, end=today, is_nurse=is_nurse)
+    expected = {"cg": e["gm"], "bf": e["bf"], "cf": e["cf"], "anc": e["anc"], "protein": e["protein"]}
+    segments = {k: e[k] for k in ("fu_pregnancy", "fu_baby", "fu_to_195", "fu_from_195", "fu_from_150")}
+    return {"type": atype, "tranche": tranche, "expected": expected, "anchor": anchor, "segments": segments}
 
 
-def _summary_rows(cases: List[Dict[str, Any]],
-                  tranche2: Optional[Dict[int, date]] = None) -> List[Dict[str, Any]]:
+def _summary_rows(cases: List[Dict[str, Any]], context: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     today = date.today()
-    tranche2 = tranche2 or {}
+    context = context or {}
+    tranche2 = context.get("tranche2") or {}
+    table = context.get("table")
+    mother_counts = context.get("mother_counts") or {}
     for case in cases:
         child, mother, learner = case["child"], case["mother"], case["learner"]
         visits = case["visits"]
@@ -463,7 +496,7 @@ def _summary_rows(cases: List[Dict[str, Any]],
         sex = _sex_key(child["gender"])
 
         # Adoption type, tranche and expected counts — REAL, by the MASD rules.
-        adoption = _adoption(case, tranche2.get(case.get("project_id")), today)
+        adoption = _adoption(case, tranche2.get(case.get("project_id")), today, table)
 
         # Adoption timing — REAL, from stored dates. For an ANC adoption the
         # case began before birth, so its age at adoption is negative.
@@ -484,14 +517,17 @@ def _summary_rows(cases: List[Dict[str, Any]],
         cg_actual = sum(1 for v in visits if GROWTH_FORM_KEY in v["forms"])
         bf_actual = sum(1 for v in visits if "breastfeeding" in v["forms"])
         cf_actual = sum(1 for v in visits if "complementary_feeding" in v["forms"])
+        mine = mother_counts.get(mother["id"]) or {"anc": 0, "protein": 0}
+        anc_actual, protein_actual = mine["anc"], mine["protein"]
 
         adoption_type = adoption["type"]
-        expected = adoption["expected"] or {"cg": None, "bf": None, "cf": None}
+        expected = adoption["expected"] or {"cg": None, "bf": None, "cf": None, "anc": None, "protein": None}
         expected_is_mock = False
         if adoption_type is None and gsm.MOCK_ENABLED:
             # No dates to type the case by: the demo layer fills in (removable).
             mock_type = gsm.adoption_type(child_id, age_at_adoption)   # MOCK: adoption type
-            expected = gsm.expected_counts(child_id, mock_type, duration_days)  # MOCK: expected rules
+            expected = {**gsm.expected_counts(child_id, mock_type, duration_days),  # MOCK: expected rules
+                        "anc": 0, "protein": 0}
             adoption_type = {gsm.ADOPTION_ANTENATAL: masd_rules.ANC, gsm.ADOPTION_NEWBORN: masd_rules.PNC_LT5,
                              gsm.ADOPTION_OLDER: masd_rules.PNC_GE5}.get(mock_type, mock_type)
             expected_is_mock = True
@@ -499,9 +535,11 @@ def _summary_rows(cases: List[Dict[str, Any]],
         cg, bf, cf = (_activity_block(expected["cg"], cg_actual),
                       _activity_block(expected["bf"], bf_actual),
                       _activity_block(expected["cf"], cf_actual))
+        anc, protein = (_activity_block(expected["anc"], anc_actual),
+                        _activity_block(expected["protein"], protein_actual))
         total_expected = (sum(expected.values())
                           if all(v is not None for v in expected.values()) else None)
-        total = _activity_block(total_expected, cg_actual + bf_actual + cf_actual)
+        total = _activity_block(total_expected, cg_actual + bf_actual + cf_actual + anc_actual + protein_actual)
 
         # Outcomes — REAL z-scores computed from measurements; null when there
         # are none. Never mock-filled (see _z_triplet).
@@ -526,8 +564,11 @@ def _summary_rows(cases: List[Dict[str, Any]],
                 "tranche": adoption["tranche"],
                 "age_of_adoption_days": age_at_adoption,
                 "adoption_duration_days": duration_days,
+                # Follow-up segments the expected counts come from (days).
+                **{k: adoption.get("segments", {}).get(k) for k in
+                   ("fu_pregnancy", "fu_baby", "fu_to_195", "fu_from_195", "fu_from_150")},
             },
-            "activities": {"total": total, "cg": cg, "bf": bf, "cf": cf},
+            "activities": {"total": total, "cg": cg, "bf": bf, "cf": cf, "anc": anc, "protein": protein},
             "outcomes": {"wfaz": wfaz, "hfaz": hfaz, "wfhz": wfhz},
             "meta": {
                 "sex": sex,
@@ -663,6 +704,11 @@ def _xlsx_columns() -> List[_ColSpec]:
         ("Case details", "Tranche", lambda r: r["case_details"].get("tranche"), None),
         ("Case details", "Adopt age (mo)", lambda r: _months(r["case_details"]["age_of_adoption_days"]), None),
         ("Case details", "Duration (mo)", lambda r: _months(r["case_details"]["adoption_duration_days"]), None),
+        ("Follow-up (days)", "Pregnancy", lambda r: r["case_details"].get("fu_pregnancy"), None),
+        ("Follow-up (days)", "Baby", lambda r: r["case_details"].get("fu_baby"), None),
+        ("Follow-up (days)", "Till 195 d", lambda r: r["case_details"].get("fu_to_195"), None),
+        ("Follow-up (days)", "From 195 d", lambda r: r["case_details"].get("fu_from_195"), None),
+        ("Follow-up (days)", "From 150 d", lambda r: r["case_details"].get("fu_from_150"), None),
         *activity("Total activities", "total"),
         # Outcomes sit between Total and the per-form groups (client request);
         # headers put the visit code before the z (W·BVz), and weight-for-height
@@ -679,6 +725,8 @@ def _xlsx_columns() -> List[_ColSpec]:
         *activity("CG (Check Growth)", "cg"),
         *activity("BF (Breastfeeding)", "bf"),
         *activity("CF (Compl. Feeding)", "cf"),
+        *activity("ANC (Antenatal)", "anc"),
+        *activity("Protein count", "protein"),
     ]
 
 
@@ -829,7 +877,7 @@ def admin_growth_summary(
         department=department or None, learner_category=learner_category or None, learner_id=learner_id,
         learner_ids=_parse_learner_ids(learner_ids),
     )
-    rows = _summary_rows(cases, _tranche2_by_project(db))
+    rows = _summary_rows(cases, _rules_context(db, cases))
     phi.log_list(
         resource_type="growth_summary",
         count=len(rows),
@@ -923,7 +971,7 @@ def admin_growth_summary_export(
         department=department or None, learner_category=learner_category or None, learner_id=learner_id,
         learner_ids=_parse_learner_ids(learner_ids),
     )
-    rows = _summary_rows(cases, _tranche2_by_project(db))
+    rows = _summary_rows(cases, _rules_context(db, cases))
     buffer = _summary_xlsx(rows)
     # Written synchronously: at this moment the data leaves the platform's
     # custody, and under the MOU custody is what responsibility follows. The

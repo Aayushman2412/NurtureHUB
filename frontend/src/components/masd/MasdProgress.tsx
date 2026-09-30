@@ -41,11 +41,10 @@ const MasdProgress: React.FC<{ report: MasdReport }> = ({ report }) => {
   const { then, now } = cmp;
   const thenLabel = fmtDate(then.as_of);
   const nowLabel = fmtDate(now.as_of);
-  const basis = (n: number) => (n === 1 ? t('progress.basisT1') : t('progress.basisBoth'));
   const diff = (a: number | null, b: number | null) => (a == null || b == null ? null : b - a);
 
   const rows: [string, React.ReactNode, React.ReactNode, React.ReactNode][] = [
-    [t('progress.basis'), basis(then.tranches_in_force), basis(now.tranches_in_force), null],
+    [t('progress.basis'), t('progress.fuDays', { n: then.fu_days ?? 0 }), t('progress.fuDays', { n: now.fu_days ?? 0 }), null],
     [t('progress.learners'), then.learners, now.learners, null],
     [t('progress.targetBasis'), t('progress.perLearner', { n: then.target_per_learner }), t('progress.perLearner', { n: now.target_per_learner }), null],
     [t('progress.adoptions'),
@@ -54,6 +53,8 @@ const MasdProgress: React.FC<{ report: MasdReport }> = ({ report }) => {
       <Change key="f" value={diff(then.fulfilment_pct, now.fulfilment_pct)} />],
     [t('progress.intensity'), fmt1(then.intensity_pct), fmt1(now.intensity_pct),
       <Change key="i" value={diff(then.intensity_pct, now.intensity_pct)} />],
+    [t('progress.own'), fmt1(then.own_pct), fmt1(now.own_pct),
+      <Change key="o" value={diff(then.own_pct, now.own_pct)} />],
     [t('progress.nilDays'), fmt1(then.nil_days_avg, ''), fmt1(now.nil_days_avg, ''),
       <Change key="n" value={diff(then.nil_days_avg, now.nil_days_avg)} unit={t('progress.days')} lowerIsBetter />],
     [t('progress.cohort'),

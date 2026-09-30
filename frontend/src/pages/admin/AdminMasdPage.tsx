@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  BookOpen, CalendarRange, ChartColumn, FileSpreadsheet, HeartPulse, LayoutDashboard, Presentation,
+  BookOpen, CalendarRange, CalendarX2, ChartColumn, FileSpreadsheet, Gauge, HeartPulse, LayoutDashboard, Presentation,
   Settings2, TriangleAlert, Users,
 } from 'lucide-react';
 import { downloadMasd, getMasdProjects, getMasdReport, type MasdProject, type MasdReport } from '../../api/masd';
@@ -10,6 +10,8 @@ import { getProjectSlug, onProjectChanged, setProjectSlug } from '../../lib/admi
 import { Button, DateInput, EmptyState, Field, PageLoader, SelectField } from '../../components/ui';
 import { SubNav } from '../../components/results/InsightParts';
 import MasdOverview from '../../components/masd/MasdOverview';
+import MasdExpected from '../../components/masd/MasdExpected';
+import MasdFlags from '../../components/masd/MasdFlags';
 import MasdActivity from '../../components/masd/MasdActivity';
 import MasdProgress from '../../components/masd/MasdProgress';
 import MasdOutcomes from '../../components/masd/MasdOutcomes';
@@ -17,8 +19,8 @@ import MasdLearners from '../../components/masd/MasdLearners';
 import MasdRules from '../../components/masd/MasdRules';
 import MasdSettingsModal from '../../components/masd/MasdSettingsModal';
 
-type View = 'overview' | 'activity' | 'progress' | 'outcomes' | 'learners' | 'rules';
-const VIEWS: View[] = ['overview', 'activity', 'progress', 'outcomes', 'learners', 'rules'];
+type View = 'overview' | 'expected' | 'activity' | 'progress' | 'outcomes' | 'flags' | 'learners' | 'rules';
+const VIEWS: View[] = ['overview', 'expected', 'activity', 'progress', 'outcomes', 'flags', 'learners', 'rules'];
 const VIEW_KEY = 'nh_masd_view';
 
 const readView = (): View => {
@@ -116,9 +118,11 @@ const AdminMasdPage: React.FC = () => {
 
   const navItems = useMemo(() => [
     { key: 'overview', label: t('views.overview'), icon: <LayoutDashboard /> },
+    { key: 'expected', label: t('views.expected'), icon: <Gauge /> },
     { key: 'activity', label: t('views.activity'), icon: <ChartColumn /> },
     { key: 'progress', label: t('views.progress'), icon: <CalendarRange /> },
     { key: 'outcomes', label: t('views.outcomes'), icon: <HeartPulse /> },
+    { key: 'flags', label: t('views.flags'), icon: <CalendarX2 /> },
     { key: 'learners', label: t('views.learners'), icon: <Users /> },
     { key: 'rules', label: t('views.rules'), icon: <BookOpen /> },
   ], [t]);
@@ -127,6 +131,7 @@ const AdminMasdPage: React.FC = () => {
 
   const cal = report?.calendar;
   const effectiveCompare = compare || report?.comparison?.then.as_of || '';
+  const namedBatches = cal ? cal.batches.filter(b => b.id != null) : [];
 
   return (
     <div className="space-y-5">
@@ -168,11 +173,16 @@ const AdminMasdPage: React.FC = () => {
         </div>
         {cal && (
           <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-ink-muted">
-            <span>{t('calendar.training')}: <b className="text-ink">{fmtDate(cal.training_date)}</b></span>
-            <span>{t('calendar.tranche2')}: <b className="text-ink">{fmtDate(cal.tranche2_start)}</b></span>
-            <span>{cal.prorated
-              ? t('calendar.prorated', { t1: Math.round(cal.due_fraction.t1 * 100), t2: Math.round(cal.due_fraction.t2 * 100) })
-              : t('calendar.full')}</span>
+            {namedBatches.length > 0 ? (
+              <span>{t('calendar.batches', { count: namedBatches.length })}: <b className="text-ink">
+                {fmtDate(namedBatches[0].end_date)} – {fmtDate(namedBatches[namedBatches.length - 1].end_date)}</b></span>
+            ) : (
+              <span>{t('calendar.training')}: <b className="text-ink">{fmtDate(cal.training_date)}</b></span>
+            )}
+            <span>{t('calendar.fu')}: <b className="text-ink">{t('calendar.fuValue', { days: cal.fu_days ?? 0, buffer: cal.buffer_days })}</b></span>
+            <span>{t('calendar.targetsNow')}: <b className="text-ink">{t('calendar.targetsValue', {
+              anc: cal.targets.now.anc, lt5: cal.targets.now.pnc_lt5, ge5: cal.targets.now.pnc_ge5, nurse: cal.targets.now.nurse,
+            })}</b></span>
             {cal.inferred && (
               <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-500">
                 <TriangleAlert className="size-3.5" />{t('calendar.inferred')}
@@ -196,12 +206,14 @@ const AdminMasdPage: React.FC = () => {
       ) : (
         <>
           <SubNav items={navItems} value={view} onChange={v => setView(v as View)} label={t('views.label')} />
-          {view === 'overview' && <MasdOverview report={report} onOpenLearners={() => setView('learners')} />}
+          {view === 'overview' && <MasdOverview report={report} onOpenLearners={() => setView('learners')} onOpenFlags={() => setView('flags')} />}
+          {view === 'expected' && <MasdExpected report={report} />}
           {view === 'activity' && <MasdActivity report={report} />}
           {view === 'progress' && <MasdProgress report={report} />}
           {view === 'outcomes' && <MasdOutcomes report={report} />}
+          {view === 'flags' && <MasdFlags report={report} />}
           {view === 'learners' && <MasdLearners report={report} onChanged={reload} />}
-          {view === 'rules' && <MasdRules report={report} />}
+          {view === 'rules' && <MasdRules report={report} onChanged={reload} />}
         </>
       )}
 

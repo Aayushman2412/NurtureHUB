@@ -120,9 +120,23 @@
       "bf": "Breastfeeding Assessment",
       "cf": "Complementary Feeding Assessment",
       "outcomes": "Outcomes (z)",
-      "outcomesFull": "WFAz / HFAz / WFHz at Baseline / Assessment / Last visit"
+      "outcomesFull": "WFAz / HFAz / WFHz at Baseline / Assessment / Last visit",
+      "fu": "Follow-up",
+      "fuFull": "Follow-up segments (days) the expected counts come from",
+      "anc": "Antenatal care (mother)",
+      "protein": "Protein count (mother)"
     },
-    "wfhz": "Weight-for-height z (WFHz)"
+    "wfhz": "Weight-for-height z (WFHz)",
+    "fuPreg": "Preg",
+    "fuPregFull": "Days followed in pregnancy (adoption → birth or due date)",
+    "fuBaby": "Baby",
+    "fuBabyFull": "Days the baby has been followed",
+    "fuTo195": "<195d",
+    "fuTo195Full": "Follow-up before 195 days of age (breastfeeding phase)",
+    "fuFrom195": "≥195d",
+    "fuFrom195Full": "Follow-up from 195 days of age (complementary-feeding assessments)",
+    "fuFrom150": "≥150d",
+    "fuFrom150Full": "Follow-up from 150 days of age (complementary-feeding counselling)"
   },
   "caseDetail": {
     "metrics": "Activity & outcome summary",

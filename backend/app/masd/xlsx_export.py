@@ -1,9 +1,12 @@
 """The MASD report as an Excel workbook.
 
 Sheet 1 is the learner-level MASD file the analysts' scripts used to build
-from a raw export — one row per learner with adoptions by type, activities by
-subtype, target, ideal, fulfilment, intensity and nil-activity days. The other
-sheets hold the tables behind the dashboard, so anyone can re-cut them.
+from a raw export — one row per learner with their training batch and
+follow-up, adoptions by type against the targets in force, activities by
+subtype against what was expected, activity on their own cases, and
+nil-activity days. The other sheets hold the tables behind the dashboard, so
+anyone can re-cut them. Pregnancies needing follow-up appear as counts per
+learner: the workbook carries no mother or child identifiers.
 """
 from __future__ import annotations
 
@@ -61,43 +64,103 @@ def build_workbook(report: Dict[str, Any]) -> BytesIO:
     wb = Workbook()
     wb.remove(wb.active)
     p, cal = report["project"], report["calendar"]
-    note = (f"NurtureHUB MASD · {p['name']} · as of {report['as_of']} · F2F training {cal['training_date'] or '—'} · "
-            f"tranche 2 from {cal['tranche2_start'] or '—'}")
+    tn = cal["targets"]["now"]
+    note = (f"NurtureHUB MASD · {p['name']} · as of {report['as_of']} · targets in force: ANC {tn['anc']}, "
+            f"PNC <5M {tn['pnc_lt5']}, PNC ≥5M {tn['pnc_ge5']}, Staff Nurse {tn['nurse']} · follow-up = days since "
+            f"the learner's batch ended − {cal['buffer_days']}, rounded down to {cal['step_days']}")
+    types = list(R.ADOPTION_TYPES)
+    tl = {t: R.ADOPTION_TYPE_LABELS[t] for t in types}
 
-    header = ["Learner", "Email", "Block", "Designation", "Role group", "Department", "F2F", "MT/FL",
-              "ANC", "PNC <5M", "PNC ≥5M", "Not typed", "Total adoptions", "Target", "% target fulfilled",
-              "Antenatal care", "Protein count", "Growth monitoring", "Breastfeeding", "Complementary feeding",
-              "Total activities", "Ideal activities", "% activity intensity", "Avg activities / adoption",
-              "Last activity", "Nil-activity days"]
+    header = (["Learner", "Email", "Block", "Designation", "Role group", "Department", "F2F", "MT/FL",
+               "Batch", "Training ended", "Follow-up (days)", "Follow-up counted (days)"]
+              + [f"{tl[t]} target" for t in types] + [f"{tl[t]} adopted" for t in types]
+              + ["Not typed", "Total adoptions", "Target", "% target fulfilled",
+                 "Antenatal care", "Protein count", "Growth monitoring", "Breastfeeding", "Complementary feeding",
+                 "Total activities", "Expected activities", "% of expected activity"]
+              + [f"% expected activity · {tl[t]}" for t in types]
+              + ["Own cases: expected", "Own cases: done", "% own-case activity", "Own-case band",
+                 "Avg activities / adoption", "Last activity", "Nil-activity days"])
+    band_label = dict(R.OWN_BANDS)
     rows = []
     for l in sorted(report["learners"], key=lambda x: (x["block"], x["name"] or "")):
-        a, act = l["adoptions"], l["activities"]
+        a, act, own = l["adoptions"], l["activities"], l["own"]
         rows.append([l["name"], l["email"], l["block"], l["role"], l["role_group"], l["department"],
                      "Yes" if l["f2f"] else "No",
                      {"master_trainer": "Master Trainer", "facilitator": "Facilitator"}.get(l["trainer_role"] or "", ""),
-                     a["anc"], a["pnc_lt5"], a["pnc_ge5"], a["unknown"], a["total"], l["target"], l["fulfilment_pct"],
-                     act["anc"], act["protein"], act["gm"], act["bf"], act["cf"], act["total"], l["ideal"]["total"],
-                     l["intensity_pct"], l["avg_per_adoption"], l["last_activity"], l["nil_days"]])
+                     l["batch"] or "", l["training_end"], l["fu_raw"], l["fu_days"]]
+                    + [l["by_type"][t]["target"] for t in types] + [l["by_type"][t]["adopted"] for t in types]
+                    + [a["unknown"], a["total"], l["target"], l["fulfilment_pct"],
+                       act["anc"], act["protein"], act["gm"], act["bf"], act["cf"], act["total"], l["ideal"]["total"],
+                       l["intensity_pct"]]
+                    + [l["by_type"][t]["activity_pct"] for t in types]
+                    + [own["expected"]["total"], own["actual"]["total"], own["pct"], band_label.get(own["band"] or "", ""),
+                       l["avg_per_adoption"], l["last_activity"], l["nil_days"]])
+    pct_learner = (22, 30, 31, 32, 33, 36)
     _sheet(wb, "MASD learners", header, rows,
-           widths=[24, 30, 14, 20, 12, 10, 6, 14] + [8] * 5 + [7, 10] + [10] * 5 + [9, 9, 10, 10, 12, 10],
-           pct_cols=(15, 23), note=note)
+           widths=[24, 30, 14, 20, 12, 10, 6, 14, 12, 12, 10, 10] + [8] * 8 + [7, 10] + [10] * 8 + [11] * 3
+           + [10, 10, 10, 12, 10, 12, 10],
+           pct_cols=pct_learner, note=note)
 
     def group_rows(groups):
         return [[g["label"], g["learners"], g["adoptions"], g["target"], g["fulfilment_pct"], g["activities"],
-                 g["ideal"], g["intensity_pct"], g["nil_days_avg"]]
+                 g["ideal"], g["intensity_pct"], g["own_pct"], g["nil_days_avg"]]
                 + [g["subtype_pct"][k] for k in R.ACTIVITY_KEYS] for g in groups]
 
-    g_head = ["Group", "Learners", "Adoptions", "Target", "% target", "Activities", "Ideal", "% intensity",
-              "Avg nil-activity days"] + [f"% {R.ACTIVITY_LABELS[k]}" for k in R.ACTIVITY_KEYS]
-    _sheet(wb, "By block", g_head, group_rows(report["blocks"]), widths=[18] + [11] * 13,
-           pct_cols=(5, 8, 10, 11, 12, 13, 14))
-    _sheet(wb, "By cadre", g_head, group_rows(report["roles"] + report["departments"]), widths=[18] + [11] * 13,
-           pct_cols=(5, 8, 10, 11, 12, 13, 14))
+    g_head = ["Group", "Learners", "Adoptions", "Target", "% target", "Activities", "Expected", "% of expected",
+              "% own-case activity", "Avg nil-activity days"] + [f"% {R.ACTIVITY_LABELS[k]}" for k in R.ACTIVITY_KEYS]
+    _sheet(wb, "By block", g_head, group_rows(report["blocks"]), widths=[18] + [11] * 14,
+           pct_cols=(5, 8, 9, 11, 12, 13, 14, 15))
+    _sheet(wb, "By cadre", g_head, group_rows(report["roles"] + report["departments"]), widths=[18] + [11] * 14,
+           pct_cols=(5, 8, 9, 11, 12, 13, 14, 15))
+
+    # Adoption type: target met vs expected activity done, per block and department.
+    t_head = ["Group", "Learners"]
+    for t in types:
+        t_head += [f"{tl[t]} target", f"{tl[t]} adopted", f"{tl[t]} % target", f"{tl[t]} expected",
+                   f"{tl[t]} done", f"{tl[t]} % activity"]
+    t_rows = []
+    for g in report["blocks"] + report["departments"] + report["roles"]:
+        row = [g["label"], g["learners"]]
+        for t in types:
+            v = g["by_type"][t]
+            row += [v["target"], v["adopted"], v["adoption_pct"], v["expected"], v["actual"], v["activity_pct"]]
+        t_rows.append(row)
+    _sheet(wb, "By adoption type", t_head, t_rows, widths=[18, 9] + [10] * 18,
+           pct_cols=tuple(c for i in range(3) for c in (5 + 6 * i, 8 + 6 * i)))
+
+    b_head = ["Group", "Learners banded"] + [band_label[k] for k in R.OWN_BAND_KEYS] + ["% own-case activity"]
+    _sheet(wb, "Own-case bands", b_head,
+           [[g["label"], g["own_banded"]] + [g["own_bands"][k] for k in R.OWN_BAND_KEYS] + [g["own_pct"]]
+            for g in report["departments"] + report["blocks"] + report["roles"]],
+           widths=[18, 10] + [11] * 6 + [12], pct_cols=(9,),
+           note="Learners with at least one adoption, by the share of their own cases' expected activity they have done")
+
+    _sheet(wb, "Batches", ["Batch", "Training ended", "Learners", "Follow-up (days)", "Counted as (days)"]
+           + [f"Expected {R.ACTIVITY_LABELS[k]}" for k in R.ACTIVITY_KEYS] + ["Expected total", "Staff Nurse total"],
+           [[b["name"] or "Project training date", b["end_date"], b["learners"], b["fu_raw"], b["fu_days"]]
+            + [b["expected"]["community"]["forms"][k] for k in R.ACTIVITY_KEYS]
+            + [b["expected"]["community"]["total"], b["expected"]["nurse"]["total"]] for b in cal["batches"]],
+           widths=[22, 13, 9, 11, 11] + [12] * 7,
+           note="What one learner of each batch is expected to have done by the report date, under the targets in force")
+
+    table = report["rules"]["expected"]["table"]
+    _sheet(wb, "Expected forms", ["Adoption type", "Form"] + [f"{d} d" for d in table["durations"]],
+           [[R.ADOPTION_TYPE_LABELS.get(t, "Staff Nurse <5M"), R.ACTIVITY_LABELS[k]] + table["rows"][t][k]
+            for t, k in R.EXPECTED_ROWS],
+           widths=[16, 20] + [6] * len(table["durations"]),
+           note="Cumulative forms one adoption is expected to generate after N days of follow-up")
+
+    fl = report["flags"]
+    _sheet(wb, "Pregnancy flags", ["Learner", "Block", "Pregnancies flagged"],
+           [[x["name"], x["block"], x["n"]] for x in fl["by_learner"]], widths=[26, 16, 12],
+           note=(f"{fl['summary']['open_pregnancies']} pregnant women under follow-up · {fl['summary']['edd_passed']} past "
+                 f"the due date · {fl['summary']['anc_behind']} behind on antenatal checks · {fl['summary']['no_lmp']} "
+                 f"without LMP (mothers are listed on the dashboard, not in this file)"))
 
     cmp = report.get("comparison")
     if cmp:
         _sheet(wb, "Then vs now", ["Block", f"% target {cmp['then']['as_of']}", f"% target {cmp['now']['as_of']}",
-                                   "Change", f"% intensity {cmp['then']['as_of']}", f"% intensity {cmp['now']['as_of']}",
+                                   "Change", f"% expected {cmp['then']['as_of']}", f"% expected {cmp['now']['as_of']}",
                                    "Change"],
                [[b["label"], b["fulfilment_then"], b["fulfilment_now"], b["fulfilment_change"],
                  b["intensity_then"], b["intensity_now"], b["intensity_change"]] for b in cmp["blocks"]],
@@ -124,7 +187,7 @@ def build_workbook(report: Dict[str, Any]) -> BytesIO:
     _sheet(wb, "Malnutrition", ["Group", "Age band", "Indicator", "n", "BV %", "AV %", "LV %", "Abs change (pts)",
                                 "Rel change %"], prev_rows, widths=[22, 14, 14, 8, 9, 9, 9, 14, 13])
 
-    _sheet(wb, "Needs attention", ["Learner", "Block", "Cadre", "Adoptions", "% target", "% intensity", "Nil-activity days",
+    _sheet(wb, "Needs attention", ["Learner", "Block", "Cadre", "Adoptions", "% target", "% of expected", "Nil-activity days",
                                    "Reasons"],
            [[a["name"], a["block"], a["role_group"], a["adoptions"], a["fulfilment_pct"], a["intensity_pct"],
              a["nil_days"], ", ".join(a["reasons"])] for a in report["attention"]],

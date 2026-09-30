@@ -81,8 +81,20 @@ export interface GrowthSummaryRow {
     tranche?: number | null;
     age_of_adoption_days: number | null;
     adoption_duration_days: number | null;
+    /** Follow-up segments (days) the expected counts come from — the case's
+     *  own follow-up: in pregnancy, of the baby, and before / after 195 days
+     *  of age (and after 150, when complementary-feeding counselling starts). */
+    fu_pregnancy?: number | null;
+    fu_baby?: number | null;
+    fu_to_195?: number | null;
+    fu_from_195?: number | null;
+    fu_from_150?: number | null;
   };
-  activities: { total: ActivityBlock; cg: ActivityBlock; bf: ActivityBlock; cf: ActivityBlock };
+  activities: {
+    total: ActivityBlock; cg: ActivityBlock; bf: ActivityBlock; cf: ActivityBlock;
+    /** Mother-level checks: antenatal care and protein count. */
+    anc?: ActivityBlock; protein?: ActivityBlock;
+  };
   outcomes: { wfaz: ZTriplet; hfaz: ZTriplet; wfhz: ZTriplet };
   meta: {
     sex: string | null;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, ArrowRight, Crown, Hourglass, Lightbulb, PhoneCall, Users } from 'lucide-react';
+import { Activity, ArrowRight, Hourglass, Lightbulb, PhoneCall, Users } from 'lucide-react';
 import type { MasdReport } from '../../api/masd';
 import { BigNumber, Kpi, KpiRow, Section } from '../results/InsightParts';
 import { Ring, StackedBar } from '../results/InsightCharts';
@@ -8,11 +8,13 @@ import MasdFindings from './MasdFindings';
 import { DataTable, Th, TrendLine } from './MasdCharts';
 import { fmt1, MASD_COLORS, rateTone } from '../../lib/masdDisplay';
 
-const MasdOverview: React.FC<{ report: MasdReport; onOpenLearners: () => void }> = ({ report, onOpenLearners }) => {
+const MasdOverview: React.FC<{ report: MasdReport; onOpenLearners: () => void; onOpenFlags: () => void }> = ({
+  report, onOpenLearners, onOpenFlags,
+}) => {
   const { t } = useTranslation('masd');
   const s = report.summary;
   const ex = report.outcomes.exclusions;
-  const mtfl = report.learners.filter(l => l.f2f && l.mtfl).length;
+  const flags = report.flags.summary;
   const weeks = report.weekly.map(w => ({
     label: new Date(w.week).toLocaleDateString(undefined, { day: '2-digit', month: 'short' }),
     a: w.total,
@@ -21,7 +23,7 @@ const MasdOverview: React.FC<{ report: MasdReport; onOpenLearners: () => void }>
 
   return (
     <div className="space-y-5">
-      <KpiRow count={5}>
+      <KpiRow count={6}>
         <Kpi
           visual={<Ring value={Math.min(s.fulfilment_pct ?? 0, 100)} color={rateTone(s.fulfilment_pct ?? 0)}>{fmt1(s.fulfilment_pct)}</Ring>}
           label={t('kpi.fulfilment')}
@@ -39,14 +41,21 @@ const MasdOverview: React.FC<{ report: MasdReport; onOpenLearners: () => void }>
           value={t('kpi.nilDaysSub')}
         />
         <Kpi
+          visual={<Ring value={Math.min(s.own_pct ?? 0, 100)} color={rateTone(s.own_pct ?? 0)}>{fmt1(s.own_pct)}</Ring>}
+          label={t('kpi.own')}
+          value={t('kpi.ownSub', { n: s.own_actual.toLocaleString(), expected: s.own_expected.toLocaleString() })}
+        />
+        <button type="button" onClick={onOpenFlags} className="cursor-pointer rounded-xl text-left transition hover:ring-2 hover:ring-coral-300">
+          <Kpi
+            visual={<BigNumber value={flags.edd_passed.toLocaleString()} tone={flags.edd_passed ? 'bad' : 'good'} />}
+            label={t('kpi.overdue')}
+            value={t('kpi.overdueSub', { n: flags.open_pregnancies.toLocaleString() })}
+          />
+        </button>
+        <Kpi
           visual={<BigNumber value={ex.included.total.toLocaleString()} />}
           label={t('kpi.cohort')}
           value={t('kpi.cohortSub', { pct: fmt1(ex.inclusion_pct) })}
-        />
-        <Kpi
-          visual={<BigNumber value={mtfl} icon={mtfl ? undefined : <Crown className="size-7" />} />}
-          label={t('kpi.mtfl')}
-          value={t('kpi.mtflSub', { n: s.learners })}
         />
       </KpiRow>
 
