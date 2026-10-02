@@ -14,7 +14,12 @@
   },
   "focus": {
     "showing": "केवल {{group}} ({{dimName}}) दिखाया जा रहा है — {{n}} प्रशिक्षु।",
-    "clear": "सभी को दिखाएँ"
+    "clear": "सभी को दिखाएँ",
+    "filterActive": "फ़िल्टर किया गया:",
+    "learnersCount": "{{total}} में से {{n}} प्रशिक्षु",
+    "clearAll": "सभी फ़िल्टर हटाएँ",
+    "clearDim": "{{dim}} फ़िल्टर हटाएँ",
+    "filteredNotice": "फ़िल्टर किया गया: {{total}} में से {{count}} प्रशिक्षु"
   },
   "kpi": {
     "learners": "प्रशिक्षु",

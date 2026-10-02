@@ -7,7 +7,7 @@
 import React, { useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import {
-  ArrowRight, ArrowRightLeft, Award, BookOpenCheck, CheckCircle2, ClipboardCheck, Download, GraduationCap,
+  ArrowRight, ArrowRightLeft, Award, BookOpenCheck, CheckCircle2, ClipboardCheck, Download, Filter, GraduationCap,
   Lightbulb, PlayCircle, Sparkles, UserPlus, Users,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -15,7 +15,7 @@ import { Badge, Button, Card } from '../ui';
 import { BAND_COLORS, TEST_A_COLOR, TEST_B_COLOR } from '../../utils/brandColors';
 import { BarList, Donut, Journey, Ring, StackedBar, type BarRow, type Slice } from './InsightCharts';
 import {
-  ChipRow, FindingList, InlineBar, Kpi, KpiRow, RankBadge, ScoreCell, Section, ToneLegend,
+  ActiveFilterBar, ChipRow, FindingList, InlineBar, Kpi, KpiRow, RankBadge, ScoreCell, Section, ToneLegend,
 } from './InsightParts';
 import {
   cohortStats, findings, fmtPct, groupStats, journey, overallScore, pairStats, signed, toneColor,
@@ -29,7 +29,7 @@ const pctOf = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100
 
 const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
   const { t } = useTranslation('resultsInsights');
-  const { data, tests, users, compareBase, dims, dim, setDim, activeGroup, toggleFocus, groupLabel, colorOf, openView } = ctx;
+  const { data, tests, users, compareBase, dims, dim, setDim, filters, activeGroup, toggleFocus, clearFilter, groupLabel, colorOf, openView } = ctx;
   const lastTest = tests[tests.length - 1];
   const [metric, setMetric] = useState<string>(lastTest ? `pass:${lastTest.id}` : 'videos');
 
@@ -139,6 +139,19 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
                   : t('hero.noTests', { project: data.district_name, n: overall.n })}
               </h2>
               <p className="mt-1 text-sm text-ink-muted">{t('hero.hint')}</p>
+              {Object.keys(filters).length > 0 && (
+                <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
+                  <Filter className="size-3 text-amber-700 dark:text-amber-400" />
+                  <span>{t('focus.filteredNotice', { count: users.length, total: data.users.length })}</span>
+                  <button
+                    type="button"
+                    onClick={() => clearFilter()}
+                    className="font-semibold underline hover:text-ink cursor-pointer"
+                  >
+                    {t('focus.clear')}
+                  </button>
+                </div>
+              )}
             </div>
             <Button variant="outline" iconLeft={<Download className="size-4" />} onClick={downloadSummary}>
               {t('download')}
@@ -289,6 +302,13 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
       {/* Compare groups, on everything */}
       {dims.length > 0 && (
         <Section icon={<Users />} title={t('compare.title')} subtitle={t('compare.subtitle')}>
+          <ActiveFilterBar
+            filters={filters}
+            groupLabel={groupLabel}
+            onClear={clearFilter}
+            filteredCount={users.length}
+            totalCount={data.users.length}
+          />
           <ChipRow
             label={t('compare.splitBy')}
             items={dims.map(d => ({ key: d, label: t(`dim.${d}`) }))}

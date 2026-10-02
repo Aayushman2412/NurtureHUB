@@ -14,7 +14,12 @@
   },
   "focus": {
     "showing": "Showing only {{group}} ({{dimName}}) — {{n}} learners.",
-    "clear": "Show everyone"
+    "clear": "Show everyone",
+    "filterActive": "Filtered by:",
+    "learnersCount": "{{n}} of {{total}} learners",
+    "clearAll": "Clear all",
+    "clearDim": "Remove {{dim}} filter",
+    "filteredNotice": "Filtered: {{count}} of {{total}} learners"
   },
   "kpi": {
     "learners": "Learners",

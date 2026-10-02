@@ -14,9 +14,8 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowRightLeft, ClipboardCheck, Filter, LayoutDashboard, X } from 'lucide-react';
+import { ArrowRightLeft, ClipboardCheck, LayoutDashboard } from 'lucide-react';
 import client from '../../api/client';
-import { Button } from '../ui';
 import { CHART_SERIES } from '../../utils/brandColors';
 import { SubNav } from './InsightParts';
 import OverviewInsights from './OverviewInsights';
@@ -26,12 +25,7 @@ import {
   NOT_RECORDED, activeTests, groupOf, usefulDimensions,
   type DimensionKey, type ResultsData, type TestMeta, type TestQuestions,
 } from '../../lib/resultsInsights';
-import type { InsightCtx } from './types';
-
-interface Focus {
-  dim: DimensionKey;
-  group: string;
-}
+import type { DimensionFilters, InsightCtx } from './types';
 
 const VIEW_KEY = 'nh_insights_view';
 
@@ -55,7 +49,7 @@ const ResultsInsights: React.FC<{ data: ResultsData }> = ({ data }) => {
 
   const [view, setViewState] = useState<string>(readView);
   const [dim, setDim] = useState<DimensionKey>(dims.includes('cadre') ? 'cadre' : dims[0] ?? 'cadre');
-  const [focus, setFocus] = useState<Focus | null>(null);
+  const [filters, setFilters] = useState<DimensionFilters>({});
   const [questions, setQuestions] = useState<Record<number, TestQuestions>>({});
   const [questionsLoaded, setQuestionsLoaded] = useState(false);
 
@@ -87,16 +81,57 @@ const ResultsInsights: React.FC<{ data: ResultsData }> = ({ data }) => {
     return g;
   };
 
-  const users = useMemo(
-    () => (focus ? data.users.filter(u => (groupOf(u, focus.dim) ?? NOT_RECORDED) === focus.group) : data.users),
-    [data.users, focus],
-  );
+  const users = useMemo(() => {
+    const activeEntries = Object.entries(filters) as [DimensionKey, string][];
+    if (activeEntries.length === 0) return data.users;
+    return data.users.filter(u =>
+      activeEntries.every(([d, val]) => (groupOf(u, d) ?? NOT_RECORDED) === val)
+    );
+  }, [data.users, filters]);
+
+  const compareBase = useMemo(() => {
+    // When splitting by `dim`, apply all filters except `dim`
+    // so the reader sees all groups in `dim` (for the current cohort),
+    // with the active group for `dim` (if any) highlighted.
+    const otherEntries = (Object.entries(filters) as [DimensionKey, string][])
+      .filter(([d]) => d !== dim);
+    if (otherEntries.length === 0) return data.users;
+    return data.users.filter(u =>
+      otherEntries.every(([d, val]) => (groupOf(u, d) ?? NOT_RECORDED) === val)
+    );
+  }, [data.users, filters, dim]);
+
+  const toggleFocus = (group: string) => {
+    setFilters(prev => {
+      const next = { ...prev };
+      if (next[dim] === group) {
+        delete next[dim];
+      } else {
+        next[dim] = group;
+      }
+      return next;
+    });
+  };
+
+  const clearFilter = (dimension?: DimensionKey) => {
+    if (!dimension) {
+      setFilters({});
+    } else {
+      setFilters(prev => {
+        const next = { ...prev };
+        delete next[dimension];
+        return next;
+      });
+    }
+  };
 
   const ctx: InsightCtx = {
     data, tests, dims, dim, setDim, users,
-    compareBase: focus && focus.dim !== dim ? users : data.users,
-    activeGroup: focus && focus.dim === dim ? focus.group : null,
-    toggleFocus: group => setFocus(f => (f && f.dim === dim && f.group === group ? null : { dim, group })),
+    compareBase,
+    filters,
+    activeGroup: filters[dim] ?? null,
+    toggleFocus,
+    clearFilter,
     groupLabel,
     colorOf: i => CHART_SERIES[i % CHART_SERIES.length],
     questions, questionsLoaded,
@@ -118,18 +153,6 @@ const ResultsInsights: React.FC<{ data: ResultsData }> = ({ data }) => {
   return (
     <div className="space-y-5">
       <SubNav items={pages} value={current} onChange={setView} label={t('nav.label')} />
-
-      {focus && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm dark:border-amber-500/40 dark:bg-amber-500/10">
-          <Filter className="size-4 text-amber-700 dark:text-amber-500" />
-          <span className="text-ink">
-            {t('focus.showing', { group: groupLabel(focus.group, focus.dim), dimName: t(`dimSingular.${focus.dim}`), n: users.length })}
-          </span>
-          <Button size="sm" variant="outline" iconLeft={<X className="size-3.5" />} onClick={() => setFocus(null)}>
-            {t('focus.clear')}
-          </Button>
-        </div>
-      )}
 
       {current === 'overview' && <OverviewInsights ctx={ctx} />}
       {currentTest && <TestInsights key={currentTest.id} ctx={ctx} test={currentTest} />}

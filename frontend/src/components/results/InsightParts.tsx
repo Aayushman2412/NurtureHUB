@@ -4,10 +4,12 @@
  * lib/resultsInsights.ts, the charts in InsightCharts.tsx.
  */
 import React from 'react';
-import { Lightbulb, ThumbsUp, TriangleAlert } from 'lucide-react';
-import { Card } from '../ui';
+import { useTranslation } from 'react-i18next';
+import { Filter, Lightbulb, ThumbsUp, TriangleAlert, X } from 'lucide-react';
+import { Button, Card } from '../ui';
 import { cn } from '../../utils/cn';
-import { fmtPct, toneColor, type Finding } from '../../lib/resultsInsights';
+import { fmtPct, toneColor, type DimensionKey, type Finding } from '../../lib/resultsInsights';
+import type { DimensionFilters } from './types';
 
 export const Section: React.FC<{
   icon: React.ReactNode;
@@ -62,6 +64,64 @@ export const ChipRow: React.FC<{
     {items.map(i => <Chip key={i.key} active={i.key === value} onClick={() => onChange(i.key)}>{i.label}</Chip>)}
   </div>
 );
+
+/** Active multi-dimension filter pills shown right in the selection area */
+export const ActiveFilterBar: React.FC<{
+  filters: DimensionFilters;
+  groupLabel: (group: string, dim?: DimensionKey) => string;
+  onClear: (dim?: DimensionKey) => void;
+  filteredCount: number;
+  totalCount: number;
+  className?: string;
+}> = ({ filters, groupLabel, onClear, filteredCount, totalCount, className }) => {
+  const { t } = useTranslation('resultsInsights');
+  const entries = Object.entries(filters) as [DimensionKey, string][];
+  if (entries.length === 0) return null;
+
+  return (
+    <div className={cn(
+      'mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-amber-300 bg-amber-50/90 px-3.5 py-2.5 text-xs sm:text-sm dark:border-amber-500/40 dark:bg-amber-500/10',
+      className,
+    )}>
+      <div className="flex items-center gap-1.5 font-semibold text-amber-900 dark:text-amber-300">
+        <Filter className="size-3.5 text-amber-700 dark:text-amber-400" />
+        <span>{t('focus.filterActive')}</span>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {entries.map(([d, val]) => (
+          <span
+            key={d}
+            className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/80 bg-surface px-2.5 py-1 text-xs font-semibold text-ink shadow-xs dark:border-amber-500/40 dark:bg-surface"
+          >
+            <span className="font-normal text-ink-muted">{t(`dimSingular.${d}`)}:</span>
+            <span>{groupLabel(val, d)}</span>
+            <button
+              type="button"
+              onClick={() => onClear(d)}
+              className="ml-0.5 rounded-full p-0.5 text-ink-muted transition-colors hover:bg-amber-100 hover:text-ink dark:hover:bg-amber-500/20"
+              title={t('focus.clearDim', { dim: t(`dimSingular.${d}`) })}
+              aria-label={t('focus.clearDim', { dim: t(`dimSingular.${d}`) })}
+            >
+              <X className="size-3" />
+            </button>
+          </span>
+        ))}
+      </div>
+      <span className="text-xs text-ink-muted">
+        ({t('focus.learnersCount', { n: filteredCount, total: totalCount })})
+      </span>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="ml-auto h-7 px-2 text-xs font-medium text-amber-900 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-500/20"
+        onClick={() => onClear()}
+      >
+        <X className="mr-1 size-3" />
+        {t('focus.clearAll')}
+      </Button>
+    </div>
+  );
+};
 
 /** A headline number: the picture on top, the words underneath. */
 export const Kpi: React.FC<{ visual: React.ReactNode; label: string; value: React.ReactNode; note?: string }> = ({ visual, label, value, note }) => (
