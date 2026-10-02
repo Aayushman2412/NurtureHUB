@@ -144,12 +144,22 @@
     "answeredBy": "{{n}} answered"
   },
   "top": {
-    "title": "Top 10 performers",
+    "title": "Top performers",
+    "titleK": "Top {{count}} performers",
+    "allTitle": "All performers",
     "subtitle": "Ranked by average test score.",
     "learner": "Learner",
     "average": "Average",
     "faceToFace": "Face-to-face",
-    "selected": "Selected"
+    "selected": "Selected",
+    "searchPlaceholder": "Search learner name, email, cadre, block...",
+    "showLabel": "Show:",
+    "showAll": "All performers",
+    "f2fLabel": "Face-to-face:",
+    "f2fAll": "All",
+    "f2fSelected": "Selected only",
+    "f2fNotSelected": "Not selected",
+    "noPerformers": "No performers match your search or filter."
   },
   "dim": {
     "cadre": "Cadre / role",

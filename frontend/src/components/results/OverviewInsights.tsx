@@ -4,14 +4,14 @@
  * sentences, groups compared on everything at once, a card per test (each
  * opening that test's own page), the videos, and the top performers.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import {
-  ArrowRight, ArrowRightLeft, Award, BookOpenCheck, CheckCircle2, ClipboardCheck, Download, Filter, GraduationCap,
-  Lightbulb, PlayCircle, Sparkles, UserPlus, Users,
+  ArrowDown, ArrowRight, ArrowRightLeft, ArrowUp, ArrowUpDown, Award, BookOpenCheck, CheckCircle2, ClipboardCheck, Download, Filter, GraduationCap,
+  Lightbulb, PlayCircle, Search, Sparkles, UserPlus, Users, X,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { Badge, Button, Card } from '../ui';
+import { Badge, Button, Card, Input, Pagination } from '../ui';
 import { BAND_COLORS, TEST_A_COLOR, TEST_B_COLOR } from '../../utils/brandColors';
 import { BarList, Donut, Journey, Ring, StackedBar, type BarRow, type Slice } from './InsightCharts';
 import {
@@ -20,7 +20,7 @@ import {
 import {
   cohortStats, findings, fmtPct, groupStats, journey, overallScore, pairStats, signed, toneColor,
   topPerformers, videoStats,
-  type Finding, type GroupStats, type UserResultRow,
+  type Finding, type GroupStats,
 } from '../../lib/resultsInsights';
 import type { InsightCtx } from './types';
 import { cn } from '../../utils/cn';
@@ -41,10 +41,124 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
     () => findings(users, tests, dim, groupStats(users, dim, tests), videos, g => groupLabel(g)),
     [users, tests, dim, videos], // eslint-disable-line react-hooks/exhaustive-deps
   );
-  const top = useMemo(() => topPerformers(users, tests, 10), [users, tests]);
   const pair = useMemo(
     () => (tests.length >= 2 ? pairStats(users, tests[0], tests[tests.length - 1]) : null), [users, tests],
   );
+
+  // ── Top performers (Leaderboard) with Top-K, Search, Filter, Sort, Pagination ──
+  const [topK, setTopK] = useState<number | 'all'>(10);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [f2fFilter, setF2fFilter] = useState<'all' | 'selected' | 'not_selected'>('all');
+  const [sortCol, setSortCol] = useState<string>('rank');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
+
+  const allRanked = useMemo(() => topPerformers(users, tests, users.length), [users, tests]);
+  const rankedLearners = useMemo(() => {
+    return allRanked.map((u, i) => ({
+      user: u,
+      rank: i + 1,
+      avgScore: overallScore(u, tests) ?? 0,
+    }));
+  }, [allRanked, tests]);
+
+  const topKLearners = useMemo(() => {
+    if (topK === 'all') return rankedLearners;
+    return rankedLearners.slice(0, topK);
+  }, [rankedLearners, topK]);
+
+  const filteredLearners = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return topKLearners.filter(({ user }) => {
+      if (f2fFilter === 'selected' && !user.face_to_face.selected) return false;
+      if (f2fFilter === 'not_selected' && user.face_to_face.selected) return false;
+      if (q) {
+        const name = (user.name ?? '').toLowerCase();
+        const email = (user.email ?? '').toLowerCase();
+        const cadre = (user.profile?.cadre ?? '').toLowerCase();
+        const block = (user.profile?.block ?? '').toLowerCase();
+        if (!name.includes(q) && !email.includes(q) && !cadre.includes(q) && !block.includes(q)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [topKLearners, f2fFilter, searchQuery]);
+
+  const sortedLearners = useMemo(() => {
+    const list = [...filteredLearners];
+    list.sort((a, b) => {
+      let diff = 0;
+      if (sortCol === 'rank') {
+        diff = a.rank - b.rank;
+      } else if (sortCol === 'name') {
+        diff = a.user.name.localeCompare(b.user.name);
+      } else if (sortCol === 'cadre') {
+        diff = (a.user.profile?.cadre ?? '').localeCompare(b.user.profile?.cadre ?? '');
+      } else if (sortCol === 'block') {
+        diff = (a.user.profile?.block ?? '').localeCompare(b.user.profile?.block ?? '');
+      } else if (sortCol.startsWith('test:')) {
+        const testId = sortCol.slice(5);
+        const scoreA = a.user.tests[testId]?.best_score ?? -1;
+        const scoreB = b.user.tests[testId]?.best_score ?? -1;
+        diff = scoreA - scoreB;
+      } else if (sortCol === 'average') {
+        diff = a.avgScore - b.avgScore;
+      } else if (sortCol === 'f2f') {
+        diff = Number(a.user.face_to_face.selected) - Number(b.user.face_to_face.selected);
+      }
+      return sortDir === 'asc' ? diff : -diff;
+    });
+    return list;
+  }, [filteredLearners, sortCol, sortDir]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [topK, searchQuery, f2fFilter, sortCol, sortDir]);
+
+  const paginatedLearners = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return sortedLearners.slice(start, start + PAGE_SIZE);
+  }, [sortedLearners, page]);
+
+  const handleSort = (col: string) => {
+    if (sortCol === col) {
+      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortCol(col);
+      if (col === 'average' || col.startsWith('test:') || col === 'f2f') {
+        setSortDir('desc');
+      } else {
+        setSortDir('asc');
+      }
+    }
+  };
+
+  const renderSortHeader = (col: string, label: string, align: 'left' | 'center' = 'left', extraClass?: string) => {
+    const active = sortCol === col;
+    return (
+      <th
+        key={col}
+        onClick={() => handleSort(col)}
+        className={cn(
+          'cursor-pointer select-none pb-2 transition-colors hover:text-ink',
+          align === 'center' ? 'text-center' : 'text-left',
+          active && 'text-primary font-bold',
+          extraClass,
+        )}
+      >
+        <div className={cn('inline-flex items-center gap-1', align === 'center' && 'justify-center')}>
+          <span>{label}</span>
+          {active ? (
+            sortDir === 'asc' ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />
+          ) : (
+            <ArrowUpDown className="size-3 opacity-30" />
+          )}
+        </div>
+      </th>
+    );
+  };
 
   const findingText = (f: Finding) =>
     t(`finding.${f.key}`, { ...f.params, dimName: t(`dimSingular.${String(f.params.dim ?? dim)}`) });
@@ -463,54 +577,129 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
         </Section>
       )}
 
-      {/* Top performers */}
-      {top.length > 0 && (
-        <Section icon={<Award />} title={t('top.title')} subtitle={t('top.subtitle')}>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[40rem] text-sm">
-              <thead className="text-xs uppercase tracking-wide text-ink-muted">
-                <tr>
-                  <th className="w-10 pb-2 text-left">#</th>
-                  <th className="pb-2 text-left">{t('top.learner')}</th>
-                  <th className="pb-2 text-left">{t('dim.cadre')}</th>
-                  <th className="pb-2 text-left">{t('dim.block')}</th>
-                  {tests.map(test => <th key={test.id} className="pb-2 text-center">{test.label}</th>)}
-                  <th className="pb-2 text-center">{t('top.average')}</th>
-                  <th className="pb-2 text-center">{t('top.faceToFace')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {top.map((u: UserResultRow, i) => (
-                  <tr key={u.user_id} className="border-t border-border">
-                    <td className="py-2"><RankBadge rank={i + 1} /></td>
-                    <td className="py-2">
-                      <div className="font-semibold text-ink">{u.name}</div>
-                      <div className="text-xs text-ink-faint">{u.email}</div>
-                    </td>
-                    <td className="py-2 text-ink-muted">{u.profile?.cadre ?? '—'}</td>
-                    <td className="py-2 text-ink-muted">{u.profile?.block ?? '—'}</td>
-                    {tests.map(test => {
-                      const r = u.tests[String(test.id)];
-                      return (
-                        <td key={test.id} className="py-2 text-center font-semibold tabular-nums"
-                          style={{ color: r?.attempts_count ? toneColor(r.best_score ?? 0) : undefined }}>
-                          {r?.attempts_count ? fmtPct(r.best_score ?? 0) : '—'}
-                        </td>
-                      );
-                    })}
-                    <td className="py-2 text-center font-display font-extrabold tabular-nums text-ink">
-                      {fmtPct(overallScore(u, tests) ?? 0)}
-                    </td>
-                    <td className="py-2 text-center">
-                      {u.face_to_face.selected
-                        ? <Badge variant="coral" size="sm">{t('top.selected')}</Badge>
-                        : <span className="text-ink-faint">—</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Top performers (Leaderboard) */}
+      {rankedLearners.length > 0 && (
+        <Section
+          icon={<Award />}
+          title={topK === 'all' ? t('top.allTitle') : t('top.titleK', { count: topK })}
+          subtitle={t('top.subtitle')}
+        >
+          {/* Controls: Search, F2F filter, Top K selector */}
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="relative min-w-[200px] flex-1 sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-muted" />
+              <Input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder={t('top.searchPlaceholder')}
+                className="h-9 pl-9 pr-8 text-sm"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink cursor-pointer"
+                >
+                  <X className="size-3.5" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1.5 text-xs text-ink-muted">
+                <span className="font-semibold">{t('top.f2fLabel')}</span>
+                <select
+                  value={f2fFilter}
+                  onChange={e => setF2fFilter(e.target.value as typeof f2fFilter)}
+                  className="cursor-pointer rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
+                >
+                  <option value="all">{t('top.f2fAll')}</option>
+                  <option value="selected">{t('top.f2fSelected')}</option>
+                  <option value="not_selected">{t('top.f2fNotSelected')}</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1.5 text-xs text-ink-muted">
+                <span className="font-semibold">{t('top.showLabel')}</span>
+                <select
+                  value={topK}
+                  onChange={e => setTopK(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                  className="cursor-pointer rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-semibold text-ink focus:border-primary focus:outline-none"
+                >
+                  <option value={5}>Top 5</option>
+                  <option value={10}>Top 10</option>
+                  <option value={20}>Top 20</option>
+                  <option value={50}>Top 50</option>
+                  <option value="all">{t('top.showAll')}</option>
+                </select>
+              </div>
+            </div>
           </div>
+
+          {sortedLearners.length === 0 ? (
+            <div className="py-8 text-center text-sm text-ink-muted">
+              {t('top.noPerformers')}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[40rem] text-sm">
+                <thead className="text-xs uppercase tracking-wide text-ink-muted">
+                  <tr>
+                    {renderSortHeader('rank', '#', 'left', 'w-12')}
+                    {renderSortHeader('name', t('top.learner'), 'left')}
+                    {renderSortHeader('cadre', t('dim.cadre'), 'left')}
+                    {renderSortHeader('block', t('dim.block'), 'left')}
+                    {tests.map(test => renderSortHeader(`test:${test.id}`, test.label, 'center'))}
+                    {renderSortHeader('average', t('top.average'), 'center')}
+                    {renderSortHeader('f2f', t('top.faceToFace'), 'center')}
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedLearners.map(({ user: u, rank, avgScore }) => (
+                    <tr key={u.user_id} className="border-t border-border transition-colors hover:bg-surface-sunken">
+                      <td className="py-2"><RankBadge rank={rank} /></td>
+                      <td className="py-2">
+                        <div className="font-semibold text-ink">{u.name}</div>
+                        <div className="text-xs text-ink-faint">{u.email}</div>
+                      </td>
+                      <td className="py-2 text-ink-muted">{u.profile?.cadre ?? '—'}</td>
+                      <td className="py-2 text-ink-muted">{u.profile?.block ?? '—'}</td>
+                      {tests.map(test => {
+                        const r = u.tests[String(test.id)];
+                        return (
+                          <td key={test.id} className="py-2 text-center font-semibold tabular-nums"
+                            style={{ color: r?.attempts_count ? toneColor(r.best_score ?? 0) : undefined }}>
+                            {r?.attempts_count ? fmtPct(r.best_score ?? 0) : '—'}
+                          </td>
+                        );
+                      })}
+                      <td className="py-2 text-center font-display font-extrabold tabular-nums text-ink">
+                        {fmtPct(avgScore)}
+                      </td>
+                      <td className="py-2 text-center">
+                        {u.face_to_face.selected
+                          ? <Badge variant="coral" size="sm">{t('top.selected')}</Badge>
+                          : <span className="text-ink-faint">—</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {sortedLearners.length > PAGE_SIZE && (
+            <div className="mt-4 border-t border-border pt-3">
+              <Pagination
+                currentPage={page}
+                totalItems={sortedLearners.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={setPage}
+                itemLabel={t('kpi.learners')}
+              />
+            </div>
+          )}
         </Section>
       )}
     </div>
