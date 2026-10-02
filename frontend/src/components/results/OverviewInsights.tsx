@@ -222,7 +222,18 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
                 )}
               >
                 <div className="mb-6 flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
-                  <Ring value={s.passRate} size={104} stroke={11} />
+                  <div className="flex shrink-0 flex-col items-center text-center">
+                    <Ring value={s.passRate} size={104} stroke={11} />
+                    <div className="mt-2 text-xs font-semibold text-ink">
+                      {t('kpi.passed', { test: test.label })}
+                    </div>
+                    <div className="text-xs text-ink-muted">
+                      <Trans t={t} i18nKey="kpi.nOfWrote" values={{ n: s.passed, m: s.wrote }} components={{ b: <strong /> }} />
+                    </div>
+                    <div className="text-[0.7rem] text-ink-faint">
+                      {t('kpi.avgScore', { score: Math.round(s.avgScore) })}
+                    </div>
+                  </div>
                   <dl className="grid w-full grid-cols-3 gap-2 text-center sm:flex-1 sm:gap-3">
                     {([
                       [t('test.wrote'), String(s.wrote), undefined],
