@@ -17,6 +17,7 @@ services:
     restart: unless-stopped
 
   backend:
+    image: ghcr.io/${GHCR_IMAGE_PREFIX:-aayushman2412/nurturehub}/backend:${IMAGE_TAG:-latest}
     build: ./backend
     depends_on:
       db:
@@ -88,6 +89,7 @@ services:
     restart: unless-stopped
 
   frontend:
+    image: ghcr.io/${GHCR_IMAGE_PREFIX:-aayushman2412/nurturehub}/frontend:${IMAGE_TAG:-latest}
     build:
       context: ./frontend
       args:
