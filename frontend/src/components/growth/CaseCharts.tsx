@@ -53,7 +53,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, badge, ex
   return (
     <div className="rounded-lg border border-border bg-surface p-2.5">
       <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="truncate text-[11px] font-bold uppercase tracking-wide text-ink-muted" title={title}>
+        <span className="truncate text-[12px] font-bold uppercase tracking-wide text-ink-muted" title={title}>
           {title}
         </span>
         <span className="flex shrink-0 items-center gap-0.5">
@@ -146,7 +146,7 @@ export const ActivityComparisonChart: React.FC<ActivityChartProps> = ({ groups, 
       {series.map((s, i) => (
         <g key={s.key} transform={`translate(${x0 + i * 64}, 4)`}>
           <rect width={10} height={10} rx={2} className={s.cls} />
-          <text x={14} y={9} fontSize={9} className="fill-current text-ink-muted">
+          <text x={14} y={9} fontSize={12} className="fill-current text-ink-muted">
             {s.label}
           </text>
         </g>
@@ -253,7 +253,7 @@ export const OutcomeDivergingChart: React.FC<OutcomeChartProps> = ({ outcomes, l
         <g key={m.key} transform={`translate(${x0 + i * 72}, 4)`}>
           <title>{m.label}</title>
           <rect width={10} height={10} rx={2} className={m.cls} />
-          <text x={14} y={9} fontSize={9} className="fill-current text-ink-muted">
+          <text x={14} y={9} fontSize={12} className="fill-current text-ink-muted">
             {m.short}
           </text>
         </g>
@@ -262,7 +262,7 @@ export const OutcomeDivergingChart: React.FC<OutcomeChartProps> = ({ outcomes, l
       {refLines.map(l => (
         <g key={l.z}>
           <line x1={sx(l.z)} x2={sx(l.z)} y1={TOP - 4} y2={plotBottom} className={l.cls} strokeDasharray={l.dash} />
-          <text x={sx(l.z)} y={TOP - 8} fontSize={8} textAnchor="middle" className="fill-current text-ink-faint">
+          <text x={sx(l.z)} y={TOP - 8} fontSize={11} textAnchor="middle" className="fill-current text-ink-faint">
             {l.z > 0 ? `+${l.z}` : l.z}
           </text>
         </g>
@@ -311,7 +311,7 @@ export const OutcomeDivergingChart: React.FC<OutcomeChartProps> = ({ outcomes, l
                     </>
                   )}
                   {z == null && (
-                    <text x={cx + 4} y={y + BAR_H - 2} fontSize={9} className="fill-current text-ink-faint">
+                    <text x={cx + 4} y={y + BAR_H - 2} fontSize={12} className="fill-current text-ink-faint">
                       —
                     </text>
                   )}
@@ -330,12 +330,12 @@ export const OutcomeDivergingChart: React.FC<OutcomeChartProps> = ({ outcomes, l
         <line x1={cx} x2={cx} y1={footY - 3} y2={footY + 3} className="stroke-border" />
 
         <path d={`M ${x0} ${footY} l 6 -3.5 l 0 7 z`} className="fill-ink-faint" />
-        <text x={x0 + 11} y={footY + 3} fontSize={8} textAnchor="start" className="fill-current text-ink-faint">
+        <text x={x0 + 11} y={footY + 3} fontSize={11} textAnchor="start" className="fill-current text-ink-faint">
           {direction.negative}
         </text>
 
         <path d={`M ${x1} ${footY} l -6 -3.5 l 0 7 z`} className="fill-ink-faint" />
-        <text x={x1 - 11} y={footY + 3} fontSize={8} textAnchor="end" className="fill-current text-ink-faint">
+        <text x={x1 - 11} y={footY + 3} fontSize={11} textAnchor="end" className="fill-current text-ink-faint">
           {direction.positive}
         </text>
       </g>
@@ -393,7 +393,7 @@ const ZTrendSvg: React.FC<ZTrendProps & { svgRef: React.RefObject<SVGSVGElement 
       ].map(l => (
         <g key={l.z}>
           <line x1={PAD.l} x2={W - PAD.r} y1={sy(l.z)} y2={sy(l.z)} className={l.cls} strokeDasharray={l.dash} />
-          <text x={2} y={sy(l.z) + 3} className="fill-current text-ink-faint" fontSize={8}>
+          <text x={2} y={sy(l.z) + 3} className="fill-current text-ink-faint" fontSize={11}>
             {l.z > 0 ? `+${l.z}` : l.z}
           </text>
         </g>

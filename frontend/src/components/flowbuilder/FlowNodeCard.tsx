@@ -185,7 +185,7 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
         )}
       >
         {isStart && (
-          <span className="absolute -top-2.5 left-3 rounded-full bg-primary px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-primary-fg shadow-sm">
+          <span className="absolute -top-2.5 left-3 rounded-full bg-primary px-2 py-0.5 text-xs font-extrabold uppercase tracking-wider text-primary-fg shadow-sm">
             Start
           </span>
         )}
@@ -193,17 +193,17 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
         <div className="px-3.5 pb-3 pt-3.5">
           <div className="mb-1.5 flex items-center gap-1.5">
             {isSection && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-sage-100 px-2 py-0.5 text-[10px] font-bold text-sage-700 dark:bg-sage-500/15 dark:text-sage-300">
+              <span className="inline-flex items-center gap-1 rounded-full bg-sage-100 px-2 py-0.5 text-xs font-bold text-sage-700 dark:bg-sage-500/15 dark:text-sage-300">
                 <Layers className="size-3" /> Section
               </span>
             )}
             {info && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-info-50 px-2 py-0.5 text-[10px] font-bold text-info-600 dark:bg-coral-500/15 dark:text-coral-300">
+              <span className="inline-flex items-center gap-1 rounded-full bg-info-50 px-2 py-0.5 text-xs font-bold text-info-600 dark:bg-coral-500/15 dark:text-coral-300">
                 <Info className="size-3" /> Info block
               </span>
             )}
             {matrix && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-500/15 dark:text-amber-500">
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700 dark:bg-amber-500/15 dark:text-amber-500">
                 <Table className="size-3" /> Matrix
               </span>
             )}
@@ -212,7 +212,7 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
                 const badge = TYPE_BADGES[question.questionType];
                 const Icon = badge.icon;
                 return (
-                  <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold', badge.classes)}>
+                  <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold', badge.classes)}>
                     <Icon className="size-3" /> {badge.label}
                   </span>
                 );
@@ -225,11 +225,11 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
 
           {isSection && node.kind === 'section' && (
             <div className="mt-2 space-y-0.5">
-              <div className="text-[11px] font-semibold text-ink-muted">
+              <div className="text-[12px] font-semibold text-ink-muted">
                 {node.children.length} question{node.children.length === 1 ? '' : 's'} inside
               </div>
               {node.children.slice(0, 2).map(c => (
-                <div key={c.id} className="truncate text-[11px] text-ink-muted">
+                <div key={c.id} className="truncate text-[12px] text-ink-muted">
                   · {nodeTitle(c)}
                 </div>
               ))}
@@ -242,15 +242,15 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
                 <DotMini key={o.id} verdict={o.verdict} />
               ))}
               {question.options.length > 8 && (
-                <span className="text-[10px] font-bold text-ink-muted">+{question.options.length - 8}</span>
+                <span className="text-xs font-bold text-ink-muted">+{question.options.length - 8}</span>
               )}
-              <span className="ml-1 text-[11px] text-ink-muted">
+              <span className="ml-1 text-[12px] text-ink-muted">
                 {question.options.length} option{question.options.length === 1 ? '' : 's'}
               </span>
             </div>
           )}
           {question && !hasOptions && (
-            <div className="mt-2 text-[11px] text-ink-muted">
+            <div className="mt-2 text-[12px] text-ink-muted">
               {question.questionType === 'text'
                 ? 'Free text answer'
                 : question.questionType === 'number'
@@ -262,23 +262,23 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
           {info && (info.body.trim() || info.action.type !== 'none') && (
             <div className="mt-2 space-y-0.5">
               {info.body.trim() && (
-                <div className="line-clamp-2 text-[11px] text-ink-muted">{truncate(info.body.trim(), 90)}</div>
+                <div className="line-clamp-2 text-[12px] text-ink-muted">{truncate(info.body.trim(), 90)}</div>
               )}
               {info.action.type !== 'none' && (
-                <div className="text-[11px] font-semibold text-ink-muted">▶ {info.action.type} attached</div>
+                <div className="text-[12px] font-semibold text-ink-muted">▶ {info.action.type} attached</div>
               )}
             </div>
           )}
 
           {matrix && (
-            <div className="mt-2 text-[11px] text-ink-muted">
+            <div className="mt-2 text-[12px] text-ink-muted">
               {matrix.rows.length} row{matrix.rows.length === 1 ? '' : 's'} ×{' '}
               {matrix.columns.length} column{matrix.columns.length === 1 ? '' : 's'}
             </div>
           )}
 
           {endsHere && (
-            <div className="mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-ink-muted">
+            <div className="mt-1.5 flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-ink-muted">
               <Flag className="size-3" /> Ends form
             </div>
           )}

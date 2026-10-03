@@ -5,6 +5,7 @@ import type { MasdReport } from '../../api/masd';
 import { BigNumber, Kpi, KpiRow, Section } from '../results/InsightParts';
 import { Ring, StackedBar } from '../results/InsightCharts';
 import MasdFindings from './MasdFindings';
+import MasdBaseline from './MasdBaseline';
 import { DataTable, Th, TrendLine } from './MasdCharts';
 import { fmt1, MASD_COLORS, rateTone } from '../../lib/masdDisplay';
 
@@ -23,6 +24,7 @@ const MasdOverview: React.FC<{ report: MasdReport; onOpenLearners: () => void; o
 
   return (
     <div className="space-y-5">
+      <MasdBaseline report={report} />
       <KpiRow count={6}>
         <Kpi
           visual={<Ring value={Math.min(s.fulfilment_pct ?? 0, 100)} color={rateTone(s.fulfilment_pct ?? 0)}>{fmt1(s.fulfilment_pct)}</Ring>}

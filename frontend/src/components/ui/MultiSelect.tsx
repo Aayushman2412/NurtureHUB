@@ -110,7 +110,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
               />
             </div>
 
-            <div className="flex items-center justify-between border-b border-border px-3 py-1.5 text-[11px]">
+            <div className="flex items-center justify-between border-b border-border px-3 py-1.5 text-[12px]">
               <button
                 type="button"
                 onClick={selectAllFiltered}
@@ -169,7 +169,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
           {chips.map(o => (
             <span
               key={o.value}
-              className="inline-flex max-w-full items-center gap-1.5 rounded-lg bg-surface-sunken px-2 py-1 text-[11px] text-ink"
+              className="inline-flex max-w-full items-center gap-1.5 rounded-lg bg-surface-sunken px-2 py-1 text-[12px] text-ink"
             >
               <span className="truncate">{o.label}</span>
               <button

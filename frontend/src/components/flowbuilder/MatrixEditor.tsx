@@ -70,12 +70,12 @@ const ColumnEditor: React.FC<{
   return (
     <div className="rounded-lg border border-border bg-surface">
       <div className="flex items-center gap-2 py-2 pl-2.5 pr-1.5">
-        <span className="flex size-5 shrink-0 items-center justify-center rounded bg-surface-sunken text-[10px] font-bold text-ink-muted">
+        <span className="flex size-5 shrink-0 items-center justify-center rounded bg-surface-sunken text-xs font-bold text-ink-muted">
           {index + 1}
         </span>
         <button type="button" onClick={() => setOpen(o => !o)} className="min-w-0 flex-1 cursor-pointer text-left">
           <span className="block truncate text-[13px] font-semibold text-ink">{col.label || 'Untitled column'}</span>
-          <span className="text-[10px] text-ink-faint">
+          <span className="text-xs text-ink-faint">
             {COLUMN_TYPES.find(c => c.value === col.type)?.label}
             {col.required && ' · required'}
             {col.learnerHidden && ' · hidden from learner'}
@@ -242,7 +242,7 @@ const MatrixEditor: React.FC<MatrixEditorProps> = ({ node, schema, onPatch }) =>
           <FieldLabel size="sm" className="mb-0">
             Rows (one subject per line)
           </FieldLabel>
-          <span className="text-[11px] text-ink-faint">{node.rows.length}</span>
+          <span className="text-[12px] text-ink-faint">{node.rows.length}</span>
         </div>
         <textarea
           rows={5}
@@ -256,7 +256,7 @@ const MatrixEditor: React.FC<MatrixEditorProps> = ({ node, schema, onPatch }) =>
       {node.rows.length > 0 && (
         <div>
           <FieldLabel size="sm">Per-row settings</FieldLabel>
-          <p className="mb-1.5 text-[11px] leading-snug text-ink-faint">
+          <p className="mb-1.5 text-[12px] leading-snug text-ink-faint">
             <b>Unit</b> is the row's standard household measure ("Scoop"); any row that has one
             gives the grid a read-only unit column. <b>g</b> is protein per standard serving —
             filled in, the learner's summary shows computed intake totals, and <b>HQ</b> counts the
@@ -318,7 +318,7 @@ const MatrixEditor: React.FC<MatrixEditorProps> = ({ node, schema, onPatch }) =>
           </Select>
           {gateNodeId && (
             <>
-              <p className="mt-2 text-[11px] leading-snug text-ink-muted">
+              <p className="mt-2 text-[12px] leading-snug text-ink-muted">
                 Give each row the option that turns it on. Rows left on "Always" are shown
                 regardless.
               </p>
@@ -359,7 +359,7 @@ const MatrixEditor: React.FC<MatrixEditorProps> = ({ node, schema, onPatch }) =>
           <FieldLabel size="sm" className="mb-0">
             Columns
           </FieldLabel>
-          <span className="text-[11px] text-ink-faint">{node.columns.length}</span>
+          <span className="text-[12px] text-ink-faint">{node.columns.length}</span>
         </div>
         <div className="space-y-2">
           {node.columns.map((col, i) => (

@@ -346,7 +346,7 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
       {/* Interaction hints */}
       {nodeCount > 0 && !connect && (
-        <div className="pointer-events-none absolute bottom-4 left-4 z-20 hidden rounded-lg border border-border bg-surface/90 px-3 py-1.5 text-[11px] text-ink-faint shadow-sm backdrop-blur-sm lg:block">
+        <div className="pointer-events-none absolute bottom-4 left-4 z-20 hidden rounded-lg border border-border bg-surface/90 px-3 py-1.5 text-[12px] text-ink-faint shadow-sm backdrop-blur-sm lg:block">
           {tool === 'select' ? 'Drag: select' : 'Drag: pan'} · V/H: switch tool · Space / middle-drag: pan ·
           Ctrl+C/V: copy &amp; paste · Del: delete · Ctrl+Z: undo
         </div>
@@ -396,7 +396,7 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({
         <button type="button" title="Zoom out" onClick={() => zoomBy(1 / 1.2)} className={zoomBtn}>
           <Minus className="size-3.5" />
         </button>
-        <span className="w-11 text-center text-[11px] font-bold tabular-nums text-ink-muted">
+        <span className="w-11 text-center text-[12px] font-bold tabular-nums text-ink-muted">
           {Math.round(view.zoom * 100)}%
         </span>
         <button type="button" title="Zoom in" onClick={() => zoomBy(1.2)} className={zoomBtn}>

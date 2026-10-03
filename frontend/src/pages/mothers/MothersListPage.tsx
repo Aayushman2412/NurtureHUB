@@ -102,7 +102,7 @@ const MothersListPage: React.FC = () => {
                   ['gestationalAge', m.gestational_weeks != null ? t('list.weeks', { n: m.gestational_weeks }) : '—'],
                 ] as const).map(([key, value]) => (
                   <div key={key} className="min-w-0">
-                    <dt className="text-[11px] uppercase tracking-wide text-ink-faint">{t(`list.table.${key}`)}</dt>
+                    <dt className="text-[12px] uppercase tracking-wide text-ink-faint">{t(`list.table.${key}`)}</dt>
                     <dd className="truncate text-ink">{value}</dd>
                   </div>
                 ))}

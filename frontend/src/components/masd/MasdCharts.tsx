@@ -30,7 +30,7 @@ export const GroupedColumns: React.FC<{
   const max = top <= 10 ? Math.ceil(top) : Math.ceil(top / 20) * 20;
   const refPct = reference ? (reference.value / max) * 100 : null;
   const dense = series.length >= 4 && categories.length >= 5;
-  const minWidth = categories.length * Math.max(56, series.length * 22);
+  const minWidth = categories.length * Math.max(72, series.length * 30);
   return (
     <div>
       <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted">
@@ -57,11 +57,11 @@ export const GroupedColumns: React.FC<{
                 {series.map(s => {
                   const v = s.values[ci];
                   return (
-                    <div key={s.key} className="flex h-full max-w-9 flex-1 flex-col items-center justify-end"
+                    <div key={s.key} className="flex h-full max-w-14 flex-1 flex-col items-center justify-end"
                       title={`${c.label} · ${s.label}: ${v == null ? '—' : v.toFixed(1) + valueSuffix}`}>
                       {showValues && v != null && (
                         <span className={cn('mb-0.5 font-semibold tabular-nums text-ink',
-                          dense ? 'text-[0.55rem] sm:text-[0.62rem]' : 'text-[0.62rem] sm:text-[0.68rem]')}>
+                          dense ? 'text-xs' : 'text-sm')}>
                           {v >= 100 || valueSuffix === '' ? Math.round(v) : v.toFixed(0)}
                         </span>
                       )}
@@ -78,7 +78,7 @@ export const GroupedColumns: React.FC<{
             {categories.map(c => (
               <div key={c.key} className="min-w-0 flex-1 text-center">
                 <div className="truncate text-xs font-medium text-ink" title={c.label}>{c.label}</div>
-                {c.sub && <div className="text-[0.68rem] text-ink-faint">{c.sub}</div>}
+                {c.sub && <div className="text-xs text-ink-faint">{c.sub}</div>}
               </div>
             ))}
           </div>
@@ -131,21 +131,21 @@ export const BubblePlot: React.FC<{
       {ticks(x0, x1).map(v => (
         <g key={`x${v}`}>
           <line x1={px(v)} x2={px(v)} y1={T} y2={H - B} className="stroke-border" strokeWidth={1} />
-          <text x={px(v)} y={H - B + 16} textAnchor="middle" className="fill-ink-faint text-[11px]">{v}</text>
+          <text x={px(v)} y={H - B + 16} textAnchor="middle" className="fill-ink-faint text-[14px]">{v}</text>
         </g>
       ))}
       {ticks(y0, y1).map(v => (
         <g key={`y${v}`}>
           <line x1={L} x2={W - R} y1={py(v)} y2={py(v)} className="stroke-border" strokeWidth={1} />
-          <text x={L - 8} y={py(v) + 4} textAnchor="end" className="fill-ink-faint text-[11px]">{v}</text>
+          <text x={L - 8} y={py(v) + 4} textAnchor="end" className="fill-ink-faint text-[14px]">{v}</text>
         </g>
       ))}
       <line x1={px(avgX)} x2={px(avgX)} y1={T} y2={H - B} className="stroke-ink/40" strokeDasharray="5 4" />
       <line x1={L} x2={W - R} y1={py(avgY)} y2={py(avgY)} className="stroke-ink/40" strokeDasharray="5 4" />
-      <text x={W - R - 4} y={T + 12} textAnchor="end" className="fill-success-600 text-[11px] font-semibold">{quadrant.topRight}</text>
-      <text x={L + 6} y={T + 12} className="fill-ink-faint text-[11px]">{quadrant.topLeft}</text>
-      <text x={W - R - 4} y={H - B - 8} textAnchor="end" className="fill-ink-faint text-[11px]">{quadrant.bottomRight}</text>
-      <text x={L + 6} y={H - B - 8} className="fill-error-600 text-[11px] font-semibold">{quadrant.bottomLeft}</text>
+      <text x={W - R - 4} y={T + 12} textAnchor="end" className="fill-success-600 text-[14px] font-semibold">{quadrant.topRight}</text>
+      <text x={L + 6} y={T + 12} className="fill-ink-faint text-[14px]">{quadrant.topLeft}</text>
+      <text x={W - R - 4} y={H - B - 8} textAnchor="end" className="fill-ink-faint text-[14px]">{quadrant.bottomRight}</text>
+      <text x={L + 6} y={H - B - 8} className="fill-error-600 text-[14px] font-semibold">{quadrant.bottomLeft}</text>
       {[...bubbles].sort((a, b) => b.size - a.size).map((b, i) => {
         const color = BUBBLE_PALETTE[bubbles.indexOf(b) % BUBBLE_PALETTE.length];
         return (
@@ -153,12 +153,12 @@ export const BubblePlot: React.FC<{
             <title>{`${b.label}: ${b.x.toFixed(1)}% · ${b.y.toFixed(1)}% · ${sizeLabel(b.size)}`}</title>
             <circle cx={px(b.x)} cy={py(b.y)} r={r(b.size)} fill={color} fillOpacity={0.78} stroke="white" strokeWidth={1.5}
               style={{ transition: 'all 400ms ease' }} data-i={i} />
-            <text x={px(b.x) + r(b.size) + 4} y={py(b.y) + 4} className="fill-ink text-[12px] font-semibold">{b.label}</text>
+            <text x={px(b.x) + r(b.size) + 4} y={py(b.y) + 4} className="fill-ink text-[15px] font-semibold">{b.label}</text>
           </g>
         );
       })}
-      <text x={(L + W - R) / 2} y={H - 6} textAnchor="middle" className="fill-ink-muted text-[12px]">{xLabel}</text>
-      <text transform={`translate(14 ${(T + H - B) / 2}) rotate(-90)`} textAnchor="middle" className="fill-ink-muted text-[12px]">{yLabel}</text>
+      <text x={(L + W - R) / 2} y={H - 6} textAnchor="middle" className="fill-ink-muted text-[15px]">{xLabel}</text>
+      <text transform={`translate(14 ${(T + H - B) / 2}) rotate(-90)`} textAnchor="middle" className="fill-ink-muted text-[15px]">{yLabel}</text>
     </svg>
   );
 };
@@ -206,7 +206,7 @@ export const TrendLine: React.FC<{
         {[0, 0.5, 1].map(f => (
           <g key={f}>
             <line x1={L} x2={W - R} y1={pyA(maxA * f)} y2={pyA(maxA * f)} className="stroke-border" />
-            <text x={L - 6} y={pyA(maxA * f) + 4} textAnchor="end" className="fill-ink-faint text-[11px]">{Math.round(maxA * f)}</text>
+            <text x={L - 6} y={pyA(maxA * f) + 4} textAnchor="end" className="fill-ink-faint text-[14px]">{Math.round(maxA * f)}</text>
           </g>
         ))}
         {points.map((p, i) => (
@@ -223,7 +223,7 @@ export const TrendLine: React.FC<{
             <circle cx={px(i)} cy={pyA(p.a)} r={hover === i ? 5.5 : 3.2} fill={MASD_COLORS.activity}
               stroke={hover === i ? 'white' : 'none'} strokeWidth={2} />
             {i % every === 0 && (
-              <text x={px(i)} y={H - B + 16} textAnchor="middle" className="fill-ink-faint text-[11px]">{p.label}</text>
+              <text x={px(i)} y={H - B + 16} textAnchor="middle" className="fill-ink-faint text-[14px]">{p.label}</text>
             )}
           </g>
         ))}
@@ -238,11 +238,11 @@ export const TrendLine: React.FC<{
         {tip && (
           <g pointerEvents="none">
             <rect x={tip.x} y={tip.y} width={tip.w} height={tip.h} rx={8} className="fill-surface stroke-border-strong" strokeWidth={1} />
-            <text x={tip.x + 10} y={tip.y + 18} className="fill-ink text-[12px] font-semibold">{tip.p.label}</text>
+            <text x={tip.x + 10} y={tip.y + 18} className="fill-ink text-[15px] font-semibold">{tip.p.label}</text>
             <circle cx={tip.x + 14} cy={tip.y + 32} r={4} fill={MASD_COLORS.activity} />
-            <text x={tip.x + 24} y={tip.y + 36} className="fill-ink text-[12px]">{`${labelA}: ${tip.p.a.toLocaleString()}`}</text>
+            <text x={tip.x + 24} y={tip.y + 36} className="fill-ink text-[15px]">{`${labelA}: ${tip.p.a.toLocaleString()}`}</text>
             <rect x={tip.x + 10} y={tip.y + 42} width={8} height={8} rx={2} fill={MASD_COLORS.adoption} />
-            <text x={tip.x + 24} y={tip.y + 50} className="fill-ink text-[12px]">{`${labelB}: ${tip.p.b.toLocaleString()}`}</text>
+            <text x={tip.x + 24} y={tip.y + 50} className="fill-ink text-[15px]">{`${labelB}: ${tip.p.b.toLocaleString()}`}</text>
           </g>
         )}
       </svg>
@@ -258,7 +258,7 @@ export const RateCell: React.FC<{
   /** Small grey line under the rate, e.g. the counts it comes from ("59/55"). */
   sub?: React.ReactNode;
 }> = ({ value, lowerIsBetter = false, className, sub }) => {
-  const under = sub != null && <div className="mt-0.5 text-[0.68rem] tabular-nums text-ink-faint">{sub}</div>;
+  const under = sub != null && <div className="mt-0.5 text-xs tabular-nums text-ink-faint">{sub}</div>;
   if (value == null) return <td className={cn('px-3 py-2 text-center text-ink-faint', className)}>—{under}</td>;
   const c = lowerIsBetter ? (value < 10 ? '#2F9E56' : value < 20 ? '#E0A11B' : '#DC2F2F') : rateTone(value);
   return (

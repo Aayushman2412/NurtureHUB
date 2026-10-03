@@ -15,52 +15,65 @@ import { cn } from '../../utils/cn';
 import { BAND_COLORS } from '../../utils/brandColors';
 import { BarList, Donut, Histogram, Ring, StackedBar, type BarRow, type Slice } from './InsightCharts';
 import {
-  ActiveFilterBar, BigNumber, ChipRow, FindingList, InlineBar, Kpi, KpiRow, RankBadge, ScoreCell, Section, ToneLegend,
+  BigNumber, Chip, CountPicker, FindingList, InlineBar, Kpi, KpiRow, RankBadge, ScoreCell, Section, ToneLegend,
+  type CountValue, type RankDir,
 } from './InsightParts';
 import {
-  fmtPct, lowestScorers, scoreDistribution, testFindings, testGroupStats, testStats, toneColor, topScorers,
-  type ActiveTest, type Finding, type TestStats, type UserResultRow,
+  DIFFICULTY_CUTOFFS, bottomScorers, fmtPct, lowestScorers, questionDifficulty, scoreDistribution, testFindings,
+  testGroupStats, testStats, toneColor, topScorers, wrongAnswers,
+  type ActiveTest, type Difficulty, type Finding, type TestStats, type UserResultRow,
 } from '../../lib/resultsInsights';
 import type { InsightCtx } from './types';
 
-type Measure = 'pass' | 'score' | 'firstTry';
+type Measure = 'pass' | 'score' | 'firstTry' | 'notTaken';
 type QuestionOrder = 'hardest' | 'paper';
 
 const pctOf = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100 : 0);
 
 const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, test }) => {
   const { t } = useTranslation('resultsInsights');
-  const { data, users, compareBase, dims, dim, setDim, filters, activeGroup, toggleFocus, clearFilter, groupLabel, colorOf } = ctx;
+  const { data, users, compareBase, dims, dim, filters, activeGroup, toggleFocus, clearFilter, groupLabel, colorOf } = ctx;
   const [measure, setMeasure] = useState<Measure>('pass');
   const [order, setOrder] = useState<QuestionOrder>('hardest');
+  const [difficulty, setDifficulty] = useState<Difficulty | 'all'>('all');
+  const [topic, setTopic] = useState('');
+  const [topN, setTopN] = useState<CountValue>(10);
+  const [topDir, setTopDir] = useState<RankDir>('top');
+  const [supportN, setSupportN] = useState<CountValue>(10);
 
   const s = useMemo(() => testStats(users, test), [users, test]);
   const groups = useMemo(() => testGroupStats(compareBase, dim, test), [compareBase, dim, test]);
   const base = useMemo(() => testStats(compareBase, test), [compareBase, test]);
   const questions = ctx.questions[test.id];
-  const bars = useMemo(
-    () => scoreDistribution(users, test, questions?.questions.length), [users, test, questions],
-  );
+  const bars = useMemo(() => scoreDistribution(users, test), [users, test]);
   const facts = useMemo(
     () => testFindings(users, test, dim, g => groupLabel(g), questions),
     [users, test, dim, questions], // eslint-disable-line react-hooks/exhaustive-deps
   );
-  const top = useMemo(() => topScorers(users, test, 10), [users, test]);
-  const support = useMemo(() => lowestScorers(users, test, 10), [users, test]);
+  const top = useMemo(() => {
+    const n = topN === 'all' ? users.length : topN;
+    return topDir === 'top' ? topScorers(users, test, n) : bottomScorers(users, test, n);
+  }, [users, test, topN, topDir]);
+  const support = useMemo(
+    () => lowestScorers(users, test, supportN === 'all' ? users.length : supportN), [users, test, supportN],
+  );
 
   const findingText = (f: Finding) =>
     t(`finding.${f.key}`, { ...f.params, dimName: t(`dimSingular.${String(f.params.dim ?? dim)}`) });
   const excellentFrom = Math.max(85, test.passMark);
   const nearFrom = Math.max(0, test.passMark - 20);
 
+  // Lowest band first, as in the histogram above it: red on the left, green on the right.
   const bandParts = (st: TestStats): Slice[] => [
-    { key: 'ex', label: t('test.bandExcellent', { from: excellentFrom }), value: st.bands.excellent, color: BAND_COLORS.excellent },
-    { key: 'ok', label: t('test.bandPassed', { from: test.passMark, to: excellentFrom - 1 }), value: st.bands.passed, color: BAND_COLORS.passed },
-    { key: 'near', label: t('test.bandNear', { from: nearFrom, to: test.passMark - 1 }), value: st.bands.nearMiss, color: BAND_COLORS.nearMiss },
     { key: 'low', label: t('test.bandSupport', { below: nearFrom }), value: st.bands.support, color: BAND_COLORS.support },
+    { key: 'near', label: t('test.bandNear', { from: nearFrom, to: test.passMark - 1 }), value: st.bands.nearMiss, color: BAND_COLORS.nearMiss },
+    { key: 'ok', label: t('test.bandPassed', { from: test.passMark, to: excellentFrom - 1 }), value: st.bands.passed, color: BAND_COLORS.passed },
+    { key: 'ex', label: t('test.bandExcellent', { from: excellentFrom }), value: st.bands.excellent, color: BAND_COLORS.excellent },
   ];
 
+  const notTaken = measure === 'notTaken';
   const measureValue = (st: TestStats): number | null => {
+    if (notTaken) return st.registered ? pctOf(st.notTaken, st.registered) : null;
     if (!st.wrote) return null;
     if (measure === 'pass') return st.passRate;
     if (measure === 'score') return st.avgScore;
@@ -73,16 +86,32 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
     .sort((a, b) => (b.v as number) - (a.v as number))
     .map(({ g, v }) => ({
       key: g.group, label: groupLabel(g.group), value: v as number, display: fmtPct(v as number),
-      sub: t('testPage.wroteOfN', { n: g.stats.wrote }),
+      // Not taking the test is the bad outcome: the more, the redder.
+      color: notTaken ? toneColor(100 - (v as number)) : undefined,
+      sub: notTaken
+        ? t('testPage.notTakenOfN', { n: g.stats.notTaken, m: g.stats.registered })
+        : t('testPage.wroteOfN', { n: g.stats.wrote }),
     }));
+  // The pie: who wrote it — or, when the reader asks, who did NOT.
   const writersSlices: Slice[] = groups
-    .map((g, i) => ({ key: g.group, label: groupLabel(g.group), value: g.stats.wrote, color: colorOf(i) }));
+    .map((g, i) => ({ key: g.group, label: groupLabel(g.group), value: notTaken ? g.stats.notTaken : g.stats.wrote, color: colorOf(i) }));
 
+  const topics = useMemo(
+    () => [...new Set((questions?.questions ?? []).map(q => q.topic).filter((x): x is string => !!x))].sort(),
+    [questions],
+  );
+  const difficultyCount = useMemo(() => {
+    const c: Record<Difficulty, number> = { difficult: 0, medium: 0, easy: 0 };
+    for (const q of questions?.questions ?? []) if (q.writers > 0) c[questionDifficulty(q)] += 1;
+    return c;
+  }, [questions]);
   const questionRows = useMemo(() => {
-    const qs = [...(questions?.questions ?? [])];
+    let qs = [...(questions?.questions ?? [])];
+    if (difficulty !== 'all') qs = qs.filter(q => q.writers > 0 && questionDifficulty(q) === difficulty);
+    if (topic) qs = qs.filter(q => q.topic === topic);
     if (order === 'hardest') qs.sort((a, b) => pctOf(a.correct, a.writers) - pctOf(b.correct, b.writers));
     return qs;
-  }, [questions, order]);
+  }, [questions, order, difficulty, topic]);
 
   // ── Excel: this test only ──
   const download = () => {
@@ -115,13 +144,16 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
     }
     if (questions?.questions.length) {
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
-        ['#', t('questions.question'), t('questions.rightAnswer'), t('questions.correctPct'),
-          t('questions.correctN'), t('questions.topWrong'), t('questions.blank')],
+        ['#', t('questions.question'), t('questions.topic'), t('questions.subtopic'), t('questions.difficulty'),
+          t('questions.rightAnswer'), t('questions.correctPct'), t('questions.correctN'), t('questions.wrongAnswers'),
+          t('questions.blankPct')],
         ...questions.questions.map(q => [
-          q.number, q.text, `${q.correct_label ?? ''} ${q.correct_text ?? ''}`.trim(),
+          q.number, q.text, q.topic ?? '', q.subtopic ?? '',
+          q.writers ? t(`questions.level.${questionDifficulty(q)}`) : '',
+          `${q.correct_label ?? ''} ${q.correct_text ?? ''}`.trim(),
           Math.round(pctOf(q.correct, q.writers)), q.correct,
-          q.top_wrong_label ? `${q.top_wrong_label}: ${q.top_wrong_text ?? ''} (${q.top_wrong_count})` : '',
-          q.unanswered,
+          wrongAnswers(q).map(w => `${w.label}: ${Math.round(w.pct)}%`).join(', '),
+          Math.round(pctOf(q.unanswered, q.writers)),
         ]),
       ]), t('questions.sheet').slice(0, 31));
     }
@@ -218,6 +250,7 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
             passMark={test.passMark}
             passLabel={t('testPage.passMarkShort', { mark: test.passMark })}
             countLabel={(n, label) => t('testPage.barTitle', { n, label })}
+            axisLabel={t('testPage.histAxis')}
           />
           <div className="mt-6">
             <StackedBar parts={bandParts(s)} />
@@ -238,26 +271,15 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
           title={t('testPage.groupsTitle', { test: test.label })}
           subtitle={t('compare.subtitle')}
         >
-          <ActiveFilterBar
-            filters={filters}
-            groupLabel={groupLabel}
-            onClear={clearFilter}
-            filteredCount={users.length}
-            totalCount={data.users.length}
-          />
-          <ChipRow
-            label={t('compare.splitBy')}
-            items={dims.map(d => ({ key: d, label: t(`dim.${d}`) }))}
-            value={dim}
-            onChange={k => setDim(k as typeof dim)}
-          />
-          <div className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,26rem)_1fr]">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,26rem)_1fr]">
             <div>
-              <h4 className="mb-3 text-sm font-semibold text-ink">{t('testPage.whoWrote', { dim: t(`dim.${dim}`) })}</h4>
+              <h4 className="mb-3 text-base font-semibold text-ink">
+                {notTaken ? t('testPage.whoNotTaken', { dim: t(`dim.${dim}`) }) : t('testPage.whoWrote', { dim: t(`dim.${dim}`) })}
+              </h4>
               <Donut
                 slices={writersSlices}
-                centerValue={base.wrote}
-                centerLabel={t('testPage.wroteIt')}
+                centerValue={notTaken ? base.notTaken : base.wrote}
+                centerLabel={notTaken ? t('testPage.notTakenIt') : t('testPage.wroteIt')}
                 activeKey={activeGroup}
                 onSelect={toggleFocus}
                 selectHint={t('compare.clickHint')}
@@ -274,6 +296,7 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
                   <option value="pass">{t('testPage.measurePass')}</option>
                   <option value="score">{t('testPage.measureScore')}</option>
                   <option value="firstTry">{t('testPage.measureFirstTry')}</option>
+                  <option value="notTaken">{t('testPage.measureNotTaken')}</option>
                 </select>
               </div>
               <BarList
@@ -330,17 +353,17 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
                         sub={g.stats.wrote ? t('scorecard.nOfM', { n: g.stats.firstTry, m: g.stats.wrote }) : undefined} />
                       <td className="px-3 py-2 text-center tabular-nums text-ink">{g.stats.afterRetake}</td>
                       <td className="px-3 py-2">
-                        {g.stats.wrote > 0 && <StackedBar parts={bandParts(g.stats)} height="h-3" showLegend={false} />}
+                        {g.stats.wrote > 0 && <StackedBar parts={bandParts(g.stats)} height="h-5" showLegend={false} />}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted">
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-muted">
               {bandParts(s).map(p => (
                 <span key={p.key} className="inline-flex items-center gap-1.5">
-                  <span className="size-2.5 rounded-full" style={{ background: p.color }} />{p.label}
+                  <span className="size-3 rounded-full" style={{ background: p.color }} />{p.label}
                 </span>
               ))}
             </div>
@@ -364,50 +387,108 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
         )}
       >
         {ctx.activeGroup !== null && (
-          <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-500/10 dark:text-amber-500">
+          <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-500">
             {t('questions.everyoneNote')}
           </p>
+        )}
+        {questions && questions.questions.length > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold text-ink-muted">{t('questions.difficulty')}:</span>
+              <Chip active={difficulty === 'all'} onClick={() => setDifficulty('all')}>
+                {t('questions.allN', { n: questions.questions.length })}
+              </Chip>
+              {(['difficult', 'medium', 'easy'] as Difficulty[]).map(d => (
+                <Chip key={d} active={difficulty === d} onClick={() => setDifficulty(d)}>
+                  {t(`questions.levelN.${d}`, { n: difficultyCount[d], easy: DIFFICULTY_CUTOFFS.easy, below: DIFFICULTY_CUTOFFS.easy - 1, medium: DIFFICULTY_CUTOFFS.medium })}
+                </Chip>
+              ))}
+            </div>
+            {topics.length > 0 && (
+              <label className="flex items-center gap-2 text-sm font-semibold text-ink-muted">
+                {t('questions.topic')}:
+                <select
+                  value={topic}
+                  onChange={e => setTopic(e.target.value)}
+                  className="cursor-pointer rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-normal text-ink focus:border-primary focus:outline-none"
+                >
+                  <option value="">{t('questions.allTopics')}</option>
+                  {topics.map(tp => <option key={tp} value={tp}>{tp}</option>)}
+                </select>
+              </label>
+            )}
+          </div>
         )}
         {!ctx.questionsLoaded ? (
           <p className="text-sm text-ink-muted">{t('questions.loading')}</p>
         ) : !questions || questions.questions.length === 0 ? (
           <p className="text-sm text-ink-muted">{t('questions.none')}</p>
+        ) : questionRows.length === 0 ? (
+          <p className="text-sm text-ink-muted">{t('questions.noneMatch')}</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[46rem] text-sm">
-              <thead className="text-xs uppercase tracking-wide text-ink-muted">
+            <table className="w-full min-w-[52rem] text-sm">
+              <thead className="sticky top-0 z-[1] bg-surface text-xs uppercase tracking-wide text-ink-muted">
                 <tr>
-                  <th className="w-10 pb-2 text-left">#</th>
+                  <th className="w-12 pb-2 text-left">#</th>
                   <th className="pb-2 text-left">{t('questions.question')}</th>
-                  <th className="w-[26%] pb-2 text-left">{t('questions.correctPct')}</th>
-                  <th className="w-[24%] pb-2 text-left">{t('questions.topWrong')}</th>
-                  <th className="w-16 pb-2 text-center">{t('questions.blank')}</th>
+                  <th className="w-[22%] pb-2 text-left">{t('questions.correctPct')}</th>
+                  <th className="w-[30%] pb-2 text-left">{t('questions.wrongAnswers')}</th>
+                  <th className="w-20 pb-2 text-center">{t('questions.blank')}</th>
                 </tr>
               </thead>
               <tbody>
-                {questionRows.map(q => (
-                  <tr key={q.id} className="border-t border-border align-top">
-                    <td className="py-2.5 font-semibold tabular-nums text-ink-muted">Q{q.number}</td>
-                    <td className="py-2.5 pr-4">
-                      <div className="line-clamp-2 text-ink" title={q.text}>{q.text}</div>
-                      {q.correct_label && (
-                        <div className="mt-0.5 text-xs text-success-600">
-                          {t('questions.answerIs', { label: q.correct_label, text: q.correct_text ?? '' })}
+                {questionRows.map(q => {
+                  const level = q.writers > 0 ? questionDifficulty(q) : null;
+                  const wrong = wrongAnswers(q);
+                  return (
+                    <tr key={q.id} className="border-t border-border align-top">
+                      <td className="py-3 text-base font-bold tabular-nums text-ink-muted">Q{q.number}</td>
+                      <td className="py-3 pr-4">
+                        <div className="line-clamp-3 text-ink" title={q.text}>{q.text}</div>
+                        {q.correct_label && (
+                          <div className="mt-1 text-sm font-medium text-success-600">
+                            {t('questions.answerIs', { label: q.correct_label, text: q.correct_text ?? '' })}
+                          </div>
+                        )}
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          {level && (
+                            <span className={cn(
+                              'rounded-full px-2 py-0.5 text-xs font-semibold',
+                              level === 'difficult' ? 'bg-error-50 text-error-600 dark:bg-error-500/15'
+                                : level === 'medium' ? 'bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400'
+                                  : 'bg-success-50 text-success-600 dark:bg-success-500/15',
+                            )}>{t(`questions.level.${level}`)}</span>
+                          )}
+                          {(q.topic || q.subtopic) && (
+                            <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-medium text-ink-muted">
+                              {[q.topic, q.subtopic].filter(Boolean).join(' › ')}
+                            </span>
+                          )}
                         </div>
-                      )}
-                    </td>
-                    <td className="py-2.5 pr-4">
-                      <InlineBar value={pctOf(q.correct, q.writers)} />
-                      <div className="mt-0.5 text-xs text-ink-faint">{t('scorecard.nOfM', { n: q.correct, m: q.writers })}</div>
-                    </td>
-                    <td className="py-2.5 pr-3 text-xs text-ink-muted">
-                      {q.top_wrong_label
-                        ? <><strong className="text-error-600">{q.top_wrong_label}</strong> {q.top_wrong_text} <span className="text-ink-faint">({q.top_wrong_count})</span></>
-                        : '—'}
-                    </td>
-                    <td className="py-2.5 text-center tabular-nums text-ink-muted">{q.unanswered}</td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="py-3 pr-4">
+                        <InlineBar value={pctOf(q.correct, q.writers)} />
+                        <div className="mt-1 text-xs text-ink-muted">{t('scorecard.nOfM', { n: q.correct, m: q.writers })}</div>
+                      </td>
+                      <td className="py-3 pr-3">
+                        {wrong.length === 0 ? <span className="text-sm text-ink-muted">—</span> : (
+                          <ul className="space-y-1">
+                            {wrong.map(w => (
+                              <li key={w.label} className="flex items-baseline gap-2 text-sm" title={w.text}>
+                                <span className="w-11 shrink-0 text-right font-bold tabular-nums text-error-600">{fmtPct(w.pct)}</span>
+                                <span className="min-w-0 truncate text-ink"><strong>{w.label}</strong> {w.text}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </td>
+                      <td className="py-3 text-center text-sm font-semibold tabular-nums text-ink-muted">
+                        {q.writers ? fmtPct(pctOf(q.unanswered, q.writers)) : '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -416,10 +497,18 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
 
       {/* Top scorers + who needs support */}
       <div className="grid gap-6 xl:grid-cols-2">
-        <Section icon={<Award />} title={t('testPage.topTitle')} subtitle={t('testPage.topSubtitle', { test: test.label })}>
+        <Section
+          icon={<Award />}
+          title={topDir === 'top'
+            ? (topN === 'all' ? t('testPage.allScorers') : t('testPage.topTitleN', { n: topN }))
+            : (topN === 'all' ? t('testPage.allScorersLow') : t('testPage.bottomTitleN', { n: topN }))}
+          subtitle={topDir === 'top' ? t('testPage.topSubtitle', { test: test.label }) : t('testPage.bottomSubtitle', { test: test.label })}
+        >
+          <div className="mb-3"><CountPicker n={topN} onN={setTopN} dir={topDir} onDir={setTopDir} /></div>
           <LearnerTable rows={top} test={test} ranked />
         </Section>
         <Section icon={<LifeBuoy />} title={t('testPage.supportTitle')} subtitle={t('testPage.supportSubtitle', { test: test.label })}>
+          <div className="mb-3"><CountPicker n={supportN} onN={setSupportN} /></div>
           {support.length === 0
             ? <p className="text-sm text-ink-muted">{t('testPage.everyonePassed')}</p>
             : <LearnerTable rows={support} test={test} />}
@@ -451,7 +540,7 @@ const LearnerTable: React.FC<{ rows: UserResultRow[]; test: ActiveTest; ranked?:
                 {ranked && <td className="py-2"><RankBadge rank={i + 1} /></td>}
                 <td className="py-2">
                   <div className="font-semibold text-ink">{u.name}</div>
-                  <div className="text-xs text-ink-faint">{u.profile?.block ?? ''}</div>
+                  <div className="text-xs text-ink-muted">{u.profile?.block ?? ''}</div>
                 </td>
                 <td className="py-2 text-ink-muted">{u.profile?.cadre ?? '—'}</td>
                 <td className="py-2 text-center font-display font-extrabold tabular-nums" style={{ color: toneColor(r.best_score ?? 0) }}>

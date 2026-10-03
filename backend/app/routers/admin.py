@@ -3764,8 +3764,9 @@ def get_results_questions(
 ):
     """
     Question-by-question results for each of a project's tests: how many
-    answered each question correctly, how many left it blank, and the wrong
-    answer chosen most often.
+    answered each question correctly, how many left it blank, how many chose
+    each option (so every wrong answer can be shown), and the question's
+    topic and subtopic from the upload sheet.
 
     Counted on each learner's FIRST submitted attempt — what they knew before
     they had seen the paper. A retake after reading the questions says more
@@ -3821,6 +3822,12 @@ def get_results_questions(
                 "id": q.id,
                 "number": len(rows) + 1,
                 "text": q.text,
+                "topic": q.topic or None,
+                "subtopic": q.subtopic or None,
+                # Every option and how many chose it, so the dashboard can show
+                # all the wrong answers, not only the most common one.
+                "options": [{"label": o.label, "text": o.text, "count": answered[o.id],
+                             "correct": o.id in correct_ids} for o in options],
                 "correct_label": right.label if right else None,
                 "correct_text": right.text if right else None,
                 "writers": writers,

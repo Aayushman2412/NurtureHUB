@@ -15,7 +15,8 @@ import { Badge, Button, Card, Input, Pagination } from '../ui';
 import { BAND_COLORS, TEST_A_COLOR, TEST_B_COLOR } from '../../utils/brandColors';
 import { BarList, Donut, Journey, Ring, StackedBar, type BarRow, type Slice } from './InsightCharts';
 import {
-  ActiveFilterBar, ChipRow, FindingList, InlineBar, Kpi, KpiRow, RankBadge, ScoreCell, Section, ToneLegend,
+  CountPicker, FindingList, InlineBar, Kpi, KpiRow, RankBadge, ScoreCell, Section, ToneLegend,
+  type CountValue, type RankDir,
 } from './InsightParts';
 import {
   cohortStats, findings, fmtPct, groupStats, journey, overallScore, pairStats, signed, toneColor,
@@ -29,7 +30,7 @@ const pctOf = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100
 
 const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
   const { t } = useTranslation('resultsInsights');
-  const { data, tests, users, compareBase, dims, dim, setDim, filters, activeGroup, toggleFocus, clearFilter, groupLabel, colorOf, openView } = ctx;
+  const { data, tests, users, compareBase, dims, dim, filters, activeGroup, toggleFocus, clearFilter, groupLabel, colorOf, openView } = ctx;
   const lastTest = tests[tests.length - 1];
   const [metric, setMetric] = useState<string>(lastTest ? `pass:${lastTest.id}` : 'videos');
 
@@ -46,7 +47,8 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
   );
 
   // ── Top performers (Leaderboard) with Top-K, Search, Filter, Sort, Pagination ──
-  const [topK, setTopK] = useState<number | 'all'>(10);
+  const [topK, setTopK] = useState<CountValue>(10);
+  const [rankDir, setRankDir] = useState<RankDir>('top');
   const [searchQuery, setSearchQuery] = useState('');
   const [f2fFilter, setF2fFilter] = useState<'all' | 'selected' | 'not_selected'>('all');
   const [sortCol, setSortCol] = useState<string>('rank');
@@ -64,9 +66,9 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
   }, [allRanked, tests]);
 
   const topKLearners = useMemo(() => {
-    if (topK === 'all') return rankedLearners;
-    return rankedLearners.slice(0, topK);
-  }, [rankedLearners, topK]);
+    if (topK === 'all') return rankDir === 'top' ? rankedLearners : [...rankedLearners].reverse();
+    return rankDir === 'top' ? rankedLearners.slice(0, topK) : rankedLearners.slice(-topK).reverse();
+  }, [rankedLearners, topK, rankDir]);
 
   const filteredLearners = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -115,7 +117,12 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
 
   useEffect(() => {
     setPage(1);
-  }, [topK, searchQuery, f2fFilter, sortCol, sortDir]);
+  }, [topK, rankDir, searchQuery, f2fFilter, sortCol, sortDir]);
+  // Bottom of the list reads lowest score first; top, highest first.
+  useEffect(() => {
+    setSortCol('rank');
+    setSortDir(rankDir === 'top' ? 'asc' : 'desc');
+  }, [rankDir]);
 
   const paginatedLearners = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
@@ -173,6 +180,9 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
       { key: `score:${test.id}`, label: t('measure.score', { test: test.label }),
         value: (g: GroupStats) => (g.tests[test.id]?.wrote ? g.tests[test.id].avgScore : null),
         overall: base.tests[test.id]?.avgScore ?? null },
+      { key: `notTaken:${test.id}`, label: t('measure.notTaken', { test: test.label }),
+        value: (g: GroupStats) => (g.n ? pctOf(g.n - (g.tests[test.id]?.wrote ?? 0), g.n) : null),
+        overall: base.n ? pctOf(base.n - (base.tests[test.id]?.wrote ?? 0), base.n) : null },
     ]),
     { key: 'videos', label: t('measure.videos'), value: g => (g.n ? (g.finishedVideos / g.n) * 100 : null),
       overall: base.n ? (base.finishedVideos / base.n) * 100 : null },
@@ -182,16 +192,26 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
       overall: base.n ? (base.selected / base.n) * 100 : null },
   ];
   const measure = measures.find(m => m.key === metric) ?? measures[0];
+  // "Did not take the X test": the pie becomes who did NOT take it, and a
+  // high share is the bad outcome, so the bars run red as it grows.
+  const notTakenTest = measure.key.startsWith('notTaken:') ? tests.find(x => `notTaken:${x.id}` === measure.key) : undefined;
   const barRows: BarRow[] = groups
     .map(g => ({ g, v: measure.value(g) }))
     .filter(x => x.v !== null)
     .sort((a, b) => (b.v as number) - (a.v as number))
     .map(({ g, v }) => ({
       key: g.group, label: groupLabel(g.group), value: v as number, display: fmtPct(v as number),
-      sub: t('compare.ofN', { n: g.n }),
+      color: notTakenTest ? toneColor(100 - (v as number)) : undefined,
+      sub: notTakenTest
+        ? t('testPage.notTakenOfN', { n: g.n - (g.tests[notTakenTest.id]?.wrote ?? 0), m: g.n })
+        : t('compare.ofN', { n: g.n }),
     }));
 
-  const whoSlices: Slice[] = groups.map((g, i) => ({ key: g.group, label: groupLabel(g.group), value: g.n, color: colorOf(i) }));
+  const whoSlices: Slice[] = groups.map((g, i) => ({
+    key: g.group, label: groupLabel(g.group),
+    value: notTakenTest ? g.n - (g.tests[notTakenTest.id]?.wrote ?? 0) : g.n, color: colorOf(i),
+  }));
+  const whoTotal = whoSlices.reduce((a, s) => a + s.value, 0);
   const selectedSlices: Slice[] = groups
     .map((g, i) => ({ key: g.group, label: groupLabel(g.group), value: g.selected, color: colorOf(i) }))
     .filter(s => s.value > 0);
@@ -357,7 +377,7 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
                     <div className="text-xs text-ink-muted">
                       <Trans t={t} i18nKey="kpi.nOfWrote" values={{ n: s.passed, m: s.wrote }} components={{ b: <strong /> }} />
                     </div>
-                    <div className="text-[0.7rem] text-ink-faint">
+                    <div className="text-xs text-ink-muted">
                       {t('kpi.avgScore', { score: Math.round(s.avgScore) })}
                     </div>
                   </div>
@@ -368,7 +388,7 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
                       [t('test.avgScore'), fmtPct(s.avgScore), toneColor(s.avgScore)],
                     ] as [string, string, string | undefined][]).map(([label, value, color]) => (
                       <div key={label} className="min-w-0 rounded-xl bg-surface-sunken px-2 py-3">
-                        <dt className="text-[0.7rem] leading-tight text-ink-muted sm:text-xs">{label}</dt>
+                        <dt className="text-xs font-medium leading-tight text-ink-muted sm:text-sm">{label}</dt>
                         <dd className="font-display text-xl font-extrabold text-ink sm:text-2xl" style={color ? { color } : undefined}>{value}</dd>
                       </div>
                     ))}
@@ -376,10 +396,10 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
                 </div>
                 <h4 className="mb-2 text-sm font-semibold text-ink">{t('test.bandsTitle')}</h4>
                 <StackedBar parts={[
-                  { key: 'ex', label: t('test.bandExcellent', { from: excellentFrom }), value: s.bands.excellent, color: BAND_COLORS.excellent },
-                  { key: 'ok', label: t('test.bandPassed', { from: test.passMark, to: excellentFrom - 1 }), value: s.bands.passed, color: BAND_COLORS.passed },
-                  { key: 'near', label: t('test.bandNear', { from: Math.max(0, test.passMark - 20), to: test.passMark - 1 }), value: s.bands.nearMiss, color: BAND_COLORS.nearMiss },
                   { key: 'low', label: t('test.bandSupport', { below: Math.max(0, test.passMark - 20) }), value: s.bands.support, color: BAND_COLORS.support },
+                  { key: 'near', label: t('test.bandNear', { from: Math.max(0, test.passMark - 20), to: test.passMark - 1 }), value: s.bands.nearMiss, color: BAND_COLORS.nearMiss },
+                  { key: 'ok', label: t('test.bandPassed', { from: test.passMark, to: excellentFrom - 1 }), value: s.bands.passed, color: BAND_COLORS.passed },
+                  { key: 'ex', label: t('test.bandExcellent', { from: excellentFrom }), value: s.bands.excellent, color: BAND_COLORS.excellent },
                 ]} />
               </Section>
             );
@@ -416,26 +436,17 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
       {/* Compare groups, on everything */}
       {dims.length > 0 && (
         <Section icon={<Users />} title={t('compare.title')} subtitle={t('compare.subtitle')}>
-          <ActiveFilterBar
-            filters={filters}
-            groupLabel={groupLabel}
-            onClear={clearFilter}
-            filteredCount={users.length}
-            totalCount={data.users.length}
-          />
-          <ChipRow
-            label={t('compare.splitBy')}
-            items={dims.map(d => ({ key: d, label: t(`dim.${d}`) }))}
-            value={dim}
-            onChange={k => setDim(k as typeof dim)}
-          />
-          <div className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,26rem)_1fr]">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,26rem)_1fr]">
             <div>
-              <h4 className="mb-3 text-sm font-semibold text-ink">{t('compare.who', { dim: t(`dim.${dim}`) })}</h4>
+              <h4 className="mb-3 text-base font-semibold text-ink">
+                {notTakenTest
+                  ? t('compare.whoNotTaken', { dim: t(`dim.${dim}`), test: notTakenTest.label })
+                  : t('compare.who', { dim: t(`dim.${dim}`) })}
+              </h4>
               <Donut
                 slices={whoSlices}
-                centerValue={compareBase.length}
-                centerLabel={t('compare.learners')}
+                centerValue={notTakenTest ? whoTotal : compareBase.length}
+                centerLabel={notTakenTest ? t('compare.notTakenCenter') : t('compare.learners')}
                 activeKey={activeGroup}
                 onSelect={toggleFocus}
                 selectHint={t('compare.clickHint')}
@@ -581,7 +592,8 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
       {rankedLearners.length > 0 && (
         <Section
           icon={<Award />}
-          title={topK === 'all' ? t('top.allTitle') : t('top.titleK', { count: topK })}
+          title={topK === 'all' ? t('top.allTitle')
+            : rankDir === 'top' ? t('top.titleK', { count: topK }) : t('top.bottomK', { count: topK })}
           subtitle={t('top.subtitle')}
         >
           {/* Controls: Search, F2F filter, Top K selector */}
@@ -606,35 +618,21 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
               )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-1.5 text-xs text-ink-muted">
-                <span className="font-semibold">{t('top.f2fLabel')}</span>
-                <select
-                  value={f2fFilter}
-                  onChange={e => setF2fFilter(e.target.value as typeof f2fFilter)}
-                  className="cursor-pointer rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
-                >
-                  <option value="all">{t('top.f2fAll')}</option>
-                  <option value="selected">{t('top.f2fSelected')}</option>
-                  <option value="not_selected">{t('top.f2fNotSelected')}</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-1.5 text-xs text-ink-muted">
-                <span className="font-semibold">{t('top.showLabel')}</span>
-                <select
-                  value={topK}
-                  onChange={e => setTopK(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                  className="cursor-pointer rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-semibold text-ink focus:border-primary focus:outline-none"
-                >
-                  <option value={5}>Top 5</option>
-                  <option value={10}>Top 10</option>
-                  <option value={20}>Top 20</option>
-                  <option value={50}>Top 50</option>
-                  <option value="all">{t('top.showAll')}</option>
-                </select>
-              </div>
+            <div className="flex items-center gap-1.5 text-sm text-ink-muted">
+              <span className="font-semibold">{t('top.f2fLabel')}</span>
+              <select
+                value={f2fFilter}
+                onChange={e => setF2fFilter(e.target.value as typeof f2fFilter)}
+                className="cursor-pointer rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
+              >
+                <option value="all">{t('top.f2fAll')}</option>
+                <option value="selected">{t('top.f2fSelected')}</option>
+                <option value="not_selected">{t('top.f2fNotSelected')}</option>
+              </select>
             </div>
+          </div>
+          <div className="mb-4">
+            <CountPicker n={topK} onN={setTopK} dir={rankDir} onDir={setRankDir} />
           </div>
 
           {sortedLearners.length === 0 ? (
@@ -644,7 +642,7 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[40rem] text-sm">
-                <thead className="text-xs uppercase tracking-wide text-ink-muted">
+                <thead className="sticky top-0 z-[1] bg-surface text-xs uppercase tracking-wide text-ink-muted">
                   <tr>
                     {renderSortHeader('rank', '#', 'left', 'w-12')}
                     {renderSortHeader('name', t('top.learner'), 'left')}
@@ -661,7 +659,7 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
                       <td className="py-2"><RankBadge rank={rank} /></td>
                       <td className="py-2">
                         <div className="font-semibold text-ink">{u.name}</div>
-                        <div className="text-xs text-ink-faint">{u.email}</div>
+                        <div className="text-xs text-ink-muted">{u.email}</div>
                       </td>
                       <td className="py-2 text-ink-muted">{u.profile?.cadre ?? '—'}</td>
                       <td className="py-2 text-ink-muted">{u.profile?.block ?? '—'}</td>

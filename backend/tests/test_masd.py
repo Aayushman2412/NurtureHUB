@@ -546,3 +546,50 @@ def test_settings_reject_tranche_before_training():
         SettingsIn(targets=[{"from": "2026-06-01", "anc": 1}, {"from": "2026-06-01", "anc": 2}])
     with pytest.raises(ValidationError):
         SettingsIn(batches=[{"name": "A", "end_date": "2026-06-01"}, {"name": "a ", "end_date": "2026-06-02"}])
+
+
+# ── Review of 3 Oct 2026 ───────────────────────────────────────────────────
+
+
+def test_severe_forms_are_counted_below_minus_three(report):
+    prev = report["outcomes"]["prevalence"]["overall"]
+    for ind in R.SEVERE_INDICATORS:
+        assert set(prev[ind]) >= {"bv", "av", "lv", "abs_change", "rel_change"}
+        base = R.SEVERE_OF[ind]
+        for p in ("bv", "av", "lv"):
+            if prev[base][p] is not None and prev[ind][p] is not None:
+                assert prev[ind][p] <= prev[base][p], "below −3 SD is a subset of below −2 SD"
+
+
+def test_nfhs_first_year_is_weighted_by_sample_size():
+    assert R.combined_prevalence(28.8, 1000, 24.8, 1000) == 26.8
+    assert R.combined_prevalence(30.0, 300, 20.0, 100) == 27.5
+    assert R.combined_prevalence(30.0, None, 20.0, 100) is None, "no sample size, no combined figure"
+    data = _project()
+    data.benchmarks = {"label": "NFHS-5", "age_bands": {
+        "lt6": {"stunting": 30.0, "sam": 4.0, "n": 300}, "m6_11": {"stunting": 20.0, "sam": 2.0, "n": 100}}}
+    lt12 = E.compute(data, AS_OF)["outcomes"]["benchmarks_lt12"]
+    assert (lt12["stunting"], lt12["sam"], lt12["n"]) == (27.5, 3.5, 400)
+    assert lt12["wasting"] is None
+    assert E.compute(_project(), AS_OF)["outcomes"]["benchmarks_lt12"] is None, "the default has no sample sizes"
+
+
+def test_settings_take_sample_sizes_severe_and_under5():
+    from pydantic import ValidationError
+
+    from app.routers.masd import SettingsIn
+
+    s = SettingsIn(benchmarks={"label": "NFHS-5", "age_bands": {"lt6": {"stunting": 28.8, "sam": 3.1, "n": 1200}},
+                               "under5": {"stunting": 38.0, "severe_stunting": 14.0}})
+    dumped = s.benchmarks.model_dump()
+    assert dumped["age_bands"]["lt6"]["n"] == 1200 and dumped["under5"]["severe_stunting"] == 14.0
+    with pytest.raises(ValidationError):
+        SettingsIn(benchmarks={"label": "x", "age_bands": {"lt6": {"n": -5}}})
+
+
+def test_pnc_split_is_one_setting():
+    from app.routers.metadata import programme_constants
+
+    out = programme_constants()
+    assert out == {"pnc_split_days": R.FIVE_MONTHS_DAYS, "pnc_split_months": R.PNC_SPLIT_MONTHS}
+    assert R.ADOPTION_TYPE_LABELS[R.PNC_LT5] == f"PNC <{R.PNC_SPLIT_MONTHS}M"

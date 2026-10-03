@@ -180,7 +180,7 @@ const RunsPanel: React.FC<RunsPanelProps> = ({
                 <div className="flex items-center gap-2">
                   <span className="font-display text-sm font-bold text-ink">#{run.id}</span>
                   {variantLabels && (
-                    <span className="rounded bg-surface-sunken px-1.5 py-0.5 text-[11px] font-semibold text-ink-muted">
+                    <span className="rounded bg-surface-sunken px-1.5 py-0.5 text-[12px] font-semibold text-ink-muted">
                       {variantLabels[run.variant] || run.variant}
                     </span>
                   )}
@@ -367,7 +367,7 @@ const RunsPanel: React.FC<RunsPanelProps> = ({
                                 <span className="min-w-0">
                                   <span className="block truncate font-medium text-ink">{file.name}</span>
                                   {file.path !== file.name && (
-                                    <span className="block truncate text-[11px] text-ink-faint">{file.path}</span>
+                                    <span className="block truncate text-[12px] text-ink-faint">{file.path}</span>
                                   )}
                                 </span>
                               </span>

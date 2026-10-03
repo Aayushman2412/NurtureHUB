@@ -197,7 +197,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
                     x={sx(tk.value)}
                     y={M.top + PLOT_H + 16}
                     textAnchor="middle"
-                    className="fill-ink-muted text-[11px]"
+                    className="fill-ink-muted text-[14px]"
                   >
                     {tk.label}
                   </text>
@@ -218,7 +218,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
                 x={M.left - 7}
                 y={sy(tk) + 3.5}
                 textAnchor="end"
-                className="fill-ink-muted text-[11px]"
+                className="fill-ink-muted text-[14px]"
               >
                 {tk}
               </text>
@@ -230,7 +230,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
             x={M.left + PLOT_W / 2}
             y={VIEW_H - 6}
             textAnchor="middle"
-            className="fill-ink-muted text-[12px] font-semibold"
+            className="fill-ink-muted text-[15px] font-semibold"
           >
             {xLabel}
           </text>
@@ -239,7 +239,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
             y={M.top + PLOT_H / 2}
             textAnchor="middle"
             transform={`rotate(-90 13 ${M.top + PLOT_H / 2})`}
-            className="fill-ink-muted text-[12px] font-semibold"
+            className="fill-ink-muted text-[15px] font-semibold"
           >
             {yLabel}
           </text>
@@ -263,7 +263,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
               key={`lbl-${p.key}`}
               x={M.left + PLOT_W + 5}
               y={Math.max(M.top + 8, Math.min(M.top + PLOT_H, p.labelY + 3.5))}
-              className="text-[11px] font-bold"
+              className="text-[12px] font-bold"
               fill={percentileColor(p.key)}
             >
               {t(`percentiles.${p.key}`)}
@@ -311,7 +311,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
               x={M.left + PLOT_W / 2}
               y={M.top + PLOT_H / 2}
               textAnchor="middle"
-              className="fill-ink-faint text-[13px]"
+              className="fill-ink-faint text-[15px]"
             >
               {t('chart.noData')}
             </text>

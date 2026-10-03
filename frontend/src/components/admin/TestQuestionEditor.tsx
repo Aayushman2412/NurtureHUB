@@ -69,14 +69,14 @@ const ImagePicker: React.FC<ImagePickerProps> = ({ url, onChange, small, label }
           className={cn(
             'flex items-center gap-1.5 rounded-lg border border-dashed border-border-strong/60 px-2.5 text-ink-muted',
             'hover:border-coral-500 hover:text-coral-600 cursor-pointer disabled:opacity-50 dark:hover:text-coral-300',
-            small ? 'h-10 text-[11px]' : 'h-9 text-xs',
+            small ? 'h-10 text-[12px]' : 'h-9 text-xs',
           )}
         >
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <ImagePlus className="size-3.5" />}
           {small ? '' : t('images.add')}
         </button>
       )}
-      {error && <span className="text-[11px] text-error-600">{error}</span>}
+      {error && <span className="text-[12px] text-error-600">{error}</span>}
     </div>
   );
 };
@@ -128,12 +128,12 @@ const TestQuestionEditor: React.FC<Props> = ({
       <div className="mt-3">
         <FieldLabel size="sm">{t('editor.questionImage')}</FieldLabel>
         <ImagePicker url={value.image_url} onChange={url => set({ image_url: url })} label={t('editor.questionImage')} />
-        <p className="mt-1 text-[11px] text-ink-faint">{t('editor.questionImageHint')}</p>
+        <p className="mt-1 text-[12px] text-ink-faint">{t('editor.questionImageHint')}</p>
       </div>
 
       <div className="mt-4">
         <FieldLabel size="sm">{t('editor.options')}</FieldLabel>
-        <p className="mb-2 text-[11px] text-ink-faint">{t('editor.optionsHint')}</p>
+        <p className="mb-2 text-[12px] text-ink-faint">{t('editor.optionsHint')}</p>
         <div className="flex flex-col gap-2">
           {OPTION_LABELS.map(label => {
             const key = `option_${label.toLowerCase()}` as keyof AdminQuestion;
@@ -187,14 +187,14 @@ const TestQuestionEditor: React.FC<Props> = ({
           placeholder={t('editor.marksDefault', { n: defaultMarks })}
           onChange={e => set({ marks: parseInt(e.target.value, 10) || 0 })}
         />
-        <p className="mt-1 text-[11px] text-ink-faint">{t('editor.marksHint', { n: defaultMarks })}</p>
+        <p className="mt-1 text-[12px] text-ink-faint">{t('editor.marksHint', { n: defaultMarks })}</p>
       </div>
 
       {locked && <p className="mt-3 text-[13px] text-warning-700 dark:text-warning-300">{t('editor.lockedNote')}</p>}
       {error && <p className="mt-3 text-[13px] text-error-600">{error}</p>}
 
       <div className="mt-4 flex items-center justify-between gap-3">
-        <span className="text-[11px] text-ink-faint">
+        <span className="text-[12px] text-ink-faint">
           {canSave ? '' : t('editor.needTwoOptions')}
         </span>
         <div className="flex gap-2">

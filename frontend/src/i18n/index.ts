@@ -91,7 +91,9 @@ i18n
     supportedLngs: SUPPORTED_LANGUAGES.map(l => l.code),
     defaultNS: 'common',
     ns: NAMESPACES as unknown as string[],
-    interpolation: { escapeValue: false }, // React already escapes
+    // React already escapes. pncM / pncDays: the PNC adoption split, kept in
+    // step with the server by lib/programme.ts.
+    interpolation: { escapeValue: false, defaultVariables: { pncM: 5, pncDays: 150 } },
     react: { useSuspense: false }, // resources are bundled (sync) — no Suspense boundary needed
     detection: {
       order: ['localStorage', 'navigator'],

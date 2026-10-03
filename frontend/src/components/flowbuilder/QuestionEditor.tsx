@@ -248,7 +248,7 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
               />
             </div>
           </div>
-          <p className="text-[11px] leading-snug text-ink-faint">
+          <p className="text-[12px] leading-snug text-ink-faint">
             Values outside the range are still saved but flagged red to the learner and admin.
           </p>
         </div>
@@ -261,7 +261,7 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
           <FieldLabel size="sm" className="mb-0">
             Learner view — this question
           </FieldLabel>
-          <span className="text-[11px] text-ink-faint">
+          <span className="text-[12px] text-ink-faint">
             {overrideCount > 0 ? `${overrideCount} override${overrideCount === 1 ? '' : 's'}` : 'form defaults'}
           </span>
         </div>
@@ -323,12 +323,12 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
               <button
                 type="button"
                 onClick={() => setBulkOpen(o => !o)}
-                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-primary-ink hover:underline cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-[12px] font-bold text-primary-ink hover:underline cursor-pointer"
               >
                 <ClipboardPaste className="size-3.5" />
                 {bulkOpen ? 'Hide paste box' : 'Paste a list'}
               </button>
-              <span className="text-[11px] text-ink-faint">{question.options.length}</span>
+              <span className="text-[12px] text-ink-faint">{question.options.length}</span>
             </div>
           </div>
 
@@ -342,7 +342,7 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
                 onChange={e => setBulkText(e.target.value)}
               />
               <div className="mt-2 flex items-center justify-between gap-3">
-                <p className="text-[11px] leading-snug text-ink-faint">
+                <p className="text-[12px] leading-snug text-ink-faint">
                   One option per line. Verdicts and coaching actions are set afterwards, per option.
                 </p>
                 <button
@@ -385,7 +385,7 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
             <Plus className="size-4" /> Add option
           </button>
           {branchable && question.options.length > 0 && (
-            <p className="mt-2 text-[11px] leading-snug text-ink-faint">
+            <p className="mt-2 text-[12px] leading-snug text-ink-faint">
               Answers with their own branch override the default next step.
             </p>
           )}

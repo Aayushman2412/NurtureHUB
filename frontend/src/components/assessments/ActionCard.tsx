@@ -111,7 +111,7 @@ const ActionCard: React.FC<ActionCardProps> = ({ item, index, verdictDef = null 
 
   return (
     <Card className="p-5">
-      <div className="text-[11px] font-bold uppercase tracking-wider text-ink-faint">
+      <div className="text-[12px] font-bold uppercase tracking-wider text-ink-faint">
         {t('plan.stepN', { n: index + 1 })}
       </div>
       <h4 className="mt-1 font-display font-bold leading-snug text-ink">{item.question}</h4>

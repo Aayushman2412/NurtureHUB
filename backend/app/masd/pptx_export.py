@@ -964,11 +964,16 @@ def _nfhs(d: Deck):
     bands = b.get("age_bands") or {}
     if bands:
         s = d.slide(f"{b.get('label') or 'NFHS'}: malnutrition by age group", "The benchmark the project's cohort is read against")
-        rows = [["Indicator", R.BAND_LABELS[R.BAND_LT6], R.BAND_LABELS[R.BAND_6_11]]]
-        for ind in R.INDICATORS:
+        lt12 = d.r["outcomes"].get("benchmarks_lt12") or {}
+        under5 = b.get("under5") or {}
+        rows = [["Indicator", R.BAND_LABELS[R.BAND_LT6], R.BAND_LABELS[R.BAND_6_11], "<1 year (weighted)", "Under 5"]]
+        for ind in R.ALL_INDICATORS:
             rows.append([R.INDICATOR_LABELS[ind], _pct((bands.get(R.BAND_LT6) or {}).get(ind)),
-                         _pct((bands.get(R.BAND_6_11) or {}).get(ind))])
-        d.table(s, MARGIN, Inches(1.4), Inches(5.5), rows, col_w=[2, 1.6, 1.6], size=14)
+                         _pct((bands.get(R.BAND_6_11) or {}).get(ind)), _pct(lt12.get(ind)), _pct(under5.get(ind))])
+        n_lt6, n_611 = (bands.get(R.BAND_LT6) or {}).get("n"), (bands.get(R.BAND_6_11) or {}).get("n")
+        rows.append(["Sample size (n)", _num(n_lt6) if n_lt6 else "—", _num(n_611) if n_611 else "—",
+                     _num(lt12["n"]) if lt12.get("n") else "—", _num(under5.get("n")) if under5.get("n") else "—"])
+        d.table(s, MARGIN, Inches(1.4), Inches(5.6), rows, col_w=[1.9, 1.0, 1.0, 1.1, 0.9], size=12)
         d.chart(s, XL_CHART_TYPE.COLUMN_CLUSTERED, MARGIN + Inches(5.9), Inches(1.3), Inches(6.3), Inches(4.3),
                 [R.INDICATOR_LABELS[i] for i in R.INDICATORS],
                 [(R.BAND_LABELS[bd], [(bands.get(bd) or {}).get(i) for i in R.INDICATORS]) for bd in (R.BAND_LT6, R.BAND_6_11)],
@@ -982,7 +987,7 @@ def _prev_rows(p: Dict[str, Any], bench: Optional[Dict[str, Any]]):
         head += [f"<6m {bench.get('label') or 'NFHS'}", f"6–11m {bench.get('label') or 'NFHS'}"]
     head += ["BV", "AV (baseline)", "LV (endline)", "Abs diff (AV→LV)", "Rel diff (AV→LV)"]
     rows = [head]
-    for ind in R.INDICATORS:
+    for ind in R.ALL_INDICATORS:
         x = p[ind]
         row = [R.INDICATOR_LABELS[ind]]
         if bands:
@@ -998,17 +1003,19 @@ def _prevalence_slide(d: Deck, title: str, p: Dict[str, Any], findings_key: str)
     if not p.get("n"):
         return
     bench = d.r["outcomes"].get("benchmarks")
-    s = d.slide(f"{title} (n={p['n']:,})", "Share below −2 SD: stunting (length-for-age), underweight (weight-for-age), wasting (weight-for-length)")
+    s = d.slide(f"{title} (n={p['n']:,})", "Share below −2 SD (stunting, underweight, wasting) and below −3 SD (the severe forms; SAM = severe wasting)")
     rows = _prev_rows(p, bench)
     ncol = len(rows[0])
-    d.table(s, MARGIN, Inches(1.4), SLIDE_W - 2 * MARGIN, rows, col_w=[1.8] + [1.3] * (ncol - 1), size=13,
+    d.table(s, MARGIN, Inches(1.4), SLIDE_W - 2 * MARGIN, rows, col_w=[2.0] + [1.3] * (ncol - 1), size=11,
             fills=lambda r_, c, v: _prev_tint(float(v.rstrip("%"))) if c >= 1 and isinstance(v, str) and v.endswith("%")
             and "pts" not in v and not v.startswith(("+", "-")) else None)
-    d.chart(s, XL_CHART_TYPE.COLUMN_CLUSTERED, MARGIN, Inches(3.3), Inches(7.2), Inches(3.4),
+    top = Inches(1.6) + Pt(11 * 2.05) * len(rows)
+    d.chart(s, XL_CHART_TYPE.COLUMN_CLUSTERED, MARGIN, top, Inches(7.2), SLIDE_H - top - Inches(0.55),
             [R.INDICATOR_LABELS[i] for i in R.INDICATORS],
             [("Baseline (AV)", [p[i]["av"] for i in R.INDICATORS]), ("Last visit (LV)", [p[i]["lv"] for i in R.INDICATORS])],
             [THEN, CORAL])
-    d.findings(s, d.r["insights"].get(findings_key, []), MARGIN + Inches(7.5), Inches(3.5), Inches(4.7), Inches(3), size=12)
+    d.findings(s, d.r["insights"].get(findings_key, []), MARGIN + Inches(7.5), top + Inches(0.1), Inches(4.7),
+               SLIDE_H - top - Inches(0.6), size=12)
 
 
 def _compliance(d: Deck):
@@ -1023,7 +1030,7 @@ def _compliance(d: Deck):
         s = d.slide(f"Minimum PNC visit compliance: {who} (n={n:,})",
                     f"Compliant = {rule['min_visits']}+ growth checks with ≥{rule['min_follow_up_days']} days of follow-up")
         rows = [["Indicator", "Group", "n", "BV", "AV (baseline)", "LV (endline)"]]
-        for ind in R.INDICATORS:
+        for ind in R.ALL_INDICATORS:
             for label, g in (("Yes", c["yes"]), ("No", c["no"])):
                 rows.append([R.INDICATOR_LABELS[ind] if label == "Yes" else "", label, g.get("n", 0),
                              _pct(g[ind]["bv"]) if g.get("n") else "—", _pct(g[ind]["av"]) if g.get("n") else "—",
@@ -1046,21 +1053,22 @@ def _bands(d: Deck):
             continue
         s = d.slide(f"Age {R.BAND_LABELS[band]}: MT+FL vs other learners (AV vs LV)")
         rows = [["Indicator", "MT+FL AV", "MT+FL LV", "MT+FL rel diff", "Other AV", "Other LV", "Other rel diff"]]
-        for ind in R.INDICATORS:
+        for ind in R.ALL_INDICATORS:
             def cell(g, p):
                 return f"{_pct(g[ind][p])} (n={g['n']})" if g.get("n") else "—"
 
             def rel(g):
                 return "—" if not g.get("n") or g[ind]["rel_change"] is None else f"{g[ind]['rel_change']:+.1f}%"
             rows.append([R.INDICATOR_LABELS[ind], cell(m, "av"), cell(m, "lv"), rel(m), cell(o, "av"), cell(o, "lv"), rel(o)])
-        d.table(s, MARGIN, Inches(1.35), SLIDE_W - 2 * MARGIN, rows, col_w=[1.7, 1.6, 1.6, 1.4, 1.6, 1.6, 1.4], size=12)
+        d.table(s, MARGIN, Inches(1.35), SLIDE_W - 2 * MARGIN, rows, col_w=[1.9, 1.6, 1.6, 1.4, 1.6, 1.6, 1.4], size=11)
         get = lambda g, p: [g[i][p] if g.get("n") else None for i in R.INDICATORS]  # noqa: E731
-        d.chart(s, XL_CHART_TYPE.COLUMN_CLUSTERED, MARGIN, Inches(3.2), Inches(7.4), Inches(3.5),
+        top = Inches(1.55) + Pt(11 * 2.05) * len(rows)
+        d.chart(s, XL_CHART_TYPE.COLUMN_CLUSTERED, MARGIN, top, Inches(7.4), SLIDE_H - top - Inches(0.55),
                 [R.INDICATOR_LABELS[i] for i in R.INDICATORS],
                 [("MT+FL AV", get(m, "av")), ("MT+FL LV", get(m, "lv")), ("Other AV", get(o, "av")), ("Other LV", get(o, "lv"))],
                 ["9FC5CC", TEAL, "F2B8AE", CORAL], label_size=8)
         items = [f for f in d.r["insights"]["bands"] if R.BAND_LABELS[band] in f["text"]]
-        d.findings(s, items, MARGIN + Inches(7.7), Inches(3.4), Inches(4.5), Inches(3.2), size=12)
+        d.findings(s, items, MARGIN + Inches(7.7), top + Inches(0.1), Inches(4.5), SLIDE_H - top - Inches(0.6), size=12)
 
     bench = (d.r["outcomes"].get("benchmarks") or {})
     bb = bench.get("age_bands") or {}
@@ -1070,14 +1078,14 @@ def _bands(d: Deck):
         a = bands[band]["all"]
         d.text(s, MARGIN, y, Inches(10), Inches(0.35), f"Age {R.BAND_LABELS[band]} (n={a.get('n', 0):,})", size=14, bold=True)
         rows = [["Indicator"] + (["NFHS"] if bb else []) + ["AV (baseline)", "LV (endline)", "Abs diff (AV→LV)", "Rel diff (AV→LV)"]]
-        for ind in R.INDICATORS:
+        for ind in R.ALL_INDICATORS:
             x = a[ind]
             rows.append([R.INDICATOR_LABELS[ind]] + ([_pct((bb.get(band) or {}).get(ind))] if bb else [])
                         + [_pct(x["av"]), _pct(x["lv"]),
                            "—" if x["abs_change"] is None else f"{x['abs_change']:+.1f} pts",
                            "—" if x["rel_change"] is None else f"{x['rel_change']:+.1f}%"])
-        d.table(s, MARGIN, y + Inches(0.4), SLIDE_W - 2 * MARGIN, rows, size=12)
-        y += Inches(2.6)
+        d.table(s, MARGIN, y + Inches(0.4), SLIDE_W - 2 * MARGIN, rows, size=11)
+        y += Inches(0.6) + Pt(11 * 2.05) * len(rows)
 
 
 def _data_fixes(d: Deck):

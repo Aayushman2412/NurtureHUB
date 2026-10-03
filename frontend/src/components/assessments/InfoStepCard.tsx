@@ -41,7 +41,7 @@ const InfoStepCard: React.FC<InfoStepCardProps> = ({ node }) => {
     <div>
       <div className="mb-4 flex items-center gap-2 text-primary-ink">
         <Info className="size-5" aria-hidden />
-        <span className="text-[11px] font-bold uppercase tracking-wider">{t('runner.infoBadge')}</span>
+        <span className="text-[12px] font-bold uppercase tracking-wider">{t('runner.infoBadge')}</span>
       </div>
 
       {node.title.trim() && (

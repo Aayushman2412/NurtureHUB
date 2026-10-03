@@ -152,11 +152,11 @@ const TutorialsPage: React.FC = () => {
                         <div className="flex size-13 items-center justify-center rounded-full bg-cream-950/40 shadow-md transition-transform group-hover:scale-110">
                           <Play className="ml-0.5 size-6 fill-white stroke-none" />
                         </div>
-                        <span className="absolute left-3 top-3 rounded bg-cream-950/60 px-2 py-1 text-[11px] font-bold tracking-wide">
+                        <span className="absolute left-3 top-3 rounded bg-cream-950/60 px-2 py-1 text-[12px] font-bold tracking-wide">
                           {tut.module_number}
                         </span>
                         {tut.is_completed && (
-                          <span className="absolute right-3 top-3 flex items-center gap-1 rounded bg-success-500 px-2 py-1 text-[11px] font-bold">
+                          <span className="absolute right-3 top-3 flex items-center gap-1 rounded bg-success-500 px-2 py-1 text-[12px] font-bold">
                             <CheckCircle className="size-3" /> {t('completedBadge')}
                           </span>
                         )}

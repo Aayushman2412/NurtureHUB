@@ -288,7 +288,7 @@ const TutorialPlayerPage: React.FC = () => {
 
                           <div className="min-w-0 flex-1">
                             <span className="block truncate text-[13px] font-semibold">{tut.title}</span>
-                            <span className={cn('text-[11px]', isPlaying ? 'text-primary-ink' : 'text-ink-faint')}>
+                            <span className={cn('text-[12px]', isPlaying ? 'text-primary-ink' : 'text-ink-faint')}>
                               {t('player.watchStat', {
                                 minutes: tut.duration_minutes,
                                 pct: Math.round(tut.watch_pct || 0),

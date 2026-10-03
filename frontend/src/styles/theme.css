@@ -85,6 +85,12 @@
   --font-display: 'Figtree', 'Noto Sans Devanagari', ui-sans-serif, system-ui, sans-serif;
   --font-body: 'Nunito Sans', 'Noto Sans Devanagari', ui-sans-serif, system-ui, sans-serif;
 
+  /* Readability (review of 3 Oct 2026): dashboards are read on district-office
+     laptops at arm's length. Captions (text-xs) are 13px, not Tailwind's 12px,
+     and nothing in the app is set smaller than 12px. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.125rem;
+
   /* ── Radius (nudged up for warmer geometry) ────────────────── */
   --radius-sm: 6px;
   --radius-md: 8px;

@@ -379,7 +379,7 @@ const AdminResultsPage: React.FC = () => {
                     <div className="font-bold text-ink">
                       {u.summary.tutorials_completed}/{u.summary.total_tutorials}
                     </div>
-                    <div className="text-[0.7rem] text-ink-faint">
+                    <div className="text-xs text-ink-faint">
                       {t('table.watchedLine', { pct: u.summary.avg_watch_pct, done: u.summary.quizzes_completed, skipped: u.summary.quizzes_skipped })}
                     </div>
                   </Td>
@@ -387,7 +387,7 @@ const AdminResultsPage: React.FC = () => {
                     <span className={cn('font-display font-extrabold', scoreColor(u.summary.performance_score))}>
                       {u.summary.performance_score}
                     </span>
-                    <span className="text-[0.7rem] text-ink-faint">{t('table.outOf100')}</span>
+                    <span className="text-xs text-ink-faint">{t('table.outOf100')}</span>
                   </Td>
                   {data.tests.map(test => {
                     const r = u.tests[String(test.id)];
@@ -400,7 +400,7 @@ const AdminResultsPage: React.FC = () => {
                         <div className={cn('font-bold', r.is_passed ? 'text-success-600' : 'text-error-600')}>
                           {r.best_score !== null ? `${Math.round(r.best_score)}%` : '—'} {r.is_passed ? '✓' : '✗'}
                         </div>
-                        <div className={cn('text-[0.7rem]', riskAlert ? 'text-error-600' : 'text-ink-faint')}>
+                        <div className={cn('text-xs', riskAlert ? 'text-error-600' : 'text-ink-faint')}>
                           {t('table.riskLine', { risk: r.max_risk_score, tabs: r.tab_switches, fs: r.fullscreen_exits, cp: r.copy_paste_events })}
                           {r.was_flagged ? ` • ${t('table.flagged')}` : ''}
                         </div>
@@ -537,7 +537,7 @@ const AdminResultsPage: React.FC = () => {
                           {batches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                         </select>
                         {sel.training_end && (
-                          <span className="text-[0.68rem] text-ink-faint">
+                          <span className="text-xs text-ink-faint">
                             {t('selectionTable.ended', { date: new Date(sel.training_end).toLocaleDateString() })}
                           </span>
                         )}

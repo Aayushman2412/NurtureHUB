@@ -306,6 +306,12 @@ class Settings(BaseSettings):
     ALLOW_DEV_ADMIN: bool = Field(default=True, validation_alias="ALLOW_DEV_ADMIN")
     DEV_ADMIN_PASSWORD: str = Field(default="admin123", validation_alias="DEV_ADMIN_PASSWORD")
 
+    # Age (days) at adoption that splits PNC adoptions into "under" and "from"
+    # (150 = 5 months). The programme may move it to 180 (6 months): set
+    # PNC_SPLIT_DAYS=180 and restart — the MASD rules, the growth monitor's
+    # cohorts and every label follow (served at /api/metadata/programme).
+    PNC_SPLIT_DAYS: int = Field(default=150, ge=30, le=365, validation_alias="PNC_SPLIT_DAYS")
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

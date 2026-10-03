@@ -59,7 +59,7 @@ const LandingPage: React.FC = () => {
           </span>
           <div>
             <span className="block font-display text-lg font-extrabold leading-tight">{t('common:brand.name')}</span>
-            <span className="hidden text-[10px] font-bold uppercase tracking-widest text-primary-ink sm:block">
+            <span className="hidden text-xs font-bold uppercase tracking-widest text-primary-ink sm:block">
               {t('landing:nav.badge')}
             </span>
           </div>

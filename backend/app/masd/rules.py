@@ -26,7 +26,15 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
+from app.config import settings as _settings
+
 # ── Adoption types ─────────────────────────────────────────────────────────
+
+# A child adopted at this many days old or more is a "PNC ≥5 months" adoption.
+# One setting (PNC_SPLIT_DAYS, default 150) so the programme's planned move to
+# 180 days (6 months) is a config change, not a code change.
+FIVE_MONTHS_DAYS = _settings.PNC_SPLIT_DAYS
+PNC_SPLIT_MONTHS = round(FIVE_MONTHS_DAYS / 30)
 
 ANC = "anc"
 PNC_LT5 = "pnc_lt5"
@@ -35,13 +43,10 @@ UNKNOWN = "unknown"          # no pregnancy date and no child: cannot be typed
 ADOPTION_TYPES = (ANC, PNC_LT5, PNC_GE5)
 ADOPTION_TYPE_LABELS = {
     ANC: "ANC",
-    PNC_LT5: "PNC <5M",
-    PNC_GE5: "PNC ≥5M",
+    PNC_LT5: f"PNC <{PNC_SPLIT_MONTHS}M",
+    PNC_GE5: f"PNC ≥{PNC_SPLIT_MONTHS}M",
     UNKNOWN: "Not typed",
 }
-
-# A child adopted at this many days old or more is a "PNC ≥5 months" adoption.
-FIVE_MONTHS_DAYS = 150
 
 # ── Activities (one submitted assessment form = one activity) ──────────────
 
@@ -450,7 +455,25 @@ def role_group(role: Optional[str]) -> str:
 MALNUTRITION_Z = -2.0
 INDICATORS = ("stunting", "underweight", "wasting")
 INDICATOR_Z = {"stunting": "hfa", "underweight": "wfa", "wasting": "wfh"}
-INDICATOR_LABELS = {"stunting": "Stunting", "underweight": "Underweight", "wasting": "Wasting"}
+# The severe forms, below −3 SD (review of 3 Oct 2026). Severe wasting is
+# severe acute malnutrition (SAM) by weight-for-length.
+SEVERE_Z = -3.0
+SEVERE_INDICATORS = ("severe_stunting", "severe_underweight", "sam")
+SEVERE_OF = {"severe_stunting": "stunting", "severe_underweight": "underweight", "sam": "wasting"}
+ALL_INDICATORS = INDICATORS + SEVERE_INDICATORS
+INDICATOR_LABELS = {"stunting": "Stunting", "underweight": "Underweight", "wasting": "Wasting",
+                    "severe_stunting": "Severe stunting", "severe_underweight": "Severe underweight",
+                    "sam": "SAM (severe wasting)"}
+
+
+def combined_prevalence(p1: Optional[float], n1: Optional[float],
+                        p2: Optional[float], n2: Optional[float]) -> Optional[float]:
+    """One prevalence over two age bands, weighted by each band's sample
+    size: (p1·n1 + p2·n2) / (n1 + n2) — how the NFHS <6 and 6–11 month
+    figures give one for the first year of life."""
+    if None in (p1, n1, p2, n2) or (n1 or 0) + (n2 or 0) <= 0:
+        return None
+    return round((p1 * n1 + p2 * n2) / (n1 + n2), 1)
 
 # Age bands for the NFHS comparison (deck: "<6-month age band = ANC + PNC<5M
 # adoption subtypes combined; 6–11-month age band = PNC≥5M").

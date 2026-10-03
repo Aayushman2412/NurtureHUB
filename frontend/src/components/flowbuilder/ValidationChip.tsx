@@ -70,7 +70,7 @@ const ValidationChip: React.FC<ValidationChipProps> = ({ issues, onSelectIssue }
             </div>
           ) : (
             <>
-              <div className="px-2.5 pb-1.5 pt-1 text-[11px] font-semibold text-ink-faint">
+              <div className="px-2.5 pb-1.5 pt-1 text-[12px] font-semibold text-ink-faint">
                 {errors > 0 && `${errors} error${errors > 1 ? 's' : ''}`}
                 {errors > 0 && warnings > 0 && ' · '}
                 {warnings > 0 && `${warnings} warning${warnings > 1 ? 's' : ''}`}

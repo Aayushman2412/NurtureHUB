@@ -65,7 +65,7 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ media, onChange, label = 'Ima
           >
             <img src={resolveAssetUrl(m.url)} alt="" className="size-full object-cover" />
             {m.type === 'gif' && (
-              <span className="absolute bottom-0.5 left-0.5 rounded bg-cream-950/70 px-1 text-[9px] font-bold text-white">
+              <span className="absolute bottom-0.5 left-0.5 rounded bg-cream-950/70 px-1 text-xs font-bold text-white">
                 GIF
               </span>
             )}

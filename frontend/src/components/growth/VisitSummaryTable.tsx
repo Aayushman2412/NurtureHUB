@@ -139,7 +139,7 @@ export const GREEN_INK = 'text-sage-800 dark:text-sage-300';
 export const RED_INK = 'text-coral-800 dark:text-coral-300';
 
 const TH_BASE =
-  'whitespace-nowrap border-b border-r border-border-strong bg-surface-sunken px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-ink-muted';
+  'whitespace-nowrap border-b border-r border-border-strong bg-surface-sunken px-3 py-2 text-[12px] font-bold uppercase tracking-wide text-ink-muted';
 const TD_BASE = 'whitespace-nowrap border-r border-border-strong px-3 py-2';
 
 const VisitSummaryTable: React.FC<{ visits: GrowthVisitDetail[] }> = ({ visits }) => {

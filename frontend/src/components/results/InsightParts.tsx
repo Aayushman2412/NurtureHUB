@@ -170,19 +170,19 @@ export const ScoreCell: React.FC<{ value: number | null; sub?: string }> = ({ va
       >
         {fmtPct(value)}
       </span>
-      {sub && <div className="text-[0.7rem] text-ink-faint">{sub}</div>}
+      {sub && <div className="text-xs text-ink-muted">{sub}</div>}
     </td>
   );
 };
 
 export const InlineBar: React.FC<{ value: number; note?: string }> = ({ value, note }) => (
   <div className="flex items-center gap-2.5">
-    <span className="relative h-2.5 flex-1 rounded-full bg-surface-sunken">
+    <span className="relative h-3.5 flex-1 rounded-full bg-surface-sunken">
       <span className="absolute inset-y-0 left-0 rounded-full"
         style={{ width: `${Math.max(0, Math.min(100, value))}%`, background: toneColor(value), transition: 'width 500ms ease' }} />
     </span>
     <span className="w-11 text-right text-sm font-bold tabular-nums text-ink">{fmtPct(value)}</span>
-    {note && <span className="hidden text-xs text-ink-faint md:inline">{note}</span>}
+    {note && <span className="hidden text-xs text-ink-muted md:inline">{note}</span>}
   </div>
 );
 
@@ -216,6 +216,67 @@ export const FindingList: React.FC<{ findings: Finding[]; text: (f: Finding) => 
     </ul>
   )
 );
+
+export type CountValue = number | 'all';
+export type RankDir = 'top' | 'bottom';
+
+/**
+ * "Show [Top|Bottom] [ 10 ] — 10 · 20 · 50 · 100 · All": how many learners a
+ * ranked list shows, from which end. The box takes any number; the chips are
+ * the usual picks.
+ */
+export const CountPicker: React.FC<{
+  n: CountValue;
+  onN: (n: CountValue) => void;
+  dir?: RankDir;
+  onDir?: (d: RankDir) => void;
+  presets?: number[];
+}> = ({ n, onN, dir, onDir, presets = [10, 20, 50, 100] }) => {
+  const { t } = useTranslation('resultsInsights');
+  const [draft, setDraft] = React.useState(n === 'all' ? '' : String(n));
+  React.useEffect(() => { setDraft(n === 'all' ? '' : String(n)); }, [n]);
+  const commit = (raw: string) => {
+    const v = Math.floor(Number(raw));
+    if (raw.trim() && Number.isFinite(v) && v >= 1) onN(Math.min(v, 100000));
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      {onDir && dir && (
+        <div role="group" aria-label={t('pick.which')} className="inline-flex rounded-lg border border-border bg-surface-sunken p-0.5">
+          {(['top', 'bottom'] as RankDir[]).map(d => (
+            <button
+              key={d}
+              type="button"
+              aria-pressed={dir === d}
+              onClick={() => onDir(d)}
+              className={cn(
+                'cursor-pointer rounded-md px-3 py-1 text-sm font-semibold transition-colors',
+                dir === d ? 'bg-surface text-primary-ink shadow-(--shadow-card)' : 'text-ink-muted hover:text-ink',
+              )}
+            >
+              {t(`pick.${d}`)}
+            </button>
+          ))}
+        </div>
+      )}
+      <label className="inline-flex items-center gap-1.5 font-semibold text-ink-muted">
+        {t('pick.show')}
+        <input
+          type="text"
+          inputMode="numeric"
+          value={draft}
+          placeholder={t('pick.all')}
+          onChange={e => { const raw = e.target.value.replace(/[^0-9]/g, ''); setDraft(raw); commit(raw); }}
+          onBlur={() => setDraft(n === 'all' ? '' : String(n))}
+          className="w-16 rounded-lg border border-border bg-surface px-2 py-1 text-center text-sm font-bold text-ink focus:border-primary focus:outline-none"
+          aria-label={t('pick.howMany')}
+        />
+      </label>
+      {presets.map(p => <Chip key={p} active={n === p} onClick={() => onN(p)}>{p}</Chip>)}
+      <Chip active={n === 'all'} onClick={() => onN('all')}>{t('pick.all')}</Chip>
+    </div>
+  );
+};
 
 /** 1st gold, 2nd–3rd light gold, the rest grey. */
 export const RankBadge: React.FC<{ rank: number }> = ({ rank }) => (

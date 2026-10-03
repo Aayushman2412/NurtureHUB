@@ -41,7 +41,7 @@ const INFO_FORMS: FormKey[] = ['growth_monitoring', 'mother_protein_intake', 'an
 
 const Fact: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <div className="flex flex-col">
-    <span className="text-[11px] uppercase tracking-wide text-ink-faint">{label}</span>
+    <span className="text-[12px] uppercase tracking-wide text-ink-faint">{label}</span>
     <span className="text-sm font-medium text-ink">{value}</span>
   </div>
 );
@@ -129,16 +129,16 @@ const LapMatrix: React.FC<{ matrix: MatrixData }> = ({ matrix }) => {
       >
         <thead className="sticky top-0 z-20">
           <tr>
-            <th className="sticky left-0 z-10 w-12 bg-surface-sunken px-2 py-2 text-right text-[11px] font-bold uppercase tracking-wide text-ink-muted">
+            <th className="sticky left-0 z-10 w-12 bg-surface-sunken px-2 py-2 text-right text-[12px] font-bold uppercase tracking-wide text-ink-muted">
               #
             </th>
-            <th className="sticky left-12 z-10 min-w-44 max-w-60 md:min-w-72 md:max-w-96 bg-surface-sunken px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wide text-ink-muted">
+            <th className="sticky left-12 z-10 min-w-44 max-w-60 md:min-w-72 md:max-w-96 bg-surface-sunken px-3 py-2 text-left text-[12px] font-bold uppercase tracking-wide text-ink-muted">
               {t('casePage.question')}
             </th>
             {matrix.dates.map(date => (
               <th
                 key={date}
-                className="whitespace-nowrap bg-surface-sunken px-3 py-2 text-center text-[11px] font-semibold text-ink-muted"
+                className="whitespace-nowrap bg-surface-sunken px-3 py-2 text-center text-[12px] font-semibold text-ink-muted"
               >
                 {date}
               </th>
@@ -148,7 +148,7 @@ const LapMatrix: React.FC<{ matrix: MatrixData }> = ({ matrix }) => {
         <tbody>
           {matrix.rows.map((row, index) => (
             <tr key={row.key}>
-              <td className="sticky left-0 z-10 w-12 bg-surface px-2 py-1.5 text-right text-[11px] tabular-nums text-ink-faint">
+              <td className="sticky left-0 z-10 w-12 bg-surface px-2 py-1.5 text-right text-[12px] tabular-nums text-ink-faint">
                 {index + 1}
               </td>
               <td className="sticky left-12 z-10 min-w-44 max-w-60 md:min-w-72 md:max-w-96 bg-surface px-3 py-1.5 text-[13px] text-ink">
@@ -443,7 +443,7 @@ const AdminGrowthCasePage: React.FC = () => {
           <BarChart3 className="size-4 text-ink-muted" />
           {t('casePage.lapMatrices')}
         </div>
-        <div className="mb-2 flex flex-wrap items-center gap-3 text-[11px] text-ink-muted">
+        <div className="mb-2 flex flex-wrap items-center gap-3 text-[12px] text-ink-muted">
           <span className="flex items-center gap-1">
             <span className="font-bold text-success-600">✓</span> {t('casePage.legendGreen')}
           </span>

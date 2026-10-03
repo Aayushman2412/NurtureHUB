@@ -715,7 +715,7 @@ const AdminTestsPage: React.FC = () => {
                       fallback={1}
                       onChange={v => updateTest(test.id, { default_marks: v })}
                     />
-                    <p className="mt-1 text-[11px] text-ink-faint">{t('fields.defaultMarksHint')}</p>
+                    <p className="mt-1 text-[12px] text-ink-faint">{t('fields.defaultMarksHint')}</p>
                   </div>
                   <div>
                     <FieldLabel size="sm">{t('fields.testType')}</FieldLabel>
@@ -747,7 +747,7 @@ const AdminTestsPage: React.FC = () => {
                     checked={test.shuffle_options}
                     onChange={e => updateTest(test.id, { shuffle_options: e.target.checked })}
                   />
-                  <span className="text-[11px] text-ink-faint">{t('shuffle.hint')}</span>
+                  <span className="text-[12px] text-ink-faint">{t('shuffle.hint')}</span>
                 </div>
 
                 {/* Question toolbar */}
@@ -933,7 +933,7 @@ const AdminTestsPage: React.FC = () => {
                                 {q.image_url && <ImageIcon className="ml-1.5 inline size-3.5 text-ink-faint" />}
                               </p>
                               {(q.topic || q.subtopic) && (
-                                <span className="mt-1 inline-flex items-center gap-1 rounded bg-surface-sunken px-1.5 py-0.5 text-[11px] font-semibold text-ink-muted">
+                                <span className="mt-1 inline-flex items-center gap-1 rounded bg-surface-sunken px-1.5 py-0.5 text-[12px] font-semibold text-ink-muted">
                                   {[q.topic, q.subtopic].filter(Boolean).join(' › ')}
                                 </span>
                               )}

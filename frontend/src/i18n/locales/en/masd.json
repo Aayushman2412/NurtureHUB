@@ -27,7 +27,7 @@
     "fu": "Follow-up counted",
     "fuValue": "{{days}} days, tranche by tranche",
     "targetsNow": "Targets in force",
-    "targetsValue": "ANC {{anc}} · <5M {{lt5}} · ≥5M {{ge5}} · Staff Nurse {{nurse}}"
+    "targetsValue": "ANC {{anc}} · <{{pncM}}M {{lt5}} · ≥{{pncM}}M {{ge5}} · Staff Nurse {{nurse}}"
   },
   "views": {
     "label": "MASD pages",
@@ -71,8 +71,8 @@
   },
   "types": {
     "anc": "ANC",
-    "pnc_lt5": "PNC <5 months",
-    "pnc_ge5": "PNC ≥5 months",
+    "pnc_lt5": "PNC <{{pncM}} months",
+    "pnc_ge5": "PNC ≥{{pncM}} months",
     "unknown": "Not typed"
   },
   "attention": {
@@ -179,13 +179,16 @@
   "bands": {
     "lt6": "<6 months",
     "m6_11": "6–11 months",
-    "lt6Types": "ANC + PNC <5M",
-    "m6_11Types": "PNC ≥5M"
+    "lt6Types": "ANC + PNC <{{pncM}}M",
+    "m6_11Types": "PNC ≥{{pncM}}M"
   },
   "indicators": {
     "stunting": "Stunting",
     "underweight": "Underweight",
-    "wasting": "Wasting"
+    "wasting": "Wasting",
+    "severe_stunting": "Severe stunting",
+    "severe_underweight": "Severe underweight",
+    "sam": "SAM (severe wasting)"
   },
   "reasons": {
     "no_child": "No child ID – child not born yet / not followed up",
@@ -242,7 +245,7 @@
     "demoSub": "Mothers of the analysed dyads",
     "familyTypeNote": "Family type is not collected in NurtureHUB's mother registration, so it is not shown.",
     "prevTitle": "Malnutrition: birth → adoption visit → last visit",
-    "prevSub": "Share below −2 SD: stunting (length-for-age), underweight (weight-for-age), wasting (weight-for-length)",
+    "prevSub": "Share below −2 SD — and below −3 SD for the severe forms: stunting (length-for-age), underweight (weight-for-age), wasting (weight-for-length; severe wasting = SAM)",
     "overall": "All cases",
     "otherLearners": "Other learners",
     "otherShort": "Other",
@@ -268,7 +271,10 @@
     "fixesSub": "Excluded for a data-entry problem, not for missing follow-up — correcting them brings the case back into the analysis",
     "fixesNone": "No case is excluded for a data-entry problem.",
     "cases": "Cases",
-    "whatToCheck": "What to check"
+    "whatToCheck": "What to check",
+    "lt12Title": "The <6 and 6–11 month NFHS values weighted by their sample sizes",
+    "nfhsLt12": "NFHS <1 yr",
+    "nfhsUnder5": "NFHS <5 yr"
   },
   "learners": {
     "show": "Show:",
@@ -279,7 +285,7 @@
       "outside": "Outside F2F, with cases"
     },
     "search": "Search name, email, block…",
-    "hint": "Put each F2F learner in their training batch — their follow-up is counted from its last day. Mark Master Trainers and Facilitators here too. Adoptions are shown as total / target (ANC · <5M · ≥5M).",
+    "hint": "Put each F2F learner in their training batch — their follow-up is counted from its last day. Mark Master Trainers and Facilitators here too. Adoptions are shown as total / target (ANC · <{{pncM}}M · ≥{{pncM}}M).",
     "mtfl": "MT / FL",
     "mtflFor": "Master Trainer or Facilitator: {{name}}",
     "activities": "Activities / expected",
@@ -308,12 +314,12 @@
         "meaning": "A mother — and her child once born — taken on by a learner: a mother-child dyad."
       },
       "types": {
-        "term": "ANC · PNC <5M · PNC ≥5M",
-        "meaning": "Adopted while pregnant; or after birth with the child younger than {{days}} days (5 months); or {{days}} days or older."
+        "term": "ANC · PNC <{{pncM}}M · PNC ≥{{pncM}}M",
+        "meaning": "Adopted while pregnant; or after birth with the child younger than {{days}} days ({{pncM}} months); or {{days}} days or older."
       },
       "target": {
         "term": "Adoption target fulfilment",
-        "meaning": "Adoptions ÷ the targets in force on the report date — they rise at each review (a Staff Nurse's target is PNC <5M hospital adoptions)."
+        "meaning": "Adoptions ÷ the targets in force on the report date — they rise at each review (a Staff Nurse's target is PNC <{{pncM}}M hospital adoptions)."
       },
       "intensity": {
         "term": "% of expected activity",
@@ -333,7 +339,7 @@
       },
       "bands": {
         "term": "Age bands",
-        "meaning": "<6 months = ANC and PNC <5M adoptions; 6–11 months = PNC ≥5M adoptions, as in the NFHS comparison."
+        "meaning": "<6 months = ANC and PNC <{{pncM}}M adoptions; 6–11 months = PNC ≥{{pncM}}M adoptions, as in the NFHS comparison."
       },
       "malnutrition": {
         "term": "Stunting · underweight · wasting",
@@ -368,7 +374,7 @@
     "tableNote": "Counts are cumulative, so they can only stay the same or rise as the follow-up lengthens. Protein counts apply to ANC adoptions for now; an ANC adoption's baby visits are not yet counted in this table.",
     "adoptionType": "Adoption type",
     "days": "{{n}} d",
-    "nurseRow": "Staff Nurse <5M",
+    "nurseRow": "Staff Nurse <{{pncM}}M",
     "caseTitle": "One case's expected forms",
     "caseSub": "Used for each learner's own cases, the Growth Monitor and the follow-up flags",
     "case1": "In pregnancy: an antenatal and a protein check on the adoption day and every {{every}} days, until the birth — or, if no birth is entered, until the due date (LMP + {{days}} days).",
@@ -383,8 +389,8 @@
     "title": "Programme settings",
     "cancel": "Cancel",
     "save": "Save",
-    "calendar": "Programme calendar",
-    "calendarHint": "The training date is used for learners not in a batch. Leave both empty to infer them from the data.",
+    "calendar": "Learners not in a batch",
+    "calendarHint": "Learners who were trained face-to-face but are not in any batch start their follow-up from this date.",
     "benchmarks": "NFHS benchmark",
     "defaultBench": "Showing the built-in NFHS-5 Maharashtra figures from the analysts' report. Saving stores them for this project.",
     "benchHint": "The survey figures the project's outcomes are compared with. Leave empty for none.",
@@ -403,21 +409,34 @@
     "batchDefault": "Batch {{n}}",
     "addBatch": "Add batch",
     "remove": "Remove",
-    "targets": "Adoption tranches",
-    "targetsHint": "Each step is a tranche: on its date learners were asked to take on more. Its adoptions are followed up from that date plus the buffer; the step in force on the report date is the target.",
-    "targetsDefault": "Showing the default tranches. Saving stores them for this project.",
+    "targets": "Tranches of adoption",
+    "targetsHint": "Each row is one tranche: the date the district asked learners to take on more, a buffer before its follow-up counts, and the adoptions it ADDS. The follow-up and expected forms on the right are worked out as you type.",
+    "targetsDefault": "Showing the default tranches. Edit them and save to keep them for this project.",
     "from": "From",
     "target": {
       "anc": "ANC",
-      "pnc_lt5": "PNC <5M",
-      "pnc_ge5": "PNC ≥5M",
+      "pnc_lt5": "PNC <{{pncM}}M",
+      "pnc_ge5": "PNC ≥{{pncM}}M",
       "nurse": "Staff Nurse"
     },
-    "addStep": "Add step",
+    "addStep": "Add tranche",
     "batchError": "Every batch needs its own name and an end date.",
-    "targetError": "Every target step needs its own start date.",
+    "targetError": "Every tranche needs its own start date.",
     "buffer": "Buffer (days)",
-    "bufferDefault": "{{n}} (default)"
+    "bufferDefault": "{{n}} (default)",
+    "askedInTranche": "Adoptions asked in this tranche",
+    "autoCalc": "Worked out (as of {{date}})",
+    "fuNow": "Follow-up",
+    "expRol": "Expected / learner",
+    "expSn": "Expected / Staff Nurse",
+    "notOpen": "not open yet",
+    "totalAsOf": "Total target as of {{date}}",
+    "trainingNoBatch": "Their training date",
+    "lt12": "<1 year (weighted)",
+    "under5": "Under 5",
+    "sampleSize": "Sample size (n)",
+    "lt12Hint": "The <1 year figure is the <6 and 6–11 month values weighted by their sample sizes: (p₁n₁ + p₂n₂) ÷ (n₁ + n₂). Fill the sample sizes from the NFHS report. District fact sheets give under-5 figures only.",
+    "nError": "Sample sizes must be whole numbers."
   },
   "expected": {
     "split": {
@@ -429,7 +448,7 @@
       "rolesOne": "Cadre"
     },
     "nowTitle": "What each learner is expected to have done by now",
-    "nowSub": "Each tranche counted at its own follow-up · targets in force on {{date}}: ANC {{anc}} · PNC <5M {{lt5}} · PNC ≥5M {{ge5}} · Staff Nurse {{nurse}}",
+    "nowSub": "Each tranche counted at its own follow-up · targets in force on {{date}}: ANC {{anc}} · PNC <{{pncM}}M {{lt5}} · PNC ≥{{pncM}}M {{ge5}} · Staff Nurse {{nurse}}",
     "noBatches": "No training date yet — add the batches in Programme settings.",
     "batch": "Batch",
     "trainingEnded": "Training ended",
@@ -498,7 +517,9 @@
       "gm": "Growth",
       "bf": "BF",
       "cf": "CF"
-    }
+    },
+    "workedTitle": "How the expected figures add up",
+    "workedSub": "One community learner, tranche by tranche — and, where batches started at different times, each batch"
   },
   "bandsOwn": {
     "none": "No activity",
@@ -536,5 +557,32 @@
     "lastCheck": "Last check",
     "never": "none yet",
     "daysAgo": "{{n}} days since contact"
+  },
+  "baseline": {
+    "title": "What is expected of each learner",
+    "sub": "The baseline for this dashboard: each tranche of adoptions, how long it has been followed up by {{date}}, and the forms it should have produced — for the rest of the learners and for Staff Nurses",
+    "tranche": "Tranche",
+    "fu": "Follow-up",
+    "days": "{{n}} days",
+    "fuRaw": "{{n}} so far",
+    "asked": "Adoptions asked",
+    "rol": "Expected forms — rest of the learners",
+    "sn": "Expected forms — Staff Nurse",
+    "total": "Total",
+    "totalRow": "Total as of {{date}}",
+    "target": {
+      "anc": "ANC",
+      "pnc_lt5": "<{{pncM}}M",
+      "pnc_ge5": "≥{{pncM}}M",
+      "nurse": "SN"
+    },
+    "note": "Each tranche is followed up from the day it opened plus its buffer, rounded down to a multiple of 15 days. A Staff Nurse's hospital adoptions are all PNC <{{pncM}}M and expect growth checks and breastfeeding assessments only. Set the tranches in Programme settings. GM = growth monitoring, BF = breastfeeding, CF = complementary feeding, Prot = protein count, SN = Staff Nurse.",
+    "code": {
+      "anc": "ANC",
+      "protein": "Prot",
+      "gm": "GM",
+      "bf": "BF",
+      "cf": "CF"
+    }
   }
 }

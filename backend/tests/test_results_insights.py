@@ -153,6 +153,20 @@ def test_most_common_wrong_answer_is_a_wrong_option(world):
     assert q1["correct_label"] == "A"
 
 
+def test_every_option_is_counted_so_all_wrong_answers_show(world):
+    """The dashboard lists every wrong answer with its share (review of
+    3 Oct 2026), so each option comes back with its count and whether it is
+    the right one; the counts add up to the answered papers."""
+    db, _ = world
+    q1, q2 = _questions(db)["questions"]
+    by = {o["label"]: o for o in q1["options"]}
+    assert by["A"]["correct"] and by["A"]["count"] == 1, "Ravi"
+    assert not by["B"]["correct"] and by["B"]["count"] == 1, "Sita"
+    assert by.get("C", {"count": 0})["count"] == 0, "the admin's and outsider's C are not counted"
+    assert sum(o["count"] for o in q2["options"]) == q2["writers"] - q2["unanswered"]
+    assert "topic" in q1 and "subtopic" in q1
+
+
 def test_results_rows_carry_profile_and_first_attempt(world):
     db, test = world
     data = get_combined_results(district="demo", db=db, admin_email="a@t")

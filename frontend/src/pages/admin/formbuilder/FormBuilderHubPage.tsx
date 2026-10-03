@@ -109,7 +109,7 @@ const FormCard: React.FC<{ summary: FormDefinitionSummary; onEdit: () => void }>
         <p className="mt-1 flex-1 text-[13px] leading-relaxed text-ink-muted">{meta?.blurb}</p>
 
         <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-3.5">
-          <div className="min-w-0 text-[11px] text-ink-faint">
+          <div className="min-w-0 text-[12px] text-ink-faint">
             <span className="font-bold text-ink-muted">
               {summary.version_count ?? 1} {(summary.version_count ?? 1) === 1 ? 'version' : 'versions'}
             </span>

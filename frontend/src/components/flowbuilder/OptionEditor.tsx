@@ -152,7 +152,7 @@ const OptionEditor: React.FC<OptionEditorProps> = ({
       </div>
 
       {!expanded && summaryBits.length > 0 && (
-        <div className="flex items-center gap-3 overflow-hidden px-2.5 pb-2 text-[10px] font-semibold text-ink-faint">
+        <div className="flex items-center gap-3 overflow-hidden px-2.5 pb-2 text-xs font-semibold text-ink-faint">
           {summaryBits}
         </div>
       )}
@@ -173,7 +173,7 @@ const OptionEditor: React.FC<OptionEditorProps> = ({
                     type="button"
                     onClick={() => patch({ verdict: id })}
                     className={cn(
-                      'inline-flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition-colors cursor-pointer',
+                      'inline-flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[12px] font-semibold transition-colors cursor-pointer',
                       active
                         ? 'border-transparent text-white'
                         : 'border-border bg-surface text-ink-muted hover:bg-surface-sunken',

@@ -12,7 +12,7 @@ import { Button, Card } from '../ui';
 import { cn } from '../../utils/cn';
 import { TEST_A_COLOR, TEST_B_COLOR } from '../../utils/brandColors';
 import { HeatGrid, PairedBars, Ring, StackedBar, type PairedRow } from './InsightCharts';
-import { ActiveFilterBar, BigNumber, ChipRow, FindingList, Kpi, KpiRow, ScoreCell, Section, ToneLegend } from './InsightParts';
+import { BigNumber, FindingList, Kpi, KpiRow, ScoreCell, Section, ToneLegend } from './InsightParts';
 import {
   GRID_BANDS, compareFindings, fmtPct, pairGroupStats, pairStats, signed,
   type Finding, type PairStats,
@@ -25,7 +25,7 @@ const pctOf = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100
 
 const CompareTests: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
   const { t } = useTranslation('resultsInsights');
-  const { data, tests, users, compareBase, dims, dim, setDim, filters, activeGroup, toggleFocus, clearFilter, groupLabel } = ctx;
+  const { data, tests, users, compareBase, dims, dim, filters, activeGroup, toggleFocus, clearFilter, groupLabel } = ctx;
   const [aId, setAId] = useState<number>(tests[0].id);
   const [bId, setBId] = useState<number>(tests[tests.length - 1].id);
   const [measure, setMeasure] = useState<Measure>('score');
@@ -156,7 +156,7 @@ const CompareTests: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
             <div className="grid grid-cols-2 gap-3">
               {([
                 ['both', t('cmp.passBoth'), s.passBoth, '#2F9E56'],
-                ['aOnly', t('cmp.passOnly', { test: a.label }), s.passAOnly, '#F59E0B'],
+                ['aOnly', t('cmp.passOnly', { test: a.label }), s.passAOnly, '#B45309'],
                 ['bOnly', t('cmp.passOnly', { test: b.label }), s.passBOnly, TEST_B_COLOR],
                 ['neither', t('cmp.passNeither'), s.passNeither, '#DC2F2F'],
               ] as [string, string, number, string][]).map(([key, label, n, color]) => (
@@ -182,20 +182,7 @@ const CompareTests: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
         {/* Across variables */}
         {dims.length > 0 && (
           <Section icon={<Users />} title={t('cmp.groupsTitle')} subtitle={t('compare.subtitle')}>
-            <ActiveFilterBar
-              filters={filters}
-              groupLabel={groupLabel}
-              onClear={clearFilter}
-              filteredCount={users.length}
-              totalCount={data.users.length}
-            />
-            <ChipRow
-              label={t('compare.splitBy')}
-              items={dims.map(d => ({ key: d, label: t(`dim.${d}`) }))}
-              value={dim}
-              onChange={k => setDim(k as typeof dim)}
-            />
-            <div className="mb-4 mt-4 flex flex-wrap items-center gap-2">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
               <span className="text-sm font-semibold text-ink">{t('compare.show')}</span>
               <select
                 value={measure}
@@ -287,10 +274,9 @@ const CompareTests: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
             bands={GRID_BANDS}
             labelA={t('cmp.scoreIn', { test: a.label })}
             labelB={t('cmp.scoreIn', { test: b.label })}
-            color={TEST_B_COLOR}
             cellTitle={(n, ba, bb) => t('cmp.cellTitle', { n, a: a.label, b: b.label, ba, bb })}
           />
-          <p className="mt-3 text-xs text-ink-muted">{t('cmp.gridHow')}</p>
+          <p className="mt-3 text-sm text-ink-muted">{t('cmp.gridHow')}</p>
         </Section>
       </>)}
     </div>

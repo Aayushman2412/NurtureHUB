@@ -16,8 +16,13 @@ export interface MasdFinding { tone: Tone; text: string }
 
 export type ActivityKey = 'anc' | 'protein' | 'gm' | 'bf' | 'cf';
 export const ACTIVITY_KEYS: ActivityKey[] = ['anc', 'protein', 'gm', 'bf', 'cf'];
-export type Indicator = 'stunting' | 'underweight' | 'wasting';
-export const INDICATORS: Indicator[] = ['stunting', 'underweight', 'wasting'];
+export type MainIndicator = 'stunting' | 'underweight' | 'wasting';
+/** The severe forms, below −3 SD (SAM = severe wasting). */
+export type SevereIndicator = 'severe_stunting' | 'severe_underweight' | 'sam';
+export type Indicator = MainIndicator | SevereIndicator;
+export const MAIN_INDICATORS: MainIndicator[] = ['stunting', 'underweight', 'wasting'];
+export const SEVERE_INDICATORS: SevereIndicator[] = ['severe_stunting', 'severe_underweight', 'sam'];
+export const INDICATORS: Indicator[] = [...MAIN_INDICATORS, ...SEVERE_INDICATORS];
 export type Band = 'lt6' | 'm6_11';
 export type AdoptionType = 'anc' | 'pnc_lt5' | 'pnc_ge5';
 export const ADOPTION_TYPES: AdoptionType[] = ['anc', 'pnc_lt5', 'pnc_ge5'];
@@ -127,9 +132,14 @@ export type Prevalence = { n: number } & Record<Indicator, IndicatorPrev>;
 
 export interface Share { label: string; n: number; pct: number | null }
 
+/** One NFHS column: a value per indicator, and the survey's sample size. */
+export type BenchValues = Partial<Record<Indicator, number | null>> & { n?: number | null };
+
 export interface Benchmarks {
   label: string;
-  age_bands: Partial<Record<Band, Partial<Record<Indicator, number | null>>>>;
+  age_bands: Partial<Record<Band, BenchValues>>;
+  /** District fact sheets give under-5 figures only. */
+  under5?: BenchValues | null;
   district_trend?: {
     label: string;
     rounds: string[];
@@ -169,6 +179,8 @@ export interface MasdOutcomes {
   };
   compliance: Record<Band, { rule: { min_visits: number; min_follow_up_days: number }; yes: Prevalence; no: Prevalence }>;
   benchmarks: Benchmarks | null;
+  /** <6 and 6–11 month NFHS values weighted by their sample sizes (null until entered). */
+  benchmarks_lt12: BenchValues | null;
   data_fixes: { id: number; name: string; block: string; cases: number; reasons: Record<string, number> }[];
 }
 

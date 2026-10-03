@@ -27,7 +27,7 @@ const Meta: React.FC<{ icon: React.ReactNode; label: string; value: React.ReactN
       {icon}
     </span>
     <div className="min-w-0">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-faint">{label}</div>
+      <div className="text-[12px] font-semibold uppercase tracking-wider text-ink-faint">{label}</div>
       <div className="truncate text-sm font-semibold text-ink">{value || '—'}</div>
     </div>
   </div>

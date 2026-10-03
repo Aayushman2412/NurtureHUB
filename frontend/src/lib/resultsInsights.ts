@@ -191,7 +191,9 @@ export const finishedVideos = (u: UserResultRow) =>
   u.summary.total_tutorials > 0 && u.summary.tutorials_completed >= u.summary.total_tutorials;
 
 export interface TestStats {
+  registered: number;        // learners in the group (wrote or not)
   wrote: number;
+  notTaken: number;          // registered but never submitted the test
   passed: number;
   passRate: number;          // % of those who wrote
   avgScore: number;          // average best score of those who wrote
@@ -227,7 +229,9 @@ export function testStats(users: UserResultRow[], test: ActiveTest): TestStats {
     else bands.support += 1;
   }
   return {
+    registered: users.length,
     wrote: rows.length,
+    notTaken: users.length - rows.length,
     passed,
     passRate: pct(passed, rows.length),
     avgScore: avg(rows.map(r => r.best_score ?? 0)),
@@ -469,10 +473,21 @@ export function findings(
 
 // ── One test on its own ─────────────────────────────────────────────────────
 
+export interface OptionStat {
+  label: string | null;
+  text: string;
+  count: number;
+  correct: boolean;
+}
+
 export interface QuestionStat {
   id: number;
   number: number;
   text: string;
+  topic?: string | null;
+  subtopic?: string | null;
+  /** Every option with how many chose it (first attempts). */
+  options?: OptionStat[];
   correct_label: string | null;
   correct_text: string | null;
   writers: number;
@@ -490,37 +505,50 @@ export interface TestQuestions {
 }
 
 export interface ScoreBar {
-  label: string;          // "60%" or "60–69"
+  label: string;          // "60–69" (a range, in %)
   lo: number;             // lowest score the bar holds
   hi: number;             // highest score the bar holds
   count: number;
+  pct: number;            // share of the learners who wrote the test
 }
 
 /**
- * How the best scores are spread. A short paper can only produce a few
- * scores (5 questions: 0, 20, 40 … 100%), and 10-point bands would leave every
- * other bar empty — which reads as missing data. So: one bar per possible
- * score when there are few, 10-point bands when there are many.
+ * How the best scores are spread, always in 10-point RANGES (0–9%, 10–19% …
+ * 90–100%). A bar labelled with a single score ("25%") reads as "this many
+ * scored exactly 25%", so every bar names the range it holds, and its height
+ * and label are the SHARE of writers — counts change with every filter and
+ * district, a percentage reads the same everywhere.
  */
-export function scoreDistribution(users: UserResultRow[], test: ActiveTest, questionCount?: number): ScoreBar[] {
+export function scoreDistribution(users: UserResultRow[], test: ActiveTest): ScoreBar[] {
   const scores = users
     .map(u => u.tests[String(test.id)])
     .filter(r => r && r.attempts_count > 0)
-    .map(r => Math.round((r.best_score ?? 0) * 10) / 10);
-  const distinct = new Set(scores);
-  if (questionCount && questionCount <= 12) {
-    for (let k = 0; k <= questionCount; k++) distinct.add(Math.round((k * 1000) / questionCount) / 10);
-  }
-  if (distinct.size <= 13) {
-    return [...distinct].sort((a, b) => a - b).map(v => ({
-      label: `${Math.round(v)}%`, lo: v, hi: v, count: scores.filter(s => s === v).length,
-    }));
-  }
+    .map(r => r.best_score ?? 0);
   const bars: ScoreBar[] = Array.from({ length: 10 }, (_, i) => ({
-    label: i === 9 ? '90+' : `${i * 10}–${i * 10 + 9}`, lo: i * 10, hi: i === 9 ? 100 : i * 10 + 9.99, count: 0,
+    label: i === 9 ? '90–100' : `${i * 10}–${i * 10 + 9}`, lo: i * 10, hi: i === 9 ? 100 : i * 10 + 9.99, count: 0, pct: 0,
   }));
-  for (const s of scores) bars[Math.min(9, Math.floor(s / 10))].count += 1;
+  for (const s of scores) bars[Math.max(0, Math.min(9, Math.floor(s / 10)))].count += 1;
+  for (const b of bars) b.pct = pct(b.count, scores.length);
   return bars;
+}
+
+/** How hard a question turned out, by the share who got it right. */
+export type Difficulty = 'difficult' | 'medium' | 'easy';
+export const DIFFICULTY_CUTOFFS = { easy: 80, medium: 50 } as const;
+export function questionDifficulty(q: QuestionStat): Difficulty {
+  const right = pct(q.correct, q.writers);
+  return right >= DIFFICULTY_CUTOFFS.easy ? 'easy' : right >= DIFFICULTY_CUTOFFS.medium ? 'medium' : 'difficult';
+}
+
+/** The wrong answers chosen, most chosen first, as a share of writers. */
+export function wrongAnswers(q: QuestionStat): { label: string; text: string; count: number; pct: number }[] {
+  const opts = q.options ?? (q.top_wrong_label
+    ? [{ label: q.top_wrong_label, text: q.top_wrong_text ?? '', count: q.top_wrong_count, correct: false }]
+    : []);
+  return opts
+    .filter(o => !o.correct && o.count > 0)
+    .map(o => ({ label: o.label ?? '', text: o.text, count: o.count, pct: pct(o.count, q.writers) }))
+    .sort((a, b) => b.count - a.count);
 }
 
 export interface TestGroupRow {
@@ -541,6 +569,16 @@ export function lowestScorers(users: UserResultRow[], test: ActiveTest, limit = 
   return users
     .filter(u => wroteIt(u, test) && !u.tests[String(test.id)].is_passed)
     .sort((a, b) => bestOf(a, test) - bestOf(b, test) || a.name.localeCompare(b.name))
+    .slice(0, limit);
+}
+
+/** Lowest score first, among everyone who wrote (passed or not). */
+export function bottomScorers(users: UserResultRow[], test: ActiveTest, limit = 10): UserResultRow[] {
+  return users
+    .filter(u => wroteIt(u, test))
+    .sort((a, b) => bestOf(a, test) - bestOf(b, test)
+      || b.tests[String(test.id)].attempts_count - a.tests[String(test.id)].attempts_count
+      || a.name.localeCompare(b.name))
     .slice(0, limit);
 }
 
@@ -615,8 +653,9 @@ export function testFindings(
 
 /** A change smaller than this many points counts as "about the same". */
 export const SAME_BAND = 5;
-/** Score bands for the side-by-side grid. */
-export const GRID_BANDS: [number, number][] = [[0, 39], [40, 59], [60, 74], [75, 89], [90, 100]];
+/** Score bands for the side-by-side grid: equal fifths, so a move from one
+ *  box to the next is the same size of change wherever it happens. */
+export const GRID_BANDS: [number, number][] = [[0, 20], [21, 40], [41, 60], [61, 80], [81, 100]];
 
 export interface PairStats {
   n: number;                    // wrote both
@@ -637,7 +676,9 @@ export interface PairStats {
 }
 
 function bandIndex(score: number): number {
-  const i = GRID_BANDS.findIndex(([lo, hi]) => score >= lo && score <= hi);
+  // By upper bound, so a fractional score (20.5%) lands in the next band up
+  // rather than falling between "0–20" and "21–40".
+  const i = GRID_BANDS.findIndex(([, hi]) => score <= hi);
   return i < 0 ? GRID_BANDS.length - 1 : i;
 }
 

@@ -157,7 +157,7 @@ const ProjectSetupWizard: React.FC<Props> = ({ projectId, onClose, onDone }) => 
               <div className="mt-2">
                 <Checkbox checked={copyTests} onChange={e => setCopyTests(e.target.checked)}
                   label={t('setup.copyTests')} />
-                <p className="mt-1 pl-6.5 text-[11px] text-ink-faint">{t('setup.copyTestsHint')}</p>
+                <p className="mt-1 pl-6.5 text-[12px] text-ink-faint">{t('setup.copyTestsHint')}</p>
               </div>
             )}
           </section>
@@ -207,7 +207,7 @@ const ProjectSetupWizard: React.FC<Props> = ({ projectId, onClose, onDone }) => 
               <div className="mt-2">
                 <Checkbox checked={childrenInherit} onChange={e => setChildrenInherit(e.target.checked)}
                   label={t('setup.childrenInherit')} />
-                <p className="mt-1 pl-6.5 text-[11px] text-ink-faint">{t('setup.childrenInheritHint')}</p>
+                <p className="mt-1 pl-6.5 text-[12px] text-ink-faint">{t('setup.childrenInheritHint')}</p>
               </div>
             </section>
           )}

@@ -9,6 +9,15 @@ from app import models, schemas
 # back to the primary otherwise). No read-after-write concerns here.
 router = APIRouter(prefix="/api/metadata", tags=["metadata"])
 
+
+@router.get("/programme")
+def programme_constants():
+    """Programme-wide constants the app's screens share (no personal data):
+    the age splitting PNC adoptions into under / from N months."""
+    from app.masd import rules as R
+    return {"pnc_split_days": R.FIVE_MONTHS_DAYS, "pnc_split_months": R.PNC_SPLIT_MONTHS}
+
+
 @router.get("/states", response_model=List[schemas.StateOut])
 def get_states(db: Session = Depends(get_read_db)):
     return db.query(models.State).filter(models.State.is_active == True).all()

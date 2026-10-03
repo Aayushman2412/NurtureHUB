@@ -9,13 +9,12 @@ import { useToast } from '../../context/ToastContext';
 import { Button } from '../ui';
 import { Section } from '../results/InsightParts';
 import { cn } from '../../utils/cn';
+import MasdBaseline from './MasdBaseline';
 import { DataTable, Th } from './MasdCharts';
 
 const ROW_LABEL: Record<TableRowType, string> = {
   anc: 'types.anc', pnc_lt5: 'types.pnc_lt5', pnc_ge5: 'types.pnc_ge5', nurse_lt5: 'rules.nurseRow',
 };
-const fmtDate = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
 /** The programme rules the report applies, straight from the backend — with
  * the expected-forms table editable in place (e.g. to load the analysts'
@@ -26,13 +25,11 @@ const MasdRules: React.FC<{ report: MasdReport; onChanged: () => void }> = ({ re
   const r = report.rules;
   const e = r.expected;
   const cal = report.calendar;
-  const fuNow = new Map(cal.tranches.map(tr => [tr.step, tr]));
   const fuDays = new Set(cal.tranches.map(tr => tr.fu_days));
   const [draft, setDraft] = useState<ExpectedFormsTable | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const table = draft ?? e.table;
-  const stepNow = cal.targets.step;
 
   const edit = async () => {
     setError('');
@@ -91,37 +88,10 @@ const MasdRules: React.FC<{ report: MasdReport; onChanged: () => void }> = ({ re
           <li>{t('rules.method3')}</li>
           <li>{t('rules.method4')}</li>
         </ol>
-        <h4 className="mb-2 mt-5 text-sm font-semibold text-ink">
-          {t('rules.targetsTitle')}{cal.targets.is_default && <span className="ml-2 text-xs font-normal text-ink-faint">{t('rules.targetsDefault')}</span>}
-        </h4>
-        <DataTable>
-          <thead>
-            <tr>
-              <Th className="text-left">{t('settings.from')}</Th>
-              {(['anc', 'pnc_lt5', 'pnc_ge5', 'nurse'] as const).map(k => <Th key={k}>{t(`settings.target.${k}`)}</Th>)}
-              <Th>{t('rules.buffer')}</Th>
-              <Th>{t('rules.fuNow')}</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {r.targets.map((s, i) => (
-              <tr key={i} className={cn(stepNow === i + 1 && 'bg-coral-50/60 font-semibold dark:bg-coral-500/10')}>
-                <td className="px-3 py-2">{fmtDate(s.from)}{stepNow === i + 1 && <span className="ml-2 text-xs text-coral-600">{t('rules.inForce')}</span>}</td>
-                <td className="px-3 py-2 text-center tabular-nums">{s.anc}</td>
-                <td className="px-3 py-2 text-center tabular-nums">{s.pnc_lt5}</td>
-                <td className="px-3 py-2 text-center tabular-nums">{s.pnc_ge5}</td>
-                <td className="px-3 py-2 text-center tabular-nums">{s.nurse}</td>
-                <td className="px-3 py-2 text-center tabular-nums">
-                  {t('expected.daysN', { n: s.buffer ?? (i === 0 ? e.buffer_days : e.later_buffer_days) })}
-                </td>
-                <td className="px-3 py-2 text-center tabular-nums">
-                  {fuNow.has(i + 1) ? t('expected.daysN', { n: fuNow.get(i + 1)!.fu_days ?? 0 }) : '—'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </DataTable>
+        {cal.targets.is_default && <p className="mt-3 text-sm text-ink-muted">{t('rules.targetsDefault')}</p>}
       </Section>
+
+      <MasdBaseline report={report} />
 
       <Section
         icon={<Table2 />}

@@ -1032,7 +1032,7 @@ const AdminTutorialsPage: React.FC = () => {
               <option value="tutorials">{t('addPhaseModal.typeVideos')}</option>
               <option value="test">{t('addPhaseModal.typeTest')}</option>
             </Select>
-            <p className="mt-1 text-[11px] text-ink-faint">
+            <p className="mt-1 text-[12px] text-ink-faint">
               {newStageType === 'test' ? t('addPhaseModal.typeTestHint') : t('addPhaseModal.typeVideosHint')}
             </p>
           </div>
@@ -1093,7 +1093,7 @@ const AdminTutorialsPage: React.FC = () => {
               />
             ))}
         </div>
-        <p className="mt-3 text-[11px] text-ink-faint">{t('copyPhase.note')}</p>
+        <p className="mt-3 text-[12px] text-ink-faint">{t('copyPhase.note')}</p>
       </Modal>
 
       {/* Bulk sheet upload modal */}

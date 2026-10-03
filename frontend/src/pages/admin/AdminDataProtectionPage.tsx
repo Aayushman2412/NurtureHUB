@@ -596,7 +596,7 @@ const AuditTab: React.FC = () => {
               <p className="text-xs text-ink-muted">
                 Chain <code>{selected.chain_key}</code>, position {selected.sequence}
               </p>
-              <code className="block break-all text-[11px] text-ink-muted mt-1">
+              <code className="block break-all text-[12px] text-ink-muted mt-1">
                 {selected.entry_hash}
               </code>
             </div>
@@ -1121,7 +1121,7 @@ const IncidentDetailModal: React.FC<{
                 <Tr key={n.id}>
                   <Td>
                     <div className="font-medium text-ink">{n.authority_label}</div>
-                    <div className="text-[11px] text-ink-muted">{n.legal_basis}</div>
+                    <div className="text-[12px] text-ink-muted">{n.legal_basis}</div>
                   </Td>
                   <Td className="whitespace-nowrap">{formatDateTime(n.due_at)}</Td>
                   <Td className={cn('whitespace-nowrap', DEADLINE_TONE[n.deadline.state])}>

@@ -132,7 +132,7 @@ const FormInfoPanel: React.FC<{
         ].map(s => (
           <div key={s.label} className="rounded-lg border border-border bg-surface-sunken/50 px-2 py-2.5">
             <div className="font-display text-lg font-bold text-ink">{s.value}</div>
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-ink-faint">{s.label}</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-ink-faint">{s.label}</div>
           </div>
         ))}
       </div>
@@ -145,7 +145,7 @@ const FormInfoPanel: React.FC<{
           </p>
         ) : (
           <>
-            <p className="mb-1.5 text-[11px] text-ink-faint">
+            <p className="mb-1.5 text-[12px] text-ink-faint">
               {errors > 0 && `${errors} error${errors > 1 ? 's' : ''}`}
               {errors > 0 && warnings > 0 && ' · '}
               {warnings > 0 && `${warnings} warning${warnings > 1 ? 's' : ''}`}
@@ -168,7 +168,7 @@ const FormInfoPanel: React.FC<{
                 </li>
               ))}
               {issues.length > 6 && (
-                <li className="px-2 text-[11px] text-ink-faint">…and {issues.length - 6} more</li>
+                <li className="px-2 text-[12px] text-ink-faint">…and {issues.length - 6} more</li>
               )}
             </ul>
           </>
@@ -199,7 +199,7 @@ const FormInfoPanel: React.FC<{
           </LegendRow>
           <LegendRow
             swatch={
-              <span className="rounded-full bg-primary px-1.5 py-px text-[8px] font-extrabold uppercase text-primary-fg">
+              <span className="rounded-full bg-primary px-1.5 py-px text-xs font-extrabold uppercase text-primary-fg">
                 Start
               </span>
             }
@@ -287,9 +287,9 @@ const SectionPanel: React.FC<{
             <FieldLabel size="sm" className="mb-0">
               Questions in this section
             </FieldLabel>
-            <span className="text-[11px] text-ink-faint">{node.children.length}</span>
+            <span className="text-[12px] text-ink-faint">{node.children.length}</span>
           </div>
-          <p className="mb-2 text-[11px] leading-snug text-ink-faint">
+          <p className="mb-2 text-[12px] leading-snug text-ink-faint">
             Section questions are asked in order and cannot branch — the flow continues after the
             section ends.
           </p>
@@ -305,7 +305,7 @@ const SectionPanel: React.FC<{
                   )}
                 >
                   <div className="flex items-center gap-2 py-2 pl-2.5 pr-1.5">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded bg-surface-sunken text-[10px] font-bold text-ink-muted">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded bg-surface-sunken text-xs font-bold text-ink-muted">
                       {i + 1}
                     </span>
                     <button
@@ -316,7 +316,7 @@ const SectionPanel: React.FC<{
                       <span className="block truncate text-[13px] font-semibold text-ink">
                         {nodeTitle(child)}
                       </span>
-                      <span className="text-[10px] text-ink-faint">
+                      <span className="text-xs text-ink-faint">
                         {QUESTION_TYPE_LABELS[child.questionType]}
                         {child.options.length > 0 && ` · ${child.options.length} options`}
                       </span>
@@ -419,7 +419,7 @@ const QuestionPanel: React.FC<{
           <Badge variant="coral">{QUESTION_TYPE_LABELS[node.questionType]}</Badge>
           {sections.length > 0 && (
             <select
-              className="max-w-[190px] cursor-pointer rounded-md border border-border bg-surface px-2 py-1 text-[11px] font-semibold text-ink-muted hover:border-border-strong"
+              className="max-w-[190px] cursor-pointer rounded-md border border-border bg-surface px-2 py-1 text-[12px] font-semibold text-ink-muted hover:border-border-strong"
               value=""
               onChange={e => {
                 if (e.target.value) onMoveIntoSection(node.id, e.target.value);
@@ -486,7 +486,7 @@ const InfoPanel: React.FC<{
     <div>
       <PanelHeader label="Info block" kind="info" onClose={() => onSelect(null)} />
       <div className="space-y-4 p-4">
-        <p className="text-[11px] leading-snug text-ink-faint">
+        <p className="text-[12px] leading-snug text-ink-faint">
           A read-only screen shown between questions — a heading, text, images/GIFs and an optional
           video or link. It collects no answer.
         </p>

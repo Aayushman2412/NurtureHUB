@@ -205,7 +205,11 @@ const AdminMasdPage: React.FC = () => {
         <EmptyState icon={<Users className="size-8" />} title={t('noLearnersTitle')} description={t('noLearners')} />
       ) : (
         <>
-          <SubNav items={navItems} value={view} onChange={v => setView(v as View)} label={t('views.label')} />
+          {/* Frozen at the top while the page scrolls, like every dashboard's
+              controls (review of 3 Oct 2026). */}
+          <div className="rounded-2xl bg-background/95 py-1 backdrop-blur sm:sticky sm:top-[3.75rem] sm:z-20 lg:top-2">
+            <SubNav items={navItems} value={view} onChange={v => setView(v as View)} label={t('views.label')} />
+          </div>
           {view === 'overview' && <MasdOverview report={report} onOpenLearners={() => setView('learners')} onOpenFlags={() => setView('flags')} />}
           {view === 'expected' && <MasdExpected report={report} />}
           {view === 'activity' && <MasdActivity report={report} />}
@@ -217,7 +221,8 @@ const AdminMasdPage: React.FC = () => {
         </>
       )}
 
-      <MasdSettingsModal project={project || null} open={settingsOpen} onClose={() => setSettingsOpen(false)} onSaved={reload} />
+      <MasdSettingsModal project={project || null} open={settingsOpen} onClose={() => setSettingsOpen(false)} onSaved={reload}
+        table={report?.rules.expected.table} asOf={report?.as_of} />
     </div>
   );
 };

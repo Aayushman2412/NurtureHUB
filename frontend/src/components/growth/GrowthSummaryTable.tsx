@@ -73,7 +73,7 @@ const ExpectedCell: React.FC<{ block: ActivityBlock; mock: boolean; demoLabel: s
 const CountPctCell: React.FC<{ count: number | null; pct: number | null }> = ({ count, pct }) => (
   <span className="tabular-nums">
     <span className={cn(count == null ? 'text-ink-faint' : 'text-ink')}>{count ?? '—'}</span>
-    {pct != null && <span className="text-[11px] text-ink-muted">|{pct}</span>}
+    {pct != null && <span className="text-[12px] text-ink-muted">|{pct}</span>}
   </span>
 );
 
@@ -498,7 +498,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
                   colSpan={g.cols.length}
                   title={g.title}
                   className={cn(
-                    'border-b border-r border-border-strong bg-surface-sunken px-2 py-1.5 text-center text-[11px] font-bold uppercase tracking-wide text-ink-muted',
+                    'border-b border-r border-border-strong bg-surface-sunken px-2 py-1.5 text-center text-[12px] font-bold uppercase tracking-wide text-ink-muted',
                     g.id === 'identity' && 'sticky left-0 z-10',
                   )}
                 >
@@ -517,13 +517,13 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
                       title={c.title}
                       style={isId ? { left: idLeft[c.key] } : undefined}
                       className={cn(
-                        'border-b border-r border-border-strong bg-surface-sunken px-2 py-1.5 text-[11px] font-semibold text-ink-muted',
+                        'border-b border-r border-border-strong bg-surface-sunken px-2 py-1.5 text-[12px] font-semibold text-ink-muted',
                         c.align === 'left' ? 'text-left' : 'text-center',
                         isId && 'sticky z-10',
                       )}
                     >
                       {c.code}
-                      {c.sub && <div className="text-[9px] font-normal text-ink-faint">{c.sub}</div>}
+                      {c.sub && <div className="text-xs font-normal text-ink-faint">{c.sub}</div>}
                     </th>
                   );
                 }),

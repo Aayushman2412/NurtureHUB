@@ -169,7 +169,7 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
                       <option value="">{t('learners.projectDate')}</option>
                       {batches.map(b => <option key={b.id} value={b.id!}>{b.name}</option>)}
                     </select>
-                    {l.tranche_fu.length > 0 && <span className="text-[0.68rem] text-ink-faint">{t('learners.fuShort', { n: l.tranche_fu.join(' · ') })}</span>}
+                    {l.tranche_fu.length > 0 && <span className="text-xs text-ink-faint">{t('learners.fuShort', { n: l.tranche_fu.join(' · ') })}</span>}
                   </div>
                 ) : <span className="text-xs text-ink-faint">—</span>}
               </td>

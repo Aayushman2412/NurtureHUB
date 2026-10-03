@@ -128,7 +128,7 @@ const OptionsEditor: React.FC<{
         <button
           type="button"
           onClick={() => { setBulkOpen(o => !o); setNotice(''); }}
-          className="mb-1.5 inline-flex items-center gap-1.5 text-[11px] font-bold text-primary-ink hover:underline cursor-pointer"
+          className="mb-1.5 inline-flex items-center gap-1.5 text-[12px] font-bold text-primary-ink hover:underline cursor-pointer"
         >
           <ClipboardPaste className="size-3.5" />
           {bulkOpen ? t('options.bulkHide') : t('options.bulkShow')}
@@ -176,7 +176,7 @@ const OptionsEditor: React.FC<{
             onChange={e => setBulkText(e.target.value)}
           />
           <div className="mt-2 flex items-center justify-between gap-3">
-            <p className="text-[11px] leading-snug text-ink-faint">{t('options.bulkHint')}</p>
+            <p className="text-[12px] leading-snug text-ink-faint">{t('options.bulkHint')}</p>
             <Button
               size="sm"
               disabled={!bulkText.trim()}
@@ -188,7 +188,7 @@ const OptionsEditor: React.FC<{
         </div>
       )}
 
-      {notice && <p className="mt-1.5 text-[11px] font-semibold text-ink-muted">{notice}</p>}
+      {notice && <p className="mt-1.5 text-[12px] font-semibold text-ink-muted">{notice}</p>}
 
       <div className="mt-3">
         <Checkbox
@@ -196,7 +196,7 @@ const OptionsEditor: React.FC<{
           checked={allowOther}
           onChange={e => onAllowOtherChange(e.target.checked)}
         />
-        <p className="mt-1 text-[11px] leading-snug text-ink-faint">{t('options.allowOtherHint')}</p>
+        <p className="mt-1 text-[12px] leading-snug text-ink-faint">{t('options.allowOtherHint')}</p>
       </div>
     </div>
   );
@@ -603,7 +603,7 @@ const FlatFormEditorPage: React.FC = () => {
                           />
                         </div>
                       </div>
-                      <p className="mt-2 text-[11px] leading-snug text-ink-faint">{t('numeric.hint')}</p>
+                      <p className="mt-2 text-[12px] leading-snug text-ink-faint">{t('numeric.hint')}</p>
                     </div>
                   )}
                 </div>

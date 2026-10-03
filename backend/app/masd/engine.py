@@ -795,14 +795,17 @@ def _dyad_checks(dyad: Dyad, growth: List[GrowthIn]) -> Optional[str]:
 
 
 def _prevalence(dyads: List[Dyad]) -> Dict[str, Any]:
-    """% below −2 SD at BV / AV / LV for each indicator, over the dyads with a
-    value at that point."""
+    """% below −2 SD at BV / AV / LV for each indicator — and below −3 SD
+    for its severe form (severe stunting, severe underweight, SAM) — over the
+    dyads with a value at that point."""
     out: Dict[str, Any] = {"n": len(dyads)}
-    for ind in R.INDICATORS:
+    for ind in R.ALL_INDICATORS:
+        base = R.SEVERE_OF.get(ind, ind)
+        cut = R.SEVERE_Z if ind in R.SEVERE_OF else R.MALNUTRITION_Z
         entry: Dict[str, Any] = {}
         for p in ("bv", "av", "lv"):
-            vals = [d.z[p][ind] for d in dyads if d.z.get(p, {}).get(ind) is not None]
-            entry[p] = _pct(sum(1 for v in vals if v < R.MALNUTRITION_Z), len(vals))
+            vals = [d.z[p][base] for d in dyads if d.z.get(p, {}).get(base) is not None]
+            entry[p] = _pct(sum(1 for v in vals if v < cut), len(vals))
             entry[f"n_{p}"] = len(vals)
         av, lv = entry["av"], entry["lv"]
         entry["abs_change"] = round(lv - av, 1) if (av is not None and lv is not None) else None
@@ -932,6 +935,15 @@ def _outcomes(data: MasdData, adoptions: List[Adoption], as_of: date) -> Dict[st
         compliance[band] = {"rule": rule, "yes": _prevalence(yes), "no": _prevalence(no)}
 
     benchmarks = data.benchmarks
+    # The first year of life in one figure: the <6 and 6–11 month NFHS values
+    # weighted by their sample sizes, where the analysts have entered them.
+    lt12 = None
+    if benchmarks and benchmarks.get("age_bands"):
+        a = benchmarks["age_bands"].get(R.BAND_LT6) or {}
+        b = benchmarks["age_bands"].get(R.BAND_6_11) or {}
+        vals = {ind: R.combined_prevalence(a.get(ind), a.get("n"), b.get(ind), b.get("n")) for ind in R.ALL_INDICATORS}
+        if any(v is not None for v in vals.values()):
+            lt12 = {**vals, "n": (a.get("n") or 0) + (b.get("n") or 0)}
     return {
         "funnel": funnel,
         "exclusions": {
@@ -952,6 +964,7 @@ def _outcomes(data: MasdData, adoptions: List[Adoption], as_of: date) -> Dict[st
         },
         "compliance": compliance,
         "benchmarks": benchmarks,
+        "benchmarks_lt12": lt12,
         "data_fixes": _data_fixes(eligible),
     }
 

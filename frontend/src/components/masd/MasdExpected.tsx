@@ -8,6 +8,7 @@ import {
 import { BigNumber, ChipRow, Kpi, KpiRow, Section } from '../results/InsightParts';
 import { Ring, StackedBar } from '../results/InsightCharts';
 import MasdFindings from './MasdFindings';
+import MasdBaseline from './MasdBaseline';
 import { BubblePlot, DataTable, GroupedColumns, RateCell, Th } from './MasdCharts';
 import { fmt1, MASD_COLORS, rateTone } from '../../lib/masdDisplay';
 
@@ -38,7 +39,6 @@ const MasdExpected: React.FC<{ report: MasdReport }> = ({ report }) => {
   const { t } = useTranslation('masd');
   const s = report.summary;
   const cal = report.calendar;
-  const tn = cal.targets.now;
   const [split, setSplit] = useState<Split>('blocks');
   const [atype, setAtype] = useState<AdoptionType>('pnc_lt5');
   const [bandSplit, setBandSplit] = useState<Split>('departments');
@@ -87,6 +87,7 @@ const MasdExpected: React.FC<{ report: MasdReport }> = ({ report }) => {
 
   return (
     <div className="space-y-5">
+      <MasdBaseline report={report} />
       <KpiRow count={4}>
         <Kpi
           visual={<Ring value={Math.min(s.fulfilment_pct ?? 0, 100)} color={rateTone(s.fulfilment_pct ?? 0)}>{fmt1(s.fulfilment_pct)}</Ring>}
@@ -110,88 +111,49 @@ const MasdExpected: React.FC<{ report: MasdReport }> = ({ report }) => {
         />
       </KpiRow>
 
-      <Section icon={<Calculator />} title={t('expected.nowTitle')}
-        subtitle={t('expected.nowSub', { date: fmtDate(report.as_of), anc: tn.anc, lt5: tn.pnc_lt5, ge5: tn.pnc_ge5, nurse: tn.nurse })}>
-        {!example ? (
-          <p className="text-sm text-ink-muted">{t('expected.noBatches')}</p>
-        ) : (
-          <>
-            <DataTable>
-              <thead>
-                <tr>
-                  <Th className="text-left">{t('expected.trancheHead')}</Th>
-                  <Th title={t('expected.fuTitle')}>{t('expected.fu')}</Th>
-                  {ACTIVITY_KEYS.map(k => <Th key={k} title={t(`activities.${k}`)}>{t(`expected.short.${k}`)}</Th>)}
-                  <Th>{t('expected.perLearner')}</Th>
-                  <Th>{t('expected.nurse')}</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {tranches.map(tr => (
-                  <tr key={tr.step}>
-                    {trancheCell(tr.step, tr.opened, tr.buffer, tr.added)}
-                    <td className="px-3 py-2 text-center tabular-nums">
-                      {tr.fu_raw ?? '—'} <span className="text-xs text-ink-faint">→ {tr.fu_days ?? 0}</span>
-                    </td>
-                    {ACTIVITY_KEYS.map(k => (
-                      <td key={k} className="px-3 py-2 text-center tabular-nums">{tr.community.forms[k] || ''}</td>
-                    ))}
-                    <td className="px-3 py-2 text-center font-bold tabular-nums">{tr.community.total}</td>
-                    <td className="px-3 py-2 text-center tabular-nums text-ink-muted">{tr.nurse.total}</td>
+      {example && (
+        <Section icon={<Calculator />} title={t('expected.workedTitle')} subtitle={t('expected.workedSub')}>
+          {exampleText.length > 0 && (
+            <div className="rounded-xl bg-surface-sunken p-4 text-sm leading-relaxed text-ink">
+              <span className="font-semibold">{t('expected.exampleLead')}</span>{' '}
+              {exampleText.join(' | ')}{' '}
+              <span className="font-semibold">= {t('expected.exampleTotal', { n: example.expected.community.total })}</span>
+            </div>
+          )}
+          {sameClock ? (
+            namedBatches.length > 0 && <p className="mt-3 text-sm text-ink-muted">{t('expected.sameClock', { n: namedBatches.length })}</p>
+          ) : (
+            <>
+              <h4 className="mb-1 mt-5 text-sm font-semibold text-ink">{t('expected.byBatch')}</h4>
+              <p className="mb-2 text-sm text-ink-muted">{t('expected.byBatchSub')}</p>
+              <DataTable>
+                <thead>
+                  <tr>
+                    <Th className="text-left">{t('expected.batch')}</Th>
+                    <Th>{t('expected.trainingEnded')}</Th>
+                    <Th>{t('table.learners')}</Th>
+                    <Th>{t('expected.fuByTranche')}</Th>
+                    <Th>{t('expected.perLearner')}</Th>
+                    <Th>{t('expected.nurse')}</Th>
                   </tr>
-                ))}
-                <tr className="border-t-2 border-border-strong bg-surface-sunken/60">
-                  <td className="px-3 py-2 font-semibold text-ink" colSpan={2}>{t('expected.allTranches')}</td>
-                  {ACTIVITY_KEYS.map(k => (
-                    <td key={k} className="px-3 py-2 text-center font-semibold tabular-nums">{example.expected.community.forms[k] || ''}</td>
-                  ))}
-                  <td className="px-3 py-2 text-center font-bold tabular-nums">{example.expected.community.total}</td>
-                  <td className="px-3 py-2 text-center font-semibold tabular-nums text-ink-muted">{example.expected.nurse.total}</td>
-                </tr>
-              </tbody>
-            </DataTable>
-            {exampleText.length > 0 && (
-              <div className="mt-4 rounded-xl bg-surface-sunken p-4 text-sm text-ink">
-                <span className="font-semibold">{t('expected.exampleLead')}</span>{' '}
-                {exampleText.join(' | ')}{' '}
-                <span className="font-semibold">= {t('expected.exampleTotal', { n: example.expected.community.total })}</span>
-              </div>
-            )}
-            {sameClock ? (
-              namedBatches.length > 0 && <p className="mt-3 text-xs text-ink-muted">{t('expected.sameClock', { n: namedBatches.length })}</p>
-            ) : (
-              <>
-                <h4 className="mb-1 mt-5 text-sm font-semibold text-ink">{t('expected.byBatch')}</h4>
-                <p className="mb-2 text-xs text-ink-muted">{t('expected.byBatchSub')}</p>
-                <DataTable>
-                  <thead>
-                    <tr>
-                      <Th className="text-left">{t('expected.batch')}</Th>
-                      <Th>{t('expected.trainingEnded')}</Th>
-                      <Th>{t('table.learners')}</Th>
-                      <Th>{t('expected.fuByTranche')}</Th>
-                      <Th>{t('expected.perLearner')}</Th>
-                      <Th>{t('expected.nurse')}</Th>
+                </thead>
+                <tbody>
+                  {cal.batches.map(b => (
+                    <tr key={b.id ?? 'project'}>
+                      <td className="px-3 py-2 font-medium text-ink">{b.name ?? t('expected.projectDate')}</td>
+                      <td className="px-3 py-2 text-center text-ink-muted">{fmtDate(b.end_date)}</td>
+                      <td className="px-3 py-2 text-center tabular-nums">{b.learners}</td>
+                      <td className="px-3 py-2 text-center tabular-nums">{b.tranche_fu.join(' · ') || '—'}</td>
+                      <td className="px-3 py-2 text-center font-bold tabular-nums">{b.expected.community.total}</td>
+                      <td className="px-3 py-2 text-center tabular-nums text-ink-muted">{b.expected.nurse.total}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {cal.batches.map(b => (
-                      <tr key={b.id ?? 'project'}>
-                        <td className="px-3 py-2 font-medium text-ink">{b.name ?? t('expected.projectDate')}</td>
-                        <td className="px-3 py-2 text-center text-ink-muted">{fmtDate(b.end_date)}</td>
-                        <td className="px-3 py-2 text-center tabular-nums">{b.learners}</td>
-                        <td className="px-3 py-2 text-center tabular-nums">{b.tranche_fu.join(' · ') || '—'}</td>
-                        <td className="px-3 py-2 text-center font-bold tabular-nums">{b.expected.community.total}</td>
-                        <td className="px-3 py-2 text-center tabular-nums text-ink-muted">{b.expected.nurse.total}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </DataTable>
-              </>
-            )}
-          </>
-        )}
-      </Section>
+                  ))}
+                </tbody>
+              </DataTable>
+            </>
+          )}
+        </Section>
+      )}
 
       {uptake.length > 0 && (
         <Section icon={<Hourglass />} title={t('expected.uptakeTitle')} subtitle={t('expected.uptakeSub')}>

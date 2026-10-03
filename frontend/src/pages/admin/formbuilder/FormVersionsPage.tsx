@@ -243,7 +243,7 @@ const FormVersionsPage: React.FC = () => {
                     {version.detected_changes.length > 0 && (
                       <div className="mt-1.5 border-l-2 border-border pl-2.5">
                         {version.diffed_from_version != null && (
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
+                          <p className="text-[12px] font-semibold uppercase tracking-wide text-ink-faint">
                             {t('versions.diffedFrom', { n: version.diffed_from_version })}
                           </p>
                         )}
@@ -258,7 +258,7 @@ const FormVersionsPage: React.FC = () => {
                         version without cutting a new version number. */}
                     {(version.change_log ?? []).length > 0 && (
                       <div className="mt-2 rounded-lg border border-border bg-surface-sunken/50 p-2.5">
-                        <p className="mb-1 mt-0 text-[11px] font-bold uppercase tracking-wide text-ink-muted">
+                        <p className="mb-1 mt-0 text-[12px] font-bold uppercase tracking-wide text-ink-muted">
                           {t('versions.changeLogTitle', { n: version.change_log.length })}
                         </p>
                         <ul className="space-y-1.5">
@@ -268,7 +268,7 @@ const FormVersionsPage: React.FC = () => {
                               {entry.by && <span className="text-ink-faint"> · {entry.by}</span>}
                               <span className="block text-ink-muted">{entry.note}</span>
                               {entry.detected.length > 0 && (
-                                <ul className="mt-0.5 space-y-0.5 border-l-2 border-border pl-2.5 text-[11px] text-ink-faint">
+                                <ul className="mt-0.5 space-y-0.5 border-l-2 border-border pl-2.5 text-[12px] text-ink-faint">
                                   {entry.detected.map((change, j) => (
                                     <li key={`${j}-${change}`}>{change}</li>
                                   ))}
@@ -393,16 +393,16 @@ const FormVersionsPage: React.FC = () => {
                         <span className="text-sm font-medium text-ink">{district.name}</span>
                       </span>
                       {pinnedElsewhere ? (
-                        <span className="text-[11px] text-amber-600">
+                        <span className="text-[12px] text-amber-600">
                           {t('versions.pinnedTo', { n: pinnedVersion })}
                         </span>
                       ) : pinnedVersion === assignFor.version_number ? (
-                        <span className="flex items-center gap-1 text-[11px] text-success-600">
+                        <span className="flex items-center gap-1 text-[12px] text-success-600">
                           <Check className="size-3" />
                           {t('versions.pinnedHere')}
                         </span>
                       ) : (
-                        <span className="text-[11px] text-ink-faint">{t('versions.followsDefault')}</span>
+                        <span className="text-[12px] text-ink-faint">{t('versions.followsDefault')}</span>
                       )}
                     </label>
                   </li>

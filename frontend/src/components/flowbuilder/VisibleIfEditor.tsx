@@ -62,13 +62,13 @@ const VisibleIfEditor: React.FC<VisibleIfEditorProps> = ({ schema, nodeId, value
 
       {value && (
         <>
-          <p className="mt-2 text-[11px] leading-snug text-ink-muted">
+          <p className="mt-2 text-[12px] leading-snug text-ink-muted">
             Shown when the answer includes any ticked option. Hidden steps are skipped —
             the flow continues at this step's next.
           </p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {sourceOptions.length === 0 && (
-              <span className="text-[11px] text-error-600">That question no longer exists or has no options.</span>
+              <span className="text-[12px] text-error-600">That question no longer exists or has no options.</span>
             )}
             {sourceOptions.map(o => {
               const selected = value.anyOf.includes(o.id);
@@ -78,7 +78,7 @@ const VisibleIfEditor: React.FC<VisibleIfEditorProps> = ({ schema, nodeId, value
                   type="button"
                   onClick={() => toggleOption(o.id)}
                   className={cn(
-                    'cursor-pointer rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors',
+                    'cursor-pointer rounded-full border px-2.5 py-1 text-[12px] font-semibold transition-colors',
                     selected
                       ? 'border-primary bg-coral-50 text-primary-ink dark:bg-coral-500/15'
                       : 'border-border text-ink-muted hover:border-border-strong',
@@ -90,7 +90,7 @@ const VisibleIfEditor: React.FC<VisibleIfEditorProps> = ({ schema, nodeId, value
             })}
           </div>
           {value.anyOf.length === 0 && (
-            <p className="mt-1.5 text-[11px] font-semibold text-amber-700 dark:text-amber-500">
+            <p className="mt-1.5 text-[12px] font-semibold text-amber-700 dark:text-amber-500">
               No options ticked — this step would never be shown.
             </p>
           )}

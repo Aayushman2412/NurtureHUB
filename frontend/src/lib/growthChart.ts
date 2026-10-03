@@ -19,9 +19,11 @@
 
 import type { GrowthCase, GrowthIndicator, GrowthStandardPoint, GrowthVisit } from '../api/growth';
 import { GROWTH_SOURCE_COLORS, PERCENTILE_COLORS } from '../utils/brandColors';
+import { programme } from './programme';
 
 export type GrowthCohort = 'young' | 'old';
-export const COHORT_SPLIT_DAYS = 150;
+/** The PNC adoption split (150 days unless the programme setting moves it). */
+export const cohortSplitDays = () => programme.pncSplitDays;
 
 /** How a visit's metrics were collected → its color on the charts. */
 export type VisitSourceCombo = 'birth' | 'growth' | 'growth_bf' | 'growth_cf' | 'growth_bf_cf';
@@ -70,7 +72,7 @@ export const COHORT_SPECS: Record<GrowthCohort, CohortSpec> = {
   // (see cohortDomains) rather than moving to the old chart.
   young: { cohort: 'young', ageDomain: [0, 183], lengthDomain: [45, 70] },
   // 150 days → 2 years.
-  old: { cohort: 'old', ageDomain: [COHORT_SPLIT_DAYS, 731], lengthDomain: [58, 100] },
+  old: { cohort: 'old', ageDomain: [150, 731], lengthDomain: [58, 100] },
 };
 
 /** Hard limits of the WHO reference tables — domains never exceed them. */
@@ -101,10 +103,10 @@ export const adoptionAgeDays = (c: GrowthCase): number | null =>
 export const adoptionCohort = (c: GrowthCase): GrowthCohort => {
   const atAdoption = adoptionAgeDays(c);
   if (atAdoption != null && atAdoption >= 0) {
-    return atAdoption < COHORT_SPLIT_DAYS ? 'young' : 'old';
+    return atAdoption < cohortSplitDays() ? 'young' : 'old';
   }
   const ages = c.visits.map(v => v.age_days).filter((a): a is number => a != null && a >= 0);
-  if (ages.length > 0) return Math.min(...ages) < COHORT_SPLIT_DAYS ? 'young' : 'old';
+  if (ages.length > 0) return Math.min(...ages) < cohortSplitDays() ? 'young' : 'old';
   return 'young';
 };
 

@@ -250,4 +250,4 @@ def _prev(group: str, band: str, block: Dict[str, Any]) -> List[List[Any]]:
     if not block or not block.get("n"):
         return []
     return [[group, band, R.INDICATOR_LABELS[i], block["n"], block[i]["bv"], block[i]["av"], block[i]["lv"],
-             block[i]["abs_change"], block[i]["rel_change"]] for i in R.INDICATORS]
+             block[i]["abs_change"], block[i]["rel_change"]] for i in R.ALL_INDICATORS]

@@ -1016,12 +1016,12 @@ const FlowBuilderPage: React.FC = () => {
                       </option>
                     ))}
                   </Select>
-                  <span className="shrink-0 text-[11px] text-ink-faint">
+                  <span className="shrink-0 text-[12px] text-ink-faint">
                     {used} option{used === 1 ? '' : 's'}
                   </span>
                 </div>
                 {isBuiltinVerdict(def.id) && (
-                  <p className="mt-1.5 text-[11px] text-ink-faint">
+                  <p className="mt-1.5 text-[12px] text-ink-faint">
                     Built-in — its name stays translated for learners; the colour and scoring are
                     yours to change.
                   </p>
@@ -1074,7 +1074,7 @@ const FlowBuilderPage: React.FC = () => {
                   Clear
                 </Button>
               </div>
-              <p className="text-[11px] leading-relaxed text-ink-faint">
+              <p className="text-[12px] leading-relaxed text-ink-faint">
                 Shortcuts: <kbd>Ctrl+C</kbd> copy · <kbd>Ctrl+V</kbd> paste · <kbd>Del</kbd> delete ·{' '}
                 <kbd>Esc</kbd> clear. Drag any selected card to move the whole group; Shift-drag a box
                 to add more steps to the selection.

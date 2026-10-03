@@ -179,7 +179,7 @@ const ActionEditor: React.FC<ActionEditorProps> = ({ action, onChange }) => {
               >
                 {action.url ? 'Replace file' : 'Upload file'}
               </Button>
-              <span className="text-[11px] text-ink-faint">MP4, WebM or MP3 · max 25 MB</span>
+              <span className="text-[12px] text-ink-faint">MP4, WebM or MP3 · max 25 MB</span>
             </div>
             <input
               ref={fileRef}

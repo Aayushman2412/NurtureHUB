@@ -165,7 +165,7 @@ const AdminProjectsPage: React.FC = () => {
                   {t(project.level === 'state' ? 'projects.levelState' : 'projects.levelDistrict')}
                 </Badge>
                 {project.code && (
-                  <span className="rounded bg-surface-sunken px-1.5 py-0.5 font-mono text-[11px] text-ink-muted">
+                  <span className="rounded bg-surface-sunken px-1.5 py-0.5 font-mono text-[12px] text-ink-muted">
                     {project.code}
                   </span>
                 )}
@@ -265,7 +265,7 @@ const AdminProjectsPage: React.FC = () => {
       {/* Standalone districts */}
       {groups.standalone.length > 0 && (
         <div className="flex flex-col gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-ink-faint">
+          <span className="text-[12px] font-bold uppercase tracking-wider text-ink-faint">
             {t('projects.standaloneHeading')}
           </span>
           {groups.standalone.map(project => card(project, false))}
@@ -318,7 +318,7 @@ const AdminProjectsPage: React.FC = () => {
             <div>
               <Checkbox checked={inherits} onChange={e => setInherits(e.target.checked)}
                 label={t('projects.fieldInherits')} />
-              <p className="mt-1 pl-6.5 text-[11px] text-ink-faint">{t('projects.hintInherits')}</p>
+              <p className="mt-1 pl-6.5 text-[12px] text-ink-faint">{t('projects.hintInherits')}</p>
             </div>
           )}
 
@@ -327,13 +327,13 @@ const AdminProjectsPage: React.FC = () => {
               <FieldLabel size="sm">{t('projects.fieldCode')}</FieldLabel>
               <Input value={code} maxLength={4} placeholder="UJ"
                 onChange={e => setCode(e.target.value.toUpperCase())} />
-              <p className="mt-1 text-[11px] text-ink-faint">{t('projects.hintCode')}</p>
+              <p className="mt-1 text-[12px] text-ink-faint">{t('projects.hintCode')}</p>
             </div>
             <div>
               <FieldLabel size="sm">{t('projects.fieldPrefix')}</FieldLabel>
               <Input value={statePrefix} maxLength={2} placeholder="MP"
                 onChange={e => setStatePrefix(e.target.value.toUpperCase())} />
-              <p className="mt-1 text-[11px] text-ink-faint">{t('projects.hintPrefix')}</p>
+              <p className="mt-1 text-[12px] text-ink-faint">{t('projects.hintPrefix')}</p>
             </div>
           </div>
 

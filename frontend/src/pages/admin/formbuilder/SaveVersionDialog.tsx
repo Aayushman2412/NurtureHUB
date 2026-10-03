@@ -160,7 +160,7 @@ const SaveVersionDialog: React.FC<Props> = ({
             <ListChecks className="size-3.5" />
             {t('saveVersion.detected')}
             {detectedChanges.length > 0 && (
-              <span className="rounded-full bg-primary/10 px-1.5 text-[10px] font-bold text-primary-ink">
+              <span className="rounded-full bg-primary/10 px-1.5 text-xs font-bold text-primary-ink">
                 {detectedChanges.length}
               </span>
             )}

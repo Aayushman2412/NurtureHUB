@@ -34,7 +34,7 @@ const VerdictChip: React.FC<VerdictChipProps> = ({ def, className }) => {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+        'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-semibold',
         className,
       )}
       // A custom verdict carries an arbitrary colour, so the tint is inline —

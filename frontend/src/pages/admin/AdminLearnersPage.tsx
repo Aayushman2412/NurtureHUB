@@ -366,7 +366,7 @@ const AdminLearnersPage: React.FC = () => {
                   <Td className="font-semibold text-ink">
                     {learner.full_name || <span className="text-ink-faint">{t('learners.noName')}</span>}
                     {learner.is_admin && <Badge variant="coral" className="ml-2">{t('learners.adminBadge')}</Badge>}
-                    {learner.role && <span className="block text-[11px] text-ink-faint">{learner.role}</span>}
+                    {learner.role && <span className="block text-[12px] text-ink-faint">{learner.role}</span>}
                   </Td>
                   <Td className="text-ink-muted">{learner.email}</Td>
                   <Td>
@@ -484,7 +484,7 @@ const AdminLearnersPage: React.FC = () => {
             label={t('learners.fieldVerified')}
           />
         </div>
-        <p className="mt-3 text-[11px] text-ink-faint">{t('learners.reassignNote')}</p>
+        <p className="mt-3 text-[12px] text-ink-faint">{t('learners.reassignNote')}</p>
         {editError && <p className="mt-3 text-[13px] text-error-600">{editError}</p>}
       </Modal>
 
@@ -575,7 +575,7 @@ const AdminLearnersPage: React.FC = () => {
                   <RefreshCw className="size-4" />
                 </Button>
               </div>
-              <p className="mt-1 text-[11px] text-ink-faint">{t('learners.emailHint')}</p>
+              <p className="mt-1 text-[12px] text-ink-faint">{t('learners.emailHint')}</p>
             </div>
             <div>
               <FieldLabel size="sm">{t('learners.fieldPassword')}</FieldLabel>

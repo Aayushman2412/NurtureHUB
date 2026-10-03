@@ -233,7 +233,7 @@ const AssessmentPlanPage: React.FC = () => {
                   <div className={cn('font-display text-xl font-extrabold', flagged ? 'text-error-600' : 'text-ink')}>
                     {grams}g
                   </div>
-                  <div className="mt-0.5 text-[11px] font-semibold leading-snug text-ink-muted">
+                  <div className="mt-0.5 text-[12px] font-semibold leading-snug text-ink-muted">
                     {t(`plan.${key}`)}
                   </div>
                 </div>

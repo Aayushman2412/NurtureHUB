@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowRightLeft, ClipboardCheck, LayoutDashboard } from 'lucide-react';
 import client from '../../api/client';
 import { CHART_SERIES } from '../../utils/brandColors';
-import { SubNav } from './InsightParts';
+import { ActiveFilterBar, ChipRow, SubNav } from './InsightParts';
 import OverviewInsights from './OverviewInsights';
 import TestInsights from './TestInsights';
 import CompareTests from './CompareTests';
@@ -152,7 +152,30 @@ const ResultsInsights: React.FC<{ data: ResultsData }> = ({ data }) => {
 
   return (
     <div className="space-y-5">
-      <SubNav items={pages} value={current} onChange={setView} label={t('nav.label')} />
+      {/* Frozen at the top while the page scrolls: which page, how learners
+          are split, and any group filter in force — every chart below reads
+          them, so they stay in sight. */}
+      <div className="space-y-2.5 rounded-2xl border border-border bg-surface/95 p-2 shadow-(--shadow-card) backdrop-blur sm:sticky sm:top-[3.75rem] sm:z-20 lg:top-2">
+        <SubNav items={pages} value={current} onChange={setView} label={t('nav.label')} />
+        {dims.length > 0 && (
+          <div className="space-y-2 px-1.5 pb-1">
+            <ChipRow
+              label={t('compare.splitBy')}
+              items={dims.map(d => ({ key: d, label: t(`dim.${d}`) }))}
+              value={dim}
+              onChange={k => setDim(k as DimensionKey)}
+            />
+            <ActiveFilterBar
+              className="mb-0"
+              filters={filters}
+              groupLabel={groupLabel}
+              onClear={clearFilter}
+              filteredCount={users.length}
+              totalCount={data.users.length}
+            />
+          </div>
+        )}
+      </div>
 
       {current === 'overview' && <OverviewInsights ctx={ctx} />}
       {currentTest && <TestInsights key={currentTest.id} ctx={ctx} test={currentTest} />}

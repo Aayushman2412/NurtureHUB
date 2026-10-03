@@ -105,7 +105,7 @@ const PasswordRules: React.FC<Props> = ({ password, policy, results, showTip = t
                       key={k}
                       title={t(`passwordRules.kinds.${k}`)}
                       className={cn(
-                        'rounded-md border px-1.5 py-0.5 font-mono text-[0.7rem] font-semibold transition-colors',
+                        'rounded-md border px-1.5 py-0.5 font-mono text-xs font-semibold transition-colors',
                         kinds[k]
                           ? 'border-success-500/50 bg-success-50 text-success-600 dark:bg-success-500/15'
                           : 'border-border bg-surface text-ink-faint',

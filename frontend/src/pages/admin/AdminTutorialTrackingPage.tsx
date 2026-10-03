@@ -256,7 +256,7 @@ const AdminTutorialTrackingPage: React.FC = () => {
                     return (
                       <Td key={tut.id} className="whitespace-nowrap text-center">
                         <div className={`font-bold ${pctColorClass(pct)}`}>{Math.round(pct)}%</div>
-                        <div className="text-[0.7rem] text-ink-faint">
+                        <div className="text-xs text-ink-faint">
                           {fmtWatchTime(p?.watch_time_seconds || 0)}
                           {tut.has_quiz && <> • {p ? quizCell(p, tut, t) : t('tracking.pending')}</>}
                         </div>
@@ -272,13 +272,13 @@ const AdminTutorialTrackingPage: React.FC = () => {
                     <span className="text-error-600" title={t('tracking.skipped')}>
                       <SkipForward className="mb-0.5 inline size-3" /> {u.summary.quizzes_skipped}
                     </span>
-                    <div className="text-[0.7rem] text-ink-faint">{t('tracking.accuracy', { n: u.summary.quiz_accuracy_pct })}</div>
+                    <div className="text-xs text-ink-faint">{t('tracking.accuracy', { n: u.summary.quiz_accuracy_pct })}</div>
                   </Td>
                   <Td className="text-center">
                     <span className={`font-display text-base font-extrabold ${scoreColorClass(u.summary.performance_score)}`}>
                       {u.summary.performance_score}
                     </span>
-                    <span className="text-[0.7rem] text-ink-faint"> {t('tracking.outOf100')}</span>
+                    <span className="text-xs text-ink-faint"> {t('tracking.outOf100')}</span>
                   </Td>
                 </Tr>
               ))}

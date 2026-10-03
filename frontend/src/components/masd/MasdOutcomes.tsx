@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Baby, ClipboardCheck, Filter, HeartPulse, Milestone, UserCheck, Users, Wrench } from 'lucide-react';
-import { INDICATORS, type Band, type Benchmarks, type MasdReport, type Prevalence } from '../../api/masd';
+import {
+  INDICATORS, MAIN_INDICATORS, type Band, type Benchmarks, type BenchValues, type Indicator, type MasdReport, type Prevalence,
+} from '../../api/masd';
 import { ChipRow, Section } from '../results/InsightParts';
 import { BarList } from '../results/InsightCharts';
 import MasdFindings from './MasdFindings';
@@ -9,17 +11,31 @@ import { DataTable, GroupedColumns, RateCell, Th } from './MasdCharts';
 import { fmt1, MASD_COLORS } from '../../lib/masdDisplay';
 
 const BANDS: Band[] = ['lt6', 'm6_11'];
+const isSevere = (i: Indicator) => !(MAIN_INDICATORS as Indicator[]).includes(i);
+/** As on NFHS fact sheets: each indicator, then its severe form. */
+const ORDERED: Indicator[] = ['stunting', 'severe_stunting', 'underweight', 'severe_underweight', 'wasting', 'sam'];
 
-const PrevTable: React.FC<{ p: Prevalence; bench: Benchmarks | null; bands?: Band[] }> = ({ p, bench, bands = BANDS }) => {
+/** The indicator's name; the severe forms indented under their parent. */
+const IndicatorName: React.FC<{ i: Indicator }> = ({ i }) => {
+  const { t } = useTranslation('masd');
+  return isSevere(i)
+    ? <td className="py-2 pl-7 pr-3 text-ink-muted">{t(`indicators.${i}`)}</td>
+    : <td className="px-3 py-2 font-medium text-ink">{t(`indicators.${i}`)}</td>;
+};
+
+const PrevTable: React.FC<{ p: Prevalence; bench: Benchmarks | null; lt12: BenchValues | null; bands?: Band[] }> = ({ p, bench, lt12, bands = BANDS }) => {
   const { t } = useTranslation('masd');
   const ages = bench?.age_bands ?? {};
   const showBench = !!bench && bands.some(b => ages[b]);
+  const under5 = bench?.under5 ?? null;
   return (
     <DataTable>
       <thead>
         <tr>
           <Th className="text-left">{t('outcomes.indicator')}</Th>
           {showBench && bands.map(b => <Th key={b} title={bench!.label}>{t('outcomes.nfhsBand', { band: t(`bands.${b}`) })}</Th>)}
+          {lt12 && <Th title={t('outcomes.lt12Title')}>{t('outcomes.nfhsLt12')}</Th>}
+          {under5 && <Th title={bench!.label}>{t('outcomes.nfhsUnder5')}</Th>}
           <Th title={t('outcomes.bvFull')}>BV</Th>
           <Th title={t('outcomes.avFull')}>AV</Th>
           <Th title={t('outcomes.lvFull')}>LV</Th>
@@ -28,14 +44,16 @@ const PrevTable: React.FC<{ p: Prevalence; bench: Benchmarks | null; bands?: Ban
         </tr>
       </thead>
       <tbody>
-        {INDICATORS.map(i => {
+        {ORDERED.filter(i => p[i]).map(i => {
           const x = p[i];
           return (
             <tr key={i}>
-              <td className="px-3 py-2 font-medium text-ink">{t(`indicators.${i}`)}</td>
+              <IndicatorName i={i} />
               {showBench && bands.map(b => (
                 <td key={b} className="px-3 py-2 text-center tabular-nums text-ink-muted">{fmt1(ages[b]?.[i] ?? null)}</td>
               ))}
+              {lt12 && <td className="px-3 py-2 text-center tabular-nums text-ink-muted">{fmt1(lt12[i] ?? null)}</td>}
+              {under5 && <td className="px-3 py-2 text-center tabular-nums text-ink-muted">{fmt1(under5[i] ?? null)}</td>}
               <RateCell value={x.bv} lowerIsBetter />
               <RateCell value={x.av} lowerIsBetter />
               <RateCell value={x.lv} lowerIsBetter />
@@ -58,7 +76,8 @@ const MasdOutcomes: React.FC<{ report: MasdReport }> = ({ report }) => {
   const [who, setWho] = useState<Who>('overall');
   const prev = o.prevalence[who];
   const bench = o.benchmarks;
-  const indCats = INDICATORS.map(i => ({ key: i, label: t(`indicators.${i}`) }));
+  const indCats = MAIN_INDICATORS.map(i => ({ key: i, label: t(`indicators.${i}`) }));
+  const allCats = INDICATORS.map(i => ({ key: i, label: t(`indicators.${i}`) }));
   const funnelLabel: Record<string, string> = {
     start: t('outcomes.funnelStart'), no_f2f: t('outcomes.funnelNoF2f'), nursing_staff: t('outcomes.funnelNurses'),
   };
@@ -184,10 +203,10 @@ const MasdOutcomes: React.FC<{ report: MasdReport }> = ({ report }) => {
         {prev.n ? (
           <>
             <p className="mb-3 text-sm text-ink-muted">{t('outcomes.nDyads', { n: prev.n.toLocaleString() })}</p>
-            <PrevTable p={prev} bench={bench} />
+            <PrevTable p={prev} bench={bench} lt12={o.benchmarks_lt12} />
             <div className="mt-5">
               <GroupedColumns
-                categories={indCats}
+                categories={allCats}
                 series={[
                   { key: 'bv', label: t('outcomes.bvFull'), color: '#D6CFC6', values: INDICATORS.map(i => prev[i].bv) },
                   { key: 'av', label: t('outcomes.avFull'), color: MASD_COLORS.then, values: INDICATORS.map(i => prev[i].av) },
@@ -221,9 +240,9 @@ const MasdOutcomes: React.FC<{ report: MasdReport }> = ({ report }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {INDICATORS.map(i => (
+                    {ORDERED.map(i => (
                       <tr key={i}>
-                        <td className="px-3 py-2 font-medium">{t(`indicators.${i}`)}</td>
+                        <IndicatorName i={i} />
                         {bench?.age_bands?.[band] && <td className="px-3 py-2 text-center text-ink-muted">{fmt1(bench.age_bands[band]?.[i] ?? null)}</td>}
                         <RateCell value={b.mtfl.n ? b.mtfl[i].av : null} lowerIsBetter />
                         <RateCell value={b.mtfl.n ? b.mtfl[i].lv : null} lowerIsBetter />
@@ -252,10 +271,10 @@ const MasdOutcomes: React.FC<{ report: MasdReport }> = ({ report }) => {
                 <GroupedColumns
                   categories={indCats}
                   series={[
-                    { key: 'ya', label: t('outcomes.yesAv'), color: '#9FC5CC', values: INDICATORS.map(i => (c.yes.n ? c.yes[i].av : null)) },
-                    { key: 'yl', label: t('outcomes.yesLv'), color: MASD_COLORS.adoption, values: INDICATORS.map(i => (c.yes.n ? c.yes[i].lv : null)) },
-                    { key: 'na', label: t('outcomes.noAv'), color: '#F2B8AE', values: INDICATORS.map(i => (c.no.n ? c.no[i].av : null)) },
-                    { key: 'nl', label: t('outcomes.noLv'), color: MASD_COLORS.activity, values: INDICATORS.map(i => (c.no.n ? c.no[i].lv : null)) },
+                    { key: 'ya', label: t('outcomes.yesAv'), color: '#9FC5CC', values: MAIN_INDICATORS.map(i => (c.yes.n ? c.yes[i].av : null)) },
+                    { key: 'yl', label: t('outcomes.yesLv'), color: MASD_COLORS.adoption, values: MAIN_INDICATORS.map(i => (c.yes.n ? c.yes[i].lv : null)) },
+                    { key: 'na', label: t('outcomes.noAv'), color: '#F2B8AE', values: MAIN_INDICATORS.map(i => (c.no.n ? c.no[i].av : null)) },
+                    { key: 'nl', label: t('outcomes.noLv'), color: MASD_COLORS.activity, values: MAIN_INDICATORS.map(i => (c.no.n ? c.no[i].lv : null)) },
                   ]}
                   height={180}
                   valueSuffix="%"
@@ -274,7 +293,7 @@ const MasdOutcomes: React.FC<{ report: MasdReport }> = ({ report }) => {
             categories={indCats}
             series={bench.district_trend.rounds.map((round, k) => ({
               key: round, label: round, color: ['#D6CFC6', MASD_COLORS.then, MASD_COLORS.activity, MASD_COLORS.adoption][k % 4],
-              values: INDICATORS.map(i => bench.district_trend![i][k] ?? null),
+              values: MAIN_INDICATORS.map(i => bench.district_trend![i][k] ?? null),
             }))}
             height={180}
             valueSuffix="%"

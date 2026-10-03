@@ -72,7 +72,7 @@ const InputKindCard: React.FC<InputKindCardProps> = ({
             )}
           </div>
           <p className="mt-1 text-xs text-ink-muted">{kind.description}</p>
-          <p className="mt-1 font-mono text-[11px] text-ink-faint">{kind.hint}</p>
+          <p className="mt-1 font-mono text-[12px] text-ink-faint">{kind.hint}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button
@@ -168,7 +168,7 @@ const InputKindCard: React.FC<InputKindCardProps> = ({
                       <span className="min-w-0">
                         <span className="block truncate font-medium text-ink">{file.name}</span>
                         {file.path !== file.name && (
-                          <span className="block truncate text-[11px] text-ink-faint">{file.path}</span>
+                          <span className="block truncate text-[12px] text-ink-faint">{file.path}</span>
                         )}
                       </span>
                     </span>

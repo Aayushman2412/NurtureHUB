@@ -27,7 +27,7 @@ const Chip: React.FC<ChipProps> = ({ selected, count, className, children, ...re
     {typeof count === 'number' && (
       <span
         className={cn(
-          'rounded-full text-[11px] px-1.5 py-px font-bold',
+          'rounded-full text-[12px] px-1.5 py-px font-bold',
           selected ? 'bg-primary-fg/20' : 'bg-surface-sunken text-ink-faint',
         )}
       >

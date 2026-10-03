@@ -59,7 +59,7 @@ const MainHeader: React.FC<MainHeaderProps> = ({
               <CloudOff className="size-5 text-amber-600" />
             )}
             {pendingCount > 0 && (
-              <span className="absolute right-0.5 top-0.5 flex size-4.5 items-center justify-center rounded-full bg-amber-500 text-[11px] font-bold text-white ring-2 ring-surface">
+              <span className="absolute right-0.5 top-0.5 flex size-4.5 items-center justify-center rounded-full bg-amber-500 text-[12px] font-bold text-white ring-2 ring-surface">
                 {pendingCount > 9 ? '9+' : pendingCount}
               </span>
             )}
@@ -81,7 +81,7 @@ const MainHeader: React.FC<MainHeaderProps> = ({
         <button onClick={onToggleNotifs} className={`${iconBtn} relative`} title={t('app:header.notifications')}>
           <Bell className="size-5" />
           {unreadNotifsCount > 0 && (
-            <span className="absolute right-1 top-1 flex size-4.5 items-center justify-center rounded-full bg-error-500 text-[11px] font-bold text-white ring-2 ring-surface">
+            <span className="absolute right-1 top-1 flex size-4.5 items-center justify-center rounded-full bg-error-500 text-[12px] font-bold text-white ring-2 ring-surface">
               {unreadNotifsCount > 9 ? '9+' : unreadNotifsCount}
             </span>
           )}

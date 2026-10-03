@@ -96,14 +96,17 @@
     "ofN": "of {{n}}",
     "selectedWho": "Who was selected — by {{dim}}",
     "selectedCenter": "selected",
-    "selectedExplain": "Each slice is the number of learners from that group selected for face-to-face training. Compare it with “Who took part” above: a group whose slice here is much smaller than there is being selected less often."
+    "selectedExplain": "Each slice is the number of learners from that group selected for face-to-face training. Compare it with “Who took part” above: a group whose slice here is much smaller than there is being selected less often.",
+    "whoNotTaken": "Who did NOT take the {{test}} — by {{dim}}",
+    "notTakenCenter": "did not take it"
   },
   "measure": {
     "pass": "{{test}}: % who passed",
     "score": "{{test}}: average score",
     "videos": "Finished all videos",
     "quiz": "Video quizzes: % answers correct",
-    "selected": "Selected for face-to-face"
+    "selected": "Selected for face-to-face",
+    "notTaken": "{{test}}: % who did NOT take it"
   },
   "scorecard": {
     "title": "Scorecard — by {{dim}}",
@@ -159,7 +162,8 @@
     "f2fAll": "All",
     "f2fSelected": "Selected only",
     "f2fNotSelected": "Not selected",
-    "noPerformers": "No performers match your search or filter."
+    "noPerformers": "No performers match your search or filter.",
+    "bottomK": "Lowest {{count}} performers"
   },
   "dim": {
     "cadre": "Cadre / role",
@@ -223,7 +227,7 @@
     "passMarkIs": "Pass mark {{mark}}%",
     "notPassedN": "{{n}} have not passed",
     "findingsSubtitle": "What the {{test}} results say, in plain words.",
-    "histSubtitle": "How many learners got each score. The dashed line is the pass mark.",
+    "histSubtitle": "Share of learners whose best score falls in each range. The dashed line is the pass mark.",
     "passMarkShort": "Pass {{mark}}%",
     "groupsTitle": "{{test}}: groups compared",
     "whoWrote": "Who wrote it — by {{dim}}",
@@ -249,11 +253,21 @@
     "passMark": "Pass mark",
     "passRatePct": "% passed",
     "nobody": "Nobody has written the {{test}} yet.",
-    "barTitle": "{{n}} learners scored {{label}}"
+    "barTitle": "{{n}} learners scored {{label}}",
+    "measureNotTaken": "% who did NOT take the test",
+    "notTakenOfN": "{{n}} of {{m}} did not take it",
+    "whoNotTaken": "Who did NOT take it — by {{dim}}",
+    "notTakenIt": "did not take it",
+    "histAxis": "Best score, % (range)",
+    "topTitleN": "Top {{n}} scorers",
+    "bottomTitleN": "Lowest {{n}} scorers",
+    "allScorers": "All scorers, highest first",
+    "allScorersLow": "All scorers, lowest first",
+    "bottomSubtitle": "Lowest score in the {{test}} among everyone who wrote it."
   },
   "questions": {
     "title": "Question by question",
-    "subtitle": "How many answered each question correctly, on their first attempt. The hardest questions show which topics need a refresher.",
+    "subtitle": "The share who answered each question correctly on their first attempt, and every wrong answer they chose. Filter by how hard it turned out, or by topic.",
     "order": {
       "hardest": "Hardest first",
       "paper": "Paper order"
@@ -268,7 +282,25 @@
     "blank": "Left blank",
     "answerIs": "Right answer: {{label}}. {{text}}",
     "rightAnswer": "Right answer",
-    "sheet": "Questions"
+    "sheet": "Questions",
+    "topic": "Topic",
+    "subtopic": "Subtopic",
+    "difficulty": "Difficulty",
+    "wrongAnswers": "Wrong answers chosen",
+    "blankPct": "% left blank",
+    "allN": "All ({{n}})",
+    "allTopics": "All topics",
+    "noneMatch": "No question matches these filters.",
+    "level": {
+      "difficult": "Difficult",
+      "medium": "Medium",
+      "easy": "Easy"
+    },
+    "levelN": {
+      "difficult": "Difficult — under {{medium}}% right ({{n}})",
+      "medium": "Medium — {{medium}}–{{below}}% right ({{n}})",
+      "easy": "Easy — {{easy}}%+ right ({{n}})"
+    }
   },
   "cmp": {
     "eyebrow": "{{a}} vs {{b}}",
@@ -303,6 +335,14 @@
     "gridSubtitle": "Score in the {{a}} (across) against score in the {{b}} (up).",
     "scoreIn": "Score in the {{test}}",
     "cellTitle": "{{n}} learners scored {{ba}} in the {{a}} and {{bb}} in the {{b}}",
-    "gridHow": "Each box is how many learners scored that pair. The outlined boxes are the same band in both tests; boxes above them did better in the second test, boxes below did worse."
+    "gridHow": "Each box shows the share of learners (and how many) who scored that pair. Green boxes scored high on both tests, red boxes low on both. The outlined boxes are the same band in both tests; boxes above them did better in the second test, boxes below did worse."
+  },
+  "pick": {
+    "which": "From which end",
+    "top": "Top",
+    "bottom": "Bottom",
+    "show": "Show",
+    "all": "All",
+    "howMany": "How many learners to show"
   }
 }

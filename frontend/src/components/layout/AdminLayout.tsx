@@ -128,15 +128,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             {project.name}
           </span>
           {project.level === 'state' && (
-            <span className="shrink-0 rounded bg-surface-sunken px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink-muted">
+            <span className="shrink-0 rounded bg-surface-sunken px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-ink-muted">
               {t('layout.stateBadge')}
             </span>
           )}
           {project.inherits_content && (
-            <span className="shrink-0 text-[10px] text-ink-faint">{t('layout.inheritsBadge')}</span>
+            <span className="shrink-0 text-xs text-ink-faint">{t('layout.inheritsBadge')}</span>
           )}
         </span>
-        <span className="shrink-0 text-[11px] opacity-60">
+        <span className="shrink-0 text-[12px] opacity-60">
           {t('layout.usersCount', { n: project.user_count ?? 0 })}
         </span>
       </span>
@@ -178,7 +178,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           </span>
           <div className="flex-1">
             <h2 className="font-display text-base font-extrabold leading-tight">NurtureHUB</h2>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-primary-ink">
+            <span className="text-[12px] font-bold uppercase tracking-wider text-primary-ink">
               {t('layout.panel')}
             </span>
           </div>
@@ -204,7 +204,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                   : <MapPin className="size-4 shrink-0 text-primary-ink" />}
                 <span className="min-w-0 flex-1 text-left">
                   {parentState && (
-                    <span className="block truncate text-[11px] font-medium text-ink-faint">
+                    <span className="block truncate text-[12px] font-medium text-ink-faint">
                       {parentState.name}
                     </span>
                   )}
@@ -241,7 +241,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </NavLink>
           ))}
 
-          <div className="px-3.5 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wider text-ink-faint">
+          <div className="px-3.5 pb-1 pt-4 text-[12px] font-bold uppercase tracking-wider text-ink-faint">
             {t('layout.nav.databaseSection')}
           </div>
           {databaseNavItems.map(item => (

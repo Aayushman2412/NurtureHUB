@@ -171,6 +171,11 @@ class BandValues(BaseModel):
     stunting: Optional[float] = Field(None, ge=0, le=100)
     underweight: Optional[float] = Field(None, ge=0, le=100)
     wasting: Optional[float] = Field(None, ge=0, le=100)
+    severe_stunting: Optional[float] = Field(None, ge=0, le=100)
+    severe_underweight: Optional[float] = Field(None, ge=0, le=100)
+    sam: Optional[float] = Field(None, ge=0, le=100)
+    # The survey's sample size for this band, to weight the bands together.
+    n: Optional[int] = Field(None, ge=0, le=10_000_000)
 
 
 class DistrictTrend(BaseModel):
@@ -195,6 +200,8 @@ class DistrictTrend(BaseModel):
 class Benchmarks(BaseModel):
     label: str = Field("", max_length=120)
     age_bands: Dict[Literal["lt6", "m6_11"], BandValues] = Field(default_factory=dict)
+    # District NFHS fact sheets publish under-5 figures only.
+    under5: Optional[BandValues] = None
     district_trend: Optional[DistrictTrend] = None
 
 

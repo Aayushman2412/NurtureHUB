@@ -199,7 +199,7 @@ const InfoBlock: React.FC<{ node: FlowInfoNode; label: string }> = ({ node, labe
     <div className="break-inside-avoid rounded-2xl border border-primary/25 bg-coral-50/40 p-5 dark:bg-coral-500/5">
       <div className="mb-1.5 flex flex-wrap items-center gap-2">
         <Badge variant="coral">{label}</Badge>
-        <span className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-primary-ink">
+        <span className="flex items-center gap-1 text-[12px] font-bold uppercase tracking-wider text-primary-ink">
           <Info className="size-3.5" /> Info — no answer collected
         </span>
       </div>
@@ -298,7 +298,7 @@ const FlowPrint: React.FC<{ schema: FlowSchema }> = ({ schema }) => {
                     {node.visibleIf && (
                       <Anno icon={<GitBranch className="size-3" />}>{visibleIfLabel(schema, node.visibleIf)}</Anno>
                     )}
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-sage-700 dark:text-sage-300">
+                    <span className="text-[12px] font-bold uppercase tracking-wider text-sage-700 dark:text-sage-300">
                       Common section — {node.title || 'Untitled'}
                     </span>
                   </div>
@@ -516,7 +516,7 @@ const FormPrintPage: React.FC = () => {
           <FlatPrint schema={def.schema_json as FlatSchema} />
         )}
 
-        <p className="mt-10 border-t border-border pt-3 text-center text-[11px] text-ink-faint">
+        <p className="mt-10 border-t border-border pt-3 text-center text-[12px] text-ink-faint">
           {def.title} • version {def.version} • exported from the NurtureHUB form builder
         </p>
       </main>

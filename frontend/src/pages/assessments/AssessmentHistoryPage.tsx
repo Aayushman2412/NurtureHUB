@@ -322,7 +322,7 @@ const AssessmentHistoryPage: React.FC = () => {
               <Card className="hidden overflow-x-auto p-0 md:block">
                 <table className="w-full min-w-[34rem] border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-border text-[11px] uppercase tracking-wide text-ink-muted">
+                    <tr className="border-b border-border text-[12px] uppercase tracking-wide text-ink-muted">
                       <th className="px-4 py-2.5 text-left font-semibold">{t('history.colDate')}</th>
                       <th className="px-3 py-2.5 text-left font-semibold">{t('history.colStatus')}</th>
                       {scored ? (
