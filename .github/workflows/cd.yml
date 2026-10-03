@@ -126,6 +126,9 @@ jobs:
           # Sync repository files (compose files, config, migrations)
           git pull origin main
 
+          # Authenticate Docker with GHCR
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
           # Pull latest pre-built container images from GHCR
           docker compose pull
 
