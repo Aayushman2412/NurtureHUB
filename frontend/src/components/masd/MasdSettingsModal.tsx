@@ -11,6 +11,8 @@ import { Button, DateInput, Field, Input, Modal, NumberInput } from '../ui';
 type Grid = Record<Band, Record<Indicator, string>>;
 const BANDS: Band[] = ['lt6', 'm6_11'];
 const TARGET_KEYS = ['anc', 'pnc_lt5', 'pnc_ge5', 'nurse'] as const;
+// The buffers a tranche gets when none is set (app/masd/rules.py).
+const defaultBuffer = (index: number) => (index === 0 ? 7 : 4);
 const emptyGrid = (): Grid => ({
   lt6: { stunting: '', underweight: '', wasting: '' },
   m6_11: { stunting: '', underweight: '', wasting: '' },
@@ -56,7 +58,7 @@ const MasdSettingsModal: React.FC<{ project: string | null; open: boolean; onClo
       setTrend(s.benchmarks?.district_trend ?? null);
       setIsDefault(s.benchmarks_are_default);
       setBatches(s.batches);
-      setTargets(s.targets.map(x => ({ ...x, from: x.from ?? '' })));
+      setTargets(s.targets.map((x, i) => ({ ...x, from: x.from ?? '', buffer: x.buffer ?? defaultBuffer(i) })));
       setTargetsDefault(s.targets_are_default);
     }).catch(() => setError(t('settings.loadFailed')));
   }, [open, project, t]);
@@ -165,18 +167,19 @@ const MasdSettingsModal: React.FC<{ project: string | null; open: boolean; onClo
           <h3 className="font-display text-sm font-bold text-ink">{t('settings.targets')}</h3>
           <p className="mb-3 text-xs text-ink-muted">{targetsDefault ? t('settings.targetsDefault') : t('settings.targetsHint')}</p>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[34rem] text-sm">
+            <table className="w-full min-w-[44rem] text-sm">
               <thead>
                 <tr>
                   <th className={`pb-2 text-left ${small}`}>{t('settings.from')}</th>
                   {TARGET_KEYS.map(k => <th key={k} className={`pb-2 text-center ${small}`}>{t(`settings.target.${k}`)}</th>)}
+                  <th className={`pb-2 text-center ${small}`}>{t('settings.buffer')}</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
                 {targets.map((s, i) => (
                   <tr key={i}>
-                    <td className="py-1 pr-2"><DateInput value={s.from ?? ''} onChange={v => patchStep(i, { from: v })} /></td>
+                    <td className="min-w-[10.5rem] py-1 pr-2"><DateInput value={s.from ?? ''} onChange={v => patchStep(i, { from: v })} /></td>
                     {TARGET_KEYS.map(k => (
                       <td key={k} className="px-1 py-1">
                         <NumberInput value={s[k]} fallback={0} min={0} max={50} className="text-center"
@@ -184,6 +187,12 @@ const MasdSettingsModal: React.FC<{ project: string | null; open: boolean; onClo
                           onChange={v => patchStep(i, { [k]: v } as Partial<TargetStep>)} />
                       </td>
                     ))}
+                    <td className="px-1 py-1">
+                      <NumberInput value={s.buffer ?? defaultBuffer(i)} fallback={defaultBuffer(i)} min={0} max={60}
+                        className="text-center" title={t('settings.bufferDefault', { n: defaultBuffer(i) })}
+                        aria-label={`${t('settings.buffer')} ${s.from ?? ''}`}
+                        onChange={v => patchStep(i, { buffer: v })} />
+                    </td>
                     <td className="py-1 pl-1">
                       <Button variant="ghost" size="sm" aria-label={t('settings.remove')} title={t('settings.remove')}
                         onClick={() => setTargets(list => list.filter((_, j) => j !== i))}>
@@ -198,7 +207,7 @@ const MasdSettingsModal: React.FC<{ project: string | null; open: boolean; onClo
           <Button variant="outline" size="sm" className="mt-3" iconLeft={<Plus className="size-4" />}
             onClick={() => setTargets(list => {
               const last = list[list.length - 1];
-              return [...list, { from: '', anc: last?.anc ?? 1, pnc_lt5: last?.pnc_lt5 ?? 1, pnc_ge5: last?.pnc_ge5 ?? 1, nurse: last?.nurse ?? 3 }];
+              return [...list, { from: '', anc: last?.anc ?? 1, pnc_lt5: last?.pnc_lt5 ?? 1, pnc_ge5: last?.pnc_ge5 ?? 1, nurse: last?.nurse ?? 3, buffer: defaultBuffer(list.length) }];
             })}>
             {t('settings.addStep')}
           </Button>

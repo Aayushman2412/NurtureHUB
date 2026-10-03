@@ -179,7 +179,7 @@ const AdminMasdPage: React.FC = () => {
             ) : (
               <span>{t('calendar.training')}: <b className="text-ink">{fmtDate(cal.training_date)}</b></span>
             )}
-            <span>{t('calendar.fu')}: <b className="text-ink">{t('calendar.fuValue', { days: cal.fu_days ?? 0, buffer: cal.buffer_days })}</b></span>
+            <span>{t('calendar.fu')}: <b className="text-ink">{t('calendar.fuValue', { days: cal.tranches.map(tr => tr.fu_days ?? 0).join(' · ') || 0 })}</b></span>
             <span>{t('calendar.targetsNow')}: <b className="text-ink">{t('calendar.targetsValue', {
               anc: cal.targets.now.anc, lt5: cal.targets.now.pnc_lt5, ge5: cal.targets.now.pnc_ge5, nurse: cal.targets.now.nurse,
             })}</b></span>

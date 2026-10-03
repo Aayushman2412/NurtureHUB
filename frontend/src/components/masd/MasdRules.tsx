@@ -26,6 +26,8 @@ const MasdRules: React.FC<{ report: MasdReport; onChanged: () => void }> = ({ re
   const r = report.rules;
   const e = r.expected;
   const cal = report.calendar;
+  const fuNow = new Map(cal.tranches.map(tr => [tr.step, tr]));
+  const fuDays = new Set(cal.tranches.map(tr => tr.fu_days));
   const [draft, setDraft] = useState<ExpectedFormsTable | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -84,7 +86,7 @@ const MasdRules: React.FC<{ report: MasdReport; onChanged: () => void }> = ({ re
     <div className="space-y-5">
       <Section icon={<CalendarDays />} title={t('rules.methodTitle')} subtitle={t('rules.methodSub')}>
         <ol className="list-decimal space-y-1.5 pl-5 text-sm text-ink">
-          <li>{t('rules.method1', { buffer: e.buffer_days })}</li>
+          <li>{t('rules.method1', { first: e.buffer_days, later: e.later_buffer_days })}</li>
           <li>{t('rules.method2', { step: e.step_days, max: e.max_days })}</li>
           <li>{t('rules.method3')}</li>
           <li>{t('rules.method4')}</li>
@@ -97,6 +99,8 @@ const MasdRules: React.FC<{ report: MasdReport; onChanged: () => void }> = ({ re
             <tr>
               <Th className="text-left">{t('settings.from')}</Th>
               {(['anc', 'pnc_lt5', 'pnc_ge5', 'nurse'] as const).map(k => <Th key={k}>{t(`settings.target.${k}`)}</Th>)}
+              <Th>{t('rules.buffer')}</Th>
+              <Th>{t('rules.fuNow')}</Th>
             </tr>
           </thead>
           <tbody>
@@ -107,6 +111,12 @@ const MasdRules: React.FC<{ report: MasdReport; onChanged: () => void }> = ({ re
                 <td className="px-3 py-2 text-center tabular-nums">{s.pnc_lt5}</td>
                 <td className="px-3 py-2 text-center tabular-nums">{s.pnc_ge5}</td>
                 <td className="px-3 py-2 text-center tabular-nums">{s.nurse}</td>
+                <td className="px-3 py-2 text-center tabular-nums">
+                  {t('expected.daysN', { n: s.buffer ?? (i === 0 ? e.buffer_days : e.later_buffer_days) })}
+                </td>
+                <td className="px-3 py-2 text-center tabular-nums">
+                  {fuNow.has(i + 1) ? t('expected.daysN', { n: fuNow.get(i + 1)!.fu_days ?? 0 }) : '—'}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -139,7 +149,7 @@ const MasdRules: React.FC<{ report: MasdReport; onChanged: () => void }> = ({ re
               <Th className="sticky left-0 z-10 bg-surface-sunken text-left">{t('rules.adoptionType')}</Th>
               <Th className="text-left">{t('rules.activity')}</Th>
               {table.durations.map(d => (
-                <Th key={d} className={cn(cal.fu_days === d && 'text-coral-600')}>{t('rules.days', { n: d })}</Th>
+                <Th key={d} className={cn(fuDays.has(d) && 'text-coral-600')}>{t('rules.days', { n: d })}</Th>
               ))}
             </tr>
           </thead>

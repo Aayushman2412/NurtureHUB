@@ -78,8 +78,13 @@ export interface MasdLearner {
   batch_id: number | null;
   batch: string | null;
   training_end: string | null;
+  /** The first tranche's follow-up — the learner's time in the field. */
   fu_raw: number | null;
   fu_days: number | null;
+  /** Every open tranche's follow-up (days counted), in order. */
+  tranche_fu: number[];
+  /** Days from each tranche opening to the first / completing adoption; negative = before it opened. */
+  uptake?: { step: number; started_days: number | null; completed_days: number | null }[];
   adoptions: { anc: number; pnc_lt5: number; pnc_ge5: number; unknown: number; total: number };
   targets: Record<AdoptionType, number> & { total: number };
   target: number;
@@ -198,7 +203,40 @@ export interface MasdComparison {
 }
 
 export interface Targets { anc: number; pnc_lt5: number; pnc_ge5: number; nurse: number }
-export interface TargetStep extends Targets { from: string | null }
+/** One tranche: the targets from `from` on, its follow-up counted after `buffer` days (null = default). */
+export interface TargetStep extends Targets { from: string | null; buffer?: number | null }
+
+/** A tranche open on the report date, with its own follow-up. */
+export interface Tranche {
+  step: number;
+  from: string | null;
+  opened: string | null;
+  buffer: number;
+  clock_from: string | null;
+  fu_raw: number | null;
+  fu_days: number | null;
+  added: Targets;
+  targets: Targets;
+}
+export type TrancheExpected = Tranche & { community: ExpectedForLearner; nurse: ExpectedForLearner };
+
+export const UPTAKE_BUCKETS = ['before', 'd7', 'd15', 'd30', 'later', 'not_yet'] as const;
+export type UptakeBucket = (typeof UPTAKE_BUCKETS)[number];
+export interface TrancheUptake {
+  step: number;
+  from: string | null;
+  buffer: number;
+  added: Targets;
+  learners: number;
+  started: number;
+  started_pct: number | null;
+  completed: number;
+  completed_pct: number | null;
+  median_days_to_start: number | null;
+  median_days_to_complete: number | null;
+  started_by: Record<UptakeBucket, number>;
+  completed_by: Record<UptakeBucket, number>;
+}
 
 /** Forms one learner is expected to have done: per type, and in all. */
 export interface ExpectedForLearner {
@@ -214,7 +252,8 @@ export interface BatchView {
   learners: number;
   fu_raw: number | null;
   fu_days: number | null;
-  expected: { community: ExpectedForLearner; nurse: ExpectedForLearner };
+  tranche_fu: number[];
+  expected: { community: ExpectedForLearner; nurse: ExpectedForLearner; tranches: TrancheExpected[] };
 }
 
 export interface ExpectedFormsTable {
@@ -254,6 +293,7 @@ export interface MasdReport {
     step_days: number;
     fu_raw: number | null;
     fu_days: number | null;
+    tranches: TrancheExpected[];
     batches: BatchView[];
     targets: { now: Targets; step: number | null; steps: TargetStep[]; is_default: boolean };
     expected_forms_default: boolean;
@@ -277,10 +317,12 @@ export interface MasdReport {
     by_block: { block: string; n: number }[];
     by_learner: { id: number; name: string; block: string; n: number }[];
   };
+  uptake: TrancheUptake[];
   outcomes: MasdOutcomes;
   rules: {
     expected: {
       buffer_days: number;
+      later_buffer_days: number;
       step_days: number;
       max_days: number;
       table: ExpectedFormsTable;

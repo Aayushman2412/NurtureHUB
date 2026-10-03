@@ -398,6 +398,44 @@ def flags(r: Dict[str, Any]) -> List[Dict[str, str]]:
     return out
 
 
+def asked(added: Dict[str, int]) -> str:
+    """'+1 ANC · +1 PNC <5M · +1 PNC ≥5M; Staff Nurse +3' — what a tranche asked for."""
+    parts = [f"+{added[t]} {R.ADOPTION_TYPE_LABELS[t]}" for t in R.ADOPTION_TYPES if added.get(t)]
+    text = " · ".join(parts) or "no new community adoptions"
+    return text + (f"; Staff Nurse +{added['nurse']}" if added.get("nurse") else "")
+
+
+def _days(v: Optional[float]) -> str:
+    return "—" if v is None else f"{v:.0f} day{'s' if v != 1 else ''}"
+
+
+def uptake(r: Dict[str, Any]) -> List[Dict[str, str]]:
+    """How quickly learners took up each tranche once the district asked."""
+    out = []
+    items = r.get("uptake") or []
+    for u in items:
+        if not u["learners"]:
+            continue
+        opened = f"Tranche {u['step']}" + (f" (opened {_date(u['from'])}; {asked(u['added'])})" if u["from"] else "")
+        text = f"{opened}: {_f(u['started_pct'])} of learners have started it"
+        if u["median_days_to_start"] is not None:
+            text += f", half of them within {_days(u['median_days_to_start'])}"
+        text += f"; {_f(u['completed_pct'])} have taken all of it"
+        if u["median_days_to_complete"] is not None:
+            text += f", half of them within {_days(u['median_days_to_complete'])}"
+        out.append(_finding("info", text + "."))
+    if items:
+        last = items[-1]
+        ahead = last["started_by"].get("before", 0)
+        if ahead:
+            out.append(_finding("good", f"{ahead} learner{'s' if ahead != 1 else ''} had already adopted for tranche "
+                                        f"{last['step']} before it opened."))
+        if last["learners"] and (last["started_pct"] or 0) < 50:
+            out.append(_finding("watch", f"Fewer than half the learners have started tranche {last['step']} — "
+                                         f"a reminder from the district may help."))
+    return out
+
+
 def all_findings(r: Dict[str, Any], cmp: Optional[Dict[str, Any]]) -> Dict[str, List[Dict[str, str]]]:
     p = r["outcomes"]["prevalence"]
     return {
@@ -408,6 +446,7 @@ def all_findings(r: Dict[str, Any], cmp: Optional[Dict[str, Any]]) -> Dict[str, 
         "by_type": by_type(r),
         "own_cases": own_cases(r),
         "flags": flags(r),
+        "uptake": uptake(r),
         "progress": progress(cmp) if cmp else [],
         "outcomes": outcomes(r),
         "overall": prevalence(p["overall"], "All analysed cases"),

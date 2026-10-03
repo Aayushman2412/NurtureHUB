@@ -410,13 +410,19 @@ def _z_triplet(child_id: int, sex: Optional[str], visits: List[Dict[str, Any]],
     }
 
 
-def _tranche2_by_project(db: Session) -> Dict[int, date]:
-    """Each project's tranche-2 start, from its MASD calendar."""
-    return {
-        s.program_district_id: s.tranche2_start
-        for s in db.query(models.MasdProjectSettings).all()
-        if s.tranche2_start
-    }
+def _tranche_starts_by_project(db: Session) -> Dict[int, List[date]]:
+    """The days each project's tranches of adoption opened — its MASD target
+    steps, saved or default — so a case's tranche reads as on the dashboard."""
+    saved = {s.program_district_id: s for s in db.query(models.MasdProjectSettings).all()}
+    out: Dict[int, List[date]] = {}
+    for p in db.query(models.ProgramDistrict).all():
+        s = saved.get(p.id)
+        steps = (s.targets_json if s and s.targets_json else
+                 masd_rules.default_targets(p.slug, s.training_date if s else None, s.tranche2_start if s else None))
+        days = sorted(date.fromisoformat(x["from"]) for x in steps if x.get("from"))
+        if days:
+            out[p.id] = days
+    return out
 
 
 MOTHER_FORM_KEYS = {masd_rules.ACTIVITY_FORMS["anc"]: "anc", masd_rules.ACTIVITY_FORMS["protein"]: "protein"}
@@ -441,15 +447,15 @@ def _mother_form_counts(db: Session, mother_ids: List[int]) -> Dict[int, Dict[st
 
 
 def _rules_context(db: Session, cases: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """What the summary rows need beyond the cases: each project's tranche-2
-    date, the expected-forms table and the mothers' own checks."""
+    """What the summary rows need beyond the cases: the days each project's
+    tranches opened, the expected-forms table and the mothers' own checks."""
     from app.masd.data import expected_forms_for
     mother_ids = sorted({c["mother"]["id"] for c in cases if c.get("mother")})
-    return {"tranche2": _tranche2_by_project(db), "table": expected_forms_for(db)[0],
+    return {"tranches": _tranche_starts_by_project(db), "table": expected_forms_for(db)[0],
             "mother_counts": _mother_form_counts(db, mother_ids)}
 
 
-def _adoption(case: Dict[str, Any], tranche2: Optional[date], today: date,
+def _adoption(case: Dict[str, Any], tranche_starts: Optional[List[date]], today: date,
               table: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Adoption type, tranche and expected counts for one case, by the MASD
     programme rules (app/masd/rules.py) — the same rules the MASD dashboard
@@ -472,7 +478,7 @@ def _adoption(case: Dict[str, Any], tranche2: Optional[date], today: date,
     anchor = m_in.adoption_date
     if atype == masd_rules.UNKNOWN or anchor is None:
         return {"type": None, "tranche": None, "expected": None, "anchor": anchor, "segments": {}}
-    tranche = 2 if (tranche2 is not None and anchor >= tranche2) else 1
+    tranche = max(1, sum(1 for d in tranche_starts or [] if d <= anchor))
     is_nurse = masd_rules.role_group(learner.get("role")) == masd_rules.NURSING_STAFF
     e = masd_rules.case_expected(
         table or masd_rules.default_expected_forms(), mother_adopted=anchor, lmp=m_in.lmp,
@@ -486,7 +492,7 @@ def _summary_rows(cases: List[Dict[str, Any]], context: Optional[Dict[str, Any]]
     rows: List[Dict[str, Any]] = []
     today = date.today()
     context = context or {}
-    tranche2 = context.get("tranche2") or {}
+    tranche_starts = context.get("tranches") or {}
     table = context.get("table")
     mother_counts = context.get("mother_counts") or {}
     for case in cases:
@@ -496,7 +502,7 @@ def _summary_rows(cases: List[Dict[str, Any]], context: Optional[Dict[str, Any]]
         sex = _sex_key(child["gender"])
 
         # Adoption type, tranche and expected counts — REAL, by the MASD rules.
-        adoption = _adoption(case, tranche2.get(case.get("project_id")), today, table)
+        adoption = _adoption(case, tranche_starts.get(case.get("project_id")), today, table)
 
         # Adoption timing — REAL, from stored dates. For an ANC adoption the
         # case began before birth, so its age at adoption is negative.

@@ -172,7 +172,7 @@ class Adoption:
     children: List[ChildIn]
     anchor: Optional[date]          # the adoption date
     type: str
-    tranche: int
+    tranche: int                    # the target step in force on that date (1-based)
     age_at_adoption: Optional[int]  # the child's, for PNC adoptions
 
 
@@ -192,10 +192,11 @@ def classify(mother: MotherIn, children: List[ChildIn]) -> Tuple[str, Optional[i
     return R.UNKNOWN, None
 
 
-def adoptions_of(data: MasdData, tranche2: Optional[date], as_of: date) -> List[Adoption]:
+def adoptions_of(data: MasdData, steps: List[Dict[str, Any]], as_of: date) -> List[Adoption]:
     kids: Dict[int, List[ChildIn]] = defaultdict(list)
     for c in data.children:
         kids[c.mother_id].append(c)
+    opens = sorted(date.fromisoformat(s["from"]) for s in steps if s.get("from"))
     out: List[Adoption] = []
     for m in data.mothers:
         anchor = m.adoption_date or m.created_on
@@ -203,7 +204,7 @@ def adoptions_of(data: MasdData, tranche2: Optional[date], as_of: date) -> List[
             continue
         mine = kids.get(m.id, [])
         atype, age = classify(m, mine)
-        tranche = 2 if (tranche2 is not None and anchor >= tranche2) else 1
+        tranche = max(1, sum(1 for d in opens if d <= anchor))
         out.append(Adoption(m, mine, anchor, atype, tranche, age))
     return out
 
@@ -261,27 +262,48 @@ def case_expected_for(a: Adoption, table: Dict[str, Any], as_of: date, is_nurse:
     return total
 
 
-def expected_per_learner(table: Dict[str, Any], targets: Dict[str, int], fu: Optional[int]) -> Dict[str, Any]:
-    """What one learner is expected to have done at `fu` days of follow-up
-    under `targets` — the worked example on the dashboard and in the deck."""
-    out: Dict[str, Any] = {}
-    for is_nurse, name in ((False, "community"), (True, "nurse")):
-        lt = R.learner_targets(targets, is_nurse)
-        by_type = {}
-        for t in R.ADOPTION_TYPES:
-            if not lt[t]:
-                continue
-            per = R.expected_at(table, R.row_type(t, is_nurse), fu)
-            by_type[t] = {"adoptions": lt[t], "per_adoption": per,
-                          "forms": {k: lt[t] * v for k, v in per.items()}}
-        forms = {k: sum(v["forms"].get(k, 0) for v in by_type.values()) for k in R.ACTIVITY_KEYS}
-        out[name] = {"by_type": by_type, "forms": forms, "total": sum(forms.values())}
+def _tranche_expected(table: Dict[str, Any], tranche: Dict[str, Any], is_nurse: bool) -> Dict[str, Any]:
+    """The forms one tranche's adoptions are expected to have generated: the
+    adoptions it added × the table at the tranche's own follow-up."""
+    lt = R.learner_targets(tranche["added"], is_nurse)
+    by_type = {}
+    for t in R.ADOPTION_TYPES:
+        if not lt[t]:
+            continue
+        per = R.expected_at(table, R.row_type(t, is_nurse), tranche["fu_days"])
+        by_type[t] = {"adoptions": lt[t], "per_adoption": per, "forms": {k: lt[t] * v for k, v in per.items()}}
+    forms = {k: sum(v["forms"].get(k, 0) for v in by_type.values()) for k in R.ACTIVITY_KEYS}
+    return {"by_type": by_type, "forms": forms, "total": sum(forms.values())}
+
+
+def _sum_expected(parts: List[Dict[str, Any]]) -> Dict[str, Any]:
+    by_type: Dict[str, Dict[str, Any]] = {}
+    for part in parts:
+        for t, v in part["by_type"].items():
+            acc = by_type.setdefault(t, {"adoptions": 0, "forms": {}})
+            acc["adoptions"] += v["adoptions"]
+            for k, n in v["forms"].items():
+                acc["forms"][k] = acc["forms"].get(k, 0) + n
+    forms = {k: sum(v["forms"].get(k, 0) for v in by_type.values()) for k in R.ACTIVITY_KEYS}
+    return {"by_type": by_type, "forms": forms, "total": sum(forms.values())}
+
+
+def expected_per_learner(table: Dict[str, Any], tranches: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """What one learner is expected to have done by now, tranche by tranche
+    and in all — the worked example on the dashboard and in the deck."""
+    out: Dict[str, Any] = {"tranches": []}
+    per = {name: [_tranche_expected(table, tr, is_nurse) for tr in tranches]
+           for is_nurse, name in ((False, "community"), (True, "nurse"))}
+    for i, tr in enumerate(tranches):
+        out["tranches"].append({**tr, "community": per["community"][i], "nurse": per["nurse"][i]})
+    for name, parts in per.items():
+        out[name] = _sum_expected(parts)
     return out
 
 
 def _learner_rows(data: MasdData, adoptions: List[Adoption], acts: List[ActivityIn], as_of: date,
-                  cal: Dict[str, Any], targets_now: Dict[str, int], table: Dict[str, Any],
-                  idx: _Index) -> List[Dict[str, Any]]:
+                  cal: Dict[str, Any], steps: List[Dict[str, Any]], targets_now: Dict[str, int],
+                  table: Dict[str, Any], idx: _Index) -> List[Dict[str, Any]]:
     by_learner_adopt: Dict[int, List[Adoption]] = defaultdict(list)
     for a in adoptions:
         if a.mother.learner_id is not None:
@@ -320,21 +342,25 @@ def _learner_rows(data: MasdData, adoptions: List[Adoption], acts: List[Activity
         mine = by_learner_adopt.get(l.id, [])
         mix = Counter(_bucket(a.type, is_nurse) or R.UNKNOWN for a in mine)
         training_end = l.training_end or cal["training_date"]
-        fu_raw, fu = R.learner_follow_up(training_end, as_of)
+        trs = R.tranches(steps, as_of, training_end)
         lt = R.learner_targets(targets_now, is_nurse)
 
+        # Each tranche's adoptions are read at that tranche's own follow-up.
         ideal = {k: 0 for k in R.ACTIVITY_KEYS}
+        exp_type = {t: 0 for t in R.ADOPTION_TYPES}
+        for tr in trs:
+            added = R.learner_targets(tr["added"], is_nurse)
+            for t in R.ADOPTION_TYPES:
+                for k, v in R.expected_at(table, R.row_type(t, is_nurse), tr["fu_days"]).items():
+                    ideal[k] += added[t] * v
+                    exp_type[t] += added[t] * v
         by_type: Dict[str, Dict[str, Any]] = {}
         for t in R.ADOPTION_TYPES:
-            per = R.expected_at(table, R.row_type(t, is_nurse), fu)
-            expected = 0
-            for k, v in per.items():
-                ideal[k] += lt[t] * v
-                expected += lt[t] * v
-            actual = sum(typed[l.id][(t, k)] for k in per)
+            keys = {k for rt, k in R.EXPECTED_ROWS if rt == R.row_type(t, is_nurse)}
+            actual = sum(typed[l.id][(t, k)] for k in keys)
             adopted = mix.get(t, 0)
             by_type[t] = {"target": lt[t], "adopted": adopted, "adoption_pct": _pct(adopted, lt[t]),
-                          "expected": expected, "actual": actual, "activity_pct": _pct(actual, expected)}
+                          "expected": exp_type[t], "actual": actual, "activity_pct": _pct(actual, exp_type[t])}
 
         own_exp = {k: 0 for k in R.ACTIVITY_KEYS}
         for a in mine:
@@ -363,8 +389,11 @@ def _learner_rows(data: MasdData, adoptions: List[Adoption], acts: List[Activity
             "batch_id": l.batch_id,
             "batch": batch_names.get(l.batch_id) if l.batch_id else None,
             "training_end": training_end.isoformat() if training_end else None,
-            "fu_raw": fu_raw,
-            "fu_days": fu,
+            # The first tranche's follow-up — the learner's time in the field —
+            # and every tranche's, as the expected forms were counted.
+            "fu_raw": trs[0]["fu_raw"] if trs else None,
+            "fu_days": trs[0]["fu_days"] if trs else None,
+            "tranche_fu": [tr["fu_days"] for tr in trs],
             "adoptions": {
                 "anc": mix.get(R.ANC, 0), "pnc_lt5": mix.get(R.PNC_LT5, 0),
                 "pnc_ge5": mix.get(R.PNC_GE5, 0), "unknown": mix.get(R.UNKNOWN, 0),
@@ -575,7 +604,7 @@ def _flags(data: MasdData, adoptions: List[Adoption], acts: List[ActivityIn], as
 
 
 def _batches(data: MasdData, rows: List[Dict[str, Any]], cal: Dict[str, Any], as_of: date,
-             targets_now: Dict[str, int], table: Dict[str, Any]) -> List[Dict[str, Any]]:
+             steps: List[Dict[str, Any]], table: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Each training batch, how far its learners' follow-up has run and what a
     learner of it is expected to have done — the worked example."""
     f2f = [r for r in rows if r["f2f"]]
@@ -587,9 +616,113 @@ def _batches(data: MasdData, rows: List[Dict[str, Any]], cal: Dict[str, Any], as
         members = [r for r in f2f if r["batch_id"] == bid]
         if bid is None and not members:
             continue
-        fu_raw, fu = R.learner_follow_up(end, as_of)
+        trs = R.tranches(steps, as_of, end)
         out.append({"id": bid, "name": name, "end_date": end.isoformat(), "learners": len(members),
-                    "fu_raw": fu_raw, "fu_days": fu, "expected": expected_per_learner(table, targets_now, fu)})
+                    "fu_raw": trs[0]["fu_raw"] if trs else None, "fu_days": trs[0]["fu_days"] if trs else None,
+                    "tranche_fu": [tr["fu_days"] for tr in trs],
+                    "expected": expected_per_learner(table, trs)})
+    return out
+
+
+# Days from a tranche opening to a learner's first / last adoption of it.
+UPTAKE_BUCKETS = (("before", None), ("d7", 7), ("d15", 15), ("d30", 30), ("later", None))
+
+
+def _uptake_bucket(days: Optional[int]) -> str:
+    if days is None:
+        return "not_yet"
+    if days <= 0:
+        return "before"
+    for key, limit in UPTAKE_BUCKETS[1:-1]:
+        if days <= limit:
+            return key
+    return "later"
+
+
+def _median(values: List[int]) -> Optional[float]:
+    vals = sorted(values)
+    if not vals:
+        return None
+    mid = len(vals) // 2
+    return float(vals[mid]) if len(vals) % 2 else (vals[mid - 1] + vals[mid]) / 2
+
+
+def _uptake(data: MasdData, rows: List[Dict[str, Any]], adoptions: List[Adoption],
+            steps: List[Dict[str, Any]], cal: Dict[str, Any], as_of: date) -> List[Dict[str, Any]]:
+    """How quickly learners took up each tranche once it opened: the day of
+    their first adoption of it, and of the adoption that completed it.
+
+    Adoptions fill the tranches in order, per adoption type: a learner asked
+    for 1 ANC in each tranche starts tranche 2 with their second ANC
+    adoption. One made before the tranche opened (an early start) counts as
+    "before"; one not yet made, "not yet". Adds each learner's days to their
+    row (`uptake`) for the workbook."""
+    by_learner: Dict[int, Dict[str, List[date]]] = defaultdict(lambda: defaultdict(list))
+    nurse_ids = {r["id"] for r in rows if r["is_nurse"]}
+    for a in adoptions:
+        lid = a.mother.learner_id
+        bucket = _bucket(a.type, lid in nurse_ids) if lid is not None else None
+        if bucket and a.anchor:
+            by_learner[lid][bucket].append(a.anchor)
+    for dates in by_learner.values():
+        for v in dates.values():
+            v.sort()
+
+    f2f = [r for r in rows if r["f2f"]]
+    ends = {l.id: l.training_end or cal["training_date"] for l in data.learners}
+    project_trs = R.tranches(steps, as_of, None)
+    out = []
+    for tr in project_trs:
+        i = tr["step"] - 1
+        agg = {"started": Counter(), "completed": Counter()}
+        days_started: List[int] = []
+        days_completed: List[int] = []
+        asked = 0
+        for r in f2f:
+            ltr = R.tranches(steps, as_of, ends.get(r["id"]))
+            if i >= len(ltr):
+                continue
+            mine = ltr[i]
+            added = R.learner_targets(mine["added"], r["is_nurse"])
+            before = R.learner_targets({k: mine["targets"][k] - mine["added"][k] for k in R.TARGET_KEYS},
+                                       r["is_nurse"])
+            need = [t for t in R.ADOPTION_TYPES if added[t] > 0]
+            if not need:
+                continue
+            asked += 1
+            opened = date.fromisoformat(mine["opened"]) if mine["opened"] else None
+            dates = by_learner.get(r["id"], {})
+            firsts = [dates.get(t, [])[before[t]] for t in need if len(dates.get(t, [])) > before[t]]
+            lasts = [dates.get(t, [])[before[t] + added[t] - 1] for t in need
+                     if len(dates.get(t, [])) >= before[t] + added[t]]
+            start_days = (min(firsts) - opened).days if (firsts and opened) else None
+            done_days = (max(lasts) - opened).days if (len(lasts) == len(need) and opened) else None
+            agg["started"][_uptake_bucket(start_days)] += 1
+            agg["completed"][_uptake_bucket(done_days)] += 1
+            if start_days is not None:
+                days_started.append(max(0, start_days))
+            if done_days is not None:
+                days_completed.append(max(0, done_days))
+            r.setdefault("uptake", []).append({"step": tr["step"], "started_days": start_days,
+                                               "completed_days": done_days})
+        keys = [k for k, _ in UPTAKE_BUCKETS] + ["not_yet"]
+        started = asked - agg["started"]["not_yet"]
+        completed = asked - agg["completed"]["not_yet"]
+        out.append({
+            "step": tr["step"],
+            "from": tr["from"],
+            "buffer": tr["buffer"],
+            "added": tr["added"],
+            "learners": asked,
+            "started": started,
+            "started_pct": _pct(started, asked),
+            "completed": completed,
+            "completed_pct": _pct(completed, asked),
+            "median_days_to_start": _median(days_started),
+            "median_days_to_complete": _median(days_completed),
+            "started_by": {k: agg["started"].get(k, 0) for k in keys},
+            "completed_by": {k: agg["completed"].get(k, 0) for k in keys},
+        })
     return out
 
 
@@ -858,15 +991,14 @@ def target_steps(data: MasdData, cal: Dict[str, Any]) -> List[Dict[str, Any]]:
 def compute(data: MasdData, as_of: date) -> Dict[str, Any]:
     cal = calendar(data)
     tranche2 = cal["tranche2_start"]
-    tranches = 1 if (tranche2 is not None and as_of < tranche2) else 2
     steps = target_steps(data, cal)
     targets_now, step_no = R.targets_in_force(steps, as_of)
     table = data.expected_forms
-    adoptions = adoptions_of(data, tranche2, as_of)
+    adoptions = adoptions_of(data, steps, as_of)
     acts = [a for a in data.activities if a.on <= as_of]
     idx = _index(adoptions)
 
-    rows = _learner_rows(data, adoptions, acts, as_of, cal, targets_now, table, idx)
+    rows = _learner_rows(data, adoptions, acts, as_of, cal, steps, targets_now, table, idx)
     f2f_rows = [r for r in rows if r["f2f"]]
     f2f_ids = {r["id"] for r in f2f_rows}
     non_f2f_cases = sum(r["adoptions"]["total"] for r in rows if not r["f2f"])
@@ -884,7 +1016,8 @@ def compute(data: MasdData, as_of: date) -> Dict[str, Any]:
         distribution[r["block"]][r["role_group"]] += 1
 
     tranche_mix = Counter((a.tranche, a.type) for a in adoptions if a.mother.learner_id in f2f_ids)
-    project_fu = R.learner_follow_up(cal["training_date"], as_of)
+    project_trs = R.tranches(steps, as_of, cal["training_date"])
+    uptake = _uptake(data, rows, adoptions, steps, cal, as_of)
 
     report = {
         "project": data.project,
@@ -894,12 +1027,13 @@ def compute(data: MasdData, as_of: date) -> Dict[str, Any]:
             "tranche2_start": tranche2.isoformat() if tranche2 else None,
             "inferred": cal["inferred"],
             "saved": data.calendar_saved,
-            "tranches_in_force": tranches,
-            "buffer_days": R.FU_BUFFER_DAYS,
+            "tranches_in_force": len(project_trs),
+            "buffer_days": project_trs[0]["buffer"] if project_trs else R.FIRST_TRANCHE_BUFFER_DAYS,
             "step_days": R.FU_STEP_DAYS,
-            "fu_raw": project_fu[0],
-            "fu_days": project_fu[1],
-            "batches": _batches(data, rows, cal, as_of, targets_now, table),
+            "fu_raw": project_trs[0]["fu_raw"] if project_trs else None,
+            "fu_days": project_trs[0]["fu_days"] if project_trs else None,
+            "tranches": expected_per_learner(table, project_trs)["tranches"],
+            "batches": _batches(data, rows, cal, as_of, steps, table),
             "targets": {"now": targets_now, "step": step_no, "steps": steps,
                         "is_default": data.targets is None},
             "expected_forms_default": data.expected_forms_default,
@@ -919,10 +1053,12 @@ def compute(data: MasdData, as_of: date) -> Dict[str, Any]:
         "weekly": _weekly(acts, adoptions, f2f_ids, cal["training_date"], as_of),
         "attention": _attention(f2f_rows),
         "flags": _flags(data, adoptions, acts, as_of, idx),
+        "uptake": uptake,
         "outcomes": _outcomes(data, adoptions, as_of),
         "rules": {
             "expected": {
-                "buffer_days": R.FU_BUFFER_DAYS,
+                "buffer_days": R.FIRST_TRANCHE_BUFFER_DAYS,
+                "later_buffer_days": R.LATER_TRANCHE_BUFFER_DAYS,
                 "step_days": R.FU_STEP_DAYS,
                 "max_days": R.FU_MAX_DAYS,
                 "table": table,

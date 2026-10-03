@@ -4,11 +4,18 @@ Managers decide who gets a supervisor's call and how a district is doing from
 these figures, and the analysts compare them with their own report, so the
 rules have to be the report's rules exactly:
 
-  * a learner's expected activity is the adoption targets in force × the
-    cumulative forms table at their follow-up (batch end + 15 days, rounded
-    down to 15) — reproducing every figure quoted when the method was agreed
-    (29 Sep 2026): 90 days of 3·3·3 = 6 ANC, 6 protein, 84 growth, 30 BF,
-    15 CF; a case followed ~30 days in pregnancy and 32 after birth = 20;
+  * the cumulative forms table reproduces every figure quoted when the
+    method was agreed (29 Sep 2026): 90 days of 3·3·3 = 6 ANC, 6 protein,
+    84 growth, 30 BF, 15 CF; a case followed ~30 days in pregnancy and 32
+    after birth = 20;
+  * the targets come in tranches, each counted at its own follow-up (refined
+    1–3 Oct 2026): from the day it opened (or the learner's training ended,
+    if later) plus a buffer — a week for the first, four days after — rounded
+    down to 15. Jalna on 1 Oct 2026: 105 · 60 · 15 days. A learner's expected
+    activity is, per tranche, the adoptions it asked for × the table at that
+    tranche's follow-up, summed;
+  * how quickly each tranche was taken up: days from it opening to the first
+    adoption for it and to the one that completed it;
   * an adoption is ANC if the mother was taken on before the birth, otherwise
     PNC split at 150 days (5 months);
   * an interim report only charges learners for what was due by then, under
@@ -68,10 +75,35 @@ def test_expected_table_reproduces_the_agreed_figures():
     assert R.expected_at(t, R.PNC_LT5, 0) == {"gm": 0, "bf": 0}, "nothing is due before the first step"
 
 
-def test_follow_up_is_buffered_and_rounded_down():
-    assert R.learner_follow_up(date(2026, 6, 7), date(2026, 9, 29)) == (99, 90)
-    assert R.learner_follow_up(date(2026, 9, 20), date(2026, 9, 29)) == (0, 0), "still inside the 15-day buffer"
+def test_each_tranche_has_its_own_follow_up():
+    jalna = R.default_targets("jalna", None, None)
+    assert [(s["from"], s["buffer"]) for s in jalna] == [("2026-06-11", 7), ("2026-07-27", 4), ("2026-09-07", 4)]
+    trs = R.tranches(jalna, date(2026, 10, 1))
+    assert [(t["fu_raw"], t["fu_days"]) for t in trs] == [(105, 105), (62, 60), (20, 15)]
+    assert all(t["added"] == {"anc": 1, "pnc_lt5": 1, "pnc_ge5": 1, "nurse": 3} for t in trs)
+    assert trs[-1]["targets"] == {"anc": 3, "pnc_lt5": 3, "pnc_ge5": 3, "nurse": 9}
+    # Inside the buffer: the tranche is open (it counts towards the target) but nothing is due yet.
+    assert [t["fu_days"] for t in R.tranches(jalna, date(2026, 9, 10))] == [75, 30, 0]
+    assert len(R.tranches(jalna, date(2026, 7, 26))) == 1, "a tranche not yet opened is left out"
+    # Trained after tranche 2 opened: both start on the training day, and a
+    # later tranche's clock never starts before an earlier one's.
+    late = R.tranches(jalna, date(2026, 10, 1), training_end=date(2026, 8, 1))
+    assert [(t["opened"], t["clock_from"]) for t in late[:2]] == [("2026-08-01", "2026-08-08"),
+                                                                  ("2026-08-01", "2026-08-08")]
     assert R.round_follow_up(1000) == R.FU_MAX_DAYS
+
+
+def test_expected_activity_adds_up_tranche_by_tranche():
+    """Jalna on 1 Oct 2026, one community learner (1·1·1 asked in each
+    tranche): 49 + 44 + 33 = 126 forms, where reading all nine adoptions at
+    105 days would ask for 147."""
+    t = R.default_expected_forms()
+    ex = E.expected_per_learner(t, R.tranches(R.default_targets("jalna", None, None), date(2026, 10, 1)))
+    assert [tr["community"]["total"] for tr in ex["tranches"]] == [49, 44, 33]
+    assert ex["community"]["total"] == 126
+    assert ex["community"]["forms"] == {"anc": 6, "protein": 6, "gm": 15 * 2 + 13 * 2 + 9 * 2, "bf": 30, "cf": 5 + 4 + 1}
+    assert ex["community"]["by_type"][R.PNC_LT5]["adoptions"] == 3
+    assert ex["nurse"]["total"] == 9 * 11, "a Staff Nurse's flat hospital row does not change with follow-up"
 
 
 def test_case_expected_follows_the_case():
@@ -99,9 +131,11 @@ def test_case_expected_follows_the_case():
 
 def test_targets_rise_in_steps():
     steps = R.default_targets("jalna", date(2026, 6, 7), date(2026, 7, 19))
-    assert R.targets_in_force(steps, date(2026, 6, 1)) == ({"anc": 0, "pnc_lt5": 0, "pnc_ge5": 0, "nurse": 0}, None)
-    assert R.targets_in_force(steps, date(2026, 6, 10))[0] == {"anc": 1, "pnc_lt5": 1, "pnc_ge5": 1, "nurse": 3}
-    assert R.targets_in_force(steps, date(2026, 9, 29)) == ({"anc": 3, "pnc_lt5": 5, "pnc_ge5": 3, "nurse": 9}, 3)
+    assert R.targets_in_force(steps, date(2026, 6, 10)) == ({"anc": 0, "pnc_lt5": 0, "pnc_ge5": 0, "nurse": 0}, None)
+    assert R.targets_in_force(steps, date(2026, 6, 11))[0] == {"anc": 1, "pnc_lt5": 1, "pnc_ge5": 1, "nurse": 3}
+    assert R.targets_in_force(steps, date(2026, 9, 29)) == ({"anc": 3, "pnc_lt5": 3, "pnc_ge5": 3, "nurse": 9}, 3)
+    other = R.default_targets("ujjain", date(2026, 6, 7), date(2026, 7, 19))
+    assert [(s["from"], s["buffer"]) for s in other] == [("2026-06-07", 7), ("2026-07-19", 4), ("2026-09-02", 4)]
     assert R.learner_targets({"anc": 3, "pnc_lt5": 5, "pnc_ge5": 3, "nurse": 9}, True) == \
         {R.ANC: 0, R.PNC_LT5: 9, R.PNC_GE5: 0}
 
@@ -231,23 +265,31 @@ def _learner(r, lid):
     return next(x for x in r["learners"] if x["id"] == lid)
 
 
-def _expected(targets, is_nurse, fu):
+def _expected(steps, as_of, training_end, is_nurse=False):
+    """Forms expected of one learner: per tranche, what it added × the table
+    at its own follow-up."""
     t = R.default_expected_forms()
-    lt = R.learner_targets(targets, is_nurse)
-    return sum(lt[a] * v for a in R.ADOPTION_TYPES for v in R.expected_at(t, R.row_type(a, is_nurse), fu).values())
+    total = 0
+    for tr in R.tranches(steps, as_of, training_end):
+        lt = R.learner_targets(tr["added"], is_nurse)
+        total += sum(lt[a] * v for a in R.ADOPTION_TYPES
+                     for v in R.expected_at(t, R.row_type(a, is_nurse), tr["fu_days"]).values())
+    return total
 
 
 def test_targets_and_expected_activity(report):
     s = report["summary"]
     assert s["learners"] == 3, "only F2F learners count"
     cal = report["calendar"]
-    assert (cal["fu_raw"], cal["fu_days"]) == (105, 105), "1 Jun + 15 days buffer → 29 Sep"
+    assert (cal["fu_raw"], cal["fu_days"]) == (113, 105), "1 Jun + a week's buffer → 29 Sep"
+    assert [(t["clock_from"], t["fu_days"]) for t in cal["tranches"]] == [("2026-06-08", 105), ("2026-07-17", 60)]
     now = cal["targets"]["now"]
     assert now == {"anc": 2, "pnc_lt5": 2, "pnc_ge5": 2, "nurse": 6} and cal["targets"]["is_default"]
     one = _learner(report, 1)
     assert one["adoptions"] == {"anc": 1, "pnc_lt5": 4, "pnc_ge5": 1, "unknown": 0, "total": 6}
     assert one["target"] == 6 and one["fulfilment_pct"] == 100.0
-    assert one["ideal"]["total"] == _expected(now, False, 105)
+    assert one["tranche_fu"] == [105, 60]
+    assert one["ideal"]["total"] == 49 + 44 == _expected(cal["targets"]["steps"], AS_OF, TRAINING)
     assert one["activities"]["total"] == 16   # 10 growth checks + 2 BF + 3 ANC + 1 protein
     assert one["by_type"][R.ANC] == {"target": 2, "adopted": 1, "adoption_pct": 50.0, "expected": 8,
                                      "actual": 4, "activity_pct": 50.0}
@@ -265,9 +307,12 @@ def test_batch_end_starts_the_follow_up():
     data.learners[0].batch_id, data.learners[0].training_end = 7, date(2026, 7, 1)
     r = E.compute(data, AS_OF)
     one = _learner(r, 1)
-    assert (one["batch"], one["fu_raw"], one["fu_days"]) == ("Batch 2", 75, 75)
+    assert (one["batch"], one["fu_raw"], one["fu_days"]) == ("Batch 2", 83, 75), "1 Jul + a week → 29 Sep"
+    assert one["tranche_fu"] == [75, 60], "tranche 2 opened after the batch ended: its own clock"
     assert [b["name"] for b in r["calendar"]["batches"]] == ["Batch 2", None], "the rest train on the project date"
-    assert r["calendar"]["batches"][0]["expected"]["community"]["total"] == _expected(r["calendar"]["targets"]["now"], False, 75)
+    b2 = r["calendar"]["batches"][0]
+    assert b2["tranche_fu"] == [75, 60]
+    assert b2["expected"]["community"]["total"] == _expected(r["calendar"]["targets"]["steps"], AS_OF, date(2026, 7, 1))
 
 
 def test_pregnancy_flags():
@@ -310,8 +355,27 @@ def test_interim_counts_only_what_was_due_then():
     assert cal["tranches_in_force"] == 1 and cal["targets"]["step"] == 1
     one = _learner(interim, 1)
     assert one["target"] == 3 and one["fu_days"] == 15
-    assert one["ideal"]["total"] == _expected(cal["targets"]["now"], False, 15), "15 days of follow-up under 1·1·1"
+    assert one["ideal"]["total"] == 33, "15 days of follow-up under 1·1·1: 4 + 14 + 15"
     assert one["adoptions"]["total"] == 5, "the adoption on 20 July is not counted yet"
+
+
+def test_uptake_of_each_tranche(report):
+    """Learner 1 started tranche 1 nine days after it opened and completed it
+    with the 20 Jul PNC≥5M adoption; their second PNC<5M came before tranche 2
+    opened, but the second ANC never came. The Staff Nurse started tranche 1
+    in four days; the idle learner never did."""
+    up = {u["step"]: u for u in report["uptake"]}
+    t1, t2 = up[1], up[2]
+    assert (t1["learners"], t1["started"], t1["completed"]) == (3, 2, 1)
+    assert t1["started_by"]["d7"] == 1 and t1["started_by"]["d15"] == 1 and t1["started_by"]["not_yet"] == 1
+    assert (t1["median_days_to_start"], t1["median_days_to_complete"]) == (6.5, 49.0)
+    assert (t2["started"], t2["completed"], t2["started_by"]["before"]) == (1, 0, 1)
+    assert _learner(report, 1)["uptake"] == [{"step": 1, "started_days": 9, "completed_days": 49},
+                                             {"step": 2, "started_days": -31, "completed_days": None}]
+    assert report["summary"]["tranche_mix"]["t2_pnc_ge5"] == 1, "adopted 20 Jul, after tranche 2 opened"
+    texts = [f["text"] for f in I.uptake(report)]
+    assert any(t.startswith("Tranche 1 (opened 01 Jun 2026") for t in texts)
+    assert any("already adopted for tranche 2 before it opened" in t for t in texts)
 
 
 def test_comparison_and_findings(report):
@@ -342,8 +406,10 @@ def test_deck_and_workbook_build(report):
                 assert not re.search(r'<a:(off|ext) [^>]*="\d+\.\d', xml), f"fractional EMU in {name}"
     from openpyxl import load_workbook
     wb = load_workbook(build_workbook(report))
-    assert {"MASD learners", "By block", "By cadre", "By adoption type", "Own-case bands", "Batches",
+    assert {"MASD learners", "By block", "By cadre", "By adoption type", "Own-case bands", "Batches", "Tranches",
             "Expected forms", "Pregnancy flags", "Malnutrition", "Needs attention"} <= set(wb.sheetnames)
+    tranches = [[c.value for c in row] for row in wb["Tranches"].iter_rows(min_row=4)]
+    assert [r[0] for r in tranches] == ["Tranche 1", "Tranche 2"] and tranches[0][12] == 49
     flat = " ".join(str(c.value) for ws in wb.worksheets for row in ws.iter_rows() for c in row if c.value)
     assert "UID-M2" not in flat, "the workbook never carries a mother's record ID"
 
@@ -431,17 +497,19 @@ def test_batches_targets_and_table_settings(world):
     out = put_settings(SettingsIn(
         training_date=date(2026, 6, 1),
         targets=[{"from": "2026-06-01", "anc": 1, "pnc_lt5": 1, "pnc_ge5": 1, "nurse": 3},
-                 {"from": "2026-08-01", "anc": 3, "pnc_lt5": 5, "pnc_ge5": 3, "nurse": 9}],
+                 {"from": "2026-08-01", "anc": 3, "pnc_lt5": 5, "pnc_ge5": 3, "nurse": 9, "buffer": 10}],
         batches=[{"name": "Batch 1", "end_date": "2026-06-01"}, {"name": "Batch 2", "end_date": "2026-06-20"}],
     ), project="demo", admin_email="a@t", db=db)
     assert not out["targets_are_default"] and [b["name"] for b in out["batches"]] == ["Batch 1", "Batch 2"]
+    assert [s["buffer"] for s in out["targets"]] == [None, 10], "unset = the default buffer"
     b2 = out["batches"][1]["id"]
     with pytest.raises(HTTPException):
         put_learner_batch(other.id, BatchAssignIn(batch_id=b2), admin_email="a@t", db=db)   # not F2F
     put_learner_batch(trained.id, BatchAssignIn(batch_id=b2), admin_email="a@t", db=db)
     r = masd_report_json(project="demo", as_of=AS_OF, compare=None, db=db)
     row = next(x for x in r["learners"] if x["id"] == trained.id)
-    assert (row["batch"], row["fu_raw"], row["target"]) == ("Batch 2", 86, 11)
+    assert (row["batch"], row["fu_raw"], row["target"]) == ("Batch 2", 94, 11), "20 Jun + a week → 29 Sep"
+    assert row["tranche_fu"] == [90, 45], "tranche 2: 1 Aug + its own 10-day buffer → 49 days"
     assert get_settings(project="demo", db=db)["batches"][1]["learners"] == 1
 
     table = R.default_expected_forms()

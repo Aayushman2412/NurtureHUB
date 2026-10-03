@@ -199,18 +199,21 @@ class Benchmarks(BaseModel):
 
 
 class TargetStep(BaseModel):
-    """Expected adoptions per learner from `from` onwards."""
+    """Expected adoptions per learner from `from` onwards — one tranche. Its
+    follow-up counts after `buffer` days (None = the default: a week for the
+    first tranche, four days for later ones)."""
     from_: date = Field(..., alias="from")
     anc: int = Field(0, ge=0, le=50)
     pnc_lt5: int = Field(0, ge=0, le=50)
     pnc_ge5: int = Field(0, ge=0, le=50)
     nurse: int = Field(0, ge=0, le=50)
+    buffer: Optional[int] = Field(None, ge=0, le=60)
 
     model_config = {"populate_by_name": True}
 
     def stored(self) -> dict:
         return {"from": self.from_.isoformat(), "anc": self.anc, "pnc_lt5": self.pnc_lt5,
-                "pnc_ge5": self.pnc_ge5, "nurse": self.nurse}
+                "pnc_ge5": self.pnc_ge5, "nurse": self.nurse, "buffer": self.buffer}
 
 
 class BatchIn(BaseModel):

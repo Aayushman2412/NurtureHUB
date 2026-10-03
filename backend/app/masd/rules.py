@@ -13,8 +13,10 @@ Terms (as the deck uses them)
   ANC              adopted while pregnant
   PNC<5M / PNC≥5M  adopted after birth, the child younger / older than 5 months
   tranche          the programme runs rounds of adoption; the targets rise at
-                   each review
-  follow-up (FU)   days since the learner's F2F batch ended, less a 15-day
+                   each review (Jalna: three, three more on 27 Jul, three
+                   more on 7 Sep)
+  follow-up (FU)   days a tranche of adoptions has run: from the day it opened
+                   (or the learner's training ended, if later), less a short
                    buffer, rounded down to a multiple of 15
   BV / AV / LV     birth details / adoption visit / last visit
   MT+FL            Master Trainers + Facilitators
@@ -65,16 +67,20 @@ FORM_TO_ACTIVITY = {form: key for key, form in ACTIVITY_FORMS.items()}
 # MASD no longer reads a learner against a flat ideal (the deck's 98 / 66). It
 # reads them against what was EXPECTED by the report date, two ways:
 #
-#  1. Against the adoption targets. A learner's follow-up runs from the last
-#     day of their F2F training batch, plus a 15-day buffer to settle into the
-#     community, to the report date — rounded DOWN to a multiple of 15 days
-#     (100 days counts as 90). The forms expected are the adoption targets in
-#     force × the cumulative expected-forms table at that duration.
+#  1. Against the adoption targets. The targets come in tranches, and each
+#     tranche has its own follow-up (refined 1–3 Oct 2026): from the day it
+#     opened — or the learner's last training day, if that came later — plus a
+#     buffer (a week for the first tranche, four days for each later one), to
+#     the report date, rounded DOWN to a multiple of 15 days (98 days counts as
+#     90). The forms expected are, for each tranche, the adoptions it added ×
+#     the cumulative expected-forms table at ITS follow-up, summed. Adoptions
+#     asked for in September cannot be expected to have June's visits.
 #  2. Within the learner's own cases. Each case's expected forms follow from
 #     its actual follow-up (case_expected below), so a learner who adopted
 #     fewer mothers is still asked: are you active on the ones you have?
 
-FU_BUFFER_DAYS = 15
+FIRST_TRANCHE_BUFFER_DAYS = 7    # before the first tranche's follow-up counts
+LATER_TRANCHE_BUFFER_DAYS = 4    # … and after each later tranche opens
 FU_STEP_DAYS = 15
 FU_MAX_DAYS = 270            # the table runs to nine months of follow-up
 EXPECTED_DURATIONS = list(range(FU_STEP_DAYS, FU_MAX_DAYS + 1, FU_STEP_DAYS))
@@ -148,12 +154,12 @@ def round_follow_up(days: int) -> int:
     return max(0, min(FU_MAX_DAYS, (days // FU_STEP_DAYS) * FU_STEP_DAYS))
 
 
-def learner_follow_up(training_end: Optional[date], as_of: date) -> Tuple[Optional[int], Optional[int]]:
-    """(actual, rounded) days of community follow-up a learner has had by
-    `as_of`: from their batch's last training day + the buffer."""
-    if training_end is None:
+def follow_up(clock_from: Optional[date], as_of: date) -> Tuple[Optional[int], Optional[int]]:
+    """(actual, rounded) days of follow-up from `clock_from` (the buffer
+    already added) to `as_of`; 0 while the clock has not started."""
+    if clock_from is None:
         return None, None
-    raw = max(0, (as_of - (training_end + timedelta(days=FU_BUFFER_DAYS))).days)
+    raw = max(0, (as_of - clock_from).days)
     return raw, round_follow_up(raw)
 
 
@@ -171,31 +177,45 @@ def expected_at(table: Dict[str, Any], atype: str, days: Optional[int]) -> Dict[
 # ── Adoption targets, raised as the programme goes on ───────────────────────
 #
 # Right after training a learner is asked for one adoption of each type; at
-# each review the ask rises (Jalna went 1·1·1 → 2·2·2 → 3·5·3). The step in
-# force on the report date is the target. Each project's steps are the
-# analysts' to set (Programme settings); these defaults stand in until they do,
-# dated from the project's training date and tranche-2 start. The last step of
-# each reproduces the targets agreed for 29 Sep 2026.
+# each review the district asks for more (a "tranche"), so the targets rise in
+# steps. The step in force on the report date is the adoption target, and each
+# step is a tranche with its own follow-up clock (see tranches()). Each
+# project's steps are the analysts' to set (Programme settings); these defaults
+# stand in until they do. Jalna's are the dates the programme gave on
+# 3 Oct 2026; the others are dated from the project's training date and
+# tranche-2 start.
 
 TARGET_KEYS = ("anc", "pnc_lt5", "pnc_ge5", "nurse")
 _PLANS: Dict[str, List[Tuple[int, int, int, int]]] = {
     #            ANC  <5M  ≥5M  Staff Nurse (<5M)
-    "jalna":     [(1, 1, 1, 3), (2, 2, 2, 6), (3, 5, 3, 9)],
+    "jalna":     [(1, 1, 1, 3), (2, 2, 2, 6), (3, 3, 3, 9)],
     "ujjain":    [(1, 1, 1, 3), (2, 2, 2, 6), (3, 3, 3, 10)],
     "meghalaya": [(1, 1, 1, 5), (2, 2, 2, 10)],
     "khasi":     [(1, 1, 1, 5), (2, 2, 2, 10)],
 }
 _GENERIC_PLAN = [(1, 1, 1, 3), (2, 2, 2, 6)]
+# The dates each tranche opened, where the programme has given them.
+_PLAN_DATES: Dict[str, Tuple[date, ...]] = {
+    "jalna": (date(2026, 6, 11), date(2026, 7, 27), date(2026, 9, 7)),
+}
 THIRD_STEP_AFTER_TRANCHE2_DAYS = 45
+
+
+def default_buffer(index: int) -> int:
+    """The buffer before the `index`-th (0-based) tranche's follow-up counts."""
+    return FIRST_TRANCHE_BUFFER_DAYS if index == 0 else LATER_TRANCHE_BUFFER_DAYS
 
 
 def default_targets(slug: str, training: Optional[date], tranche2: Optional[date]) -> List[Dict[str, Any]]:
     plan = _PLANS.get(slug, _GENERIC_PLAN)
-    if training is None:
-        return [{"from": None, **dict(zip(TARGET_KEYS, plan[-1]))}]
-    t2 = tranche2 or training + timedelta(days=DEFAULT_TRANCHE2_OFFSET_DAYS)
-    starts = [training, t2, t2 + timedelta(days=THIRD_STEP_AFTER_TRANCHE2_DAYS)]
-    return [{"from": starts[i].isoformat(), **dict(zip(TARGET_KEYS, step))} for i, step in enumerate(plan)]
+    starts = _PLAN_DATES.get(slug)
+    if starts is None:
+        if training is None:
+            return [{"from": None, **dict(zip(TARGET_KEYS, plan[-1])), "buffer": default_buffer(0)}]
+        t2 = tranche2 or training + timedelta(days=DEFAULT_TRANCHE2_OFFSET_DAYS)
+        starts = (training, t2, t2 + timedelta(days=THIRD_STEP_AFTER_TRANCHE2_DAYS))
+    return [{"from": starts[i].isoformat(), **dict(zip(TARGET_KEYS, step)), "buffer": default_buffer(i)}
+            for i, step in enumerate(plan)]
 
 
 def _step_date(step: Dict[str, Any]) -> date:
@@ -213,6 +233,46 @@ def targets_in_force(steps: List[Dict[str, Any]], as_of: date) -> Tuple[Dict[str
     if current is None:
         return {k: 0 for k in TARGET_KEYS}, None
     return {k: int(current.get(k) or 0) for k in TARGET_KEYS}, number
+
+
+def tranches(steps: List[Dict[str, Any]], as_of: date,
+             training_end: Optional[date] = None) -> List[Dict[str, Any]]:
+    """The tranches of adoption open by `as_of`, each with its own follow-up.
+
+    A tranche is a target step: on its date the learners were asked for the
+    adoptions it `added` on top of the step before. Its follow-up clock starts
+    when it opened — the step's date, or the learner's last training day if
+    that came later (no one adopts before they are trained) — plus the step's
+    buffer, and never before the previous tranche's clock. Steps not yet open
+    on `as_of` are left out; a tranche still inside its buffer has 0 days."""
+    out: List[Dict[str, Any]] = []
+    prev = {k: 0 for k in TARGET_KEYS}
+    last_clock: Optional[date] = None
+    for i, step in enumerate(sorted(steps, key=_step_date)):
+        from_ = date.fromisoformat(step["from"]) if step.get("from") else None
+        if from_ is not None and from_ > as_of:
+            break
+        known = [d for d in (from_, training_end) if d is not None]
+        opened = max(known) if known else None
+        buffer = int(step["buffer"]) if step.get("buffer") is not None else default_buffer(i)
+        clock = opened + timedelta(days=buffer) if opened else None
+        if clock and last_clock and clock < last_clock:
+            clock = last_clock
+        raw, fu = follow_up(clock, as_of)
+        now = {k: int(step.get(k) or 0) for k in TARGET_KEYS}
+        out.append({
+            "step": i + 1,
+            "from": from_.isoformat() if from_ else None,
+            "opened": opened.isoformat() if opened else None,
+            "buffer": buffer,
+            "clock_from": clock.isoformat() if clock else None,
+            "fu_raw": raw,
+            "fu_days": fu,
+            "added": {k: max(0, now[k] - prev[k]) for k in TARGET_KEYS},
+            "targets": now,
+        })
+        prev, last_clock = now, clock or last_clock
+    return out
 
 
 def learner_targets(targets: Dict[str, int], is_nurse: bool) -> Dict[str, int]:

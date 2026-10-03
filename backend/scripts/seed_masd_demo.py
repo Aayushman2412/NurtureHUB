@@ -5,7 +5,7 @@ Ujjain and Khasi a full programme's worth of field work, so the MASD report and
 the growth monitor can be shown end to end:
 
   * adoptions of every type — ANC, PNC <5 months, PNC ≥5 months, and a Staff
-    Nurse's hospital PNC<5M adoptions — across both tranches;
+    Nurse's hospital PNC<5M adoptions — across every tranche;
   * learners who behave differently — steady, star (these become the Master
     Trainers / Facilitators), over-adopting, under-adopting, fading away,
     registering cases but filing nothing, adopting nobody, skipping
@@ -22,7 +22,8 @@ Every form answer goes through the same snapshot/validation code the API uses,
 so the stored payloads look exactly like real submissions.
 
 Adoptions follow each project's target steps (one of each type after
-training, more at each review — Jalna ends on 3 ANC · 5 PNC<5M · 3 PNC≥5M),
+training, more at each review — Jalna's three tranches on the programme's
+own dates, 11 Jun, 27 Jul and 7 Sep 2026, ending on 3 · 3 · 3),
 and each case's forms are its expected forms (app/masd/rules.case_expected)
 scaled by how diligent its learner is. Pregnancies are taken on in the last
 trimester and checked every fortnight; some births are never entered, so the
@@ -63,13 +64,14 @@ MARK = "MASD-"
 SEEDED_BY = "seed_masd_demo"
 MOCK_DOMAIN = "@nurturehub.mock"
 
-# Programme calendar, counted back from today: (days before today of the F2F
-# training, days from training to tranche 2). With the batches ending up to
-# eight days before it, every learner's follow-up counts as 90 days on the day
-# the demo is seeded — the figure agreed for 29 Sep 2026 — and the third target
-# step (tranche 2 + 45 days) is in force.
+# Programme calendar. Jalna runs on the programme's real dates (its tranches
+# opened 11 Jun, 27 Jul and 7 Sep 2026 — the default target steps); the others
+# are counted back from today: (days before today of the F2F training, days
+# from training to tranche 2), so the third target step (tranche 2 + 45 days)
+# is in force on the day the demo is seeded. The batches end up to eight days
+# before the training date, so they have all finished when tranche 1 opens.
 PROJECTS = {
-    "jalna": {"training_days_ago": 106, "tranche2_after": 42, "state": "mh"},
+    "jalna": {"training": date(2026, 6, 11), "tranche2": date(2026, 7, 27), "state": "mh"},
     "ujjain": {"training_days_ago": 106, "tranche2_after": 42, "state": "mp"},
     "khasi": {"training_days_ago": 106, "tranche2_after": 42, "state": "ml"},
 }
@@ -438,8 +440,7 @@ def _windows(ctx: Ctx) -> List[Tuple[int, date, date, Dict[str, int]]]:
         if end < start:
             break
         adds = {k: max(0, int(step[k]) - prev[k]) for k in R.TARGET_KEYS}
-        tranche = 2 if start >= ctx.tranche2 else 1
-        out.append((tranche, start, end, adds))
+        out.append((i + 1, start, end, adds))
         prev = {k: int(step[k]) for k in R.TARGET_KEYS}
     return out
 
@@ -613,8 +614,8 @@ def seed_project(db, slug: str, today: date) -> Dict[str, int]:
         print(f"  {slug}: project not found, skipped")
         return {}
     conf = PROJECTS[slug]
-    training = today - timedelta(days=conf["training_days_ago"])
-    tranche2 = training + timedelta(days=conf["tranche2_after"])
+    training = conf.get("training") or today - timedelta(days=conf["training_days_ago"])
+    tranche2 = conf.get("tranche2") or training + timedelta(days=conf["tranche2_after"])
     rng = Random(f"masd-{slug}-2026")
     steps = R.default_targets(slug, training, tranche2)
     ctx = Ctx(db=db, rng=rng, today=today, training=training, tranche2=tranche2,

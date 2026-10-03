@@ -18,6 +18,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 from app.masd import rules as R
+from app.masd.insights import asked as _asked
 
 HEAD_FILL = PatternFill("solid", fgColor="E85D4C")
 HEAD_FONT = Font(bold=True, color="FFFFFF")
@@ -66,8 +67,10 @@ def build_workbook(report: Dict[str, Any]) -> BytesIO:
     p, cal = report["project"], report["calendar"]
     tn = cal["targets"]["now"]
     note = (f"NurtureHUB MASD · {p['name']} · as of {report['as_of']} · targets in force: ANC {tn['anc']}, "
-            f"PNC <5M {tn['pnc_lt5']}, PNC ≥5M {tn['pnc_ge5']}, Staff Nurse {tn['nurse']} · follow-up = days since "
-            f"the learner's batch ended − {cal['buffer_days']}, rounded down to {cal['step_days']}")
+            f"PNC <5M {tn['pnc_lt5']}, PNC ≥5M {tn['pnc_ge5']}, Staff Nurse {tn['nurse']} · each tranche's follow-up = "
+            f"days since it opened (or the learner's batch ended, if later) − its buffer, rounded down to "
+            f"{cal['step_days']}; expected = per tranche, the adoptions asked for × the table at its follow-up")
+    steps = [u["step"] for u in report.get("uptake") or []]
     types = list(R.ADOPTION_TYPES)
     tl = {t: R.ADOPTION_TYPE_LABELS[t] for t in types}
 
@@ -79,7 +82,10 @@ def build_workbook(report: Dict[str, Any]) -> BytesIO:
                  "Total activities", "Expected activities", "% of expected activity"]
               + [f"% expected activity · {tl[t]}" for t in types]
               + ["Own cases: expected", "Own cases: done", "% own-case activity", "Own-case band",
-                 "Avg activities / adoption", "Last activity", "Nil-activity days"])
+                 "Avg activities / adoption", "Last activity", "Nil-activity days",
+                 "Follow-up counted, by tranche (days)"]
+              + [h for n in steps for h in (f"Tranche {n}: days to first adoption",
+                                            f"Tranche {n}: days to take all")])
     band_label = dict(R.OWN_BANDS)
     rows = []
     for l in sorted(report["learners"], key=lambda x: (x["block"], x["name"] or "")):
@@ -94,11 +100,13 @@ def build_workbook(report: Dict[str, Any]) -> BytesIO:
                        l["intensity_pct"]]
                     + [l["by_type"][t]["activity_pct"] for t in types]
                     + [own["expected"]["total"], own["actual"]["total"], own["pct"], band_label.get(own["band"] or "", ""),
-                       l["avg_per_adoption"], l["last_activity"], l["nil_days"]])
+                       l["avg_per_adoption"], l["last_activity"], l["nil_days"],
+                       " · ".join(str(fu) for fu in l.get("tranche_fu") or [])]
+                    + [v for n in steps for v in _uptake_cells(l, n)])
     pct_learner = (22, 30, 31, 32, 33, 36)
     _sheet(wb, "MASD learners", header, rows,
            widths=[24, 30, 14, 20, 12, 10, 6, 14, 12, 12, 10, 10] + [8] * 8 + [7, 10] + [10] * 8 + [11] * 3
-           + [10, 10, 10, 12, 10, 12, 10],
+           + [10, 10, 10, 12, 10, 12, 10, 14] + [12] * (2 * len(steps)),
            pct_cols=pct_learner, note=note)
 
     def group_rows(groups):
@@ -135,13 +143,39 @@ def build_workbook(report: Dict[str, Any]) -> BytesIO:
            widths=[18, 10] + [11] * 6 + [12], pct_cols=(9,),
            note="Learners with at least one adoption, by the share of their own cases' expected activity they have done")
 
-    _sheet(wb, "Batches", ["Batch", "Training ended", "Learners", "Follow-up (days)", "Counted as (days)"]
+    _sheet(wb, "Batches", ["Batch", "Training ended", "Learners", "Follow-up (days)", "Counted as (days)",
+                           "Counted, by tranche (days)"]
            + [f"Expected {R.ACTIVITY_LABELS[k]}" for k in R.ACTIVITY_KEYS] + ["Expected total", "Staff Nurse total"],
-           [[b["name"] or "Project training date", b["end_date"], b["learners"], b["fu_raw"], b["fu_days"]]
+           [[b["name"] or "Project training date", b["end_date"], b["learners"], b["fu_raw"], b["fu_days"],
+             " · ".join(str(fu) for fu in b["tranche_fu"])]
             + [b["expected"]["community"]["forms"][k] for k in R.ACTIVITY_KEYS]
             + [b["expected"]["community"]["total"], b["expected"]["nurse"]["total"]] for b in cal["batches"]],
-           widths=[22, 13, 9, 11, 11] + [12] * 7,
-           note="What one learner of each batch is expected to have done by the report date, under the targets in force")
+           widths=[22, 13, 9, 11, 11, 14] + [12] * 7,
+           note="What one learner of each batch is expected to have done by the report date, tranche by tranche")
+
+    uptake = {u["step"]: u for u in report.get("uptake") or []}
+    keys = ["before", "d7", "d15", "d30", "later", "not_yet"]
+    key_label = {"before": "before it opened", "d7": "within 7 d", "d15": "8–15 d", "d30": "16–30 d",
+                 "later": "after 30 d", "not_yet": "not yet"}
+    tr_rows = []
+    for tr in cal.get("tranches") or []:
+        u = uptake.get(tr["step"]) or {}
+        tr_rows.append([f"Tranche {tr['step']}", tr["from"], _asked(tr["added"]), tr["buffer"], tr["clock_from"],
+                        tr["fu_raw"], tr["fu_days"]]
+                       + [tr["community"]["forms"][k] for k in R.ACTIVITY_KEYS]
+                       + [tr["community"]["total"], tr["nurse"]["total"],
+                          u.get("learners"), u.get("started"), u.get("started_pct"), u.get("median_days_to_start"),
+                          u.get("completed"), u.get("completed_pct"), u.get("median_days_to_complete")]
+                       + [(u.get("started_by") or {}).get(k) for k in keys])
+    _sheet(wb, "Tranches", ["Tranche", "Opened", "Asked for", "Buffer (days)", "Follow-up counts from",
+                            "Follow-up (days)", "Counted as (days)"]
+           + [f"Expected {R.ACTIVITY_LABELS[k]}" for k in R.ACTIVITY_KEYS]
+           + ["Expected per learner", "Staff Nurse", "Learners asked", "Started", "% started", "Median days to start",
+              "Took all of it", "% took all", "Median days to take all"]
+           + [f"First adoption {key_label[k]}" for k in keys],
+           tr_rows, widths=[11, 12, 34, 9, 13, 10, 10] + [11] * 5 + [11] * 9 + [12] * 6, pct_cols=(17, 20),
+           note="Each tranche of adoptions with its own follow-up (from the project's training date), what one learner "
+                "is expected to have done for it, and how quickly learners took it up once it opened")
 
     table = report["rules"]["expected"]["table"]
     _sheet(wb, "Expected forms", ["Adoption type", "Form"] + [f"{d} d" for d in table["durations"]],
@@ -203,6 +237,13 @@ def build_workbook(report: Dict[str, Any]) -> BytesIO:
     wb.save(buffer)
     buffer.seek(0)
     return buffer
+
+
+def _uptake_cells(learner: Dict[str, Any], step: int) -> List[Any]:
+    """Days from tranche `step` opening to the learner's first adoption for it
+    and to the one that completed it; negative = made before it opened."""
+    u = next((x for x in learner.get("uptake") or [] if x["step"] == step), None)
+    return [u["started_days"], u["completed_days"]] if u else [None, None]
 
 
 def _prev(group: str, band: str, block: Dict[str, Any]) -> List[List[Any]]:
