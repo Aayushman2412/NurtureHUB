@@ -123,6 +123,9 @@ jobs:
           echo "Starting zero-downtime deployment on narmada..."
           cd /websites_dir/NurtureHUB
 
+          # Sync repository files (compose files, config, migrations)
+          git pull origin main
+
           # Pull latest pre-built container images from GHCR
           docker compose pull
 
