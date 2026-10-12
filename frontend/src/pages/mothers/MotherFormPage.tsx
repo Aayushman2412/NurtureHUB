@@ -8,7 +8,7 @@ import {
 import { useMotherMetadata } from '../../hooks/useMotherMetadata';
 import { ageFromDob } from '../../lib/learnerFields';
 import {
-  HWC_OTHER, MATRIX_SOURCES, MAX_ADOPTION_AGE_DAYS, MAX_GESTATION_DAYS, MIN_GESTATION_DAYS,
+  ADOPTION_TYPES, HWC_OTHER, MATRIX_SOURCES, MAX_ADOPTION_AGE_DAYS, MAX_GESTATION_DAYS, MIN_GESTATION_DAYS,
   eddFromLmp, gestationalAge, isoDaysAgo, isoDaysBetween, isoYearsAgo, todayIso,
   occupationOptions, rationCardOptions, socialCategoryOptions, videoFrequencyOptions,
   likertQuestions, sourceRows,
@@ -44,6 +44,7 @@ const MotherFormPage: React.FC = () => {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   // Step 1 — identity & clinical
+  const [declaredType, setDeclaredType] = useState('');
   const [motherName, setMotherName] = useState('');
   const [adoptionDate, setAdoptionDate] = useState('');
   const [motherDob, setMotherDob] = useState('');
@@ -145,7 +146,7 @@ const MotherFormPage: React.FC = () => {
   };
 
   const values: MotherFormValues = useMemo(() => ({
-    mother_name: motherName, adoption_date: adoptionDate, mother_dob: motherDob, mother_age: motherAge,
+    declared_adoption_type: declaredType, mother_name: motherName, adoption_date: adoptionDate, mother_dob: motherDob, mother_age: motherAge,
     weight, height, lmp, edd_records: eddRecords, mobile, alternate_mobile: alternateMobile, email,
     state_id: stateId, district_id: districtId, taluk_id: talukId, village, hwc_id: hwcId, hwc_other: hwcOther,
     phc_id: meta.phc?.id ?? '', education_id: educationId, education_field_id: educationFieldId,
@@ -156,7 +157,7 @@ const MotherFormPage: React.FC = () => {
     implement_video: likert.implement_video ?? '', confidence_video: likert.confidence_video ?? '',
     willingness_hcw: likert.willingness_hcw ?? '', information_seeking: likert.information_seeking ?? '',
     showEducationField, showOccupationOther, showNutritionCourseName,
-  }), [motherName, adoptionDate, motherDob, motherAge, weight, height, lmp, eddRecords, mobile, alternateMobile,
+  }), [declaredType, motherName, adoptionDate, motherDob, motherAge, weight, height, lmp, eddRecords, mobile, alternateMobile,
     email, stateId, districtId, talukId, village, hwcId, hwcOther, meta.phc, educationId, educationFieldId,
     educationDegreeId, occupation, occupationOther, rationCard, rationCardOther, socialCategory, nutritionCourse,
     nutritionCourseName, videoFrequency, ratings, likert, showEducationField, showOccupationOther, showNutritionCourseName]);
@@ -174,6 +175,7 @@ const MotherFormPage: React.FC = () => {
   const back = () => { setErrors({}); setStep(s => Math.max(s - 1, 0)); };
 
   const buildPayload = (): MotherPayload => ({
+    declared_adoption_type: (declaredType || null) as MotherPayload['declared_adoption_type'],
     mother_name: motherName, adoption_date: adoptionDate || null, mother_dob: motherDob || null,
     mother_age: motherAge === '' ? null : Number(motherAge), weight: weight === '' ? null : Number(weight),
     height: height === '' ? null : Number(height), lmp: lmp || null, edd_records: eddRecords || null,
@@ -241,6 +243,16 @@ const MotherFormPage: React.FC = () => {
             <div>
               <SectionTitle>{t('form.sectionIdentity')}</SectionTitle>
               <div className="flex flex-col gap-4">
+                <Field label={t('form.adoptionType')} error={shown('declared_adoption_type')}>
+                  <div role="radiogroup" className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    {ADOPTION_TYPES.map(k => (
+                      <Radio key={k} name="declared_adoption_type" value={k} checked={declaredType === k}
+                        label={t(`form.adoptionTypes.${k}`)}
+                        onChange={() => { setDeclaredType(k); touch('declared_adoption_type'); }} />
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-xs text-ink-muted">{t('form.adoptionTypeHint')}</p>
+                </Field>
                 <Field label={t('form.motherName')} error={shown('mother_name')}>
                   <Input value={motherName} error={!!shown('mother_name')}
                     onBlur={() => touch('mother_name')}
@@ -272,7 +284,7 @@ const MotherFormPage: React.FC = () => {
                   </Field>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label={t('form.lmp')} error={shown('lmp')}>
+                  <Field label={declaredType && declaredType !== 'anc' ? t('form.lmpOptional') : t('form.lmp')} error={shown('lmp')}>
                     <DateInput value={lmp} min={motherDob || undefined} max={adoptionDate || today}
                       error={!!shown('lmp')} onBlur={() => touch('lmp')}
                       onChange={v => setLmp(v)} />

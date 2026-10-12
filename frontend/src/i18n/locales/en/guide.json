@@ -341,8 +341,8 @@
           "meaning": "Mother adopted in pregnancy · after birth with the baby under 5 months · baby 5 months or older."
         },
         "fu": {
-          "term": "FU — Follow-up",
-          "meaning": "Days since a tranche's clock started (its start date or the learner's training end, plus the buffer), in steps of 15, at most 270."
+          "term": "Days considered",
+          "meaning": "Days considered for expected activities: days since a tranche opened, less its buffer, rounded down to the LAP table's 15-day steps (at most 270)."
         },
         "buffer": {
           "term": "Buffer",
@@ -375,6 +375,38 @@
         "monitor": {
           "term": "Batch monitor",
           "meaning": "A learner trusted to watch over a few others. Learners → Batch monitor marks one and gives learners their monitor; the table above lists, per monitor, who is on track and who needs a call."
+        },
+        "level1": {
+          "term": "Level 1 — ideal",
+          "meaning": "Expected activity for the targets: the adoptions asked × the LAP table at each tranche's days considered (e.g. 126 per learner, 99 per Staff Nurse at Jalna)."
+        },
+        "level2": {
+          "term": "Level 2 — adopted cases",
+          "meaning": "Expected activity for the adoptions each learner actually made, whatever the target. \"Activity among the adopted cases\" is activities done ÷ this."
+        },
+        "level3": {
+          "term": "Level 3 — each case",
+          "meaning": "Each case read by its own dates (adoption, birth, baby's age) — the per-case analysis the main database will move to."
+        },
+        "iqr": {
+          "term": "Median (IQR)",
+          "meaning": "The middle value, with the range of the middle half of learners (25th–75th percentile). Used where a few extreme values would distort an average, e.g. nil-activity days."
+        },
+        "visits": {
+          "term": "BV / AV / LV",
+          "meaning": "Birth visit · adoption visit · last visit — shown blue, orange, green. BV can be shown or hidden."
+        },
+        "split": {
+          "term": "Split by / Filter by",
+          "meaning": "Split by groups the charts and tables (cadre, block, district, MT+FL, batch…); Filter by keeps only the ticked groups."
+        },
+        "declared": {
+          "term": "Declared vs worked-out type",
+          "meaning": "The learner chooses the adoption type at registration; NurtureHUB also works it out from the dates. A difference is flagged for the learner and their batch monitor."
+        },
+        "pace": {
+          "term": "Cumulative expected",
+          "meaning": "After each batch's buffer, one adoption per learner every 2 days until the tranche is taken; expected activities follow the LAP table."
         }
       }
     },

@@ -43,6 +43,11 @@ class LearnerIn:
     mobile: Optional[str] = None         # shown to admins beside the name
     is_monitor: bool = False             # tagged a batch monitor
     monitor_id: Optional[int] = None     # the batch monitor watching this learner
+    # For splitting and describing learners (review of 6–7 Oct 2026).
+    district: Optional[str] = None       # the district project they belong to
+    education: Optional[str] = None      # highest qualification
+    experience: Optional[str] = None     # years-of-service band
+    experience_order: int = 99
 
 
 @dataclass
@@ -56,6 +61,8 @@ class MotherIn:
     ration_card: Optional[str] = None
     social_category: Optional[str] = None
     uid: Optional[str] = None             # the record ID (never the name)
+    education: Optional[str] = None
+    declared_type: Optional[str] = None   # adoption type the learner chose at registration
 
 
 @dataclass
@@ -116,6 +123,22 @@ def _pct(num: float, den: float, digits: int = 1) -> Optional[float]:
 def _avg(values: Iterable[float], digits: int = 1) -> Optional[float]:
     vals = [v for v in values if v is not None]
     return round(sum(vals) / len(vals), digits) if vals else None
+
+
+def _quartiles(values: Iterable[float]) -> Dict[str, Optional[float]]:
+    """Median and interquartile range (25th, 75th percentiles, linear) — what
+    the review of 7 Oct 2026 asked for wherever an average would hide a skew
+    (days since the last activity, days to adopt)."""
+    vals = sorted(values)
+    if not vals:
+        return {"median": None, "q1": None, "q3": None, "n": 0}
+
+    def at(q: float) -> float:
+        pos = (len(vals) - 1) * q
+        lo, hi = int(pos), min(int(pos) + 1, len(vals) - 1)
+        return round(vals[lo] + (vals[hi] - vals[lo]) * (pos - lo), 1)
+
+    return {"median": at(0.5), "q1": at(0.25), "q3": at(0.75), "n": len(vals)}
 
 
 def _sex(gender: Optional[str]) -> Optional[str]:
@@ -351,19 +374,42 @@ def _learner_rows(data: MasdData, adoptions: List[Adoption], acts: List[Activity
         # Each tranche's adoptions are read at that tranche's own follow-up.
         ideal = {k: 0 for k in R.ACTIVITY_KEYS}
         exp_type = {t: 0 for t in R.ADOPTION_TYPES}
+        exp_tk: Dict[Tuple[str, str], int] = defaultdict(int)
         for tr in trs:
             added = R.learner_targets(tr["added"], is_nurse)
             for t in R.ADOPTION_TYPES:
                 for k, v in R.expected_at(table, R.row_type(t, is_nurse), tr["fu_days"]).items():
                     ideal[k] += added[t] * v
                     exp_type[t] += added[t] * v
+                    exp_tk[(t, k)] += added[t] * v
+
+        # Level 2 (review of 6 Oct 2026): what the adoptions this learner
+        # actually took should have produced by now — not the target. Each
+        # adoption is read at the follow-up of the tranche it fills (they fill
+        # the tranches in order, per type, as in the uptake); any beyond every
+        # target count with the latest tranche open.
+        undertaken = {k: 0 for k in R.ACTIVITY_KEYS}
+        open_trs = [tr for tr in trs if tr["fu_days"] is not None]
+        for t in R.ADOPTION_TYPES:
+            slots: List[Dict[str, Any]] = []
+            for tr in trs:
+                slots += [tr] * R.learner_targets(tr["added"], is_nurse)[t]
+            for j in range(mix.get(t, 0)):
+                tr = slots[j] if j < len(slots) else (open_trs[-1] if open_trs else None)
+                if tr is None:
+                    continue
+                for k, v in R.expected_at(table, R.row_type(t, is_nurse), tr["fu_days"]).items():
+                    undertaken[k] += v
         by_type: Dict[str, Dict[str, Any]] = {}
         for t in R.ADOPTION_TYPES:
             keys = {k for rt, k in R.EXPECTED_ROWS if rt == R.row_type(t, is_nurse)}
             actual = sum(typed[l.id][(t, k)] for k in keys)
             adopted = mix.get(t, 0)
             by_type[t] = {"target": lt[t], "adopted": adopted, "adoption_pct": _pct(adopted, lt[t]),
-                          "expected": exp_type[t], "actual": actual, "activity_pct": _pct(actual, exp_type[t])}
+                          "expected": exp_type[t], "actual": actual, "activity_pct": _pct(actual, exp_type[t]),
+                          # Per activity, for the visit-vs-intervention bubble charts.
+                          "expected_by": {k: exp_tk.get((t, k), 0) for k in sorted(keys)},
+                          "actual_by": {k: typed[l.id][(t, k)] for k in sorted(keys)}}
 
         own_exp = {k: 0 for k in R.ACTIVITY_KEYS}
         for a in mine:
@@ -389,7 +435,12 @@ def _learner_rows(data: MasdData, adoptions: List[Adoption], acts: List[Activity
             "trainer_role": l.trainer_role,
             "mtfl": bool(l.trainer_role),
             "mobile": l.mobile,
+            "district": l.district,
+            "education": l.education,
+            "experience": l.experience,
+            "experience_order": l.experience_order,
             "is_monitor": l.is_monitor,
+            "declared_mismatch": 0,
             "monitor_id": l.monitor_id,
             "is_nurse": is_nurse,
             "batch_id": l.batch_id,
@@ -413,6 +464,11 @@ def _learner_rows(data: MasdData, adoptions: List[Adoption], acts: List[Activity
             "intensity_pct": _pct(total_acts, ideal_total),
             "subtype_pct": {k: _pct(acts_by[k], ideal[k]) for k in R.ACTIVITY_KEYS},
             "by_type": by_type,
+            "undertaken": {
+                "expected": {**undertaken, "total": sum(undertaken.values())},
+                "actual": own_act_total,
+                "pct": _pct(own_act_total, sum(undertaken.values())),
+            },
             "own": {
                 "expected": {**own_exp, "total": own_exp_total},
                 "actual": {**own_act, "total": own_act_total},
@@ -445,6 +501,9 @@ def _aggregate(rows: List[Dict[str, Any]], key: str, label: str) -> Dict[str, An
                       "expected": ex, "actual": ac, "activity_pct": _pct(ac, ex)}
     own_exp = sum(r["own"]["expected"]["total"] for r in rows)
     own_act = sum(r["own"]["actual"]["total"] for r in rows)
+    und_exp = sum(r["undertaken"]["expected"]["total"] for r in rows)
+    und_act = sum(r["undertaken"]["actual"] for r in rows)
+    nil_q = _quartiles(nil)
     bands = Counter(r["own"]["band"] for r in rows if r["own"]["band"])
     return {
         "key": key,
@@ -470,8 +529,16 @@ def _aggregate(rows: List[Dict[str, Any]], key: str, label: str) -> Dict[str, An
         "own_banded": sum(bands.values()),
         "fu_days_avg": _avg([r["fu_days"] for r in rows if r["fu_days"] is not None]),
         "nil_days_avg": _avg(nil),
+        "nil_days_median": nil_q["median"],
+        "nil_days_q1": nil_q["q1"],
+        "nil_days_q3": nil_q["q3"],
+        "undertaken_expected": und_exp,
+        "undertaken_actual": und_act,
+        "undertaken_pct": _pct(und_act, und_exp),
         "no_activity": sum(1 for r in rows if r["activities"]["total"] == 0),
         "zero_adoptions": sum(1 for r in rows if r["adoptions"]["total"] == 0),
+        # Mutually exclusive (review of 6 Oct 2026): adopted, but not one form since.
+        "adopted_no_activity": sum(1 for r in rows if r["adoptions"]["total"] > 0 and r["activities"]["total"] == 0),
     }
 
 
@@ -573,11 +640,12 @@ def _attention(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 def _flags(data: MasdData, adoptions: List[Adoption], acts: List[ActivityIn], as_of: date,
-           idx: _Index) -> Dict[str, Any]:
+           idx: _Index, table: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Pregnancies to follow up: the due date (LMP + 280) has passed with no
     birth recorded, fortnightly antenatal checks are being missed, or there is
     no LMP to track the due date by. Mothers appear by record ID, never name."""
     learners = {l.id: l for l in data.learners}
+    table = table if table is not None else data.expected_forms
     checks: Dict[int, List[date]] = defaultdict(list)
     for act in acts:
         if act.form_key == R.ACTIVITY_FORMS["anc"]:
@@ -627,12 +695,64 @@ def _flags(data: MasdData, adoptions: List[Adoption], acts: List[ActivityIn], as
         })
     items.sort(key=lambda x: (-(x["days_past_edd"] or -1), -(x["anc_expected"] - x["anc_done"]),
                               -x["days_since_contact"]))
+
+    # Babies being followed up (review of 7 Oct 2026): growth checks missed
+    # so far by the case's own LAP schedule, and the last one — a learner who
+    # stopped visiting a mother after the birth shows up here.
+    growth_checks: Dict[int, List[date]] = defaultdict(list)
+    for act in acts:
+        if act.form_key == R.ACTIVITY_FORMS["gm"] and act.child_id is not None:
+            growth_checks[act.child_id].append(act.on)
+    nurse_ids = {l.id for l in data.learners if R.role_group(l.role) == R.NURSING_STAFF}
+    pnc = []
+    for a in adoptions:
+        born = [c for c in a.children if c.dob and c.dob <= as_of]
+        l = learners.get(a.mother.learner_id) if a.mother.learner_id else None
+        if not born or l is None or (as_of - born[0].dob).days > R.BABY_FOLLOW_UP_MAX_AGE_DAYS:
+            continue
+        due = case_expected_for(a, table, as_of, l.id in nurse_ids).get("gm", 0)
+        done = sorted(d for c in born for d in growth_checks.get(c.id, []) if d <= as_of)
+        last = done[-1] if done else None
+        since = (as_of - (last or a.anchor or born[0].dob)).days
+        missed = max(0, due - len(done))
+        reasons = []
+        if missed >= R.FLAG_PNC_MISSED:
+            reasons.append("visits_missed")
+        if since >= R.FLAG_PNC_SILENT_DAYS:
+            reasons.append("no_recent_visit")
+        if not reasons:
+            continue
+        pnc.append({
+            "mother_id": a.mother.id, "mother_uid": a.mother.uid,
+            "learner_id": l.id, "learner": l.name, "block": l.block or "Not assigned", "f2f": l.f2f,
+            "type": a.type, "adopted": a.anchor.isoformat() if a.anchor else None,
+            "dob": born[0].dob.isoformat(), "visits_due": due, "visits_done": len(done), "visits_missed": missed,
+            "last_visit": last.isoformat() if last else None, "days_since_visit": since, "reasons": reasons,
+        })
+    pnc.sort(key=lambda x: (-x["visits_missed"], -x["days_since_visit"]))
+
+    # Adoption type chosen by the learner vs worked out from the dates.
+    mismatch = []
+    for a in adoptions:
+        declared = a.mother.declared_type
+        l = learners.get(a.mother.learner_id) if a.mother.learner_id else None
+        if not declared or l is None or a.type == R.UNKNOWN or declared == a.type:
+            continue
+        mismatch.append({"mother_id": a.mother.id, "mother_uid": a.mother.uid, "learner_id": l.id,
+                         "learner": l.name, "block": l.block or "Not assigned",
+                         "declared": declared, "computed": a.type,
+                         "adopted": a.anchor.isoformat() if a.anchor else None})
     per_block = Counter(i["block"] for i in items)
     per_learner = Counter((i["learner_id"], i["learner"], i["block"]) for i in items)
     return {
         "summary": {"open_pregnancies": open_n, "flagged": len(items),
                     **{k: sum(1 for i in items if k in i["reasons"]) for k in R.FLAG_REASONS}},
         "items": items,
+        "pnc": pnc,
+        "pnc_summary": {"followed": sum(1 for a in adoptions if any(c.dob and c.dob <= as_of for c in a.children)),
+                        "flagged": len(pnc),
+                        **{k: sum(1 for i in pnc if k in i["reasons"]) for k in ("visits_missed", "no_recent_visit")}},
+        "type_mismatch": mismatch,
         "by_block": [{"block": b, "n": n} for b, n in per_block.most_common()],
         "by_learner": [{"id": lid, "name": name, "block": block, "n": n}
                        for (lid, name, block), n in per_learner.most_common()],
@@ -646,6 +766,7 @@ def _batches(data: MasdData, rows: List[Dict[str, Any]], cal: Dict[str, Any], as
     f2f = [r for r in rows if r["f2f"]]
     out = []
     groups = [(b["id"], b["name"], b["end_date"]) for b in sorted(data.batches, key=lambda b: (b["end_date"], b["name"]))]
+    extra = {b["id"]: b for b in data.batches}
     if any(r["batch_id"] is None for r in f2f) and cal["training_date"] is not None:
         groups.append((None, None, cal["training_date"]))
     for bid, name, end in groups:
@@ -653,7 +774,14 @@ def _batches(data: MasdData, rows: List[Dict[str, Any]], cal: Dict[str, Any], as
         if bid is None and not members:
             continue
         trs = R.tranches(steps, as_of, end)
+        b = extra.get(bid) or {}
+        start = b.get("start_date")
         out.append({"id": bid, "name": name, "end_date": end.isoformat(), "learners": len(members),
+                    # Who trained it and who watches over it (review of 6 Oct 2026).
+                    "start_date": start.isoformat() if start else None,
+                    "trainers": b.get("trainers") or [],
+                    "monitors": [{"id": r["id"], "name": r["name"]} for r in members if r["is_monitor"]],
+                    "without_monitor": sum(1 for r in members if not r["is_monitor"] and not r["monitor_id"]),
                     "fu_raw": trs[0]["fu_raw"] if trs else None, "fu_days": trs[0]["fu_days"] if trs else None,
                     "tranche_fu": [tr["fu_days"] for tr in trs],
                     "expected": expected_per_learner(table, trs)})
@@ -685,14 +813,17 @@ def _median(values: List[int]) -> Optional[float]:
 
 def _uptake(data: MasdData, rows: List[Dict[str, Any]], adoptions: List[Adoption],
             steps: List[Dict[str, Any]], cal: Dict[str, Any], as_of: date) -> List[Dict[str, Any]]:
-    """How quickly learners took up each tranche once it opened: the day of
-    their first adoption of it, and of the adoption that completed it.
+    """How quickly learners took up each tranche once it opened.
 
     Adoptions fill the tranches in order, per adoption type: a learner asked
     for 1 ANC in each tranche starts tranche 2 with their second ANC
-    adoption. One made before the tranche opened (an early start) counts as
-    "before"; one not yet made, "not yet". Adds each learner's days to their
-    row (`uptake`) for the workbook."""
+    adoption. For each learner and tranche: the days from its opening to
+    their 1st, 2nd, 3rd … adoption of it (all types together, in date order)
+    — the 1st is when they started, the last asked when they completed it.
+    One made before the tranche opened counts as "before"; one not yet made,
+    "not yet". Reported for the rest of the learners, Staff Nurses (their own
+    target) and everyone, each with median and interquartile range (review of
+    6 Oct 2026). Adds each learner's days to their row (`uptake`)."""
     by_learner: Dict[int, Dict[str, List[date]]] = defaultdict(lambda: defaultdict(list))
     nurse_ids = {r["id"] for r in rows if r["is_nurse"]}
     for a in adoptions:
@@ -707,13 +838,42 @@ def _uptake(data: MasdData, rows: List[Dict[str, Any]], adoptions: List[Adoption
     f2f = [r for r in rows if r["f2f"]]
     ends = {l.id: l.training_end or cal["training_date"] for l in data.learners}
     project_trs = R.tranches(steps, as_of, None)
+    keys = [k for k, _ in UPTAKE_BUCKETS] + ["not_yet"]
+
+    def summarise(records: List[Dict[str, Any]], max_n: int) -> Dict[str, Any]:
+        asked = len(records)
+        started = [r["nth"][0] for r in records if r["nth"] and r["nth"][0] is not None]
+        completed = [r["completed"] for r in records if r["completed"] is not None]
+        nth = []
+        for n in range(1, max_n + 1):
+            pool = [r for r in records if len(r["nth"]) >= n]
+            days = [r["nth"][n - 1] for r in pool if r["nth"][n - 1] is not None]
+            by = Counter(_uptake_bucket(r["nth"][n - 1]) for r in pool)
+            q = _quartiles(max(0, d) for d in days)
+            nth.append({"n": n, "learners": len(pool), "done": len(days),
+                        "by": {k: by.get(k, 0) for k in keys},
+                        "median": q["median"], "q1": q["q1"], "q3": q["q3"]})
+        s_by = Counter(_uptake_bucket(r["nth"][0] if r["nth"] else None) for r in records)
+        c_by = Counter(_uptake_bucket(r["completed"]) for r in records)
+        q_start = _quartiles(max(0, d) for d in started)
+        q_done = _quartiles(max(0, d) for d in completed)
+        return {
+            "learners": asked,
+            "started": len(started), "started_pct": _pct(len(started), asked),
+            "completed": len(completed), "completed_pct": _pct(len(completed), asked),
+            "median_days_to_start": q_start["median"], "q1_days_to_start": q_start["q1"], "q3_days_to_start": q_start["q3"],
+            "median_days_to_complete": q_done["median"], "q1_days_to_complete": q_done["q1"],
+            "q3_days_to_complete": q_done["q3"],
+            "started_by": {k: s_by.get(k, 0) for k in keys},
+            "completed_by": {k: c_by.get(k, 0) for k in keys},
+            "nth": nth,
+        }
+
     out = []
     for tr in project_trs:
         i = tr["step"] - 1
-        agg = {"started": Counter(), "completed": Counter()}
-        days_started: List[int] = []
-        days_completed: List[int] = []
-        asked = 0
+        records: Dict[str, List[Dict[str, Any]]] = {"rol": [], "sn": []}
+        max_n = {"rol": 0, "sn": 0}
         for r in f2f:
             ltr = R.tranches(steps, as_of, ends.get(r["id"]))
             if i >= len(ltr):
@@ -725,41 +885,99 @@ def _uptake(data: MasdData, rows: List[Dict[str, Any]], adoptions: List[Adoption
             need = [t for t in R.ADOPTION_TYPES if added[t] > 0]
             if not need:
                 continue
-            asked += 1
             opened = date.fromisoformat(mine["opened"]) if mine["opened"] else None
             dates = by_learner.get(r["id"], {})
-            firsts = [dates.get(t, [])[before[t]] for t in need if len(dates.get(t, [])) > before[t]]
-            lasts = [dates.get(t, [])[before[t] + added[t] - 1] for t in need
-                     if len(dates.get(t, [])) >= before[t] + added[t]]
-            start_days = (min(firsts) - opened).days if (firsts and opened) else None
-            done_days = (max(lasts) - opened).days if (len(lasts) == len(need) and opened) else None
-            agg["started"][_uptake_bucket(start_days)] += 1
-            agg["completed"][_uptake_bucket(done_days)] += 1
-            if start_days is not None:
-                days_started.append(max(0, start_days))
-            if done_days is not None:
-                days_completed.append(max(0, done_days))
-            r.setdefault("uptake", []).append({"step": tr["step"], "started_days": start_days,
-                                               "completed_days": done_days})
-        keys = [k for k, _ in UPTAKE_BUCKETS] + ["not_yet"]
-        started = asked - agg["started"]["not_yet"]
-        completed = asked - agg["completed"]["not_yet"]
+            taken = sorted(d for t in need for d in dates.get(t, [])[before[t]:before[t] + added[t]])
+            asked_n = sum(added[t] for t in need)
+            nth = [((taken[j] - opened).days if (j < len(taken) and opened) else None) for j in range(asked_n)]
+            all_done = all(len(dates.get(t, [])) >= before[t] + added[t] for t in need)
+            completed = nth[-1] if (all_done and nth and nth[-1] is not None) else None
+            group = "sn" if r["is_nurse"] else "rol"
+            records[group].append({"nth": nth, "completed": completed})
+            max_n[group] = max(max_n[group], asked_n)
+            r.setdefault("uptake", []).append({"step": tr["step"], "started_days": nth[0] if nth else None,
+                                               "completed_days": completed})
+        everyone = records["rol"] + records["sn"]
+        overall = summarise(everyone, max(max_n.values()))
         out.append({
             "step": tr["step"],
             "from": tr["from"],
             "buffer": tr["buffer"],
             "added": tr["added"],
-            "learners": asked,
-            "started": started,
-            "started_pct": _pct(started, asked),
-            "completed": completed,
-            "completed_pct": _pct(completed, asked),
-            "median_days_to_start": _median(days_started),
-            "median_days_to_complete": _median(days_completed),
-            "started_by": {k: agg["started"].get(k, 0) for k in keys},
-            "completed_by": {k: agg["completed"].get(k, 0) for k in keys},
+            **overall,
+            "groups": {"rol": summarise(records["rol"], max_n["rol"]),
+                       "sn": summarise(records["sn"], max_n["sn"]),
+                       "all": overall},
         })
     return out
+
+
+def _cumulative(data: MasdData, rows: List[Dict[str, Any]], adoptions: List[Adoption],
+                acts: List[ActivityIn], steps: List[Dict[str, Any]], cal: Dict[str, Any],
+                table: Dict[str, Any], as_of: date) -> Dict[str, Any]:
+    """Expected and actual adoptions and activities, day by day, cumulative
+    (review of 6 Oct 2026): where the project should be by each date and where
+    it is. Expected adoptions start once a tranche's buffer is over (from each
+    learner's own last training day) and come at one per learner every
+    ADOPTION_PACE_DAYS until the tranche is taken; expected activities are the
+    LAP table's figures for each learner's tranches on that day. F2F learners."""
+    f2f = [r for r in rows if r["f2f"]]
+    if not f2f:
+        return {"days": [], "pace_days": R.ADOPTION_PACE_DAYS}
+    ends = {l.id: l.training_end or cal["training_date"] for l in data.learners}
+    per_learner = []
+    first_clock: Optional[date] = None
+    for r in f2f:
+        trs = R.tranches(steps, as_of, ends.get(r["id"]))
+        per_learner.append((r, trs))
+        for tr in trs:
+            if tr["clock_from"]:
+                c = date.fromisoformat(tr["clock_from"])
+                first_clock = c if first_clock is None or c < first_clock else first_clock
+    if first_clock is None:
+        return {"days": [], "pace_days": R.ADOPTION_PACE_DAYS}
+    start = min(first_clock - timedelta(days=14), as_of)
+    span = (as_of - start).days
+
+    exp_adopt = [0] * (span + 1)
+    exp_acts = [0] * (span + 1)
+    cache: Dict[Tuple[str, int], int] = {}
+
+    def forms_at(row: str, fu: int) -> int:
+        if (row, fu) not in cache:
+            cache[(row, fu)] = sum(R.expected_at(table, row, fu).values())
+        return cache[(row, fu)]
+
+    for r, trs in per_learner:
+        is_nurse = r["is_nurse"]
+        for tr in trs:
+            if not tr["clock_from"]:
+                continue
+            clock = date.fromisoformat(tr["clock_from"])
+            added = R.learner_targets(tr["added"], is_nurse)
+            asked = sum(added.values())
+            for day in range(span + 1):
+                d = start + timedelta(days=day)
+                if d < clock:
+                    continue
+                elapsed = (d - clock).days
+                exp_adopt[day] += min(asked, elapsed // R.ADOPTION_PACE_DAYS + 1)
+                fu = R.round_follow_up(elapsed)
+                exp_acts[day] += sum(added[t] * forms_at(R.row_type(t, is_nurse), fu) for t in R.ADOPTION_TYPES
+                                     if added[t])
+    f2f_ids = {r["id"] for r in f2f}
+    adopt_on = Counter(a.anchor for a in adoptions if a.mother.learner_id in f2f_ids and a.anchor)
+    act_on = Counter(a.on for a in acts if a.learner_id in f2f_ids and R.FORM_TO_ACTIVITY.get(a.form_key))
+    days, run_a, run_x = [], 0, 0
+    run_a = sum(n for d, n in adopt_on.items() if d < start)
+    run_x = sum(n for d, n in act_on.items() if d < start)
+    for day in range(span + 1):
+        d = start + timedelta(days=day)
+        run_a += adopt_on.get(d, 0)
+        run_x += act_on.get(d, 0)
+        days.append({"date": d.isoformat(), "expected_adoptions": exp_adopt[day], "adoptions": run_a,
+                     "expected_activities": exp_acts[day], "activities": run_x})
+    return {"days": days, "pace_days": R.ADOPTION_PACE_DAYS}
 
 
 # ── Outcome half ───────────────────────────────────────────────────────────
@@ -940,13 +1158,35 @@ def _outcomes(data: MasdData, adoptions: List[Adoption], as_of: date) -> Dict[st
     ret_adopt.append({"role_group": "Total", "total": len(eligible), "final": len(included),
                       "pct": _pct(len(included), len(eligible))})
 
-    # Mother demographics of the analysed dyads.
+    # Each learner's eligible dyads, included ones and reasons — so the
+    # dashboard can split exclusions and retention by any learner group.
+    by_learner: Dict[int, Dict[str, Any]] = {}
+    for d in eligible:
+        e = by_learner.setdefault(d.learner.id, {"eligible": 0, "included": 0, "reasons": Counter()})
+        e["eligible"] += 1
+        if d.reason is None:
+            e["included"] += 1
+        else:
+            e["reasons"][d.reason] += 1
+    by_learner_out = {str(k): {"eligible": v["eligible"], "included": v["included"], "reasons": dict(v["reasons"])}
+                      for k, v in by_learner.items()}
+
+    # Mother demographics of the analysed dyads, in the order the analysts
+    # read them (review of 7 Oct 2026), with delivery place × method.
+    places = ["Government", "Private", "Home", "Other", "Not recorded"]
+    methods = ["Normal", "Caesarean section", "Assisted delivery", "Other", "Not recorded"]
+    cross = Counter((R.delivery_place_group(d.child.delivery_place), R.delivery_method_group(d.child.delivery_method))
+                    for d in included)
     demo = {
         "n": len(included),
         "mother_age": _share(Counter(_mother_age_group(d.adoption.mother.age) for d in included),
                              [g[2] for g in R.MOTHER_AGE_GROUPS]),
+        "education": _share(Counter(d.adoption.mother.education or "Not recorded" for d in included)),
         "ration_card": _share(Counter(d.adoption.mother.ration_card or "Not recorded" for d in included)),
         "social_category": _share(Counter(d.adoption.mother.social_category or "Not recorded" for d in included)),
+        "place_by_method": {"places": [p for p in places if any(cross.get((p, m)) for m in methods)],
+                            "methods": [m for m in methods if any(cross.get((p, m)) for p in places)],
+                            "counts": {f"{p}|{m}": n for (p, m), n in cross.items()}},
         "delivery_place": _share(Counter(R.delivery_place_group(d.child.delivery_place) for d in included),
                                  ["Government", "Private", "Home", "Other", "Not recorded"]),
         "delivery_method": _share(Counter(R.delivery_method_group(d.child.delivery_method) for d in included),
@@ -991,6 +1231,7 @@ def _outcomes(data: MasdData, adoptions: List[Adoption], as_of: date) -> Dict[st
             "inclusion_pct_other": _pct(inc_ot, tot_ot),
         },
         "retention": {"learners": ret_learners, "adoptions": ret_adopt},
+        "by_learner": by_learner_out,
         "demographics": demo,
         "prevalence": {
             "overall": _prevalence(included),
@@ -1069,6 +1310,15 @@ def compute(data: MasdData, as_of: date) -> Dict[str, Any]:
     uptake = _uptake(data, rows, adoptions, steps, cal, as_of)
 
     attention = _attention(f2f_rows)
+    monitors = _monitors(rows, attention)
+    flags = _flags(data, adoptions, acts, as_of, idx, table)
+    mismatched = Counter(i["learner_id"] for i in flags["type_mismatch"])
+    by_row = {r["id"]: r for r in rows}
+    for r in rows:
+        r["declared_mismatch"] = mismatched.get(r["id"], 0)
+    # A mismatch or a missed baby is the learner's and their batch monitor's to fix.
+    for item in flags["type_mismatch"] + flags["pnc"]:
+        item["monitor"] = (by_row.get(item["learner_id"]) or {}).get("monitor")
     report = {
         "project": data.project,
         "as_of": as_of.isoformat(),
@@ -1102,8 +1352,9 @@ def compute(data: MasdData, as_of: date) -> Dict[str, Any]:
         "learners": rows,
         "weekly": _weekly(acts, adoptions, f2f_ids, cal["training_date"], as_of),
         "attention": attention,
-        "batch_monitors": _monitors(rows, attention),
-        "flags": _flags(data, adoptions, acts, as_of, idx),
+        "batch_monitors": monitors,
+        "flags": flags,
+        "cumulative": _cumulative(data, rows, adoptions, acts, steps, cal, table, as_of),
         "uptake": uptake,
         "outcomes": _outcomes(data, adoptions, as_of),
         "rules": {
@@ -1121,6 +1372,14 @@ def compute(data: MasdData, as_of: date) -> Dict[str, Any]:
                 "bf_until_age_days": R.BF_UNTIL_AGE_DAYS,
                 "counselling_from_age_days": R.COUNSELLING_FROM_AGE_DAYS,
                 "baby_max_age_days": R.BABY_FOLLOW_UP_MAX_AGE_DAYS,
+                # The LAP visit schedule behind the default table: the day of
+                # follow-up each form falls due (review of 6 Oct 2026).
+                "lap_days": {"anc": list(R.LAP_ANC_DAYS), "protein": list(R.LAP_ANC_DAYS),
+                             "gm": list(R.LAP_GM_DAYS), "bf": list(R.LAP_BF_DAYS), "cf": list(R.LAP_CF_DAYS)},
+                "nurse_flat": dict(R.NURSE_FLAT),
+                "adoption_pace_days": R.ADOPTION_PACE_DAYS,
+                "pnc_flag_missed": R.FLAG_PNC_MISSED,
+                "pnc_flag_silent_days": R.FLAG_PNC_SILENT_DAYS,
             },
             "targets": steps,
             "own_bands": R.OWN_BANDS,
@@ -1157,6 +1416,15 @@ def comparison(then: Dict[str, Any], now: Dict[str, Any]) -> Dict[str, Any]:
             "intensity_pct": s["intensity_pct"],
             "own_pct": s["own_pct"],
             "nil_days_avg": s["nil_days_avg"],
+            # Counts before percentages, and the skew-proof middle (review of 7 Oct 2026).
+            "activities": s["activities"],
+            "ideal": s["ideal"],
+            "undertaken_expected": s["undertaken_expected"],
+            "undertaken_actual": s["undertaken_actual"],
+            "undertaken_pct": s["undertaken_pct"],
+            "nil_days_median": s["nil_days_median"],
+            "nil_days_q1": s["nil_days_q1"],
+            "nil_days_q3": s["nil_days_q3"],
             "cohort": r["outcomes"]["exclusions"]["included"]["total"],
             "cohort_lt6": bands[R.BAND_LT6]["all"]["n"],
             "cohort_6_11": bands[R.BAND_6_11]["all"]["n"],

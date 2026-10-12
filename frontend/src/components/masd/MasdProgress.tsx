@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { CalendarRange, ChartColumn, Stethoscope, TrendingDown, TrendingUp } from 'lucide-react';
+import type { ComparisonSnapshot } from '../../api/masd';
 import type { MasdReport } from '../../api/masd';
 import { EmptyState } from '../ui';
 import { Section } from '../results/InsightParts';
@@ -43,20 +44,31 @@ const MasdProgress: React.FC<{ report: MasdReport }> = ({ report }) => {
   const nowLabel = fmtDate(now.as_of);
   const diff = (a: number | null, b: number | null) => (a == null || b == null ? null : b - a);
 
+  const countPct = (n: number | undefined, of: number | undefined, p: number | null | undefined) =>
+    (n == null || of == null ? fmt1(p ?? null) : t('progress.countOf', { n: n.toLocaleString(), of: Math.round(of).toLocaleString(), pct: fmt1(p ?? null) }));
+  const nil = (x: ComparisonSnapshot) => (x.nil_days_median == null
+    ? fmt1(x.nil_days_avg, '')
+    : t('progress.medianIqr', { m: x.nil_days_median, q1: x.nil_days_q1, q3: x.nil_days_q3 }));
   const rows: [string, React.ReactNode, React.ReactNode, React.ReactNode][] = [
     [t('progress.basis'), t('progress.fuDays', { n: then.fu_days ?? 0 }), t('progress.fuDays', { n: now.fu_days ?? 0 }), null],
     [t('progress.learners'), then.learners, now.learners, null],
-    [t('progress.targetBasis'), t('progress.perLearner', { n: then.target_per_learner }), t('progress.perLearner', { n: now.target_per_learner }), null],
+    [t('progress.targetBasis'),
+      t('progress.perLearnerTotal', { n: then.target_per_learner, total: then.target.toLocaleString() }),
+      t('progress.perLearnerTotal', { n: now.target_per_learner, total: now.target.toLocaleString() }), null],
     [t('progress.adoptions'),
-      `${then.adoptions.toLocaleString()} (${fmt1(then.fulfilment_pct)})`,
-      `${now.adoptions.toLocaleString()} (${fmt1(now.fulfilment_pct)})`,
+      countPct(then.adoptions, then.target, then.fulfilment_pct),
+      countPct(now.adoptions, now.target, now.fulfilment_pct),
       <Change key="f" value={diff(then.fulfilment_pct, now.fulfilment_pct)} />],
-    [t('progress.intensity'), fmt1(then.intensity_pct), fmt1(now.intensity_pct),
+    [t('progress.intensity'),
+      countPct(then.activities, then.ideal, then.intensity_pct),
+      countPct(now.activities, now.ideal, now.intensity_pct),
       <Change key="i" value={diff(then.intensity_pct, now.intensity_pct)} />],
-    [t('progress.own'), fmt1(then.own_pct), fmt1(now.own_pct),
-      <Change key="o" value={diff(then.own_pct, now.own_pct)} />],
-    [t('progress.nilDays'), fmt1(then.nil_days_avg, ''), fmt1(now.nil_days_avg, ''),
-      <Change key="n" value={diff(then.nil_days_avg, now.nil_days_avg)} unit={t('progress.days')} lowerIsBetter />],
+    [t('progress.undertaken'),
+      countPct(then.undertaken_actual, then.undertaken_expected, then.undertaken_pct ?? then.own_pct),
+      countPct(now.undertaken_actual, now.undertaken_expected, now.undertaken_pct ?? now.own_pct),
+      <Change key="o" value={diff(then.undertaken_pct ?? then.own_pct, now.undertaken_pct ?? now.own_pct)} />],
+    [t('progress.nilMedian'), nil(then), nil(now),
+      <Change key="n" value={diff(then.nil_days_median ?? then.nil_days_avg, now.nil_days_median ?? now.nil_days_avg)} unit={t('progress.days')} lowerIsBetter />],
     [t('progress.cohort'),
       t('progress.cohortN', { n: then.cohort, a: then.cohort_lt6, b: then.cohort_6_11 }),
       t('progress.cohortN', { n: now.cohort, a: now.cohort_lt6, b: now.cohort_6_11 }), null],
@@ -90,31 +102,30 @@ const MasdProgress: React.FC<{ report: MasdReport }> = ({ report }) => {
         <MasdFindings className="mt-5" findings={report.insights.progress} />
       </Section>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2 [&>*]:min-w-0">
-        {([['fulfilment', 'progress.byBlockAdoption'], ['intensity', 'progress.byBlockIntensity']] as const).map(([key, title]) => (
-          <Section key={key} icon={<ChartColumn />} title={t(title)}>
-            <GroupedColumns
-              categories={blockCats}
-              series={[
-                { key: 'then', label: thenLabel, color: MASD_COLORS.then, values: cmp.blocks.map(b => b[`${key}_then`]) },
-                { key: 'now', label: nowLabel, color: key === 'fulfilment' ? MASD_COLORS.adoption : MASD_COLORS.activity,
-                  values: cmp.blocks.map(b => b[`${key}_now`]) },
-              ]}
-              reference={{ value: 100, label: t('activity.targetLine') }}
-              valueSuffix="%"
-            />
-            <div className="mt-4 flex flex-wrap gap-2">
-              {cmp.blocks.map(b => (
-                <span key={b.key} className="inline-flex items-center gap-1.5 rounded-lg bg-surface-sunken px-2 py-1 text-xs text-ink-muted">
-                  {b.label} <Change value={b[`${key}_change`]} />
-                </span>
-              ))}
-            </div>
-          </Section>
-        ))}
-      </div>
+      <Section icon={<ChartColumn />} title={t('progress.byBlockBoth')} subtitle={t('progress.byBlockBothSub')}>
+        <GroupedColumns
+          categories={blockCats}
+          series={[
+            { key: 'ft', label: t('progress.seriesThen', { what: t('activity.adoptionPct'), date: thenLabel }), color: '#9FC5CC', values: cmp.blocks.map(b => b.fulfilment_then) },
+            { key: 'fn', label: t('progress.seriesNow', { what: t('activity.adoptionPct'), date: nowLabel }), color: MASD_COLORS.adoption, values: cmp.blocks.map(b => b.fulfilment_now) },
+            { key: 'it', label: t('progress.seriesThen', { what: t('activity.activityPct'), date: thenLabel }), color: '#F2B8AE', values: cmp.blocks.map(b => b.intensity_then) },
+            { key: 'in', label: t('progress.seriesNow', { what: t('activity.activityPct'), date: nowLabel }), color: MASD_COLORS.activity, values: cmp.blocks.map(b => b.intensity_now) },
+          ]}
+          reference={{ value: 100, label: t('activity.targetLine') }}
+          valueSuffix="%"
+        />
+        <div className="mt-4 flex flex-wrap gap-2">
+          {cmp.blocks.map(b => (
+            <span key={b.key} className="inline-flex items-center gap-1.5 rounded-lg bg-surface-sunken px-2 py-1 text-xs text-ink-muted">
+              {b.label} <span className="text-ink">{t('progress.adoptShort')}</span> <Change value={b.fulfilment_change} />
+              <span className="text-ink">{t('progress.actShort')}</span> <Change value={b.intensity_change} />
+            </span>
+          ))}
+        </div>
+      </Section>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2 [&>*]:min-w-0">
+        <p className="self-center text-sm text-ink-muted xl:order-2"><TrendingDown className="mr-1 inline size-4" />{t('progress.uwMoved')}</p>
         {then.nurses && now.nurses && (
           <Section icon={<Stethoscope />} title={t('progress.nursesTitle')} subtitle={t('progress.nursesSub')}>
             <DataTable>
@@ -130,28 +141,6 @@ const MasdProgress: React.FC<{ report: MasdReport }> = ({ report }) => {
             </DataTable>
           </Section>
         )}
-        <Section icon={<TrendingDown />} title={t('progress.uwTitle')} subtitle={t('progress.uwSub')}>
-          <DataTable>
-            <thead>
-              <tr><Th className="text-left">{t('progress.band')}</Th><Th>{t('progress.report')}</Th><Th>n</Th><Th>AV</Th><Th>LV</Th><Th>{t('progress.change')}</Th></tr>
-            </thead>
-            <tbody>
-              {(['lt6', 'm6_11'] as const).flatMap(band => [then, now].map((snap, i) => {
-                const u = snap.underweight[band];
-                return (
-                  <tr key={`${band}-${i}`}>
-                    <td className="px-3 py-2 font-medium">{i === 0 ? t(`bands.${band}`) : ''}</td>
-                    <td className="px-3 py-2 text-center text-ink-muted">{i === 0 ? t('progress.interim') : t('progress.final')} · {fmtDate(snap.as_of)}</td>
-                    <td className="px-3 py-2 text-center tabular-nums">{u.n}</td>
-                    <td className="px-3 py-2 text-center tabular-nums">{fmt1(u.av)}</td>
-                    <td className="px-3 py-2 text-center tabular-nums">{fmt1(u.lv)}</td>
-                    <td className="px-3 py-2 text-center"><Change value={u.abs_change} lowerIsBetter /></td>
-                  </tr>
-                );
-              }))}
-            </tbody>
-          </DataTable>
-        </Section>
       </div>
     </div>
   );

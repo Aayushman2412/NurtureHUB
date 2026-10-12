@@ -35,8 +35,18 @@ def expected_forms_for(db: Session) -> Tuple[Dict[str, Any], bool]:
 
 
 def batches_for(db: Session, member_ids: List[int]) -> List[Dict[str, Any]]:
+    import json
+
+    def trainers(raw):
+        try:
+            out = json.loads(raw) if raw else []
+        except ValueError:
+            return []
+        return [t for t in out if isinstance(t, dict)] if isinstance(out, list) else []
+
     return [
-        {"id": b.id, "name": b.name, "end_date": b.end_date, "project_id": b.program_district_id}
+        {"id": b.id, "name": b.name, "end_date": b.end_date, "project_id": b.program_district_id,
+         "start_date": b.start_date, "trainers": trainers(b.trainers)}
         for b in db.query(models.MasdTrainingBatch)
         .filter(models.MasdTrainingBatch.program_district_id.in_(member_ids))
         .order_by(models.MasdTrainingBatch.end_date, models.MasdTrainingBatch.name)
@@ -62,8 +72,13 @@ def load(db: Session, project: models.ProgramDistrict) -> MasdData:
             models.User.id, models.User.full_name, models.User.email, models.User.role,
             models.Designation.name, models.Block.name, models.Department.code,
             models.User.is_batch_monitor, models.User.batch_monitor_id, models.User.phone,
+            models.ProgramDistrict.name, models.EducationalQualification.qualification_name,
+            models.ExperienceRange.label, models.ExperienceRange.order_index,
         )
         .outerjoin(models.Designation, models.User.designation_id == models.Designation.id)
+        .outerjoin(models.ProgramDistrict, models.User.program_district_id == models.ProgramDistrict.id)
+        .outerjoin(models.EducationalQualification, models.User.qualification_id == models.EducationalQualification.id)
+        .outerjoin(models.ExperienceRange, models.User.experience_range_id == models.ExperienceRange.id)
         .outerjoin(models.Block, models.User.block_id == models.Block.id)
         .outerjoin(models.Department, models.User.department_id == models.Department.id)
         .filter(models.User.program_district_id.in_(member_ids))
@@ -81,7 +96,8 @@ def load(db: Session, project: models.ProgramDistrict) -> MasdData:
         .all()
     } if learner_ids else {}
     learners = []
-    for uid, full_name, email, role, designation, block, dept, is_monitor, monitor_id, phone in rows:
+    for (uid, full_name, email, role, designation, block, dept, is_monitor, monitor_id, phone,
+         district, education, experience, exp_order) in rows:
         trainer_role, batch_id = f2f.get(uid, (None, None))
         learners.append(LearnerIn(
             id=uid, name=full_name or email, email=email or "",
@@ -90,16 +106,20 @@ def load(db: Session, project: models.ProgramDistrict) -> MasdData:
             batch_id=batch_id if batch_id in batch_end else None,
             training_end=batch_end.get(batch_id),
             is_monitor=bool(is_monitor), monitor_id=monitor_id, mobile=phone,
+            district=district, education=education, experience=experience,
+            experience_order=exp_order if exp_order is not None else 99,
         ))
 
     mothers: List[MotherIn] = []
-    for (mid, uid, learner_id, adoption_date, lmp, created_at, age, dob, ration, social) in (
+    for (mid, uid, learner_id, adoption_date, lmp, created_at, age, dob, ration, social, edu, declared) in (
         db.query(
             models.Mother.id, models.Mother.mother_uid, models.Mother.registered_by_user_id,
             models.Mother.adoption_date,
             models.Mother.lmp, models.Mother.created_at, models.Mother.mother_age,
             models.Mother.mother_dob, models.Mother.ration_card, models.Mother.social_category,
+            models.MotherEducationLevel.name, models.Mother.declared_adoption_type,
         )
+        .outerjoin(models.MotherEducationLevel, models.MotherEducationLevel.id == models.Mother.education_id)
         .filter(models.Mother.registered_by_user_id.in_(learner_ids))
         .all()
         if learner_ids else []
@@ -110,7 +130,7 @@ def load(db: Session, project: models.ProgramDistrict) -> MasdData:
         mothers.append(MotherIn(
             id=mid, uid=uid, learner_id=learner_id, adoption_date=adoption_date, lmp=lmp,
             created_on=created_at.date() if created_at else None, age=age,
-            ration_card=ration, social_category=social,
+            ration_card=ration, social_category=social, education=edu, declared_type=declared,
         ))
     mother_ids = [m.id for m in mothers]
 

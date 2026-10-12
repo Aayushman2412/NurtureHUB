@@ -18,6 +18,7 @@ import {
   Hourglass,
 } from 'lucide-react';
 import { Badge, Button, Card, PageLoader, ProgressBar, ProgressRing, StatCard, WelcomeBanner } from '../components/ui';
+import SupportTeamCard from '../components/SupportTeamCard';
 
 interface Achievement {
   id: number;
@@ -179,6 +180,8 @@ const DashboardPage: React.FC = () => {
           </div>
         </Card>
       )}
+
+      <SupportTeamCard />
 
       {/* Metrics */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { UserCheck } from 'lucide-react';
+import { Network, UserCheck } from 'lucide-react';
 import type { MasdReport } from '../../api/masd';
 import { DataTable, RateCell, Th } from './MasdCharts';
 
@@ -9,6 +9,56 @@ import { DataTable, RateCell, Th } from './MasdCharts';
  * answer for — "these many of yours are doing well; these two or three need a
  * call" — so the programme team chases the monitors, not every learner.
  */
+const fmtDate = (iso: string | null | undefined) =>
+  iso ? new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+/** Each batch with who trained it and who watches over its learners — the
+ *  support structure every learner sees as "My support team" (review of 6 Oct 2026). */
+export const MasdSupportStructure: React.FC<{ report: MasdReport }> = ({ report }) => {
+  const { t } = useTranslation('masd');
+  const batches = report.calendar.batches.filter(b => b.id != null);
+  if (!batches.length) return null;
+  return (
+    <section className="space-y-2 rounded-xl border border-border bg-surface p-4">
+      <h3 className="inline-flex items-center gap-2 font-display text-base font-bold text-ink">
+        <Network className="size-5 text-primary-ink" />{t('support.title')}
+      </h3>
+      <p className="text-sm text-ink">{t('support.explain')}</p>
+      <DataTable>
+        <thead>
+          <tr>
+            <Th className="text-left">{t('expected.batch')}</Th>
+            <Th>{t('support.dates')}</Th>
+            <Th className="text-left">{t('support.trainers')}</Th>
+            <Th>{t('table.learners')}</Th>
+            <Th className="text-left">{t('support.monitors')}</Th>
+            <Th>{t('support.withoutMonitor')}</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {batches.map(b => (
+            <tr key={b.id!}>
+              <td className="px-3 py-2 font-semibold text-ink">{b.name}</td>
+              <td className="px-3 py-2 text-center text-xs text-ink-muted">
+                {b.start_date ? `${fmtDate(b.start_date)} – ${fmtDate(b.end_date)}` : t('support.endedOn', { date: fmtDate(b.end_date) })}
+              </td>
+              <td className="px-3 py-2 text-sm text-ink">
+                {b.trainers?.length ? b.trainers.map((tr, i) => (
+                  <div key={i}>{tr.name}{tr.role && <span className="text-xs text-ink-muted"> · {tr.role}</span>}{tr.phone && <span className="text-xs text-ink-muted"> · {tr.phone}</span>}</div>
+                )) : <span className="text-amber-700 dark:text-amber-400">{t('support.noTrainers')}</span>}
+              </td>
+              <td className="px-3 py-2 text-center tabular-nums">{b.learners}</td>
+              <td className="px-3 py-2 text-sm text-ink">{b.monitors?.length ? b.monitors.map(m => m.name).join(', ') : <span className="text-ink-muted">—</span>}</td>
+              <td className={`px-3 py-2 text-center tabular-nums ${b.without_monitor ? 'font-bold text-amber-700 dark:text-amber-400' : 'text-ink-muted'}`}>{b.without_monitor ?? 0}</td>
+            </tr>
+          ))}
+        </tbody>
+      </DataTable>
+      <p className="text-xs text-ink-muted">{t('support.howToEdit')}</p>
+    </section>
+  );
+};
+
 const MasdMonitors: React.FC<{ report: MasdReport }> = ({ report }) => {
   const { t } = useTranslation('masd');
   const data = report.batch_monitors;

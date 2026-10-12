@@ -153,6 +153,19 @@ const MasdSettingsModal: React.FC<{
       setError(t('settings.batchError'));
       return;
     }
+    if (batches.some(b => b.start_date && b.start_date > b.end_date)) {
+      setError(t('settings.batchDatesError'));
+      return;
+    }
+    // As the server: 10 digits, a +91 / 0 prefix allowed.
+    const phoneOk = (p: string | null) => {
+      const d = (p ?? '').replace(/\D/g, '');
+      return !d || (d.length >= 10 && d.length <= 13);
+    };
+    if (batches.some(b => (b.trainers ?? []).some(tr => !tr.name.trim() || !phoneOk(tr.phone)))) {
+      setError(t('settings.trainerError'));
+      return;
+    }
     const days = rows.map(r => r.from);
     if (rows.some(r => !r.from) || new Set(days).size !== days.length) {
       setError(t('settings.targetError'));
@@ -188,7 +201,10 @@ const MasdSettingsModal: React.FC<{
         tranche2_start: second && (!training || second > training) ? second : null,
         benchmarks,
         targets: steps,
-        batches: batches.map(b => ({ id: b.id, name: b.name.trim(), end_date: b.end_date })),
+        batches: batches.map(b => ({
+          id: b.id, name: b.name.trim(), start_date: b.start_date || null, end_date: b.end_date,
+          trainers: (b.trainers ?? []).map(tr => ({ name: tr.name.trim(), phone: tr.phone?.trim() || null, role: tr.role?.trim() || null })),
+        })),
       });
       showToast(t('settings.saved'), 'success');
       onSaved();
@@ -235,7 +251,8 @@ const MasdSettingsModal: React.FC<{
               <thead>
                 <tr>
                   <th className={`pb-1 text-left ${small}`} colSpan={3} />
-                  <th className={`pb-1 text-center ${small}`} colSpan={4}>{t('settings.askedInTranche')}</th>
+                  <th className={`pb-1 text-center ${small}`} colSpan={3}>{t('settings.askedRol')}</th>
+                  <th className={`pb-1 text-center ${small}`} colSpan={1}>{t('settings.askedSn')}</th>
                   <th className={`pb-1 text-center ${small}`} colSpan={3}>{t('settings.autoCalc', { date: reportDate })}</th>
                   <th />
                 </tr>
@@ -243,7 +260,11 @@ const MasdSettingsModal: React.FC<{
                   <th className={`pb-2 text-left ${small}`}>#</th>
                   <th className={`pb-2 text-left ${small}`}>{t('settings.from')}</th>
                   <th className={`pb-2 text-center ${small}`}>{t('settings.buffer')}</th>
-                  {TARGET_KEYS.map(k => <th key={k} className={`pb-2 text-center ${small}`}>+ {t(`settings.target.${k}`)}</th>)}
+                  {TARGET_KEYS.map(k => (
+                    <th key={k} className={`pb-2 text-center ${small}`}>
+                      + {t(`settings.target.${k === 'nurse' ? 'pnc_lt5' : k}`)}
+                    </th>
+                  ))}
                   <th className={`pb-2 text-center ${small}`} title={t('expected.fuTitle')}>{t('settings.fuNow')}</th>
                   <th className={`pb-2 text-center ${small}`}>{t('settings.expRol')}</th>
                   <th className={`pb-2 text-center ${small}`}>{t('settings.expSn')}</th>
@@ -274,7 +295,7 @@ const MasdSettingsModal: React.FC<{
                         {c?.fu == null ? <span className="text-ink-muted">{t('settings.notOpen')}</span> : (
                           <>
                             <div className="font-bold text-ink">{t('baseline.days', { n: c.fu })}</div>
-                            <div className="text-xs text-ink-muted">{t('baseline.fuRaw', { n: c.fuRaw ?? 0 })}</div>
+                            <div className="text-xs text-ink-muted">{t('settings.afterBufferN', { n: c.fuRaw ?? 0 })}</div>
                           </>
                         )}
                       </td>
@@ -316,25 +337,60 @@ const MasdSettingsModal: React.FC<{
           <p className="mb-3 text-sm text-ink-muted">{t('settings.batchesHint')}</p>
           {batches.length > 0 && (
             <div className="space-y-2">
-              <div className="hidden grid-cols-[1fr_11rem_5rem_2.5rem] gap-2 sm:grid">
+              <div className="hidden grid-cols-[1fr_10rem_10rem_5rem_2.5rem] gap-2 sm:grid">
                 <span className={small}>{t('settings.batchName')}</span>
+                <span className={small}>{t('settings.batchStart')}</span>
                 <span className={small}>{t('settings.batchEnd')}</span>
                 <span className={small}>{t('settings.batchLearners')}</span>
                 <span />
               </div>
               {batches.map((b, i) => (
-                <div key={b.id ?? `new-${i}`} className="grid grid-cols-[1fr_auto] items-center gap-2 sm:grid-cols-[1fr_11rem_5rem_2.5rem] [&>*]:min-w-0">
-                  <Input ref={el => { batchRefs.current[i] = el; }} value={b.name}
-                    onChange={e => patchBatch(i, { name: e.target.value })} maxLength={80}
-                    aria-label={t('settings.batchName')} />
-                  <div className="col-span-2 row-start-2 sm:col-span-1 sm:row-start-auto">
-                    <DateInput value={b.end_date} onChange={v => patchBatch(i, { end_date: v })} />
+                <div key={b.id ?? `new-${i}`} className="rounded-lg border border-border p-2">
+                  <div className="grid grid-cols-[1fr_auto] items-center gap-2 sm:grid-cols-[1fr_10rem_10rem_5rem_2.5rem] [&>*]:min-w-0">
+                    <Input ref={el => { batchRefs.current[i] = el; }} value={b.name}
+                      onChange={e => patchBatch(i, { name: e.target.value })} maxLength={80}
+                      aria-label={t('settings.batchName')} />
+                    <div className="col-span-2 row-start-2 sm:col-span-1 sm:row-start-auto">
+                      <DateInput value={b.start_date ?? ''} max={b.end_date || undefined}
+                        onChange={v => patchBatch(i, { start_date: v || null })} />
+                    </div>
+                    <div className="col-span-2 row-start-3 sm:col-span-1 sm:row-start-auto">
+                      <DateInput value={b.end_date} onChange={v => patchBatch(i, { end_date: v })} />
+                    </div>
+                    <span className="hidden text-center text-sm tabular-nums text-ink-muted sm:block">{b.learners ?? 0}</span>
+                    <Button variant="ghost" size="sm" aria-label={t('settings.remove')} title={t('settings.remove')}
+                      onClick={() => setBatches(list => list.filter((_, j) => j !== i))}>
+                      <Trash2 className="size-4" />
+                    </Button>
                   </div>
-                  <span className="hidden text-center text-sm tabular-nums text-ink-muted sm:block">{b.learners ?? 0}</span>
-                  <Button variant="ghost" size="sm" aria-label={t('settings.remove')} title={t('settings.remove')}
-                    onClick={() => setBatches(list => list.filter((_, j) => j !== i))}>
-                    <Trash2 className="size-4" />
-                  </Button>
+                  <div className="mt-2 space-y-1.5 pl-1">
+                    <span className={small}>{t('settings.trainers')}</span>
+                    {(b.trainers ?? []).map((tr, k) => (
+                      <div key={k} className="grid grid-cols-1 gap-1.5 sm:grid-cols-[1fr_9rem_10rem_2.5rem]">
+                        <Input value={tr.name} placeholder={t('settings.trainerName')} aria-label={t('settings.trainerName')} maxLength={120}
+                          onChange={e => patchBatch(i, { trainers: (b.trainers ?? []).map((x, j) => (j === k ? { ...x, name: e.target.value } : x)) })} />
+                        <Input value={tr.phone ?? ''} placeholder={t('settings.trainerPhone')} aria-label={t('settings.trainerPhone')} inputMode="tel" maxLength={20}
+                          onChange={e => patchBatch(i, { trainers: (b.trainers ?? []).map((x, j) => (j === k ? { ...x, phone: e.target.value } : x)) })} />
+                        <select value={tr.role ?? ''} aria-label={t('settings.trainerRole')}
+                          onChange={e => patchBatch(i, { trainers: (b.trainers ?? []).map((x, j) => (j === k ? { ...x, role: e.target.value || null } : x)) })}
+                          className="cursor-pointer rounded-lg border border-border bg-surface px-2 py-2 text-sm text-ink">
+                          <option value="">{t('settings.trainerRole')}</option>
+                          <option value="Trainer">{t('settings.trainerRoles.trainer')}</option>
+                          <option value="Assistant trainer">{t('settings.trainerRoles.assistant')}</option>
+                        </select>
+                        <Button variant="ghost" size="sm" aria-label={t('settings.remove')}
+                          onClick={() => patchBatch(i, { trainers: (b.trainers ?? []).filter((_, j) => j !== k) })}>
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    {(b.trainers ?? []).length < 6 && (
+                      <Button variant="ghost" size="sm" iconLeft={<Plus className="size-4" />}
+                        onClick={() => patchBatch(i, { trainers: [...(b.trainers ?? []), { name: '', phone: null, role: (b.trainers ?? []).length ? 'Assistant trainer' : 'Trainer' }] })}>
+                        {t('settings.addTrainer')}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

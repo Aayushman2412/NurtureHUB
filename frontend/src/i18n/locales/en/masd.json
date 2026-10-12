@@ -24,10 +24,14 @@
     "inferred": "Dates inferred from the data — set them in Programme settings",
     "batches_one": "{{count}} F2F batch ended",
     "batches_other": "{{count}} F2F batches ended",
-    "fu": "Follow-up counted",
+    "fu": "Days considered for expected activities",
     "fuValue": "{{days}} days, tranche by tranche",
     "targetsNow": "Targets in force",
-    "targetsValue": "ANC {{anc}} · <{{pncM}}M {{lt5}} · ≥{{pncM}}M {{ge5}} · Staff Nurse {{nurse}}"
+    "targetsValue": "ANC {{anc}} · <{{pncM}}M {{lt5}} · ≥{{pncM}}M {{ge5}} · Staff Nurse {{nurse}}",
+    "batchesEnded_one": "{{count}} training batch, last day of training",
+    "batchesEnded_other": "{{count}} training batches, last days of training",
+    "batchesClock": "each batch's last training day starts its learners' first tranche, after the buffer",
+    "batchesTitle": "Each learner's follow-up is counted from their own batch's last day of training, not one date for the whole project"
   },
   "views": {
     "label": "MASD pages",
@@ -38,7 +42,8 @@
     "learners": "Learners",
     "rules": "Rules & definitions",
     "expected": "Expected activity",
-    "flags": "Follow-up flags"
+    "flags": "Follow-up flags",
+    "descriptives": "Who the learners are"
   },
   "kpi": {
     "fulfilment": "Adoption target met",
@@ -49,12 +54,19 @@
     "nilDaysSub": "days since the last activity",
     "cohort": "Dyads in outcome analysis",
     "cohortSub": "{{pct}} of eligible cases",
-    "own": "Activity on own cases",
+    "own": "Level 3 · Each case by its own dates",
     "ownSub": "{{n}} of {{expected}} forms their cases were due",
     "fu": "Follow-up counted",
     "fuSub": "tranche by tranche: {{days}} days — each from the day it opened, less its buffer, rounded down to {{step}}",
-    "overdue": "Pregnancies past due date",
-    "overdueSub": "of {{n}} pregnant women under follow-up"
+    "overdue": "Pregnancies past due date (as per LMP)",
+    "overdueSub": "of {{n}} pregnant women under follow-up",
+    "undertaken": "Activity among the adopted cases",
+    "undertakenSub": "{{n}} of {{expected}} activities expected for the adoptions actually taken",
+    "nilMedian": "Median nil-activity days",
+    "nilMedianSub": "days since the last activity · middle half of learners: {{q1}}–{{q3}} days",
+    "level1": "Level 1 · Ideal expected activity done ({{rol}} per learner, {{sn}} per Staff Nurse)",
+    "level2": "Level 2 · Activity among the adopted cases",
+    "level3": "Level 3 · Each case by its own dates (preview)"
   },
   "overview": {
     "findingsTitle": "What the numbers say",
@@ -67,13 +79,16 @@
     "weeklyTitle": "Activity week by week",
     "weeklySub": "Everything F2F learners filed each week since training, with new adoptions below",
     "activities": "Activities",
-    "newAdoptions": "New adoptions"
+    "newAdoptions": "New adoptions",
+    "adoptedNoActivity": "Learners with adoptions but no activity",
+    "exclusiveNote": "The two boxes do not overlap: a learner with no adoptions is counted only in the first. Out of {{n}} F2F learners.",
+    "unknownNote": "Type not known: no LMP and no baby's date of birth entered, so the dates cannot tell whether the adoption is ANC or PNC."
   },
   "types": {
     "anc": "ANC",
     "pnc_lt5": "PNC <{{pncM}} months",
     "pnc_ge5": "PNC ≥{{pncM}} months",
-    "unknown": "Not typed"
+    "unknown": "Type not known"
   },
   "attention": {
     "title_one": "{{count}} learner needs a supervisor's call",
@@ -98,7 +113,8 @@
     "nilDays": "Nil-activity days",
     "learners": "Learners",
     "fulfilment": "% adoption target",
-    "total": "Total"
+    "total": "Total",
+    "nilMedian": "Nil-activity days, median (IQR)"
   },
   "split": {
     "label": "Split by:",
@@ -125,9 +141,9 @@
     "learnersN_one": "{{count}} learner",
     "learnersN_other": "{{count}} learners",
     "dataTitle": "The data",
-    "dataSub": "With average days since the last activity",
+    "dataSub": "Counts behind the percentages, totals for everyone shown, and the median days since the last activity",
     "subtypeTitle": "Activity subtypes by {{what}}",
-    "subtypeSub": "% of the expected count done, per activity type — green ≥80%, amber 60–79%, red below",
+    "subtypeSub": "% of the expected count done, per activity type, with done / expected under each",
     "targetsTitle": "Cadre level: target vs actual",
     "targetsSub": "Adoptions and activities, with department subtotals",
     "adoptTarget": "Adoption target",
@@ -137,7 +153,31 @@
     "subtotalHFW": "HFW subtotal",
     "grandTotal": "Grand total",
     "distributionTitle": "Learners across blocks and cadres",
-    "distributionSub": "F2F learners; the share is of that block's learners"
+    "distributionSub": "F2F learners; the share is of that block's learners",
+    "avgLine": "Average · {{what}}",
+    "undertaken": "Activity among adopted cases",
+    "undertakenTitle": "Activities done ÷ activities expected for the adoptions actually taken (level 2)",
+    "allActivities": "All activities",
+    "pairsTitle": "Visits against interventions, by {{what}}",
+    "pairsSub": "Does the intervention follow the visit? Each bubble is a group, sized by its adoptions of that type",
+    "pair": {
+      "lt5": "PNC <{{pncM}}M: growth checks vs breastfeeding assessments",
+      "ge5": "PNC ≥{{pncM}}M: growth checks vs complementary feeding assessments",
+      "anc": "ANC: antenatal checks vs protein counts"
+    },
+    "pairAll": "All shown: {{x}} {{xv}} ({{xd}} of {{xe}}) · {{y}} {{yv}} ({{yd}} of {{ye}})",
+    "pairX": "{{what}} done (% of expected)",
+    "pairY": "{{what}} done (% of expected)",
+    "pq": {
+      "tr": "Both done",
+      "tl": "Intervention ahead of visits",
+      "br": "Visits without the intervention",
+      "bl": "Both behind"
+    },
+    "casesN_one": "{{count}} adoption",
+    "casesN_other": "{{count}} adoptions",
+    "pairDiagonal": "visit = intervention",
+    "pairsNote": "On the dotted line the two forms are done equally; below it, visits happen but the intervention form is not filed. PNC <{{pncM}}M includes Staff Nurses' adoptions."
   },
   "activities": {
     "anc": "Antenatal care",
@@ -153,12 +193,12 @@
     "sub": "The same report computed for both dates",
     "metric": "Metric",
     "change": "Change",
-    "basis": "Follow-up counted",
+    "basis": "Days considered for expected activities",
     "learners": "Learners (F2F)",
     "targetBasis": "Adoption target basis",
     "perLearner": "{{n}} adoptions / learner",
     "adoptions": "Adoptions completed",
-    "intensity": "Expected activity done",
+    "intensity": "Expected activity done (ideal)",
     "nilDays": "Avg nil-activity days",
     "days": " days",
     "cohort": "Outcome cohort",
@@ -174,7 +214,19 @@
     "interim": "Interim",
     "final": "Final",
     "fuDays": "{{n}} days",
-    "own": "Activity on own cases"
+    "own": "Activity on own cases",
+    "countOf": "{{n}} of {{of}} ({{pct}})",
+    "medianIqr": "{{m}} days (IQR {{q1}}–{{q3}})",
+    "perLearnerTotal": "{{n}} adoptions per learner = {{total}}",
+    "undertaken": "Activity among the adopted cases",
+    "nilMedian": "Median nil-activity days",
+    "byBlockBoth": "Adoption and activity by block, then and now",
+    "byBlockBothSub": "Light bars are the earlier date; the change is listed under the chart",
+    "seriesThen": "{{what}} · {{date}}",
+    "seriesNow": "{{what}} · {{date}}",
+    "adoptShort": "adoption",
+    "actShort": "activity",
+    "uwMoved": "Underweight, interim against final, is now on the Outcomes page."
   },
   "bands": {
     "lt6": "<6 months",
@@ -208,7 +260,10 @@
     "ration_card": "Ration card",
     "social_category": "Social category",
     "delivery_place": "Delivery place",
-    "delivery_method": "Delivery method"
+    "delivery_method": "Delivery method",
+    "education": "Mother's education",
+    "placeByMethod": "Delivery place × delivery method",
+    "placeByMethodNote": "Counts, with the share of each place in brackets; totals both ways."
   },
   "outcomes": {
     "indicator": "Indicator",
@@ -236,7 +291,7 @@
     "other": "Other",
     "included": "Included in the analysis",
     "retentionTitle": "Retention by cadre",
-    "retentionSub": "How many of each cadre's learners and cases reach the final analysis",
+    "retentionSub": "How many of each group's learners and cases reach the final analysis",
     "ret_learners": "F2F learners",
     "ret_adoptions": "Adoptions",
     "inFinal": "In final analysis",
@@ -253,7 +308,7 @@
     "noCohort": "No cases in this group pass the data checks yet.",
     "noBenchmark": "No NFHS benchmark is set for this project — add one in Programme settings to compare against it.",
     "bandsTitle": "By age band: MT+FL vs other learners",
-    "bandsSub": "Adoption visit (AV) against last visit (LV), with the NFHS figure for the same age band",
+    "bandsSub": "Birth, adoption and last visit for each age band, with the NFHS state figure for the same band",
     "typesOf": "{{types}}",
     "complianceTitle": "Minimum PNC visit compliance",
     "complianceSub": "Cases that met the visit rule against those that did not",
@@ -274,7 +329,27 @@
     "whatToCheck": "What to check",
     "lt12Title": "The <6 and 6–11 month NFHS values weighted by their sample sizes",
     "nfhsLt12": "NFHS <1 yr",
-    "nfhsUnder5": "NFHS <5 yr"
+    "nfhsUnder5": "NFHS <5 yr",
+    "funnelNoBatch": "No training batch (not trained face to face)",
+    "exclTitleBy": "Primary exclusion reasons, by {{what}}",
+    "eligibleTotal": "Eligible cases",
+    "learnersN": "Learners",
+    "exclNote": "Split by any group with Split by / Filter by above; MT+FL vs others is one of the groups.",
+    "retentionTitleBy": "Retention by {{what}}",
+    "showBv": "Show birth visit (BV)",
+    "nfhsGroup": "NFHS indicators",
+    "projectGroup": "Project outcomes (n = {{n}} dyads)",
+    "districtU5": "District under-5 · {{round}}",
+    "nfhsChange": "Change (relative)",
+    "stateBand": "State · {{band}}",
+    "severeTitle": "Severe forms (below −3 SD)",
+    "severeNote": "NFHS columns show only where the survey gives a figure.",
+    "mtflN": "MT+FL (n={{n}})",
+    "otherN": "Other learners (n={{n}})",
+    "minMet": {
+      "yes": "Minimum visits met: yes (n={{n}})",
+      "no": "Minimum visits met: no (n={{n}})"
+    }
   },
   "learners": {
     "show": "Show:",
@@ -304,7 +379,12 @@
     "projectDate": "Project date",
     "fuShort": "follow-up {{n}} d",
     "own": "% own cases",
-    "batchSaved": "Batch saved for {{name}}."
+    "batchSaved": "Batch saved for {{name}}.",
+    "activitiesIdeal": "Activities / ideal ({{rol}}; SN {{sn}})",
+    "undertaken": "Activity among adopted cases",
+    "mismatch_one": "{{count}} type mismatch",
+    "mismatch_other": "{{count}} type mismatches",
+    "mismatchTitle": "The adoption type chosen at registration differs from the one worked out from the dates — see Follow-up flags"
   },
   "rules": {
     "calendarTitle": "Programme calendar",
@@ -385,7 +465,14 @@
     "case4": "Follow-up is counted to the report date, up to {{max}} days of age.",
     "case5": "A Staff Nurse's hospital cases expect the ward visits in the Staff Nurse row.",
     "buffer": "Buffer",
-    "fuNow": "Follow-up now"
+    "fuNow": "Follow-up now",
+    "lapTitle": "The LAP visit schedule",
+    "lapSub": "On which day of follow-up each form falls due. The expected-forms table below counts these up to each 15-day step.",
+    "lapForm": "Form",
+    "lapDays": "Due on day",
+    "lapCount": "In all",
+    "dayN": "day {{n}}",
+    "lapNote": "Days count from the adoption. A Staff Nurse's facility adoption expects {{gm}} growth checks and {{bf}} breastfeeding assessments. The cumulative chart expects one adoption per learner every {{pace}} days after the buffer."
   },
   "settings": {
     "title": "Programme settings",
@@ -427,8 +514,8 @@
     "buffer": "Buffer (days)",
     "bufferDefault": "{{n}} (default)",
     "askedInTranche": "Adoptions asked in this tranche",
-    "autoCalc": "Worked out (as of {{date}})",
-    "fuNow": "Follow-up",
+    "autoCalc": "Expected activities per learner as of {{date}}",
+    "fuNow": "Days considered",
     "expRol": "Expected / learner",
     "expSn": "Expected / Staff Nurse",
     "notOpen": "not open yet",
@@ -438,7 +525,22 @@
     "under5": "Under 5",
     "sampleSize": "Sample size (n)",
     "lt12Hint": "The <1 year figure is the <6 and 6–11 month values weighted by their sample sizes: (p₁n₁ + p₂n₂) ÷ (n₁ + n₂). Fill the sample sizes from the NFHS report. District fact sheets give under-5 figures only.",
-    "nError": "Sample sizes must be whole numbers."
+    "nError": "Sample sizes must be whole numbers.",
+    "askedRol": "Adoptions asked — rest of the learners",
+    "askedSn": "Staff Nurse",
+    "afterBufferN": "{{n}} days after the buffer",
+    "batchStart": "Training from",
+    "batchDatesError": "A batch's training cannot start after it ends.",
+    "trainerError": "Every trainer needs a name, and a phone number of 10 digits if one is given.",
+    "trainers": "Trainers",
+    "trainerName": "Trainer's name",
+    "trainerPhone": "Phone",
+    "trainerRole": "Role",
+    "trainerRoles": {
+      "trainer": "Trainer",
+      "assistant": "Assistant trainer"
+    },
+    "addTrainer": "Add trainer"
   },
   "expected": {
     "split": {
@@ -464,7 +566,7 @@
     "nothingYet": "nothing due yet",
     "exampleTotal": "{{n}} activities per learner",
     "typeTitle": "Adoption vs activity, by adoption type",
-    "typeSub": "% of each type's adoption target met, and % of the activity those adoptions were expected to generate",
+    "typeSub": "% of each type's adoption target met, and % of the activity those adoptions were expected to generate — Staff Nurses' PNC <{{pncM}}M on its own",
     "typeN": "{{adopted}} of {{target}}",
     "byGroupTitle": "{{type}} by {{what}}",
     "byGroupSub": "Adoption target met against expected activity done — best and lowest marked (groups of 3+ learners)",
@@ -474,8 +576,8 @@
     "bubbleTitle": "Adoption met vs activity done",
     "adopted": "Adopted / target",
     "done": "Done / expected",
-    "ownTitle": "Within the cases they adopted: how active are learners?",
-    "ownSub": "Learners with at least one adoption, by the share of their own cases' expected forms they have filed — each case's expectation follows its own follow-up",
+    "ownTitle": "Level 3 · Within the cases they adopted, by each case's own dates",
+    "ownSub": "Learners with at least one adoption, by the share of their own cases' expected forms they have filed — each case's expectation follows its own dates",
     "ownN": "{{n}} learners · {{pct}} overall",
     "banded": "Learners",
     "ownPct": "% own cases",
@@ -495,7 +597,7 @@
     "sameClock": "All {{n}} batches had finished training when tranche 1 opened, so every learner counts the same follow-up.",
     "exampleTranche": "tranche {{n}} at {{days}} days: {{parts}}",
     "uptakeTitle": "How quickly learners took up each tranche",
-    "uptakeSub": "Days from the day a tranche opened to each learner's first adoption for it, and to the one that completed it",
+    "uptakeSub": "For each tranche: the share of learners who started and completed it, and the days from the day it opened to their first adoption and to the one that completed it — median, with the middle half of learners (IQR) in brackets",
     "started": "Started",
     "completed": "Took all of it",
     "medianStart": "Median days to start",
@@ -521,7 +623,26 @@
       "cf": "CF"
     },
     "workedTitle": "How the expected figures add up",
-    "workedSub": "One community learner, tranche by tranche — and, where batches started at different times, each batch"
+    "workedSub": "One community learner, tranche by tranche — and, where batches started at different times, each batch",
+    "upGroup": {
+      "all": "Everyone",
+      "rol": "Rest of the learners",
+      "sn": "Staff Nurses"
+    },
+    "iqrTitle": "Median days, with the 25th–75th percentile range in brackets",
+    "medianStartIqr": "Days to first adoption",
+    "medianCompleteIqr": "Days to complete",
+    "nthTitle": "Adoption by adoption",
+    "nthSub": "When each learner made their 1st, 2nd, 3rd … adoption of the tranche, counted from the day it opened",
+    "nthLabel": "Adoption {{n}}",
+    "nthDone": "{{done}} of {{of}} made",
+    "levelsNote": "Three levels of expected activity. Level 1 compares with the ideal for the targets. Level 2 counts only the adoptions each learner actually made, whatever the target. Level 3 follows each case's own dates — the analysis the main database will move to.",
+    "kind": {
+      "anc": "ANC",
+      "pnc_lt5": "PNC <{{pncM}}M",
+      "pnc_ge5": "PNC ≥{{pncM}}M",
+      "sn": "Staff Nurse PNC <{{pncM}}M"
+    }
   },
   "bandsOwn": {
     "none": "No activity",
@@ -534,7 +655,7 @@
   "flags": {
     "open": "Pregnant women under follow-up",
     "openSub": "adopted in pregnancy, no birth entered yet",
-    "edd_passed": "Past due date",
+    "edd_passed": "Past due date (as per LMP)",
     "eddSub": "LMP + 280 days has passed, no birth recorded",
     "anc_behind": "Checks behind",
     "ancSub": "2+ fortnightly antenatal checks missed",
@@ -558,34 +679,80 @@
     "checksTitle": "Antenatal checks done / due (every 15 days from adoption)",
     "lastCheck": "Last check",
     "never": "none yet",
-    "daysAgo": "{{n}} days since contact"
+    "daysAgo": "{{n}} days since contact",
+    "pncFlagged": "PNC cases with follow-up issues",
+    "pncFlaggedSub": "of {{n}} babies under follow-up",
+    "mismatch": "Adoption type mismatches",
+    "mismatchSub": "type chosen by the learner ≠ type from the dates",
+    "list": "List:",
+    "list_anc": "Pregnant (ANC) cases",
+    "list_pnc": "PNC cases",
+    "list_mismatch": "Type mismatches",
+    "listTitle_anc_one": "{{count}} pregnant (ANC) case with follow-up issues",
+    "listTitle_anc_other": "{{count}} pregnant (ANC) cases with follow-up issues",
+    "listTitle_pnc_one": "{{count}} PNC case with follow-up issues",
+    "listTitle_pnc_other": "{{count}} PNC cases with follow-up issues",
+    "listTitle_mismatch_one": "{{count}} adoption whose type does not match",
+    "listTitle_mismatch_other": "{{count}} adoptions whose type does not match",
+    "listSub_anc": "Mothers by record ID — the learner knows who they are. Ask whether the baby has come, or why the checks stopped.",
+    "listSub_pnc": "Babies whose growth checks are behind the LAP schedule, or who have not been seen for 45 days — the learner may have stopped following the mother after the birth.",
+    "listSub_mismatch": "The type the learner chose at registration against the one worked out from the dates. The learner and their batch monitor should check the dates or the choice.",
+    "download": "Download this list",
+    "anyType": "Any adoption type",
+    "anyBlock": "Any block",
+    "type": "Adoption type",
+    "dob": "Baby born",
+    "gmTitle": "Growth checks done / due by the LAP schedule till date",
+    "gmChecks": "Growth checks",
+    "missed": "Visits missed till date",
+    "lastVisit": "Last visit",
+    "visits_missed": "Visits missed",
+    "no_recent_visit": "Not seen for 45 days",
+    "declared": "Chosen by the learner",
+    "computed": "From the dates",
+    "noMismatch": "No mismatches — every declared type agrees with the dates."
   },
   "baseline": {
     "title": "What is expected of each learner",
-    "sub": "The baseline for this dashboard: each tranche of adoptions, how long it has been followed up by {{date}}, and the forms it should have produced — for the rest of the learners and for Staff Nurses",
+    "sub": "The baseline for this dashboard: each tranche of adoptions, how many days of its follow-up count by {{date}}, and the activities each learner should have done by then — for the rest of the learners and for Staff Nurses",
     "tranche": "Tranche",
     "fu": "Follow-up",
     "days": "{{n}} days",
     "fuRaw": "{{n}} so far",
     "asked": "Adoptions asked",
-    "rol": "Expected forms — rest of the learners",
-    "sn": "Expected forms — Staff Nurse",
+    "rol": "Expected activities per learner as of {{date}}",
+    "sn": "Expected per Staff Nurse as of {{date}}",
     "total": "Total",
-    "totalRow": "Total as of {{date}}",
+    "totalRow": "Total target as of {{date}}",
     "target": {
       "anc": "ANC",
       "pnc_lt5": "<{{pncM}}M",
       "pnc_ge5": "≥{{pncM}}M",
       "nurse": "SN"
     },
-    "note": "Each tranche is followed up from the day it opened plus its buffer, rounded down to a multiple of 15 days. A Staff Nurse's hospital adoptions are all PNC <{{pncM}}M and expect growth checks and breastfeeding assessments only. Set the tranches in Programme settings. GM = growth monitoring, BF = breastfeeding, CF = complementary feeding, Prot = protein count, SN = Staff Nurse.",
+    "note": "A Staff Nurse's hospital adoptions are all PNC <{{pncM}}M and expect growth checks and breastfeeding assessments only. Set the tranches in Programme settings. GM = growth monitoring, BF = breastfeeding, CF = complementary feeding, Prot = protein count, SN = Staff Nurse.",
     "code": {
       "anc": "ANC",
       "protein": "Prot",
       "gm": "GM",
       "bf": "BF",
       "cf": "CF"
-    }
+    },
+    "fuGroup": "Days of follow-up (to {{date}})",
+    "sinceOpened": "Since it opened",
+    "sinceOpenedTitle": "Days from the date the tranche opened to the report date",
+    "buffer": "Buffer",
+    "bufferTitle": "Days allowed after the tranche opens before activities are expected",
+    "afterBuffer": "After the buffer",
+    "afterBufferTitle": "Days since the buffer ended (or since the learner's training batch ended, if later)",
+    "considered": "Days considered",
+    "consideredTitle": "Days considered for expected activities: the days after the buffer, rounded down to the LAP table's 15-day steps",
+    "askedRol": "Adoptions asked — rest of the learners",
+    "askedSn": "Staff Nurse",
+    "openedOn": "opened {{date}}",
+    "notOpen": "not open yet",
+    "clockFrom": "counted from {{date}}",
+    "howDays": "How the days are counted: days since the tranche opened, less its buffer = days after the buffer; rounded down to the LAP table's {{step}}-day steps = days considered for expected activities. The expected activities are read from the LAP table at those days."
   },
   "monitors": {
     "column": "Batch monitor",
@@ -610,5 +777,98 @@
     "allOnTrack": "All on track",
     "noLearners": "No learners given yet",
     "quietDays": "quiet {{n}} days"
+  },
+  "splitDims": {
+    "role_group": "Cadre",
+    "block": "Block",
+    "department": "Department",
+    "district": "District",
+    "mtfl": "MT+FL vs others",
+    "batch": "Training batch",
+    "monitor": "Batch monitor",
+    "education": "Education",
+    "experience": "Experience"
+  },
+  "splitBar": {
+    "showing": "Showing {{n}} of {{total}} learners",
+    "clear": "Clear all",
+    "note": "Split by groups the charts and tables of this page; Filter by keeps only the ticked groups. The summary figures at the top stay for the whole project."
+  },
+  "legend": {
+    "title": "Colours:",
+    "green": "80% or more",
+    "amber": "60–79%",
+    "red": "below 60%"
+  },
+  "cumulative": {
+    "title": "Expected vs actual, cumulative",
+    "sub": "Where the project should be by each date (dashed) and where it is (solid)",
+    "by": "Show by",
+    "grain": {
+      "day": "Day",
+      "week": "Week",
+      "month": "Month",
+      "quarter": "Quarter"
+    },
+    "adoptions": "Adoptions",
+    "activities": "Activities",
+    "expected": "Expected",
+    "actual": "Actual",
+    "note": "Expected adoptions start when each batch's buffer ends (counted from its last day of training) and add one adoption per learner every {{n}} days until the tranche is taken. Expected activities follow the LAP table for the tranches open on each day, so the last point equals the expected activity figure above. F2F learners."
+  },
+  "descriptives": {
+    "registered": "Registered",
+    "registeredSub": "learners registered in this project",
+    "f2f": "F2F trained",
+    "f2fSub": "{{pct}} of those registered",
+    "notF2f": "Not trained F2F",
+    "notF2fSub": "registered, but in no training batch",
+    "mtfl": "MT+FL",
+    "mtflSub": "Master Trainers and Facilitators",
+    "nurses": "Staff Nurses",
+    "nursesSub": "facility-based learners",
+    "status": "F2F training",
+    "columns": "Columns:",
+    "crossTitle": "{{rows}} × {{cols}}",
+    "crossSub": "Counts with the share of each row in brackets; totals both ways",
+    "crossNote": "Rows follow Split by; pick the columns here. Filter by narrows the learners counted.",
+    "profileTitle": "Learners by each characteristic",
+    "profileSub": "Registered, trained face to face, and not, with the share trained",
+    "pctTrained": "% trained",
+    "note": "Learners are counted from their registration profiles; \"Not recorded\" means the profile does not say."
+  },
+  "batchUpload": {
+    "lead": "Put learners in their training batches from an Excel of user ID, name and batch number.",
+    "button": "Assign batches from Excel",
+    "title": "Assign training batches from an Excel",
+    "explain": "One row per learner: User ID, Name, Batch (the batch's number or name). The file is checked first and nothing changes until you assign. The user ID decides who; a different name is only reported.",
+    "template": "Download the template",
+    "choose": "Choose an .xlsx file",
+    "check": "Check the file",
+    "apply": "Assign {{n}} learners",
+    "applied": "{{n}} learners put in their batches",
+    "failed": "Could not read the file",
+    "status": {
+      "assign": "Will be assigned",
+      "assigned": "Assigned",
+      "unchanged": "Unchanged",
+      "error": "Not assigned"
+    },
+    "row": "Row",
+    "userId": "User ID",
+    "name": "Name",
+    "batch": "Batch",
+    "result": "Result"
+  },
+  "support": {
+    "title": "Training batches and who supports them",
+    "explain": "Each batch's trainers and batch monitors — the people every learner of the batch sees under \"My support team\" on their dashboard.",
+    "dates": "Training",
+    "trainers": "Trainers",
+    "monitors": "Batch monitors",
+    "withoutMonitor": "Learners without a monitor",
+    "noTrainers": "No trainers entered",
+    "howToEdit": "Trainers and training dates are set per batch in Programme settings; monitors in the table below.",
+    "endedOn": "ended {{date}}"
   }
 }

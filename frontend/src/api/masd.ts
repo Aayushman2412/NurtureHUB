@@ -38,6 +38,9 @@ export interface TypeFigures {
   expected: number;
   actual: number;
   activity_pct: number | null;
+  /** Per activity, for the visit-vs-intervention bubble charts (learner rows and the summary). */
+  expected_by?: Partial<Record<ActivityKey, number>>;
+  actual_by?: Partial<Record<ActivityKey, number>>;
 }
 
 export interface MasdGroup {
@@ -64,8 +67,18 @@ export interface MasdGroup {
   own_banded: number;
   fu_days_avg: number | null;
   nil_days_avg: number | null;
+  /** Median and interquartile range of the days since the last activity. */
+  nil_days_median?: number | null;
+  nil_days_q1?: number | null;
+  nil_days_q3?: number | null;
+  /** Level 2: activities expected for the adoptions actually taken, and done. */
+  undertaken_expected?: number;
+  undertaken_actual?: number;
+  undertaken_pct?: number | null;
   no_activity: number;
   zero_adoptions: number;
+  /** Learners with adoptions but no activity — never counted in zero_adoptions. */
+  adopted_no_activity?: number;
 }
 
 export interface MasdLearner {
@@ -81,6 +94,13 @@ export interface MasdLearner {
   mtfl: boolean;
   /** Shown to admins beside the name, with the user ID. */
   mobile?: string | null;
+  /** For splitting and describing learners. */
+  district?: string | null;
+  education?: string | null;
+  experience?: string | null;
+  experience_order?: number;
+  /** Adoptions whose declared type differs from the one worked out from the dates. */
+  declared_mismatch?: number;
   /** Tagged a batch monitor. */
   is_monitor?: boolean;
   /** The batch monitor watching this learner, and their name. */
@@ -106,6 +126,8 @@ export interface MasdLearner {
   intensity_pct: number | null;
   subtype_pct: Record<ActivityKey, number | null>;
   by_type: Record<AdoptionType, TypeFigures>;
+  /** Level 2: expected for the adoptions this learner took (read at their tranches). */
+  undertaken?: { expected: Record<ActivityKey, number> & { total: number }; actual: number; pct: number | null };
   own: {
     expected: Record<ActivityKey, number> & { total: number };
     actual: Record<ActivityKey, number> & { total: number };
@@ -173,6 +195,8 @@ export interface MasdOutcomes {
   demographics: {
     n: number;
     mother_age: Share[];
+    education?: Share[];
+    place_by_method?: { places: string[]; methods: string[]; counts: Record<string, number> };
     ration_card: Share[];
     social_category: Share[];
     delivery_place: Share[];
@@ -188,6 +212,8 @@ export interface MasdOutcomes {
   benchmarks: Benchmarks | null;
   /** <6 and 6–11 month NFHS values weighted by their sample sizes (null until entered). */
   benchmarks_lt12: BenchValues | null;
+  /** Each learner's eligible dyads, the included ones and why the rest were left out. */
+  by_learner?: Record<string, { eligible: number; included: number; reasons: Record<string, number> }>;
   data_fixes: { id: number; name: string; block: string; cases: number; reasons: Record<string, number> }[];
 }
 
@@ -204,6 +230,14 @@ export interface ComparisonSnapshot {
   fulfilment_pct: number | null;
   intensity_pct: number | null;
   nil_days_avg: number | null;
+  activities?: number;
+  ideal?: number;
+  undertaken_expected?: number;
+  undertaken_actual?: number;
+  undertaken_pct?: number | null;
+  nil_days_median?: number | null;
+  nil_days_q1?: number | null;
+  nil_days_q3?: number | null;
   cohort: number;
   cohort_lt6: number;
   cohort_6_11: number;
@@ -256,6 +290,57 @@ export interface TrancheUptake {
   started_by: Record<UptakeBucket, number>;
   completed_by: Record<UptakeBucket, number>;
 }
+/** One group's uptake of a tranche, with the 1st, 2nd, 3rd … adoption of it. */
+export interface UptakeGroup extends Omit<TrancheUptake, 'step' | 'from' | 'buffer' | 'added'> {
+  q1_days_to_start: number | null;
+  q3_days_to_start: number | null;
+  q1_days_to_complete: number | null;
+  q3_days_to_complete: number | null;
+  nth: { n: number; learners: number; done: number; by: Record<UptakeBucket, number>;
+    median: number | null; q1: number | null; q3: number | null }[];
+}
+export type UptakeGroupKey = 'rol' | 'sn' | 'all';
+export type TrancheUptakeFull = TrancheUptake & { groups?: Record<UptakeGroupKey, UptakeGroup> };
+
+/** Expected and actual adoptions and activities, cumulative, day by day. */
+export interface CumulativeDay {
+  date: string;
+  expected_adoptions: number;
+  adoptions: number;
+  expected_activities: number;
+  activities: number;
+}
+
+export type PncFlagReason = 'visits_missed' | 'no_recent_visit';
+export interface PncFlag {
+  mother_id: number;
+  mother_uid: string | null;
+  learner_id: number;
+  learner: string;
+  monitor?: string | null;
+  block: string;
+  f2f: boolean;
+  type: AdoptionType;
+  adopted: string | null;
+  dob: string;
+  visits_due: number;
+  visits_done: number;
+  visits_missed: number;
+  last_visit: string | null;
+  days_since_visit: number;
+  reasons: PncFlagReason[];
+}
+export interface TypeMismatch {
+  mother_id: number;
+  mother_uid: string | null;
+  learner_id: number;
+  learner: string;
+  monitor?: string | null;
+  block: string;
+  declared: AdoptionType;
+  computed: AdoptionType;
+  adopted: string | null;
+}
 
 /** Forms one learner is expected to have done: per type, and in all. */
 export interface ExpectedForLearner {
@@ -268,6 +353,10 @@ export interface BatchView {
   id: number | null;           // null = learners on the project's training date
   name: string | null;
   end_date: string;
+  start_date?: string | null;
+  trainers?: { name: string; phone: string | null; role: string | null }[];
+  monitors?: { id: number; name: string }[];
+  without_monitor?: number;
   learners: number;
   fu_raw: number | null;
   fu_days: number | null;
@@ -338,10 +427,14 @@ export interface MasdReport {
   flags: {
     summary: { open_pregnancies: number; flagged: number } & Record<FlagReason, number>;
     items: PregnancyFlag[];
+    pnc?: PncFlag[];
+    pnc_summary?: { followed: number; flagged: number } & Record<PncFlagReason, number>;
+    type_mismatch?: TypeMismatch[];
     by_block: { block: string; n: number }[];
     by_learner: { id: number; name: string; block: string; n: number }[];
   };
-  uptake: TrancheUptake[];
+  uptake: TrancheUptakeFull[];
+  cumulative?: { days: CumulativeDay[]; pace_days: number };
   outcomes: MasdOutcomes;
   rules: {
     expected: {
@@ -358,6 +451,11 @@ export interface MasdReport {
       bf_until_age_days: number;
       counselling_from_age_days: number;
       baby_max_age_days: number;
+      lap_days?: Record<ActivityKey, number[]>;
+      nurse_flat?: Partial<Record<ActivityKey, number>>;
+      adoption_pace_days?: number;
+      pnc_flag_missed?: number;
+      pnc_flag_silent_days?: number;
     };
     targets: TargetStep[];
     own_bands: [OwnBand, string][];
@@ -378,7 +476,15 @@ export interface MasdProject {
   calendar_saved: boolean;
 }
 
-export interface MasdBatch { id: number | null; name: string; end_date: string; learners?: number }
+export interface BatchTrainer { name: string; phone: string | null; role: string | null }
+export interface MasdBatch {
+  id: number | null;
+  name: string;
+  start_date?: string | null;
+  end_date: string;
+  trainers?: BatchTrainer[];
+  learners?: number;
+}
 
 export interface MasdSettings {
   project: string;
@@ -477,6 +583,65 @@ export const getMasdBatches = (project: string) =>
   client.get<{ id: number; name: string; end_date: string }[]>('/api/admin/masd/batches', { params: { project } })
     .then(r => r.data);
 
+export interface BatchUploadRow {
+  row: number;
+  user_id: number | null;
+  name: string;
+  learner?: string;
+  batch: string;
+  from?: string | null;
+  status: 'assign' | 'assigned' | 'unchanged' | 'error';
+  message: string;
+}
+export interface BatchUploadResult {
+  applied: boolean;
+  summary: Record<'assign' | 'assigned' | 'unchanged' | 'error', number>;
+  rows: BatchUploadRow[];
+}
+
+/** Check (apply=false) or apply an Excel of user ID, name and batch. */
+export const uploadBatchAssignments = (project: string, file: File, apply: boolean) => {
+  const form = new FormData();
+  form.append('file', file);
+  return client.post<BatchUploadResult>('/api/admin/masd/batches/assign-upload', form,
+    { params: { project, apply } }).then(r => r.data);
+};
+
+const saveBlob = (data: Blob, disposition: string, fallback: string) => {
+  const name = /filename="?([^";]+)"?/.exec(disposition)?.[1] ?? fallback;
+  const url = URL.createObjectURL(data);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = name;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+};
+
+export const downloadBatchTemplate = async (project: string) => {
+  const res = await client.get('/api/admin/masd/batches/assign-template', { params: { project }, responseType: 'blob' });
+  saveBlob(res.data as Blob, String(res.headers['content-disposition'] ?? ''), `batch_assignment_${project}.xlsx`);
+};
+
+/** One follow-up list as Excel, filtered as on screen (audited as an export). */
+export const downloadFlagList = async (
+  project: string, kind: 'anc' | 'pnc' | 'mismatch',
+  opts: { asOf?: string; types?: string[]; blocks?: string[]; reasons?: string[] } = {},
+) => {
+  const res = await client.get('/api/admin/masd/flags/xlsx', {
+    params: {
+      project, kind,
+      ...(opts.asOf ? { as_of: opts.asOf } : {}),
+      ...(opts.types?.length ? { types: opts.types.join(',') } : {}),
+      ...(opts.blocks?.length ? { blocks: opts.blocks.join(',') } : {}),
+      ...(opts.reasons?.length ? { reasons: opts.reasons.join(',') } : {}),
+    },
+    responseType: 'blob',
+  });
+  saveBlob(res.data as Blob, String(res.headers['content-disposition'] ?? ''), `MASD_${kind}_followup.xlsx`);
+};
+
 export const getExpectedForms = () =>
   client.get<ExpectedFormsState>('/api/admin/masd/expected-forms').then(r => r.data);
 
@@ -489,14 +654,5 @@ export const resetExpectedForms = () =>
 /** Server-named file (Content-Disposition), saved through a blob link. */
 export const downloadMasd = async (fmt: 'pptx' | 'xlsx', p: ReportParams): Promise<void> => {
   const res = await client.get(`/api/admin/masd/report/${fmt}`, { params: params(p), responseType: 'blob' });
-  const disposition = String(res.headers['content-disposition'] ?? '');
-  const name = /filename="?([^";]+)"?/.exec(disposition)?.[1] ?? `MASD_${p.project}.${fmt}`;
-  const url = URL.createObjectURL(res.data as Blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = name;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
+  saveBlob(res.data as Blob, String(res.headers['content-disposition'] ?? ''), `MASD_${p.project}.${fmt}`);
 };

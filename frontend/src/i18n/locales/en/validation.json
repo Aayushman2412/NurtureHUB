@@ -63,7 +63,8 @@
     "courseName": "Please specify the course.",
     "ratings": "Please rate trust and willingness for every source.",
     "adoption14": "Adoption date cannot be more than 14 days ago.",
-    "gestationMin12": "Gestational age at adoption must be at least 12 weeks."
+    "gestationMin12": "Gestational age at adoption must be at least 12 weeks.",
+    "adoptionTypeRequired": "Choose whether the mother is pregnant or has delivered."
   },
   "child": {
     "babiesBorn": "Please select whether this was a single or twin birth.",

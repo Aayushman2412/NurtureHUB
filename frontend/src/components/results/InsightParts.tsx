@@ -82,18 +82,20 @@ export interface GroupChoice {
  * Department → HFW, WCD — and whatever is ticked narrows every page, any
  * number of groups and dimensions at once (HFW learners of two blocks).
  */
-export const SplitFilterRow: React.FC<{
+// Generic over the dimension keys, so the MASD dashboard (its own learner
+// dimensions) uses the same control as Results.
+export function SplitFilterRow<K extends string = DimensionKey>({ mode, onMode, items, dim, onDim, filters, choices, onFilter }: {
   mode: GroupMode;
   onMode: (m: GroupMode) => void;
-  items: { key: DimensionKey; label: string }[];
-  dim: DimensionKey;
-  onDim: (d: DimensionKey) => void;
-  filters: DimensionFilters;
-  choices: (d: DimensionKey) => GroupChoice[];
-  onFilter: (d: DimensionKey, values: string[] | ((current: string[]) => string[])) => void;
-}> = ({ mode, onMode, items, dim, onDim, filters, choices, onFilter }) => {
+  items: { key: K; label: string }[];
+  dim: K;
+  onDim: (d: K) => void;
+  filters: Partial<Record<K, string[]>>;
+  choices: (d: K) => GroupChoice[];
+  onFilter: (d: K, values: string[] | ((current: string[]) => string[])) => void;
+}) {
   const { t } = useTranslation('resultsInsights');
-  const [open, setOpen] = React.useState<DimensionKey | null>(null);
+  const [open, setOpen] = React.useState<K | null>(null);
   const [query, setQuery] = React.useState('');
   const rootRef = React.useRef<HTMLDivElement>(null);
 
@@ -223,7 +225,7 @@ export const SplitFilterRow: React.FC<{
       )}
     </div>
   );
-};
+}
 
 /** Active multi-dimension filter pills shown right in the selection area */
 export const ActiveFilterBar: React.FC<{

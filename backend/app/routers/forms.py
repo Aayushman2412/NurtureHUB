@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app import models, storage, projects
+from app import entry_checks, models, storage, projects
 from app.dependencies import get_verified_user, require_phi_access
 from app.security import phi
 from app.notify import create_notification
@@ -38,7 +38,8 @@ router = APIRouter(
 
 FLOW_FORM_KEYS = {"breastfeeding", "complementary_feeding", "mother_protein_intake"}
 # Flat (field-list) forms learners can submit per child.
-FLAT_RESPONSE_FORM_KEYS = {"growth_monitoring", "antenatal"}
+GROWTH_FORM_KEY = "growth_monitoring"
+FLAT_RESPONSE_FORM_KEYS = {GROWTH_FORM_KEY, "antenatal"}
 # Forms that attach to a MOTHER (per-visit) rather than a child.
 MOTHER_FORM_KEYS = {"mother_protein_intake", "antenatal"}
 RESPONSE_FORM_KEYS = FLOW_FORM_KEYS | FLAT_RESPONSE_FORM_KEYS
@@ -997,6 +998,8 @@ def update_response(
     child, mother, subject_name = _response_subject(db, response)
     if child is not None:
         _check_cf_gate(response.form_key, child, data.assessment_date)
+    if data.assessment_date != response.assessment_date:
+        entry_checks.assessment_date(data.assessment_date, mother=mother, child=child)
 
     if definition.builder_type == "flat":
         answers, summary, actions = _snapshot_flat_answers(
@@ -1005,6 +1008,8 @@ def update_response(
         )
     else:
         answers, summary, actions = _snapshot_answers(schema, data.answers)
+    if enforce and response.form_key == GROWTH_FORM_KEY:
+        entry_checks.birth_weight(child, data.assessment_date, answers)
     response.assessment_date = data.assessment_date
     response.status = new_status
     response.definition_version = version_number
@@ -1153,6 +1158,7 @@ def create_response(
         child = _get_owned_child(db, data.child_id, current_user)
         _check_cf_gate(form_key, child, data.assessment_date)
         subject_name = child.child_name
+    entry_checks.assessment_date(data.assessment_date, mother=mother, child=child)
 
     if definition.builder_type == "flat":
         # child may be None for mother-level flat forms (antenatal) — age
@@ -1163,6 +1169,8 @@ def create_response(
         )
     else:
         answers, summary, actions = _snapshot_answers(schema, data.answers)
+    if data.status == "submitted" and form_key == GROWTH_FORM_KEY:
+        entry_checks.birth_weight(child, data.assessment_date, answers)
     response = models.FormResponse(
         form_key=form_key,
         definition_version=version_number,

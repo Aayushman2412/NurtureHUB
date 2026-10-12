@@ -15,6 +15,7 @@ import type { FieldErrors } from '../../lib/validation';
 import { getChild, updateChild, type ChildPayload } from '../../api/children';
 import { createChildResilient, isQueuedResult } from '../../offline/submit';
 import { getMother } from '../../api/mothers';
+import { apiErrorMessage } from '../../components/assessments/flowRunner';
 import { MAX_ADOPTION_AGE_DAYS, isoDaysAgo, todayIso } from '../../lib/motherFields';
 
 const STEP_KEYS = ['birth', 'delivery'] as const;
@@ -204,8 +205,10 @@ const ChildFormPage: React.FC = () => {
         );
       }
       navigate(backTo);
-    } catch {
-      updateToast(toastId, isEdit ? t('child.toastFailSave') : t('child.toastFailRegister'), 'error');
+    } catch (err) {
+      // A date the server refuses (e.g. the baby adopted before the mother)
+      // comes with a message saying what to correct — show it.
+      updateToast(toastId, apiErrorMessage(err) ?? (isEdit ? t('child.toastFailSave') : t('child.toastFailRegister')), 'error');
     } finally {
       setLoading(false);
     }

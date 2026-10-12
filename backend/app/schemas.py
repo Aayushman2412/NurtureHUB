@@ -1,6 +1,6 @@
 import re
 from pydantic import BaseModel, EmailStr, Field, model_validator, field_validator
-from typing import Optional, List, Dict, Any, ClassVar
+from typing import Optional, List, Dict, Any, ClassVar, Literal
 from datetime import datetime, date
 
 # Metadata Schemas
@@ -179,6 +179,9 @@ class MotherBase(BaseModel):
     height: Optional[float] = Field(default=None, ge=100.0, le=230.0)
     lmp: Optional[date] = None
     edd_records: Optional[date] = None
+    # What the learner says this adoption is; MASD also works it out from the
+    # dates and flags a mismatch (review of 6 Oct 2026).
+    declared_adoption_type: Optional[Literal["anc", "pnc_lt5", "pnc_ge5"]] = None
     mobile: Optional[str] = None
     alternate_mobile: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -230,9 +233,10 @@ class MotherBase(BaseModel):
                 raise ValueError("LMP cannot be in the future.")
             if self.mother_dob and self.lmp < self.mother_dob:
                 raise ValueError("LMP cannot be before the date of birth.")
-            if self.adoption_date:
-                if self.lmp > self.adoption_date:
-                    raise ValueError("LMP cannot be after the date of adoption.")
+            # A PNC adoption's LMP is a past pregnancy: only its order is checked.
+            if self.adoption_date and self.lmp > self.adoption_date:
+                raise ValueError("LMP cannot be after the date of adoption.")
+            if self.adoption_date and self.declared_adoption_type in (None, "anc"):
                 gestation_days = (self.adoption_date - self.lmp).days
                 if gestation_days > MAX_GESTATION_DAYS:
                     raise ValueError("LMP cannot be more than 180 days before the date of adoption.")

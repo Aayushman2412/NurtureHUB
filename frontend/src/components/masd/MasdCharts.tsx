@@ -6,29 +6,33 @@
  */
 import React, { useState } from 'react';
 import { cn } from '../../utils/cn';
-import { MASD_COLORS, rateTone } from '../../lib/masdDisplay';
+import { MASD_COLORS, rateTone, type ColumnSeries, type RefLine } from '../../lib/masdDisplay';
+export type { ColumnSeries, RefLine } from '../../lib/masdDisplay';
 
 // ── Grouped columns ────────────────────────────────────────────────────────
 
-export interface ColumnSeries {
-  key: string;
-  label: string;
-  color: string;
-  values: (number | null)[];
-}
+
 
 export const GroupedColumns: React.FC<{
-  categories: { key: string; label: string; sub?: string }[];
+  categories: { key: string; label: string; sub?: string; group?: string }[];
   series: ColumnSeries[];
   reference?: { value: number; label: string };
+  references?: RefLine[];
   height?: number;
   valueSuffix?: string;
   showValues?: boolean;
-}> = ({ categories, series, reference, height = 230, valueSuffix = '', showValues = true }) => {
+}> = ({ categories, series, reference, references = [], height = 230, valueSuffix = '', showValues = true }) => {
   const all = series.flatMap(s => s.values.filter((v): v is number => v != null));
-  const top = Math.max(reference?.value ?? 0, ...all, 1);
+  const lines: RefLine[] = [...(reference ? [reference] : []), ...references];
+  const top = Math.max(...lines.map(r => r.value), ...all, 1);
   const max = top <= 10 ? Math.ceil(top) : Math.ceil(top / 20) * 20;
-  const refPct = reference ? (reference.value / max) * 100 : null;
+  // Category groups ("Minimum visits met: yes"), labelled above their columns.
+  const groups = categories.reduce<{ label: string; span: number }[]>((acc, c) => {
+    const g = c.group ?? '';
+    if (acc.length && acc[acc.length - 1].label === g) acc[acc.length - 1].span += 1;
+    else acc.push({ label: g, span: 1 });
+    return acc;
+  }, []);
   const dense = series.length >= 4 && categories.length >= 5;
   const minWidth = categories.length * Math.max(72, series.length * 30);
   return (
@@ -39,19 +43,28 @@ export const GroupedColumns: React.FC<{
             <span className="size-2.5 rounded-sm" style={{ background: s.color }} aria-hidden />{s.label}
           </span>
         ))}
-        {reference && (
-          <span className="inline-flex items-center gap-1.5">
-            <span className="inline-block w-4 border-t-2 border-dashed border-ink/60" aria-hidden />{reference.label}
+        {lines.map(r => (
+          <span key={`${r.label}${r.value}`} className="inline-flex items-center gap-1.5">
+            <span className="inline-block w-4 border-t-2 border-dashed" style={{ borderColor: r.color ?? 'rgb(0 0 0 / 0.55)' }} aria-hidden />
+            {r.label}{r.color ? ` (${r.value.toFixed(1)}${valueSuffix})` : ''}
           </span>
-        )}
+        ))}
       </div>
       <div className="overflow-x-auto pb-1">
         <div style={{ minWidth }}>
+          {groups.some(g => g.label) && (
+            <div className="mb-1 flex gap-2 sm:gap-3">
+              {groups.map((g, i) => (
+                <div key={i} style={{ flex: g.span }}
+                  className="rounded-md bg-surface-sunken px-2 py-1 text-center text-xs font-bold text-ink">{g.label}</div>
+              ))}
+            </div>
+          )}
           <div className="relative flex items-end gap-2 border-b border-border-strong sm:gap-3" style={{ height }}>
-            {refPct != null && (
-              <span className="pointer-events-none absolute inset-x-0 border-t-2 border-dashed border-ink/50"
-                style={{ bottom: `${refPct}%` }} />
-            )}
+            {lines.map(r => (
+              <span key={`${r.label}${r.value}`} className="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-dashed"
+                style={{ bottom: `${(r.value / max) * 100}%`, borderColor: r.color ?? 'rgb(0 0 0 / 0.5)' }} />
+            ))}
             {categories.map((c, ci) => (
               <div key={c.key} className="flex h-full min-w-0 flex-1 items-end justify-center gap-0.5 sm:gap-1">
                 {series.map(s => {
@@ -106,7 +119,9 @@ export const BubblePlot: React.FC<{
   yLabel: string;
   quadrant: { topRight: string; topLeft: string; bottomRight: string; bottomLeft: string };
   sizeLabel: (n: number) => string;
-}> = ({ bubbles, xLabel, yLabel, quadrant, sizeLabel }) => {
+  /** Draw y = x: on the line, the two rates agree; off it, one runs ahead. */
+  diagonal?: string;
+}> = ({ bubbles, xLabel, yLabel, quadrant, sizeLabel, diagonal }) => {
   if (!bubbles.length) return null;
   const W = 640, H = 380, L = 52, R = 18, T = 18, B = 46;
   const xs = bubbles.map(b => b.x), ys = bubbles.map(b => b.y);
@@ -140,6 +155,15 @@ export const BubblePlot: React.FC<{
           <text x={L - 8} y={py(v) + 4} textAnchor="end" className="fill-ink-faint text-[14px]">{v}</text>
         </g>
       ))}
+      {diagonal && (() => {
+        const lo = Math.max(x0, y0), hi = Math.min(x1, y1);
+        return hi > lo ? (
+          <g>
+            <line x1={px(lo)} y1={py(lo)} x2={px(hi)} y2={py(hi)} stroke="#7C5CBF" strokeWidth={1.5} strokeDasharray="2 4" />
+            <text x={px(hi) - 4} y={py(hi) + 14} textAnchor="end" fill="#7C5CBF" className="text-[13px]">{diagonal}</text>
+          </g>
+        ) : null;
+      })()}
       <line x1={px(avgX)} x2={px(avgX)} y1={T} y2={H - B} className="stroke-ink/40" strokeDasharray="5 4" />
       <line x1={L} x2={W - R} y1={py(avgY)} y2={py(avgY)} className="stroke-ink/40" strokeDasharray="5 4" />
       <text x={W - R - 4} y={T + 12} textAnchor="end" className="fill-success-600 text-[14px] font-semibold">{quadrant.topRight}</text>
@@ -285,3 +309,91 @@ export const DataTable: React.FC<{ children: React.ReactNode; className?: string
     </table>
   </div>
 );
+
+/** A header cell spanning a group of columns ("NFHS indicators", "Project outcomes"). */
+export const GroupTh: React.FC<{ span: number; children: React.ReactNode; className?: string }> = ({ span, children, className }) => (
+  <th colSpan={span} className={cn('border-l-2 border-border-strong px-3 pt-2 text-center text-xs font-bold uppercase tracking-wide text-ink', className)}>
+    {children}
+  </th>
+);
+
+// ── Cumulative expected vs actual (review of 6 Oct 2026) ─────────────────────
+
+export interface CumLine { key: string; label: string; color: string; dashed?: boolean; values: number[] }
+
+/** Lines that only rise: where the project should be by each date (dashed)
+ *  and where it is (solid), points labelled with their numbers. */
+export const CumulativeChart: React.FC<{ labels: string[]; lines: CumLine[]; height?: number }> = ({ labels, lines, height = 260 }) => {
+  const [hover, setHover] = useState<number | null>(null);
+  if (labels.length < 2) return null;
+  const W = 820, H = height, L = 56, R = 18, T = 24, B = 34;
+  const max = Math.max(1, ...lines.flatMap(l => l.values));
+  const mag = 10 ** Math.floor(Math.log10(max));
+  const top = max <= 10 ? 10 : mag * Math.ceil(max / mag);
+  const step = (W - L - R) / (labels.length - 1);
+  const px = (i: number) => L + i * step;
+  const py = (v: number) => H - B - (v / top) * (H - T - B);
+  // Which points carry a label: every n-th and the last, without one
+  // crowding the last (it is the report date — the number that matters).
+  const marks = (n: number) => {
+    const last = labels.length - 1;
+    const out = new Set<number>([last]);
+    for (let i = 0; i < last; i += n) if (last - i >= Math.max(1, n * 0.6)) out.add(i);
+    return out;
+  };
+  const xMarks = marks(Math.ceil(labels.length / 10));
+  const valueMarks = marks(labels.length <= 16 ? 1 : Math.ceil(labels.length / 8));
+  return (
+    <div>
+      <div className="mb-2 flex flex-wrap gap-4 text-xs text-ink-muted">
+        {lines.map(l => (
+          <span key={l.key} className="inline-flex items-center gap-1.5">
+            <svg width="18" height="6" aria-hidden>
+              <line x1="0" y1="3" x2="18" y2="3" stroke={l.color} strokeWidth="2.5" strokeDasharray={l.dashed ? '5 3' : undefined} />
+            </svg>
+            {l.label}
+          </span>
+        ))}
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full select-none" role="img" aria-label={lines.map(l => l.label).join(', ')}
+        onMouseLeave={() => setHover(null)}>
+        {[0, 0.25, 0.5, 0.75, 1].map(f => (
+          <g key={f}>
+            <line x1={L} x2={W - R} y1={py(top * f)} y2={py(top * f)} className="stroke-border" />
+            <text x={L - 6} y={py(top * f) + 4} textAnchor="end" className="fill-ink-faint text-[13px]">{Math.round(top * f).toLocaleString()}</text>
+          </g>
+        ))}
+        {labels.map((lab, i) => (xMarks.has(i) ? (
+          <text key={`x${i}`} x={px(i)} y={H - B + 16} textAnchor="middle" className="fill-ink-faint text-[13px]">{lab}</text>
+        ) : null))}
+        {lines.map(l => (
+          <path key={l.key} fill="none" stroke={l.color} strokeWidth={2.5} strokeDasharray={l.dashed ? '7 4' : undefined}
+            strokeLinejoin="round" d={l.values.map((v, i) => `${i ? 'L' : 'M'}${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(' ')} />
+        ))}
+        {lines.map(l => l.values.map((v, i) => (valueMarks.has(i) ? (
+          <g key={`${l.key}${i}`}>
+            <circle cx={px(i)} cy={py(v)} r={3} fill={l.color} />
+            {/* Expected above its point, actual below, so close values never collide. */}
+            <text x={px(i)} y={l.dashed ? py(v) - 7 : py(v) + 16} textAnchor={i === labels.length - 1 ? 'end' : 'middle'}
+              className="text-[12px] font-semibold" fill={l.color}>{v.toLocaleString()}</text>
+          </g>
+        ) : null)))}
+        {hover != null && <line x1={px(hover)} x2={px(hover)} y1={T} y2={H - B} className="stroke-ink/40" strokeDasharray="4 3" />}
+        {labels.map((lab, i) => (
+          <rect key={`h${i}`} x={px(i) - step / 2} y={T} width={step} height={H - T - B} fill="transparent"
+            onMouseEnter={() => setHover(i)} onClick={() => setHover(i)}>
+            <title>{`${lab} · ${lines.map(l => `${l.label}: ${l.values[i].toLocaleString()}`).join(' · ')}`}</title>
+          </rect>
+        ))}
+      </svg>
+      <div className="mt-1 min-h-5 text-xs text-ink">
+        {hover != null && (
+          <span className="flex flex-wrap gap-x-4">
+            <span className="font-semibold">{labels[hover]}</span>
+            {lines.map(l => <span key={l.key} style={{ color: l.color }}>{l.label}: <b>{l.values[hover].toLocaleString()}</b></span>)}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};

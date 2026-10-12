@@ -63,5 +63,15 @@
     "title": "Recent Activity",
     "empty": "No recent activity.",
     "status": "Status: {{status}}"
+  },
+  "support": {
+    "title": "My support team",
+    "batch": "Training batch: {{name}}",
+    "monitor": "Batch monitor",
+    "trainer": "Trainer",
+    "learner": "Learner",
+    "watching_one": "You are batch monitor for {{count}} learner",
+    "watching_other": "You are batch monitor for {{count}} learners",
+    "watchingNone": "No learners have been given to you yet."
   }
 }

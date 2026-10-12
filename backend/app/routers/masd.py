@@ -8,10 +8,13 @@ behind the PHI emergency switch and every read and download is audited.
 """
 from __future__ import annotations
 
+import io
+import json
+import re
 from datetime import date
 from typing import Dict, List, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import func
@@ -164,6 +167,99 @@ def masd_report_xlsx(
     return _download(db, p, as_of, compare, "xlsx", admin_email)
 
 
+# ── Follow-up lists as Excel (review of 7 Oct 2026) ─────────────────────────
+
+_FLAG_SHEETS = {
+    # kind: (report list, sheet title, [(column, key)])
+    "anc": ("items", "Pregnancies to follow up", [
+        ("Mother ID", "mother_uid"), ("Learner", "learner"), ("Learner ID", "learner_id"), ("Block", "block"),
+        ("Adopted", "adopted"), ("LMP", "lmp"), ("Due date (as per LMP)", "edd"),
+        ("Days past due date", "days_past_edd"), ("ANC checks done", "anc_done"),
+        ("ANC checks due", "anc_expected"), ("Last ANC check", "last_anc"),
+        ("Days since last contact", "days_since_contact"), ("Why", "reasons")]),
+    "pnc": ("pnc", "PNC cases to follow up", [
+        ("Mother ID", "mother_uid"), ("Adoption type", "type"), ("Learner", "learner"), ("Learner ID", "learner_id"),
+        ("Batch monitor", "monitor"), ("Block", "block"), ("Adopted", "adopted"), ("Baby's date of birth", "dob"),
+        ("Growth checks due", "visits_due"), ("Growth checks done", "visits_done"),
+        ("Visits missed till date", "visits_missed"), ("Last visit", "last_visit"),
+        ("Days since last visit", "days_since_visit"), ("Why", "reasons")]),
+    "mismatch": ("type_mismatch", "Adoption type mismatches", [
+        ("Mother ID", "mother_uid"), ("Learner", "learner"), ("Learner ID", "learner_id"),
+        ("Batch monitor", "monitor"), ("Block", "block"), ("Adopted", "adopted"),
+        ("Type chosen by the learner", "declared"), ("Type from the dates", "computed")]),
+}
+_TYPE_LABELS = {"anc": "ANC", "pnc_lt5": "PNC <5M", "pnc_ge5": "PNC ≥5M", "unknown": "Not known"}
+
+
+@router.get("/flags/xlsx")
+@limiter.limit(lambda: settings.RATE_LIMIT_EXPORT, key_func=principal_key)
+def masd_flags_xlsx(
+    request: Request,
+    project: str = Query(...),
+    kind: Literal["anc", "pnc", "mismatch"] = Query(...),
+    as_of: Optional[date] = Query(None),
+    types: Optional[str] = Query(None, description="comma-separated adoption types to keep"),
+    blocks: Optional[str] = Query(None, description="comma-separated blocks to keep"),
+    reasons: Optional[str] = Query(None, description="comma-separated reasons to keep"),
+    admin_email: str = Depends(get_admin_email),
+    db: Session = Depends(get_db),
+):
+    """One follow-up list, filtered as on screen. Mothers by record ID only —
+    the learner knows who they are."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+
+    p = _project(db, project)
+    as_of, _ = _dates(as_of, None)
+    report = masd_report.build(db, p, as_of, None)
+    key, title, cols = _FLAG_SHEETS[kind]
+    keep_types = set(types.split(",")) if types else None
+    keep_blocks = set(blocks.split(",")) if blocks else None
+    keep_reasons = set(reasons.split(",")) if reasons else None
+    rows = [i for i in report["flags"][key]
+            if (keep_types is None or i.get("type", i.get("computed")) in keep_types)
+            and (keep_blocks is None or i.get("block") in keep_blocks)
+            and (keep_reasons is None or keep_reasons & set(i.get("reasons", [])))]
+    labels = {**R.FLAG_REASONS, **R.PNC_FLAG_REASONS}
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = title[:31]
+    ws.append([c for c, _ in cols])
+    for c in ws[1]:
+        c.font = Font(bold=True)
+    for i in rows:
+        out = []
+        for _, k in cols:
+            v = i.get(k)
+            if k == "reasons":
+                v = "; ".join(labels.get(r, r) for r in v or [])
+            elif k in ("type", "declared", "computed"):
+                v = _TYPE_LABELS.get(v, v)
+            out.append(v)
+        ws.append(out)
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = max(12, min(40, len(str(col[0].value)) + 4))
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    phi.log_export(
+        resource_type="masd_followup_list",
+        record_count=len(rows),
+        fmt="xlsx",
+        subject_type=phi.MOTHER,
+        db=db,
+        detail={"project": p.slug, "as_of": report["as_of"], "list": kind, "by": admin_email,
+                "subject_ids": [i["mother_id"] for i in rows],
+                "fields": [c for c, _ in cols],
+                "custody_note": "the exported file is in the custody of whoever holds it"},
+    )
+    db.commit()
+    name = f"MASD_{kind}_followup_{p.name.replace(' ', '_')}_{as_of:%d%m%y}.xlsx"
+    return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                             headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+
 # ── Programme calendar and benchmarks ──────────────────────────────────────
 
 
@@ -223,10 +319,48 @@ class TargetStep(BaseModel):
                 "pnc_ge5": self.pnc_ge5, "nurse": self.nurse, "buffer": self.buffer}
 
 
+class TrainerIn(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    phone: Optional[str] = Field(None, max_length=20)
+    role: Optional[str] = Field(None, max_length=60)      # "Trainer", "Assistant trainer", ...
+
+    @model_validator(mode="after")
+    def _phone(self):
+        if self.phone:
+            digits = re.sub(r"\D", "", self.phone)
+            if not 10 <= len(digits) <= 13:
+                raise ValueError("A trainer's phone number should have 10 digits")
+            self.phone = digits[-10:]
+        self.name = self.name.strip()
+        self.role = (self.role or "").strip() or None
+        return self
+
+
 class BatchIn(BaseModel):
     id: Optional[int] = None          # None = a new batch
     name: str = Field(..., min_length=1, max_length=80)
+    start_date: Optional[date] = None
     end_date: date
+    trainers: List[TrainerIn] = Field(default_factory=list, max_length=6)
+
+    @model_validator(mode="after")
+    def _dates(self):
+        if self.start_date and self.start_date > self.end_date:
+            raise ValueError(f"Batch {self.name}: training cannot start after it ends")
+        return self
+
+
+def _trainers(raw: Optional[str]) -> List[dict]:
+    try:
+        out = json.loads(raw) if raw else []
+    except ValueError:
+        return []
+    return out if isinstance(out, list) else []
+
+
+def _batch_out(b: models.MasdTrainingBatch, learners: int) -> dict:
+    return {"id": b.id, "name": b.name, "start_date": b.start_date.isoformat() if b.start_date else None,
+            "end_date": b.end_date.isoformat(), "trainers": _trainers(b.trainers), "learners": learners}
 
 
 class SettingsIn(BaseModel):
@@ -274,8 +408,7 @@ def _settings_out(db: Session, p: models.ProgramDistrict, s: Optional[models.Mas
         "benchmarks_are_default": not (s and s.benchmarks_json) and p.slug in R.DEFAULT_BENCHMARKS,
         "targets": (s.targets_json if s and s.targets_json else R.default_targets(p.slug, training, tranche2)),
         "targets_are_default": not (s and s.targets_json),
-        "batches": [{"id": b.id, "name": b.name, "end_date": b.end_date.isoformat(),
-                     "learners": counts.get(b.id, 0)} for b in _own_batches(db, p)],
+        "batches": [_batch_out(b, counts.get(b.id, 0)) for b in _own_batches(db, p)],
         "updated_by": s.updated_by if s else None,
         "updated_at": s.updated_at.isoformat() if s and s.updated_at else None,
     }
@@ -313,6 +446,8 @@ def put_settings(
                 row = models.MasdTrainingBatch(program_district_id=p.id)
                 db.add(row)
             row.name, row.end_date, row.updated_by = b.name.strip(), b.end_date, admin_email
+            row.start_date = b.start_date
+            row.trainers = json.dumps([t.model_dump() for t in b.trainers]) if b.trainers else None
             if b.id is not None:
                 keep.add(b.id)
         for bid, row in existing.items():
@@ -325,7 +460,13 @@ def put_settings(
         resource_type="masd_settings",
         resource_id=p.slug,
         is_phi=False,
-        detail={"project": p.slug, "changes": payload.model_dump(mode="json", by_alias=True), "by": admin_email},
+        # Trainers' phone numbers stay out of the trail: only that one was set.
+        detail={"project": p.slug, "by": admin_email,
+                "changes": payload.model_dump(mode="json", by_alias=True,
+                                              exclude={"batches": {"__all__": {"trainers"}}}),
+                "trainers": [{"batch": b.name, "names": [t.name for t in b.trainers],
+                              "phones_set": sum(1 for t in b.trainers if t.phone)}
+                             for b in (payload.batches or []) if b.trainers]},
     )
     db.commit()
     db.refresh(s)
@@ -446,7 +587,170 @@ def list_batches(project: str = Query(...), db: Session = Depends(get_db)):
     rows = (db.query(models.MasdTrainingBatch)
             .filter(models.MasdTrainingBatch.program_district_id.in_(set(ids)))
             .order_by(models.MasdTrainingBatch.end_date, models.MasdTrainingBatch.name).all())
-    return [{"id": b.id, "name": b.name, "end_date": b.end_date.isoformat()} for b in rows]
+    return [{"id": b.id, "name": b.name, "end_date": b.end_date.isoformat(),
+             "start_date": b.start_date.isoformat() if b.start_date else None} for b in rows]
+
+
+# ── Batches from an Excel: user ID, name, batch (review of 6 Oct 2026) ──────
+
+_BATCH_HEADERS = ("User ID", "Name", "Batch")
+
+
+def _project_batches(db: Session, p: models.ProgramDistrict) -> List[models.MasdTrainingBatch]:
+    ids = {p.id} | set(projects.member_project_ids(db, p))
+    if getattr(p, "parent_id", None):
+        ids.add(p.parent_id)
+    return (db.query(models.MasdTrainingBatch)
+            .filter(models.MasdTrainingBatch.program_district_id.in_(ids))
+            .order_by(models.MasdTrainingBatch.end_date, models.MasdTrainingBatch.name).all())
+
+
+def _batch_key(value) -> str:
+    """"Batch 3", "batch-3", "B3", "3" and 3.0 all name batch 3; a name
+    without a number is matched on its letters."""
+    text = str(value).strip().lower()
+    if re.fullmatch(r"\d+(\.0+)?", text):
+        return str(int(float(text)))
+    digits = re.findall(r"\d+", text)
+    return str(int(digits[-1])) if digits else re.sub(r"[^a-z]", "", text)
+
+
+@router.get("/batches/assign-template")
+def batch_assign_template(project: str = Query(...), db: Session = Depends(get_db)):
+    """An Excel to fill in: one row per learner, with the project's batches on
+    a second sheet."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+
+    p = _project(db, project)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Learners"
+    ws.append(list(_BATCH_HEADERS))
+    for c in ws[1]:
+        c.font = Font(bold=True)
+    for letter, width in (("A", 12), ("B", 32), ("C", 14)):
+        ws.column_dimensions[letter].width = width
+    ref = wb.create_sheet("Batches")
+    ref.append(["Batch", "Training from", "Training to"])
+    for c in ref[1]:
+        c.font = Font(bold=True)
+    for b in _project_batches(db, p):
+        ref.append([b.name, b.start_date.isoformat() if b.start_date else "", b.end_date.isoformat()])
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return StreamingResponse(
+        buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="batch_assignment_{p.slug}.xlsx"'},
+    )
+
+
+@router.post("/batches/assign-upload")
+async def batch_assign_upload(
+    project: str = Query(...),
+    apply: bool = Query(False, description="False = check the file and report; True = assign"),
+    file: UploadFile = File(...),
+    admin_email: str = Depends(get_admin_email),
+    db: Session = Depends(get_db),
+):
+    """Put many learners in their training batches from an Excel of user ID,
+    name and batch number. Checked first (apply=false) and reported row by
+    row; nothing changes until it is applied. The user ID decides who; the
+    name is only compared, so a typo in it is reported, not fatal."""
+    from openpyxl import load_workbook
+
+    p = _project(db, project)
+    raw = await file.read()
+    if len(raw) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="The file is larger than 5 MB")
+    try:
+        ws = load_workbook(io.BytesIO(raw), read_only=True, data_only=True).worksheets[0]
+        rows = list(ws.iter_rows(values_only=True))
+    except Exception:  # noqa: BLE001 — any unreadable file gets the same answer
+        raise HTTPException(status_code=422, detail="Could not read the file — upload an .xlsx")
+    if not rows:
+        raise HTTPException(status_code=422, detail="The file is empty")
+    head = [str(c or "").strip().lower() for c in rows[0]]
+
+    def col(*names: str) -> Optional[int]:
+        for name in names:
+            for i, h in enumerate(head):
+                if h == name or (len(name) > 2 and name in h):
+                    return i
+        return None
+
+    c_id, c_name, c_batch = col("user id", "userid", "user_id", "id"), col("name"), col("batch")
+    if c_id is None or c_batch is None:
+        raise HTTPException(status_code=422, detail="The first row must have the columns User ID, Name and Batch")
+
+    by_key: Dict[str, List[models.MasdTrainingBatch]] = {}
+    for b in _project_batches(db, p):
+        by_key.setdefault(_batch_key(b.name), []).append(b)
+    allowed = {p.id} | set(projects.member_project_ids(db, p))
+
+    results, seen = [], set()
+    for n, row in enumerate(rows[1:], start=2):
+        if row is None or all(v in (None, "") for v in row):
+            continue
+
+        def cell(i: Optional[int]):
+            return row[i] if i is not None and i < len(row) else None
+
+        uid_raw, name, batch_raw = cell(c_id), cell(c_name), cell(c_batch)
+        out = {"row": n, "user_id": None, "name": str(name or "").strip(), "batch": str(batch_raw or "").strip(),
+               "status": "error", "message": ""}
+        results.append(out)
+        try:
+            uid = int(float(str(uid_raw).strip()))
+        except (TypeError, ValueError):
+            out["message"] = "User ID is not a number"
+            continue
+        out["user_id"] = uid
+        if uid in seen:
+            out["message"] = "This user ID is on an earlier row too"
+            continue
+        seen.add(uid)
+        user = db.get(models.User, uid)
+        if user is None or user.is_admin or user.program_district_id not in allowed:
+            out["message"] = "No learner with this user ID in this project"
+            continue
+        out["learner"] = user.full_name or ""
+        match = by_key.get(_batch_key(batch_raw)) if batch_raw not in (None, "") else None
+        if not match:
+            out["message"] = "No batch with this name or number in this project"
+            continue
+        if len(match) > 1:
+            out["message"] = "More than one batch has this number — use the batch's full name"
+            continue
+        batch = match[0]
+        out["batch"] = batch.name
+        sel = db.query(models.FaceToFaceSelection).filter(models.FaceToFaceSelection.user_id == uid).first()
+        if sel is None:
+            out["message"] = "This learner is not selected for face-to-face training"
+            continue
+        warn = []
+        if name and user.full_name and str(name).strip().lower() != user.full_name.strip().lower():
+            warn.append("Name differs from the learner's profile")
+        if sel.batch_id == batch.id:
+            out["status"], out["message"] = "unchanged", "; ".join(warn) or "Already in this batch"
+            continue
+        out["status"] = "assign"
+        out["from"] = sel.batch.name if sel.batch else None
+        out["message"] = "; ".join(warn)
+        if apply:
+            sel.batch_id = batch.id
+            out["status"] = "assigned"
+
+    summary = {k: sum(1 for r in results if r["status"] == k) for k in ("assign", "assigned", "unchanged", "error")}
+    if apply and summary["assigned"]:
+        audit.record_sync(
+            audit.Action.ADMIN_USER_CHANGE, db=db, resource_type="masd_batch_assignment", resource_id=p.slug,
+            is_phi=False, detail={"action": "f2f_batch_upload", "assigned": summary["assigned"],
+                                  "rows": len(results), "by": admin_email},
+        )
+        db.commit()
+    return {"applied": apply, "summary": summary, "rows": results}
 
 
 class TrainerRoleIn(BaseModel):

@@ -496,7 +496,12 @@ class MasdTrainingBatch(Base):
         Integer, ForeignKey("program_districts.id", ondelete="CASCADE"), nullable=False, index=True,
     )
     name = Column(String, nullable=False)
+    start_date = Column(Date, nullable=True)         # first day of the batch's training
     end_date = Column(Date, nullable=False)          # last day of the batch's training
+    # The batch's trainers — [{"name", "phone", "role"}] as JSON, sealed like
+    # every other phone number we hold. Learners of the batch see them under
+    # "My support team" (review of 6 Oct 2026).
+    trainers = Column(EncryptedString("masd_training_batches.trainers"), nullable=True)
     updated_by = Column(String, nullable=True)       # admin email
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -759,6 +764,10 @@ class Mother(Base):
     height = Column(Float, nullable=True)             # cm, 100.0–230.0
     lmp = Column(Date, nullable=True)
     edd_lmp = Column(Date, nullable=True)             # auto = LMP + 280 days (read-only)
+    # The adoption type the learner says this is (anc / pnc_lt5 / pnc_ge5).
+    # MASD also works it out from the dates; a mismatch is flagged for the
+    # learner and their batch monitor (review of 6 Oct 2026).
+    declared_adoption_type = Column(String(16), nullable=True)
     edd_records = Column(Date, nullable=True)         # typed, "as per latest records"
     # Direct identifiers, sealed at rest. These are the fields whose disclosure
     # turns "some health data leaked" into "this named woman's pregnancy leaked",

@@ -563,7 +563,7 @@ def _flags(d: Deck):
              (f"{sm['edd_passed']:,}", "Past the due date", "no birth recorded yet", LOW if sm["edd_passed"] else INK),
              (f"{sm['anc_behind']:,}", "Antenatal checks behind", "2+ fortnightly checks missed", OK if sm["anc_behind"] else INK),
              (f"{sm['no_lmp']:,}", "No LMP recorded", "due date cannot be tracked", INK)]
-    w = (SLIDE_W - 2 * MARGIN - Inches(0.3) * 3) / 4
+    w = (SLIDE_W - 2 * MARGIN - Inches(0.3) * (len(cards) - 1)) / len(cards)
     for i, (v, label, note, color) in enumerate(cards):
         d.card(s, MARGIN + i * (w + Inches(0.3)), Inches(1.35), w, Inches(1.6), v, label, note, color)
     rows = [["Learner", "Block", "Pregnancies flagged"]] + [[x["name"], x["block"], x["n"]] for x in f["by_learner"][:10]]
@@ -583,8 +583,11 @@ def _headline(d: Deck):
          GOOD if (sm["fulfilment_pct"] or 0) >= 100 else OK),
         (_pct(sm["intensity_pct"]), "Expected activity done", f"{sm['activities']:,} of {sm['ideal']:,} expected by now",
          tone(sm["intensity_pct"])),
-        ("—" if sm["nil_days_avg"] is None else f"{sm['nil_days_avg']:.1f}", "Avg nil-activity days",
-         "days since the last activity", INK),
+        (_pct(sm.get("undertaken_pct")), "Activity among the adopted cases",
+         f"{sm.get('undertaken_actual', 0):,} of {sm.get('undertaken_expected', 0):,} expected for the adoptions taken",
+         tone(sm.get("undertaken_pct"))),
+        ("—" if sm.get("nil_days_median") is None else f"{sm['nil_days_median']:g}", "Median nil-activity days",
+         "—" if sm.get("nil_days_median") is None else f"middle half: {sm['nil_days_q1']:g}–{sm['nil_days_q3']:g} days", INK),
         (f"{ex['included']['total']:,}", "Dyads in outcome analysis", f"{_pct(ex['inclusion_pct'])} of eligible cases",
          INK),
     ]
@@ -592,6 +595,19 @@ def _headline(d: Deck):
     for i, (v, label, note, color) in enumerate(cards):
         d.card(s, MARGIN + i * (w + Inches(0.3)), Inches(1.5), w, Inches(1.75), v, label, note, color)
     d.findings(s, r["insights"]["overview"], MARGIN, Inches(3.6), SLIDE_W - 2 * MARGIN, Inches(3.2), limit=5)
+
+
+def _count_pct(x: dict, done: str, of: str, pct: str) -> str:
+    """The count first, then the share (review of 7 Oct 2026)."""
+    if x.get(done) is None or x.get(of) is None:
+        return _pct(x.get(pct))
+    return f"{x[done]:,} of {round(x[of]):,} ({_pct(x.get(pct))})"
+
+
+def _median(x: dict) -> str:
+    if x.get("nil_days_median") is None:
+        return _one(x.get("nil_days_avg"))
+    return f"{x['nil_days_median']:g} days (IQR {x['nil_days_q1']:g}–{x['nil_days_q3']:g})"
 
 
 def _progress(d: Deck):
@@ -602,14 +618,17 @@ def _progress(d: Deck):
     s = d.slide(f"Progress: {_d(t['as_of'])} vs {_d(n['as_of'])}")
     rows = [
         ["Metric", _d(t["as_of"]), _d(n["as_of"])],
-        ["Follow-up counted", f"{t['fu_days'] or 0} days", f"{n['fu_days'] or 0} days"],
+        ["Days considered for expected activities", f"{t['fu_days'] or 0} days", f"{n['fu_days'] or 0} days"],
         ["Learners (F2F)", t["learners"], n["learners"]],
-        ["Adoption target basis", f"{t['target_per_learner']} adoptions / learner", f"{n['target_per_learner']} adoptions / learner"],
+        ["Adoption target basis", f"{t['target_per_learner']} adoptions / learner = {t['target']:,}",
+         f"{n['target_per_learner']} adoptions / learner = {n['target']:,}"],
         ["Adoptions completed", f"{t['adoptions']:,} ({_pct(t['fulfilment_pct'])} of {t['target']:,})",
          f"{n['adoptions']:,} ({_pct(n['fulfilment_pct'])} of {n['target']:,})"],
-        ["Expected activity done", _pct(t["intensity_pct"]), _pct(n["intensity_pct"])],
-        ["Activity on own cases", _pct(t["own_pct"]), _pct(n["own_pct"])],
-        ["Avg nil-activity days", _one(t["nil_days_avg"]), _one(n["nil_days_avg"])],
+        ["Expected activity done (ideal)", _count_pct(t, "activities", "ideal", "intensity_pct"),
+         _count_pct(n, "activities", "ideal", "intensity_pct")],
+        ["Activity among the adopted cases", _count_pct(t, "undertaken_actual", "undertaken_expected", "undertaken_pct"),
+         _count_pct(n, "undertaken_actual", "undertaken_expected", "undertaken_pct")],
+        ["Median nil-activity days (IQR)", _median(t), _median(n)],
         ["Outcome cohort (final n)", f"{t['cohort']} ({t['cohort_lt6']} <6m + {t['cohort_6_11']} 6–11m)",
          f"{n['cohort']} ({n['cohort_lt6']} <6m + {n['cohort_6_11']} 6–11m)"],
     ]
@@ -875,7 +894,7 @@ def _funnel(d: Deck):
     o = d.r["outcomes"]
     s = d.slide("Pre-analysis exclusion: learner & case funnel",
                 "From every learner with a registered case to the F2F-eligible cases the outcome analysis uses")
-    names = {"start": "START: every learner with a registered case", "no_f2f": "Not selected for F2F training",
+    names = {"start": "START: every learner with a registered case", "no_f2f": "No training batch (not trained F2F)",
              "nursing_staff": "Staff Nurse role group (analysed separately)"}
     rows = [["Step", "Learners removed", "Learners after", "Cases removed", "Cases after"]]
     for st in o["funnel"]:

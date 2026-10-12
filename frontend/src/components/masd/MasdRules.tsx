@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Baby, BookOpen, CalendarDays, ClipboardCheck, Pencil, RotateCcw, Sigma, Table2 } from 'lucide-react';
 import {
-  getExpectedForms, resetExpectedForms, saveExpectedForms,
+  ACTIVITY_KEYS, getExpectedForms, resetExpectedForms, saveExpectedForms,
   type ExpectedFormsTable, type MasdReport, type TableRowType,
 } from '../../api/masd';
 import { useToast } from '../../context/ToastContext';
@@ -92,6 +92,38 @@ const MasdRules: React.FC<{ report: MasdReport; onChanged: () => void }> = ({ re
       </Section>
 
       <MasdBaseline report={report} />
+
+      {e.lap_days && (
+        <Section icon={<CalendarDays />} title={t('rules.lapTitle')} subtitle={t('rules.lapSub')}>
+          <DataTable>
+            <thead>
+              <tr>
+                <Th className="text-left">{t('rules.lapForm')}</Th>
+                <Th className="text-left">{t('rules.lapDays')}</Th>
+                <Th>{t('rules.lapCount')}</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {ACTIVITY_KEYS.map(k => (
+                <tr key={k}>
+                  <td className="px-3 py-2 font-medium text-ink">{t(`activities.${k}`)}</td>
+                  <td className="px-3 py-2 text-sm text-ink">
+                    <div className="flex flex-wrap gap-1">
+                      {(e.lap_days?.[k] ?? []).map(d => (
+                        <span key={d} className="rounded-md bg-surface-sunken px-1.5 py-0.5 text-xs tabular-nums">{t('rules.dayN', { n: d })}</span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 text-center tabular-nums">{e.lap_days?.[k]?.length ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </DataTable>
+          <p className="mt-2 text-xs text-ink-muted">{t('rules.lapNote', {
+            gm: e.nurse_flat?.gm ?? 6, bf: e.nurse_flat?.bf ?? 5, pace: e.adoption_pace_days ?? 2,
+          })}</p>
+        </Section>
+      )}
 
       <Section
         icon={<Table2 />}

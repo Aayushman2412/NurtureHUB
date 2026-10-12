@@ -76,17 +76,21 @@ def build_workbook(report: Dict[str, Any]) -> BytesIO:
 
     # User ID and mobile first: how a learner is recognised (review of 5 Oct 2026).
     header = (["User ID", "Learner", "Mobile", "Email", "Block", "Designation", "Role group", "Department", "F2F", "MT/FL",
-               "Batch monitor", "Batch", "Training ended", "Follow-up (days)", "Follow-up counted (days)"]
+               "Batch monitor", "Batch", "Training ended", "Days after the buffer", "Days considered for expected activities"]
               + [f"{tl[t]} target" for t in types] + [f"{tl[t]} adopted" for t in types]
-              + ["Not typed", "Total adoptions", "Target", "% target fulfilled",
+              + ["Type not known", "Total adoptions", "Target", "% target fulfilled",
                  "Antenatal care", "Protein count", "Growth monitoring", "Breastfeeding", "Complementary feeding",
                  "Total activities", "Expected activities", "% of expected activity"]
               + [f"% expected activity · {tl[t]}" for t in types]
               + ["Own cases: expected", "Own cases: done", "% own-case activity", "Own-case band",
                  "Avg activities / adoption", "Last activity", "Nil-activity days",
-                 "Follow-up counted, by tranche (days)"]
+                 "Days considered, by tranche"]
               + [h for n in steps for h in (f"Tranche {n}: days to first adoption",
-                                            f"Tranche {n}: days to take all")])
+                                            f"Tranche {n}: days to take all")]
+              # Level 2 and the declared type (review of 6 Oct 2026), last so the
+              # columns above keep their places.
+              + ["Expected for the adoptions taken (level 2)", "Activities on them",
+                 "% activity among the adopted cases", "Declared-type mismatches"])
     band_label = dict(R.OWN_BANDS)
     rows = []
     for l in sorted(report["learners"], key=lambda x: (x["block"], x["name"] or "")):
@@ -104,11 +108,15 @@ def build_workbook(report: Dict[str, Any]) -> BytesIO:
                     + [own["expected"]["total"], own["actual"]["total"], own["pct"], band_label.get(own["band"] or "", ""),
                        l["avg_per_adoption"], l["last_activity"], l["nil_days"],
                        " · ".join(str(fu) for fu in l.get("tranche_fu") or [])]
-                    + [v for n in steps for v in _uptake_cells(l, n)])
-    pct_learner = (25, 33, 34, 35, 36, 39)   # three identity columns ahead of the old positions
+                    + [v for n in steps for v in _uptake_cells(l, n)]
+                    + [(l.get("undertaken") or {}).get("expected", {}).get("total"),
+                       (l.get("undertaken") or {}).get("actual"), (l.get("undertaken") or {}).get("pct"),
+                       l.get("declared_mismatch", 0)])
+    pct_learner = (25, 33, 34, 35, 36, 39,   # three identity columns ahead of the old positions
+                   header.index("% activity among the adopted cases"))
     _sheet(wb, "MASD learners", header, rows,
            widths=[9, 24, 13, 30, 14, 20, 12, 10, 6, 14, 18, 12, 12, 10, 10] + [8] * 8 + [7, 10] + [10] * 8 + [11] * 3
-           + [10, 10, 10, 12, 10, 12, 10, 14] + [12] * (2 * len(steps)),
+           + [10, 10, 10, 12, 10, 12, 10, 14] + [12] * (2 * len(steps)) + [14, 12, 14, 12],
            pct_cols=pct_learner, note=note)
 
     def group_rows(groups):

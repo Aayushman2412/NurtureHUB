@@ -292,7 +292,8 @@ def test_targets_and_expected_activity(report):
     assert one["ideal"]["total"] == 49 + 44 == _expected(cal["targets"]["steps"], AS_OF, TRAINING)
     assert one["activities"]["total"] == 16   # 10 growth checks + 2 BF + 3 ANC + 1 protein
     assert one["by_type"][R.ANC] == {"target": 2, "adopted": 1, "adoption_pct": 50.0, "expected": 8,
-                                     "actual": 4, "activity_pct": 50.0}
+                                     "actual": 4, "activity_pct": 50.0,
+                                     "expected_by": {"anc": 4, "protein": 4}, "actual_by": {"anc": 3, "protein": 1}}
     nurse = _learner(report, 2)
     assert nurse["target"] == 6 and nurse["ideal"]["total"] == 6 * 11 and nurse["activities"]["total"] == 5
     assert nurse["subtype_pct"]["anc"] is None, "a nurse has no antenatal expectation — not 0%"

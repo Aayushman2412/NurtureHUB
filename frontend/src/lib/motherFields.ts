@@ -75,6 +75,9 @@ const toOptions = (list: string[], t: TFn, group: string) =>
 
 export const occupationOptions = (t: TFn) => toOptions(OCCUPATIONS, t, 'occupation');
 export const rationCardOptions = (t: TFn) => toOptions(RATION_CARDS, t, 'rationCard');
+/** The MASD adoption types (app/masd/rules.py ADOPTION_TYPES), as the learner declares one. */
+export const ADOPTION_TYPES = ['anc', 'pnc_lt5', 'pnc_ge5'] as const;
+export type DeclaredAdoptionType = typeof ADOPTION_TYPES[number];
 export const socialCategoryOptions = (t: TFn) => toOptions(SOCIAL_CATEGORIES, t, 'socialCategory');
 export const videoFrequencyOptions = (t: TFn) => toOptions(VIDEO_FREQUENCY, t, 'videoFrequency');
 

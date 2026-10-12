@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { matchesLearner } from '../../lib/learnerSearch';
-import { ArrowDownUp, Search } from 'lucide-react';
+import { ArrowDownUp, Search, Shuffle } from 'lucide-react';
 import {
   setBatchMonitorTag, setLearnerBatch, setLearnerMonitor, setMonitorLearners, setTrainerRole,
   type MasdLearner, type MasdReport,
@@ -12,10 +12,11 @@ import { ChipRow } from '../results/InsightParts';
 import { cn } from '../../utils/cn';
 import { DataTable, RateCell, Th } from './MasdCharts';
 import { fmt1 } from '../../lib/masdDisplay';
-import MasdMonitors from './MasdMonitors';
+import MasdMonitors, { MasdSupportStructure } from './MasdMonitors';
+import MasdBatchUpload from './MasdBatchUpload';
 
 type Filter = 'f2f' | 'mtfl' | 'attention' | 'outside' | 'monitors' | 'unmonitored';
-type SortKey = 'name' | 'block' | 'role_group' | 'batch' | 'monitor' | 'adoptions' | 'fulfilment' | 'activities' | 'intensity' | 'own' | 'nil';
+type SortKey = 'name' | 'block' | 'role_group' | 'batch' | 'monitor' | 'adoptions' | 'fulfilment' | 'activities' | 'intensity' | 'undertaken' | 'nil';
 
 const sortValue = (l: MasdLearner, key: SortKey): number | string => {
   switch (key) {
@@ -24,7 +25,7 @@ const sortValue = (l: MasdLearner, key: SortKey): number | string => {
     case 'role_group': return l.role_group;
     case 'batch': return `${l.batch ?? '~'} ${l.training_end ?? ''}`;
     case 'monitor': return l.is_monitor ? ' ' : (l.monitor ?? '~').toLowerCase();
-    case 'own': return l.own.pct ?? -1;
+    case 'undertaken': return l.undertaken?.pct ?? -1;
     case 'adoptions': return l.adoptions.total;
     case 'fulfilment': return l.fulfilment_pct ?? -1;
     case 'activities': return l.activities.total;
@@ -36,6 +37,8 @@ const sortValue = (l: MasdLearner, key: SortKey): number | string => {
 const PAGE = 60;
 
 const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({ report, onChanged }) => {
+  const idealRol = report.calendar.tranches.reduce((a, tr) => a + tr.community.total, 0);
+  const idealSn = report.calendar.tranches.reduce((a, tr) => a + tr.nurse.total, 0);
   const { t } = useTranslation('masd');
   const { showToast } = useToast();
   const [filter, setFilter] = useState<Filter>('f2f');
@@ -151,7 +154,12 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
 
   return (
     <div className="space-y-4">
+      <MasdSupportStructure report={report} />
       <MasdMonitors report={report} />
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3 py-2">
+        <p className="text-sm text-ink">{t('batchUpload.lead')}</p>
+        <MasdBatchUpload project={report.project.slug} onDone={onChanged} />
+      </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <ChipRow
           label={t('learners.show')}
@@ -189,9 +197,9 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
             {head('monitor', t('monitors.column'))}
             {head('adoptions', t('table.adoptions'))}
             {head('fulfilment', t('table.fulfilment'))}
-            {head('activities', t('learners.activities'))}
+            {head('activities', t('learners.activitiesIdeal', { rol: idealRol, sn: idealSn }))}
             {head('intensity', t('table.intensity'))}
-            {head('own', t('learners.own'))}
+            {head('undertaken', t('learners.undertaken'))}
             {head('nil', t('table.nilDays'))}
           </tr>
         </thead>
@@ -200,6 +208,12 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
             <tr key={l.id} className={cn(attentionIds.has(l.id) && 'bg-amber-50/40 dark:bg-amber-500/5')}>
               <td className="px-3 py-2">
                 <LearnerIdentity name={l.name} id={l.id} mobile={l.mobile} email={l.email} />
+                {(l.declared_mismatch ?? 0) > 0 && (
+                  <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-error-50 px-2 py-0.5 text-xs font-medium text-error-600 dark:bg-error-500/15"
+                    title={t('learners.mismatchTitle')}>
+                    <Shuffle className="size-3" />{t('learners.mismatch', { count: l.declared_mismatch })}
+                  </span>
+                )}
               </td>
               <td className="px-3 py-2 text-center text-ink-muted">{l.block}</td>
               <td className="px-3 py-2 text-center text-ink-muted">{l.role_group}</td>
@@ -258,7 +272,8 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
               <td className="px-3 py-2 text-center tabular-nums">{fmt1(l.fulfilment_pct)}</td>
               <td className="px-3 py-2 text-center tabular-nums">{l.activities.total} <span className="text-xs text-ink-faint">/ {Math.round(l.ideal.total)}</span></td>
               <RateCell value={l.intensity_pct} />
-              <RateCell value={l.own.pct} />
+              <RateCell value={l.undertaken?.pct ?? null}
+                sub={l.undertaken ? `${l.undertaken.actual} / ${l.undertaken.expected.total}` : undefined} />
               <td className="px-3 py-2 text-center tabular-nums">
                 {l.nil_days == null ? <span className="text-ink-faint">{t('learners.never')}</span> : l.nil_days}
               </td>

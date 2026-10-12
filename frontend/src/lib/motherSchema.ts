@@ -24,7 +24,10 @@ export const motherSchema = z
     mother_age: z.union([z.number(), z.literal('')]).optional(),   // derived from DOB, display-only
     weight: requiredRange(35, 200, 'validation:mother.weight'),
     height: requiredRange(100, 230, 'validation:mother.height'),
-    lmp: requiredStr('validation:mother.lmpRequired'),
+    // What the learner says this adoption is (review of 6 Oct 2026). A PNC
+    // mother's pregnancy is over, so her LMP is optional and not bounded.
+    declared_adoption_type: requiredStr('validation:mother.adoptionTypeRequired'),
+    lmp: z.string(),
     edd_records: z.string().optional(),
     mobile: z.string().refine(v => /^\d{10}$/.test(digits(v)), { message: 'validation:common.phone10' }),
     alternate_mobile: z.string().optional().refine(v => !v || /^\d{10}$/.test(digits(v)), { message: 'validation:common.altPhone10' }),
@@ -65,15 +68,17 @@ export const motherSchema = z
     const dob = toDate(v.mother_dob || '');
     const adoption = toDate(v.adoption_date);
     const lmp = toDate(v.lmp);
+    const anc = !v.declared_adoption_type || v.declared_adoption_type === 'anc';
+    if (anc && !v.lmp.trim()) ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.lmpRequired' });
     if (lmp) {
       if (daysBetween(lmp, today) > 0) ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.lmpFuture' });
       else if (dob && lmp < dob) ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.lmpBeforeDob' });
       else if (adoption && lmp > adoption) ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.lmpAfterAdoption' });
-      else if (adoption && daysBetween(adoption, lmp) > MAX_GESTATION_DAYS)
+      else if (anc && adoption && daysBetween(adoption, lmp) > MAX_GESTATION_DAYS)
         ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.lmp180' });
       // A pregnancy under 12 weeks at the adoption date is not eligible for the
       // programme — judged at adoption, which is the moment the rule is about.
-      else if (adoption && daysBetween(adoption, lmp) < MIN_GESTATION_DAYS)
+      else if (anc && adoption && daysBetween(adoption, lmp) < MIN_GESTATION_DAYS)
         ctx.addIssue({ code: 'custom', path: ['lmp'], message: 'validation:mother.gestationMin12' });
     }
     if (dob && daysBetween(dob, today) > 0) ctx.addIssue({ code: 'custom', path: ['mother_dob'], message: 'validation:common.dobFuture' });
@@ -116,7 +121,7 @@ export const motherSchema = z
 export type MotherFormValues = z.input<typeof motherSchema>;
 
 export const MR_STEP_FIELDS: readonly (readonly string[])[] = [
-  ['mother_name', 'adoption_date', 'mother_dob', 'mother_age', 'weight', 'height', 'lmp', 'edd_records', 'mobile', 'alternate_mobile', 'email'],
+  ['declared_adoption_type', 'mother_name', 'adoption_date', 'mother_dob', 'mother_age', 'weight', 'height', 'lmp', 'edd_records', 'mobile', 'alternate_mobile', 'email'],
   ['state_id', 'district_id', 'taluk_id', 'village', 'hwc_id', 'hwc_other', 'phc_id', 'education_id', 'education_field_id', 'education_degree_id', 'occupation', 'occupation_other', 'ration_card', 'ration_card_other', 'social_category'],
   ['nutrition_course', 'nutrition_course_name', 'video_frequency', 'source_ratings', 'implement_video', 'confidence_video', 'willingness_hcw', 'information_seeking'],
 ];

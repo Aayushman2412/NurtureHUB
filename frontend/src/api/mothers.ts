@@ -15,6 +15,7 @@ export interface MotherPayload {
   weight?: number | null;
   height?: number | null;
   lmp?: string | null;
+  declared_adoption_type?: 'anc' | 'pnc_lt5' | 'pnc_ge5' | null;
   edd_records?: string | null;
   mobile?: string | null;
   alternate_mobile?: string | null;

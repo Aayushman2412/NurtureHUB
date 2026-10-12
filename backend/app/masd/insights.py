@@ -67,16 +67,28 @@ def overview(r: Dict[str, Any]) -> List[Dict[str, str]]:
         out.append(_finding("watch", "Adoption volume is running well ahead of follow-up: more cases "
                                      "are being taken on than are being visited as often as the "
                                      "programme expects."))
-    if s["own_pct"] is not None:
+    und = s.get("undertaken_pct")
+    if und is not None:
+        out.append(_finding(
+            "good" if und >= 80 else "watch" if und < 60 else "info",
+            f"Among the cases they did adopt, learners did {_f(und)} of the {s['undertaken_expected']:,} "
+            f"activities expected for those adoptions (level 2)."))
+    elif s["own_pct"] is not None:
         out.append(_finding(
             "good" if s["own_pct"] >= 80 else "watch" if s["own_pct"] < 60 else "info",
             f"On the cases they did adopt, learners filed {_f(s['own_pct'])} of the forms those cases were "
             f"due by their own follow-up."))
-    if s["no_activity"]:
-        silent, nobody = s["no_activity"], s["zero_adoptions"]
-        tail = f", and {nobody} adopted nobody" if nobody else ""
-        out.append(_finding("watch", f"{silent} learner{'s have' if silent != 1 else ' has'} "
-                                     f"filed no activity at all{tail}."))
+    # Two separate groups, never one inside the other (review of 6 Oct 2026).
+    nobody = s["zero_adoptions"]
+    idle = s.get("adopted_no_activity", max(0, s["no_activity"] - nobody))
+    parts = []
+    if nobody:
+        parts.append(f"{nobody} learner{'s' if nobody != 1 else ''} adopted nobody")
+    if idle:
+        parts.append(f"{idle} {'more ' if nobody else ''}adopted but {'have' if idle != 1 else 'has'} "
+                     f"filed no activity")
+    if parts:
+        out.append(_finding("watch", "; ".join(parts).capitalize() + "."))
     return out
 
 

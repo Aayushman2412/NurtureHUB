@@ -3,73 +3,76 @@ import { useTranslation } from 'react-i18next';
 import { Calculator, ChartColumn, ChartScatter, Hourglass, Layers3, ListChecks, Target, Timer } from 'lucide-react';
 import {
   ACTIVITY_KEYS, ADOPTION_TYPES, OWN_BANDS, UPTAKE_BUCKETS,
-  type AdoptionType, type MasdGroup, type MasdReport, type OwnBand, type Targets, type UptakeBucket,
+  type MasdGroup, type MasdReport, type OwnBand, type Targets, type UptakeBucket, type UptakeGroup, type UptakeGroupKey,
 } from '../../api/masd';
-import { BigNumber, ChipRow, Kpi, KpiRow, Section } from '../results/InsightParts';
+import { ChipRow, Kpi, KpiRow, Section } from '../results/InsightParts';
 import { Ring, StackedBar } from '../results/InsightCharts';
 import MasdFindings from './MasdFindings';
 import MasdBaseline from './MasdBaseline';
 import { BubblePlot, DataTable, GroupedColumns, RateCell, Th } from './MasdCharts';
-import { fmt1, MASD_COLORS, rateTone } from '../../lib/masdDisplay';
+import { averageLines, fmt1, MASD_COLORS, rateTone } from '../../lib/masdDisplay';
+import { aggregate, applyFilters, splitBy, type MasdAgg, type TypeAgg } from '../../lib/masdSplit';
+import type { MasdSplitState } from './MasdSplitBar';
+import RateLegend from './RateLegend';
 
-type Split = 'blocks' | 'departments' | 'roles';
+type BandSplit = 'blocks' | 'departments' | 'roles';
+/** The adoption kinds a chart can show: the three types of the rest of the
+ *  learners, and a Staff Nurse's PNC <5M on its own (review of 6 Oct 2026). */
+type Kind = 'anc' | 'pnc_lt5' | 'pnc_ge5' | 'sn';
+const KINDS: Kind[] = ['anc', 'pnc_lt5', 'pnc_ge5', 'sn'];
+const kindOf = (g: MasdAgg, k: Kind): TypeAgg => (k === 'sn' ? g.nurse_lt5 : g.by_type[k]);
 const MIN_FOR_RANK = 3;
 
 const BAND_COLORS: Record<OwnBand, string> = {
   none: '#8E3B2F', b1_20: '#D6453D', b21_40: '#E0A11B', b41_60: '#C9B458', b61_80: '#7FB069', b81_100: '#2F9E56',
 };
-// When the first adoption for a tranche came: early is good, never is the worry.
+// When an adoption for a tranche came: early is good, never is the worry.
 const UPTAKE_COLORS: Record<UptakeBucket, string> = {
   before: '#2A7F8F', d7: '#2F9E56', d15: '#7FB069', d30: '#E0A11B', later: '#D6453D', not_yet: '#A8A29E',
 };
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
+const iqr = (m: number | null, a: number | null, b: number | null, days: (n: number) => string) =>
+  m == null ? '—' : `${days(m)} (${a ?? '—'}–${b ?? '—'})`;
 
 /**
- * Expected activity — the method agreed on 29 Sep 2026, counted tranche by
- * tranche since 1–3 Oct. A learner is read against what was EXPECTED of them by
- * the report date: the targets come in tranches, each followed up from the day
- * it opened (or the learner's batch ended, if later) plus a buffer, rounded
- * down to 15 days; the forms expected are, per tranche, the adoptions it asked
- * for × the expected-forms table at that tranche's follow-up. Then: how
- * quickly was each tranche taken up, and within the cases they did adopt, how
- * much of what those cases were due have they done?
+ * Expected activity — three levels (review of 6 Oct 2026):
+ *  1. ideal: the targets × the LAP table at each tranche's follow-up (126 per
+ *     learner, 99 per Staff Nurse at Jalna on 7 Oct);
+ *  2. for the adoptions actually taken: the same table, read for the types
+ *     and tranches the learner did adopt;
+ *  3. each case by its own dates (a preview of the per-case analysis).
+ * Then how quickly each tranche was taken up, by the rest of the learners and
+ * Staff Nurses, adoption by adoption.
  */
-const MasdExpected: React.FC<{ report: MasdReport }> = ({ report }) => {
+const MasdExpected: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({ report, split }) => {
   const { t } = useTranslation('masd');
   const s = report.summary;
   const cal = report.calendar;
-  const [split, setSplit] = useState<Split>('blocks');
-  const [atype, setAtype] = useState<AdoptionType>('pnc_lt5');
-  const [bandSplit, setBandSplit] = useState<Split>('departments');
+  const [kind, setKind] = useState<Kind>('pnc_lt5');
+  const [bandSplit, setBandSplit] = useState<BandSplit>('departments');
+  const [upGroup, setUpGroup] = useState<UptakeGroupKey>('all');
 
-  const groupsFor = (key: Split): MasdGroup[] =>
-    (key === 'departments' ? report.departments.filter(g => g.key !== 'total') : report[key]).filter(g => g.learners > 0);
-  const groups = groupsFor(split);
-  const word = t(`expected.split.${split}One`);
+  const learners = useMemo(() => applyFilters(report.learners.filter(l => l.f2f), split.filters), [report.learners, split.filters]);
+  const groups = useMemo(() => splitBy(learners, split.dim), [learners, split.dim]);
+  const total = useMemo(() => aggregate(learners, 'total', t('table.total')), [learners, t]);
+  const word = t(`splitDims.${split.dim}`);
 
-  const ranked = groups.filter(g => g.learners >= MIN_FOR_RANK && g.by_type[atype].activity_pct != null);
-  const best = ranked.length >= 2 ? ranked.reduce((a, b) => (b.by_type[atype].activity_pct! > a.by_type[atype].activity_pct! ? b : a)) : null;
-  const worst = ranked.length >= 2 ? ranked.reduce((a, b) => (b.by_type[atype].activity_pct! < a.by_type[atype].activity_pct! ? b : a)) : null;
+  const ranked = groups.filter(g => g.learners >= MIN_FOR_RANK && kindOf(g, kind).activity_pct != null);
+  const best = ranked.length >= 2 ? ranked.reduce((a, b) => (kindOf(b, kind).activity_pct! > kindOf(a, kind).activity_pct! ? b : a)) : null;
+  const worst = ranked.length >= 2 ? ranked.reduce((a, b) => (kindOf(b, kind).activity_pct! < kindOf(a, kind).activity_pct! ? b : a)) : null;
 
   const example = cal.batches[0];
   const tranches = useMemo(() => example?.expected.tranches ?? [], [example]);
   const sameClock = new Set(cal.batches.map(b => b.tranche_fu.join(','))).size <= 1;
   const namedBatches = cal.batches.filter(b => b.id != null);
+  const idealRol = cal.tranches.reduce((a, tr) => a + tr.community.total, 0);
+  const idealSn = cal.tranches.reduce((a, tr) => a + tr.nurse.total, 0);
   const asked = (a: Targets) => {
     const parts = ADOPTION_TYPES.filter(k => a[k]).map(k => `+${a[k]} ${t(`settings.target.${k}`)}`);
     if (a.nurse) parts.push(t('expected.askedNurse', { n: a.nurse }));
     return parts.join(' · ') || '—';
   };
-  const trancheCell = (step: number, opened: string | null, buffer: number | null, added: Targets) => (
-    <td className="px-3 py-2">
-      <div className="whitespace-nowrap font-medium text-ink">{t('expected.tranche', { n: step })}</div>
-      <div className="whitespace-nowrap text-xs text-ink-faint">
-        {opened ? (buffer != null ? t('expected.openedBuffer', { date: fmtDate(opened), n: buffer }) : t('expected.openedOn', { date: fmtDate(opened) })) : '—'}
-      </div>
-      <div className="max-w-[15rem] text-xs text-ink-muted">{asked(added)}</div>
-    </td>
-  );
   const exampleText = useMemo(() => tranches.map(tr => {
     const com = tr.community;
     const parts = ADOPTION_TYPES.filter(k => com.by_type[k]).map(k => {
@@ -81,9 +84,20 @@ const MasdExpected: React.FC<{ report: MasdReport }> = ({ report }) => {
     return t('expected.exampleTranche', { n: tr.step, days: tr.fu_days ?? 0, parts: parts.join('; ') });
   }), [tranches, t]);
   const uptake = report.uptake.filter(u => u.learners > 0);
-  const fuList = cal.tranches.map(tr => tr.fu_days ?? 0).join(' · ');
+  const upOf = (u: (typeof uptake)[number]): UptakeGroup | null => u.groups?.[upGroup] ?? null;
+  const days = (n: number) => t('expected.daysN', { n });
 
-  const bandGroups = groupsFor(bandSplit).filter(g => g.own_banded > 0);
+  const bandGroups = (bandSplit === 'departments' ? report.departments.filter(g => g.key !== 'total') : report[bandSplit])
+    .filter(g => g.learners > 0 && g.own_banded > 0);
+
+  const typeSeries = [
+    { key: 'adopt', label: t('activity.adoptionPct'), color: MASD_COLORS.adoption, values: KINDS.map(k => kindOf(total, k).adoption_pct) },
+    { key: 'act', label: t('activity.activityPct'), color: MASD_COLORS.activity, values: KINDS.map(k => kindOf(total, k).activity_pct) },
+  ];
+  const groupSeries = [
+    { key: 'adopt', label: t('activity.adoptionPct'), color: MASD_COLORS.adoption, values: groups.map(g => kindOf(g, kind).adoption_pct) },
+    { key: 'act', label: t('activity.activityPct'), color: MASD_COLORS.activity, values: groups.map(g => kindOf(g, kind).activity_pct) },
+  ];
 
   return (
     <div className="space-y-5">
@@ -96,20 +110,21 @@ const MasdExpected: React.FC<{ report: MasdReport }> = ({ report }) => {
         />
         <Kpi
           visual={<Ring value={Math.min(s.intensity_pct ?? 0, 100)} color={rateTone(s.intensity_pct ?? 0)}>{fmt1(s.intensity_pct)}</Ring>}
-          label={t('kpi.intensity')}
+          label={t('kpi.level1', { rol: idealRol, sn: idealSn })}
           value={t('kpi.intensitySub', { n: s.activities.toLocaleString(), ideal: Math.round(s.ideal).toLocaleString() })}
         />
         <Kpi
-          visual={<Ring value={Math.min(s.own_pct ?? 0, 100)} color={rateTone(s.own_pct ?? 0)}>{fmt1(s.own_pct)}</Ring>}
-          label={t('kpi.own')}
-          value={t('kpi.ownSub', { n: s.own_actual.toLocaleString(), expected: s.own_expected.toLocaleString() })}
+          visual={<Ring value={Math.min(s.undertaken_pct ?? 0, 100)} color={rateTone(s.undertaken_pct ?? 0)}>{fmt1(s.undertaken_pct)}</Ring>}
+          label={t('kpi.level2')}
+          value={t('kpi.undertakenSub', { n: (s.undertaken_actual ?? 0).toLocaleString(), expected: (s.undertaken_expected ?? 0).toLocaleString() })}
         />
         <Kpi
-          visual={<BigNumber value={cal.tranches.length ? cal.tranches.length : '—'} />}
-          label={t('kpi.fu')}
-          value={t('kpi.fuSub', { days: fuList || '—', step: cal.step_days })}
+          visual={<Ring value={Math.min(s.own_pct ?? 0, 100)} color={rateTone(s.own_pct ?? 0)}>{fmt1(s.own_pct)}</Ring>}
+          label={t('kpi.level3')}
+          value={t('kpi.ownSub', { n: s.own_actual.toLocaleString(), expected: s.own_expected.toLocaleString() })}
         />
       </KpiRow>
+      <p className="-mt-2 text-sm text-ink-muted">{t('expected.levelsNote')}</p>
 
       {example && (
         <Section icon={<Calculator />} title={t('expected.workedTitle')} subtitle={t('expected.workedSub')}>
@@ -156,58 +171,77 @@ const MasdExpected: React.FC<{ report: MasdReport }> = ({ report }) => {
       )}
 
       {uptake.length > 0 && (
-        <Section icon={<Hourglass />} title={t('expected.uptakeTitle')} subtitle={t('expected.uptakeSub')}>
+        <Section icon={<Hourglass />} title={t('expected.uptakeTitle')} subtitle={t('expected.uptakeSub')}
+          actions={<ChipRow label="" value={upGroup} onChange={v => setUpGroup(v as UptakeGroupKey)}
+            items={(['all', 'rol', 'sn'] as UptakeGroupKey[]).map(k => ({ key: k, label: t(`expected.upGroup.${k}`) }))} />}>
           <DataTable>
-                <thead>
-                  <tr>
-                    <Th className="text-left">{t('expected.trancheHead')}</Th>
-                    <Th>{t('table.learners')}</Th>
-                    <Th>{t('expected.started')}</Th>
-                    <Th>{t('expected.medianStart')}</Th>
-                    <Th>{t('expected.completed')}</Th>
-                    <Th>{t('expected.medianComplete')}</Th>
+            <thead>
+              <tr>
+                <Th className="text-left">{t('expected.trancheHead')}</Th>
+                <Th>{t('table.learners')}</Th>
+                <Th>{t('expected.started')}</Th>
+                <Th title={t('expected.iqrTitle')}>{t('expected.medianStartIqr')}</Th>
+                <Th>{t('expected.completed')}</Th>
+                <Th title={t('expected.iqrTitle')}>{t('expected.medianCompleteIqr')}</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {uptake.map(u => {
+                const g = upOf(u);
+                if (!g || !g.learners) return null;
+                return (
+                  <tr key={u.step}>
+                    <td className="px-3 py-2">
+                      <div className="whitespace-nowrap font-medium text-ink">{t('expected.tranche', { n: u.step })}</div>
+                      <div className="whitespace-nowrap text-xs text-ink-faint">{u.from ? t('expected.openedOn', { date: fmtDate(u.from) }) : '—'}</div>
+                      <div className="max-w-[15rem] text-xs text-ink-muted">{asked(u.added)}</div>
+                    </td>
+                    <td className="px-3 py-2 text-center tabular-nums">{g.learners}</td>
+                    <RateCell value={g.started_pct} sub={`${g.started} / ${g.learners}`} />
+                    <td className="px-3 py-2 text-center tabular-nums">{iqr(g.median_days_to_start, g.q1_days_to_start, g.q3_days_to_start, days)}</td>
+                    <RateCell value={g.completed_pct} sub={`${g.completed} / ${g.learners}`} />
+                    <td className="px-3 py-2 text-center tabular-nums">{iqr(g.median_days_to_complete, g.q1_days_to_complete, g.q3_days_to_complete, days)}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {uptake.map(u => (
-                    <tr key={u.step}>
-                      {trancheCell(u.step, u.from, null, u.added)}
-                      <td className="px-3 py-2 text-center tabular-nums">{u.learners}</td>
-                      <RateCell value={u.started_pct} sub={`${u.started} / ${u.learners}`} />
-                      <td className="px-3 py-2 text-center tabular-nums">{u.median_days_to_start == null ? '—' : t('expected.daysN', { n: u.median_days_to_start })}</td>
-                      <RateCell value={u.completed_pct} sub={`${u.completed} / ${u.learners}`} />
-                      <td className="px-3 py-2 text-center tabular-nums">{u.median_days_to_complete == null ? '—' : t('expected.daysN', { n: u.median_days_to_complete })}</td>
-                    </tr>
-                  ))}
-                </tbody>
+                );
+              })}
+            </tbody>
           </DataTable>
-          <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-5 [&>*]:min-w-0">
-            <div className="xl:col-span-3">
-              <h4 className="mb-2 text-sm font-semibold text-ink">{t('expected.firstAdoption')}</h4>
-              <div className="space-y-3">
-                {uptake.map(u => (
-                  <div key={u.step} className="grid grid-cols-1 gap-2 sm:grid-cols-[7rem_1fr] sm:items-center [&>*]:min-w-0">
-                    <span className="text-sm font-semibold text-ink">{t('expected.tranche', { n: u.step })}</span>
-                    <StackedBar
-                      height="h-6"
-                      showLegend={false}
-                      parts={UPTAKE_BUCKETS.map(b => ({ key: b, label: t(`expected.bucket.${b}`), value: u.started_by[b], color: UPTAKE_COLORS[b] }))}
-                    />
+
+          <h4 className="mb-1 mt-6 text-sm font-semibold text-ink">{t('expected.nthTitle')}</h4>
+          <p className="mb-3 text-sm text-ink-muted">{t('expected.nthSub')}</p>
+          <div className="space-y-5">
+            {uptake.map(u => {
+              const g = upOf(u);
+              if (!g || !g.nth.length) return null;
+              return (
+                <div key={u.step}>
+                  <div className="mb-2 text-sm font-semibold text-ink">{t('expected.tranche', { n: u.step })}</div>
+                  <div className="space-y-2">
+                    {g.nth.map(n => (
+                      <div key={n.n} className="grid grid-cols-1 gap-2 sm:grid-cols-[12rem_1fr] sm:items-center [&>*]:min-w-0">
+                        <div className="text-sm">
+                          <span className="font-medium text-ink">{t('expected.nthLabel', { n: n.n })}</span>
+                          <div className="text-xs text-ink-muted">
+                            {t('expected.nthDone', { done: n.done, of: n.learners })} · {iqr(n.median, n.q1, n.q3, days)}
+                          </div>
+                        </div>
+                        <StackedBar height="h-5" showLegend={false}
+                          parts={UPTAKE_BUCKETS.map(b => ({ key: b, label: t(`expected.bucket.${b}`), value: n.by[b], color: UPTAKE_COLORS[b] }))} />
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
-                {UPTAKE_BUCKETS.map(b => (
-                  <span key={b} className="inline-flex items-center gap-1.5 text-xs text-ink-muted">
-                    <span className="size-2.5 rounded-full" style={{ background: UPTAKE_COLORS[b] }} aria-hidden />{t(`expected.bucket.${b}`)}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="xl:col-span-2">
-              <MasdFindings findings={report.insights.uptake ?? []} />
-            </div>
+                </div>
+              );
+            })}
           </div>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+            {UPTAKE_BUCKETS.map(b => (
+              <span key={b} className="inline-flex items-center gap-1.5 text-xs text-ink-muted">
+                <span className="size-2.5 rounded-full" style={{ background: UPTAKE_COLORS[b] }} aria-hidden />{t(`expected.bucket.${b}`)}
+              </span>
+            ))}
+          </div>
+          <MasdFindings className="mt-5" findings={report.insights.uptake ?? []} />
         </Section>
       )}
 
@@ -215,13 +249,11 @@ const MasdExpected: React.FC<{ report: MasdReport }> = ({ report }) => {
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-5 [&>*]:min-w-0">
           <div className="xl:col-span-3">
             <GroupedColumns
-              categories={ADOPTION_TYPES.map(k => ({ key: k, label: t(`types.${k}`),
-                sub: t('expected.typeN', { adopted: s.by_type[k].adopted, target: s.by_type[k].target }) }))}
-              series={[
-                { key: 'adopt', label: t('activity.adoptionPct'), color: MASD_COLORS.adoption, values: ADOPTION_TYPES.map(k => s.by_type[k].adoption_pct) },
-                { key: 'act', label: t('activity.activityPct'), color: MASD_COLORS.activity, values: ADOPTION_TYPES.map(k => s.by_type[k].activity_pct) },
-              ]}
+              categories={KINDS.map(k => ({ key: k, label: t(`expected.kind.${k}`),
+                sub: t('expected.typeN', { adopted: kindOf(total, k).adopted, target: kindOf(total, k).target }) }))}
+              series={typeSeries}
               reference={{ value: 100, label: t('activity.targetLine') }}
+              references={averageLines(typeSeries, [total.fulfilment_pct, total.intensity_pct], x => t('activity.avgLine', { what: x.label }))}
               valueSuffix="%"
             />
           </div>
@@ -233,83 +265,76 @@ const MasdExpected: React.FC<{ report: MasdReport }> = ({ report }) => {
 
       <Section
         icon={<ChartColumn />}
-        title={t('expected.byGroupTitle', { type: t(`types.${atype}`), what: word })}
+        title={t('expected.byGroupTitle', { type: t(`expected.kind.${kind}`), what: word })}
         subtitle={t('expected.byGroupSub')}
       >
-        <div className="mb-4 flex flex-wrap gap-x-6 gap-y-2">
-          <ChipRow label={t('expected.typeLabel')} value={atype} onChange={v => setAtype(v as AdoptionType)}
-            items={ADOPTION_TYPES.map(k => ({ key: k, label: t(`types.${k}`) }))} />
-          <ChipRow label={t('split.label')} value={split} onChange={v => setSplit(v as Split)}
-            items={(['blocks', 'departments', 'roles'] as Split[]).map(k => ({ key: k, label: t(`expected.split.${k}`) }))} />
+        <div className="mb-4">
+          <ChipRow label={t('expected.typeLabel')} value={kind} onChange={v => setKind(v as Kind)}
+            items={KINDS.map(k => ({ key: k, label: t(`expected.kind.${k}`) }))} />
         </div>
         <GroupedColumns
-          categories={groups.map(g => ({ key: g.key, label: g.label.replace(' subtotal', ''), sub: `n=${g.learners}` }))}
-          series={[
-            { key: 'adopt', label: t('activity.adoptionPct'), color: MASD_COLORS.adoption, values: groups.map(g => g.by_type[atype].adoption_pct) },
-            { key: 'act', label: t('activity.activityPct'), color: MASD_COLORS.activity, values: groups.map(g => g.by_type[atype].activity_pct) },
-          ]}
+          categories={groups.map(g => ({ key: g.key, label: g.label, sub: `n=${g.learners}` }))}
+          series={groupSeries}
           reference={{ value: 100, label: t('activity.targetLine') }}
+          references={averageLines(groupSeries, [kindOf(total, kind).adoption_pct, kindOf(total, kind).activity_pct], x => t('activity.avgLine', { what: x.label }))}
           valueSuffix="%"
         />
         {best && worst && best.key !== worst.key && (
           <div className="mt-4 flex flex-wrap gap-2 text-sm">
             <span className="rounded-full bg-success-50 px-3 py-1 font-medium text-success-600 dark:bg-success-500/15">
-              {t('expected.best', { name: best.label.replace(' subtotal', ''), pct: fmt1(best.by_type[atype].activity_pct) })}
+              {t('expected.best', { name: best.label, pct: fmt1(kindOf(best, kind).activity_pct) })}
             </span>
             <span className="rounded-full bg-error-50 px-3 py-1 font-medium text-error-600 dark:bg-error-500/15">
-              {t('expected.worst', { name: worst.label.replace(' subtotal', ''), pct: fmt1(worst.by_type[atype].activity_pct) })}
+              {t('expected.worst', { name: worst.label, pct: fmt1(kindOf(worst, kind).activity_pct) })}
             </span>
           </div>
         )}
-        <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-5 [&>*]:min-w-0">
-          <div className="xl:col-span-3">
-            <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink"><ChartScatter className="size-4" />{t('expected.bubbleTitle')}</h4>
-            <BubblePlot
-              bubbles={groups.filter(g => g.by_type[atype].adoption_pct != null && g.by_type[atype].activity_pct != null).map(g => ({
-                key: g.key, label: g.label.replace(' subtotal', ''), x: g.by_type[atype].adoption_pct!, y: g.by_type[atype].activity_pct!, size: g.learners,
-              }))}
-              xLabel={t('activity.bubbleX')}
-              yLabel={t('activity.bubbleY')}
-              quadrant={{
-                topRight: t('activity.qTopRight'), topLeft: t('activity.qTopLeft'),
-                bottomRight: t('activity.qBottomRight'), bottomLeft: t('activity.qBottomLeft'),
-              }}
-              sizeLabel={n => t('activity.learnersN', { count: n })}
-            />
-          </div>
-          <div className="xl:col-span-2">
-            <DataTable>
-              <thead>
-                <tr>
-                  <Th className="text-left">{word}</Th>
-                  <Th title={t('expected.adopted')}>{t('table.fulfilment')}</Th>
-                  <Th title={t('expected.done')}>{t('table.intensity')}</Th>
+        <h4 className="mb-2 mt-6 flex items-center gap-2 text-sm font-semibold text-ink"><ChartScatter className="size-4" />{t('expected.bubbleTitle')}</h4>
+        <BubblePlot
+          bubbles={groups.filter(g => kindOf(g, kind).adoption_pct != null && kindOf(g, kind).activity_pct != null).map(g => ({
+            key: g.key, label: g.label, x: kindOf(g, kind).adoption_pct!, y: kindOf(g, kind).activity_pct!, size: g.learners,
+          }))}
+          xLabel={t('activity.bubbleX')}
+          yLabel={t('activity.bubbleY')}
+          quadrant={{
+            topRight: t('activity.qTopRight'), topLeft: t('activity.qTopLeft'),
+            bottomRight: t('activity.qBottomRight'), bottomLeft: t('activity.qBottomLeft'),
+          }}
+          sizeLabel={n => t('activity.learnersN', { count: n })}
+        />
+        <DataTable className="mt-5">
+          <thead>
+            <tr>
+              <Th className="text-left">{word}</Th>
+              <Th>{t('table.learners')}</Th>
+              <Th title={t('expected.adopted')}>{t('table.fulfilment')}</Th>
+              <Th title={t('expected.done')}>{t('table.intensity')}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...groups, total].map(g => {
+              const v = kindOf(g, kind);
+              return (
+                <tr key={g.key} className={g === total ? 'bg-surface-sunken/50 font-semibold' : undefined}>
+                  <td className="px-3 py-2 font-medium text-ink">
+                    {g.label}
+                    {g.key === best?.key && <span className="ml-1 text-success-600">▲</span>}
+                    {g.key === worst?.key && <span className="ml-1 text-error-600">▼</span>}
+                  </td>
+                  <td className="px-3 py-2 text-center tabular-nums text-ink-muted">{g.learners}</td>
+                  <RateCell value={v.adoption_pct} sub={`${v.adopted} / ${v.target}`} />
+                  <RateCell value={v.activity_pct} sub={`${v.actual.toLocaleString()} / ${v.expected.toLocaleString()}`} />
                 </tr>
-              </thead>
-              <tbody>
-                {groups.map(g => {
-                  const v = g.by_type[atype];
-                  return (
-                    <tr key={g.key}>
-                      <td className="px-3 py-2 font-medium text-ink">
-                        {g.label.replace(' subtotal', '')}
-                        {g.key === best?.key && <span className="ml-1 text-success-600">▲</span>}
-                        {g.key === worst?.key && <span className="ml-1 text-error-600">▼</span>}
-                      </td>
-                      <RateCell value={v.adoption_pct} sub={`${v.adopted} / ${v.target}`} />
-                      <RateCell value={v.activity_pct} sub={`${v.actual.toLocaleString()} / ${v.expected.toLocaleString()}`} />
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </DataTable>
-          </div>
-        </div>
+              );
+            })}
+          </tbody>
+        </DataTable>
+        <RateLegend className="mt-3" />
       </Section>
 
       <Section icon={<Layers3 />} title={t('expected.ownTitle')} subtitle={t('expected.ownSub')}>
-        <ChipRow label={t('split.label')} value={bandSplit} onChange={v => setBandSplit(v as Split)}
-          items={(['departments', 'blocks', 'roles'] as Split[]).map(k => ({ key: k, label: t(`expected.split.${k}`) }))} />
+        <ChipRow label={t('split.label')} value={bandSplit} onChange={v => setBandSplit(v as BandSplit)}
+          items={(['departments', 'blocks', 'roles'] as BandSplit[]).map(k => ({ key: k, label: t(`expected.split.${k}`) }))} />
         <div className="mt-5 space-y-4">
           {[...bandGroups, ...(bandSplit === 'departments' ? [] : [{ ...s, key: 'total', label: t('table.total') } as MasdGroup])].map(g => (
             <div key={g.key} className="grid grid-cols-1 gap-2 sm:grid-cols-[11rem_1fr] sm:items-center [&>*]:min-w-0">
@@ -355,6 +380,17 @@ const MasdExpected: React.FC<{ report: MasdReport }> = ({ report }) => {
                 <RateCell value={g.own_pct} />
               </tr>
             ))}
+            <tr className="bg-surface-sunken/50 font-semibold">
+              <td className="px-3 py-2 text-ink">{t('table.total')}</td>
+              <td className="px-3 py-2 text-center tabular-nums">{s.own_banded}</td>
+              {OWN_BANDS.map(b => (
+                <td key={b} className="px-3 py-2 text-center tabular-nums">
+                  {s.own_banded ? `${Math.round((100 * s.own_bands[b]) / s.own_banded)}%` : '—'}
+                  <span className="ml-1 text-xs font-normal text-ink-faint">({s.own_bands[b]})</span>
+                </td>
+              ))}
+              <RateCell value={s.own_pct} />
+            </tr>
           </tbody>
         </DataTable>
         <MasdFindings className="mt-5" findings={report.insights.own_cases} />

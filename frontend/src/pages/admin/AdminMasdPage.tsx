@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  BookOpen, CalendarRange, CalendarX2, ChartColumn, FileSpreadsheet, Gauge, HeartPulse, LayoutDashboard, Presentation,
+  BookOpen, CalendarRange, CalendarX2, ChartColumn, FileSpreadsheet, Gauge, HeartPulse, IdCard, LayoutDashboard, Presentation,
   Settings2, TriangleAlert, Users,
 } from 'lucide-react';
 import { downloadMasd, getMasdProjects, getMasdReport, type MasdProject, type MasdReport } from '../../api/masd';
@@ -18,9 +18,14 @@ import MasdOutcomes from '../../components/masd/MasdOutcomes';
 import MasdLearners from '../../components/masd/MasdLearners';
 import MasdRules from '../../components/masd/MasdRules';
 import MasdSettingsModal from '../../components/masd/MasdSettingsModal';
+import MasdDescriptives from '../../components/masd/MasdDescriptives';
+import MasdSplitBar from '../../components/masd/MasdSplitBar';
+import { DEFAULT_SPLIT, type MasdSplitState } from '../../lib/masdSplit';
 
-type View = 'overview' | 'expected' | 'activity' | 'progress' | 'outcomes' | 'flags' | 'learners' | 'rules';
-const VIEWS: View[] = ['overview', 'expected', 'activity', 'progress', 'outcomes', 'flags', 'learners', 'rules'];
+type View = 'overview' | 'descriptives' | 'expected' | 'activity' | 'progress' | 'outcomes' | 'flags' | 'learners' | 'rules';
+const VIEWS: View[] = ['overview', 'descriptives', 'expected', 'activity', 'progress', 'outcomes', 'flags', 'learners', 'rules'];
+/** The pages whose group charts and tables follow Split by / Filter by. */
+const SPLIT_VIEWS: View[] = ['descriptives', 'expected', 'activity', 'outcomes'];
 const VIEW_KEY = 'nh_masd_view';
 
 const readView = (): View => {
@@ -55,6 +60,7 @@ const AdminMasdPage: React.FC = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [downloading, setDownloading] = useState<'pptx' | 'xlsx' | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [split, setSplit] = useState<MasdSplitState>(DEFAULT_SPLIT);
 
   const setView = (v: View) => {
     setViewState(v);
@@ -101,6 +107,7 @@ const AdminMasdPage: React.FC = () => {
   const pickProject = (slug: string) => {
     setProject(slug);
     setCompare('');
+    setSplit(DEFAULT_SPLIT);
     if (slug && slug !== getProjectSlug()) setProjectSlug(slug);
   };
 
@@ -118,6 +125,7 @@ const AdminMasdPage: React.FC = () => {
 
   const navItems = useMemo(() => [
     { key: 'overview', label: t('views.overview'), icon: <LayoutDashboard /> },
+    { key: 'descriptives', label: t('views.descriptives'), icon: <IdCard /> },
     { key: 'expected', label: t('views.expected'), icon: <Gauge /> },
     { key: 'activity', label: t('views.activity'), icon: <ChartColumn /> },
     { key: 'progress', label: t('views.progress'), icon: <CalendarRange /> },
@@ -174,8 +182,9 @@ const AdminMasdPage: React.FC = () => {
         {cal && (
           <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-ink-muted">
             {namedBatches.length > 0 ? (
-              <span>{t('calendar.batches', { count: namedBatches.length })}: <b className="text-ink">
-                {fmtDate(namedBatches[0].end_date)} – {fmtDate(namedBatches[namedBatches.length - 1].end_date)}</b></span>
+              <span title={t('calendar.batchesTitle')}>{t('calendar.batchesEnded', { count: namedBatches.length })}: <b className="text-ink">
+                {fmtDate(namedBatches[0].end_date)} – {fmtDate(namedBatches[namedBatches.length - 1].end_date)}</b>
+                {' '}<span className="text-ink-faint">· {t('calendar.batchesClock')}</span></span>
             ) : (
               <span>{t('calendar.training')}: <b className="text-ink">{fmtDate(cal.training_date)}</b></span>
             )}
@@ -209,13 +218,19 @@ const AdminMasdPage: React.FC = () => {
               controls (review of 3 Oct 2026). */}
           <div className="rounded-2xl bg-background py-1 sm:sticky sm:top-[3.75rem] sm:z-20 lg:top-2">
             <SubNav items={navItems} value={view} onChange={v => setView(v as View)} label={t('views.label')} />
+            {SPLIT_VIEWS.includes(view) && (
+              <div className="mt-2">
+                <MasdSplitBar learners={report.learners.filter(l => view === 'descriptives' || l.f2f)} state={split} onChange={setSplit} />
+              </div>
+            )}
           </div>
           {view === 'overview' && <MasdOverview report={report} onOpenLearners={() => setView('learners')} onOpenFlags={() => setView('flags')} />}
-          {view === 'expected' && <MasdExpected report={report} />}
-          {view === 'activity' && <MasdActivity report={report} />}
+          {view === 'descriptives' && <MasdDescriptives report={report} split={split} />}
+          {view === 'expected' && <MasdExpected report={report} split={split} />}
+          {view === 'activity' && <MasdActivity report={report} split={split} />}
           {view === 'progress' && <MasdProgress report={report} />}
-          {view === 'outcomes' && <MasdOutcomes report={report} />}
-          {view === 'flags' && <MasdFlags report={report} />}
+          {view === 'outcomes' && <MasdOutcomes report={report} split={split} />}
+          {view === 'flags' && <MasdFlags report={report} project={project} asOf={asOf || undefined} />}
           {view === 'learners' && <MasdLearners report={report} onChanged={reload} />}
           {view === 'rules' && <MasdRules report={report} onChanged={reload} />}
         </>

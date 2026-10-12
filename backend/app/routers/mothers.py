@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.database import get_db
-from app import models, schemas
+from app import entry_checks, models, schemas
 from app.dependencies import get_current_user, require_phi_access
 from app.security import consent, phi
 from app.security.crypto import phone_index
@@ -228,6 +228,8 @@ def update_mother(
     db: Session = Depends(get_db),
 ):
     mother = _get_owned(mother_id, current_user, db)
+    if data.adoption_date != mother.adoption_date:
+        entry_checks.mother_adoption(db, mother, data.adoption_date)
     changed = _changed_fields(mother, data)
     _apply(mother, data)
     mother.sync_lookups()
@@ -300,6 +302,7 @@ def create_child(
                 raise HTTPException(status_code=409, detail="client_ref already used")
             return existing
 
+    entry_checks.child_adoption(mother, data.adoption_date)
     child = models.Child(
         child_uid=f"CR-{uuid.uuid4().hex[:10].upper()}",
         mother_id=mother.id,
@@ -392,6 +395,8 @@ def update_child(
 ):
     mother = _get_owned(mother_id, current_user, db)
     child = _get_owned_child(mother, child_id, db)
+    if data.adoption_date != child.adoption_date:
+        entry_checks.child_adoption(mother, data.adoption_date)
     changed = [
         key for key, value in data.model_dump(exclude={"birth_conditions"}).items()
         if getattr(child, key, None) != value

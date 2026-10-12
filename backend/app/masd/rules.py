@@ -412,6 +412,18 @@ FLAG_REASONS = {
     "anc_behind": "Two or more fortnightly antenatal checks missed",
     "no_lmp": "LMP not recorded, so the due date cannot be tracked",
 }
+# Babies being followed up (review of 7 Oct 2026).
+FLAG_PNC_MISSED = 2                 # two or more growth checks behind the LAP schedule
+FLAG_PNC_SILENT_DAYS = 45           # … or no growth check for this long
+PNC_FLAG_REASONS = {
+    "visits_missed": "Two or more growth checks behind the LAP schedule",
+    "no_recent_visit": "No growth check in the last 45 days",
+}
+
+# The cumulative chart's expected adoptions: once a tranche's buffer is over,
+# a learner is expected to adopt one case every this many days until the
+# tranche is taken (an assumption, shown on the chart — review of 6 Oct 2026).
+ADOPTION_PACE_DAYS = 2
 
 
 # ── Cadres (role groups) and departments ───────────────────────────────────
