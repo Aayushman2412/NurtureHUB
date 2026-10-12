@@ -200,18 +200,29 @@ export const StackedBar: React.FC<{
   parts: Slice[];
   height?: string;
   showLegend?: boolean;
-}> = ({ parts, height = 'h-7', showLegend = true }) => {
+  /** A thin line between the colours, and each share written inside its
+   *  segment when it is wide enough to read (review of 12 Oct 2026). */
+  divided?: boolean;
+}> = ({ parts, height = 'h-7', showLegend = true, divided = false }) => {
   const total = parts.reduce((a, p) => a + p.value, 0);
+  const shown = parts.filter(p => p.value > 0);
   return (
     <div>
       <div className={cn('flex w-full overflow-hidden rounded-full bg-surface-sunken', height)}>
-        {total > 0 && parts.filter(p => p.value > 0).map(p => (
-          <div
-            key={p.key}
-            style={{ width: `${(p.value / total) * 100}%`, background: p.color, transition: 'width 500ms ease' }}
-            title={`${p.label}: ${p.value} (${fmtPct((p.value / total) * 100)})`}
-          />
-        ))}
+        {total > 0 && shown.map((p, i) => {
+          const share = (p.value / total) * 100;
+          return (
+            <div
+              key={p.key}
+              className={cn(divided && 'flex items-center justify-center overflow-hidden text-[11px] font-bold text-white',
+                divided && i < shown.length - 1 && 'border-r-2 border-surface')}
+              style={{ width: `${share}%`, background: p.color, transition: 'width 500ms ease' }}
+              title={`${p.label}: ${p.value} (${fmtPct(share)})`}
+            >
+              {divided && share >= 12 ? fmtPct(share) : null}
+            </div>
+          );
+        })}
       </div>
       {showLegend && <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5">
         {parts.map(p => (

@@ -211,3 +211,73 @@ export function outcomeSplit(rows: MasdLearner[], outcomes: MasdOutcomes, dim: M
 /** The learners an outcome table speaks for: F2F learners who are not Staff
  *  Nurses (as the server's outcome funnel). */
 export const outcomeLearners = (report: MasdReport) => report.learners.filter(l => l.f2f && !l.is_nurse);
+
+/** Whether any group of any dimension is ticked. */
+export const filtersActive = (filters: MasdFilters) => Object.values(filters).some(v => (v?.length ?? 0) > 0);
+
+/** The learner IDs the filters keep, or null when nothing is filtered. */
+export const filteredIds = (rows: MasdLearner[], filters: MasdFilters): number[] | null =>
+  (filtersActive(filters) ? applyFilters(rows, filters).map(l => l.id) : null);
+
+// ── Uptake, recounted for any group of learners (review of 12 Oct 2026) ─────
+
+export type UptakeBucketKey = 'before' | 'd7' | 'd15' | 'd30' | 'later' | 'not_yet';
+export const UPTAKE_KEYS: UptakeBucketKey[] = ['before', 'd7', 'd15', 'd30', 'later', 'not_yet'];
+
+export const uptakeBucket = (days: number | null | undefined): UptakeBucketKey =>
+  days == null ? 'not_yet' : days <= 0 ? 'before' : days <= 7 ? 'd7' : days <= 15 ? 'd15' : days <= 30 ? 'd30' : 'later';
+
+export interface UptakeCount {
+  learners: number;
+  started: number;
+  completed: number;
+  start: { median: number | null; q1: number | null; q3: number | null };
+  complete: { median: number | null; q1: number | null; q3: number | null };
+  nth: { n: number; learners: number; done: number; by: Record<UptakeBucketKey, number>;
+    types: Record<AdoptionType, number>; median: number | null; q1: number | null; q3: number | null }[];
+}
+
+/** The engine's `_uptake` summary, for the learners given. */
+export function uptakeFor(rows: MasdLearner[], step: number): UptakeCount {
+  const recs = rows.map(l => l.uptake?.find(u => u.step === step)).filter((u): u is NonNullable<typeof u> => !!u);
+  const started = recs.map(u => u.nth?.[0] ?? u.started_days).filter((d): d is number => d != null);
+  const completed = recs.map(u => u.completed_days).filter((d): d is number => d != null);
+  const maxN = Math.max(0, ...recs.map(u => u.asked ?? u.nth?.length ?? 0));
+  const nth = [];
+  for (let n = 1; n <= maxN; n++) {
+    const pool = recs.filter(u => (u.nth?.length ?? 0) >= n);
+    const days = pool.map(u => u.nth![n - 1]).filter((d): d is number => d != null);
+    const by = Object.fromEntries(UPTAKE_KEYS.map(k => [k, 0])) as Record<UptakeBucketKey, number>;
+    for (const u of pool) by[uptakeBucket(u.nth![n - 1])] += 1;
+    const types = Object.fromEntries(ADOPTION_TYPES.map(t => [t, 0])) as Record<AdoptionType, number>;
+    for (const u of pool) {
+      const t = u.types?.[n - 1];
+      if (t) types[t] += 1;
+    }
+    nth.push({ n, learners: pool.length, done: days.length, by, types, ...quartiles(days.map(d => Math.max(0, d))) });
+  }
+  return {
+    learners: recs.length,
+    started: started.length,
+    completed: completed.length,
+    start: quartiles(started.map(d => Math.max(0, d))),
+    complete: quartiles(completed.map(d => Math.max(0, d))),
+    nth,
+  };
+}
+
+/** The three levels of expected activity for any group of learners. */
+export function levelsFor(rows: MasdLearner[]) {
+  const sum = (f: (l: MasdLearner) => number) => rows.reduce((a, l) => a + f(l), 0);
+  const adoptions = sum(l => l.adoptions.total), target = sum(l => l.target);
+  const acts = sum(l => l.activities.total), ideal = sum(l => l.ideal.total);
+  const und = sum(l => l.undertaken?.expected.total ?? 0), undAct = sum(l => l.undertaken?.actual ?? 0);
+  const own = sum(l => l.own.expected.total), ownAct = sum(l => l.own.actual.total);
+  return {
+    adoptions, target, fulfilment: pct(adoptions, target),
+    activities: acts, ideal, level1: pct(acts, ideal),
+    undertakenExpected: und, undertakenActual: undAct, level2: pct(undAct, und),
+    ownExpected: own, ownActual: ownAct, level3: pct(ownAct, own),
+    nil: quartiles(rows.map(l => l.nil_days).filter((d): d is number => d != null)),
+  };
+}

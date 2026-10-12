@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   BookOpen, CalendarRange, CalendarX2, ChartColumn, FileSpreadsheet, Gauge, HeartPulse, IdCard, LayoutDashboard, Presentation,
-  Settings2, TriangleAlert, Users,
+  Settings2, Sparkles, TriangleAlert, Users,
 } from 'lucide-react';
 import { downloadMasd, getMasdProjects, getMasdReport, type MasdProject, type MasdReport } from '../../api/masd';
 import { useToast } from '../../context/ToastContext';
@@ -19,21 +19,22 @@ import MasdLearners from '../../components/masd/MasdLearners';
 import MasdRules from '../../components/masd/MasdRules';
 import MasdSettingsModal from '../../components/masd/MasdSettingsModal';
 import MasdDescriptives from '../../components/masd/MasdDescriptives';
+import MasdGlance from '../../components/masd/MasdGlance';
 import MasdSplitBar from '../../components/masd/MasdSplitBar';
 import { DEFAULT_SPLIT, type MasdSplitState } from '../../lib/masdSplit';
 
-type View = 'overview' | 'descriptives' | 'expected' | 'activity' | 'progress' | 'outcomes' | 'flags' | 'learners' | 'rules';
-const VIEWS: View[] = ['overview', 'descriptives', 'expected', 'activity', 'progress', 'outcomes', 'flags', 'learners', 'rules'];
+type View = 'glance' | 'overview' | 'descriptives' | 'expected' | 'activity' | 'progress' | 'outcomes' | 'flags' | 'learners' | 'rules';
+const VIEWS: View[] = ['glance', 'overview', 'descriptives', 'expected', 'activity', 'progress', 'outcomes', 'flags', 'learners', 'rules'];
 /** The pages whose group charts and tables follow Split by / Filter by. */
-const SPLIT_VIEWS: View[] = ['descriptives', 'expected', 'activity', 'outcomes'];
+const SPLIT_VIEWS: View[] = ['overview', 'descriptives', 'expected', 'activity', 'outcomes'];
 const VIEW_KEY = 'nh_masd_view';
 
 const readView = (): View => {
   try {
     const v = localStorage.getItem(VIEW_KEY) as View | null;
-    return v && VIEWS.includes(v) ? v : 'overview';
+    return v && VIEWS.includes(v) ? v : 'glance';
   } catch {
-    return 'overview';
+    return 'glance';
   }
 };
 
@@ -124,6 +125,7 @@ const AdminMasdPage: React.FC = () => {
   };
 
   const navItems = useMemo(() => [
+    { key: 'glance', label: t('views.glance'), icon: <Sparkles /> },
     { key: 'overview', label: t('views.overview'), icon: <LayoutDashboard /> },
     { key: 'descriptives', label: t('views.descriptives'), icon: <IdCard /> },
     { key: 'expected', label: t('views.expected'), icon: <Gauge /> },
@@ -224,7 +226,8 @@ const AdminMasdPage: React.FC = () => {
               </div>
             )}
           </div>
-          {view === 'overview' && <MasdOverview report={report} onOpenLearners={() => setView('learners')} onOpenFlags={() => setView('flags')} />}
+          {view === 'overview' && <MasdOverview report={report} split={split} asOf={asOf || undefined} onOpenLearners={() => setView('learners')} onOpenFlags={() => setView('flags')} />}
+          {view === 'glance' && <MasdGlance report={report} onMore={() => setView('overview')} />}
           {view === 'descriptives' && <MasdDescriptives report={report} split={split} />}
           {view === 'expected' && <MasdExpected report={report} split={split} />}
           {view === 'activity' && <MasdActivity report={report} split={split} />}

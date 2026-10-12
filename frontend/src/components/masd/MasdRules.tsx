@@ -120,7 +120,7 @@ const MasdRules: React.FC<{ report: MasdReport; onChanged: () => void }> = ({ re
             </tbody>
           </DataTable>
           <p className="mt-2 text-xs text-ink-muted">{t('rules.lapNote', {
-            gm: e.nurse_flat?.gm ?? 6, bf: e.nurse_flat?.bf ?? 5, pace: e.adoption_pace_days ?? 2,
+            gm: e.nurse_flat?.gm ?? 6, bf: e.nurse_flat?.bf ?? 5,
           })}</p>
         </Section>
       )}

@@ -45,7 +45,8 @@ export const GroupedColumns: React.FC<{
         ))}
         {lines.map(r => (
           <span key={`${r.label}${r.value}`} className="inline-flex items-center gap-1.5">
-            <span className="inline-block w-4 border-t-2 border-dashed" style={{ borderColor: r.color ?? 'rgb(0 0 0 / 0.55)' }} aria-hidden />
+            <span className={cn('inline-block w-4 border-t-2', r.color ? 'border-dashed' : 'border-solid')}
+              style={{ borderColor: r.color ?? 'rgb(0 0 0 / 0.7)' }} aria-hidden />
             {r.label}{r.color ? ` (${r.value.toFixed(1)}${valueSuffix})` : ''}
           </span>
         ))}
@@ -62,7 +63,8 @@ export const GroupedColumns: React.FC<{
           )}
           <div className="relative flex items-end gap-2 border-b border-border-strong sm:gap-3" style={{ height }}>
             {lines.map(r => (
-              <span key={`${r.label}${r.value}`} className="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-dashed"
+              <span key={`${r.label}${r.value}`} className={cn('pointer-events-none absolute inset-x-0 z-10 border-t-2',
+                r.color ? 'border-dashed' : 'border-solid')}
                 style={{ bottom: `${(r.value / max) * 100}%`, borderColor: r.color ?? 'rgb(0 0 0 / 0.5)' }} />
             ))}
             {categories.map((c, ci) => (
@@ -319,7 +321,16 @@ export const GroupTh: React.FC<{ span: number; children: React.ReactNode; classN
 
 // ── Cumulative expected vs actual (review of 6 Oct 2026) ─────────────────────
 
-export interface CumLine { key: string; label: string; color: string; dashed?: boolean; values: number[] }
+export interface CumLine {
+  key: string; label: string; color: string; values: number[];
+  dashed?: boolean;
+  /** Dotted rather than dashed, for a third line. */
+  dotted?: boolean;
+  /** Drawn as steps (flat, then straight up): a target that changes on set days. */
+  step?: boolean;
+}
+
+const dashOf = (l: CumLine, legend = false) => (l.dotted ? (legend ? '2 3' : '2 4') : l.dashed ? (legend ? '5 3' : '7 4') : undefined);
 
 /** Lines that only rise: where the project should be by each date (dashed)
  *  and where it is (solid), points labelled with their numbers. */
@@ -349,7 +360,7 @@ export const CumulativeChart: React.FC<{ labels: string[]; lines: CumLine[]; hei
         {lines.map(l => (
           <span key={l.key} className="inline-flex items-center gap-1.5">
             <svg width="18" height="6" aria-hidden>
-              <line x1="0" y1="3" x2="18" y2="3" stroke={l.color} strokeWidth="2.5" strokeDasharray={l.dashed ? '5 3' : undefined} />
+              <line x1="0" y1="3" x2="18" y2="3" stroke={l.color} strokeWidth="2.5" strokeDasharray={dashOf(l, true)} />
             </svg>
             {l.label}
           </span>
@@ -367,8 +378,10 @@ export const CumulativeChart: React.FC<{ labels: string[]; lines: CumLine[]; hei
           <text key={`x${i}`} x={px(i)} y={H - B + 16} textAnchor="middle" className="fill-ink-faint text-[13px]">{lab}</text>
         ) : null))}
         {lines.map(l => (
-          <path key={l.key} fill="none" stroke={l.color} strokeWidth={2.5} strokeDasharray={l.dashed ? '7 4' : undefined}
-            strokeLinejoin="round" d={l.values.map((v, i) => `${i ? 'L' : 'M'}${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(' ')} />
+          <path key={l.key} fill="none" stroke={l.color} strokeWidth={2.5} strokeDasharray={dashOf(l)}
+            strokeLinejoin="round" d={l.values.map((v, i) => (i === 0 ? `M${px(0).toFixed(1)},${py(v).toFixed(1)}`
+              : l.step ? `H${px(i).toFixed(1)}V${py(v).toFixed(1)}`
+                : `L${px(i).toFixed(1)},${py(v).toFixed(1)}`)).join(' ')} />
         ))}
         {lines.map(l => l.values.map((v, i) => (valueMarks.has(i) ? (
           <g key={`${l.key}${i}`}>

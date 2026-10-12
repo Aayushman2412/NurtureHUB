@@ -1,48 +1,38 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Hourglass, Lightbulb, PhoneCall, Users } from 'lucide-react';
 import type { MasdReport } from '../../api/masd';
 import { BigNumber, Kpi, KpiRow, Section } from '../results/InsightParts';
-import { Ring, StackedBar } from '../results/InsightCharts';
+import { StackedBar } from '../results/InsightCharts';
 import MasdFindings from './MasdFindings';
 import MasdBaseline from './MasdBaseline';
 import { DataTable, Th } from './MasdCharts';
 import MasdCumulative from './MasdCumulative';
-import { fmt1, MASD_COLORS, rateTone } from '../../lib/masdDisplay';
+import MasdLevelKpis from './MasdLevelKpis';
+import { fmt1, MASD_COLORS } from '../../lib/masdDisplay';
+import { applyFilters, quartiles, type MasdSplitState } from '../../lib/masdSplit';
 
-const MasdOverview: React.FC<{ report: MasdReport; onOpenLearners: () => void; onOpenFlags: () => void }> = ({
-  report, onOpenLearners, onOpenFlags,
-}) => {
+const MasdOverview: React.FC<{
+  report: MasdReport; split: MasdSplitState; asOf?: string; onOpenLearners: () => void; onOpenFlags: () => void;
+}> = ({ report, split, asOf, onOpenLearners, onOpenFlags }) => {
   const { t } = useTranslation('masd');
   const s = report.summary;
   const ex = report.outcomes.exclusions;
   const flags = report.flags.summary;
-  const nilMedian = s.nil_days_median ?? null;
+  const nil = useMemo(() => quartiles(applyFilters(report.learners.filter(l => l.f2f), split.filters)
+    .map(l => l.nil_days).filter((d): d is number => d != null)), [report.learners, split.filters]);
+  const nilMedian = nil.median;
 
   return (
     <div className="space-y-5">
       <MasdBaseline report={report} />
       <KpiRow count={6}>
-        <Kpi
-          visual={<Ring value={Math.min(s.fulfilment_pct ?? 0, 100)} color={rateTone(s.fulfilment_pct ?? 0)}>{fmt1(s.fulfilment_pct)}</Ring>}
-          label={t('kpi.fulfilment')}
-          value={t('kpi.fulfilmentSub', { n: s.adoptions.toLocaleString(), target: s.target.toLocaleString() })}
-        />
-        <Kpi
-          visual={<Ring value={Math.min(s.intensity_pct ?? 0, 100)} color={rateTone(s.intensity_pct ?? 0)}>{fmt1(s.intensity_pct)}</Ring>}
-          label={t('kpi.intensity')}
-          value={t('kpi.intensitySub', { n: s.activities.toLocaleString(), ideal: Math.round(s.ideal).toLocaleString() })}
-        />
-        <Kpi
-          visual={<Ring value={Math.min(s.undertaken_pct ?? 0, 100)} color={rateTone(s.undertaken_pct ?? 0)}>{fmt1(s.undertaken_pct)}</Ring>}
-          label={t('kpi.undertaken')}
-          value={t('kpi.undertakenSub', { n: (s.undertaken_actual ?? 0).toLocaleString(), expected: (s.undertaken_expected ?? 0).toLocaleString() })}
-        />
+        <MasdLevelKpis report={report} split={split} />
         <Kpi
           visual={<BigNumber value={nilMedian == null ? '—' : String(nilMedian)}
             tone={(nilMedian ?? 0) >= 14 ? 'bad' : 'neutral'} />}
           label={t('kpi.nilMedian')}
-          value={nilMedian == null ? t('kpi.nilDaysSub') : t('kpi.nilMedianSub', { q1: s.nil_days_q1, q3: s.nil_days_q3 })}
+          value={nilMedian == null ? t('kpi.nilDaysSub') : t('kpi.nilMedianSub', { q1: nil.q1, q3: nil.q3 })}
         />
         <button type="button" onClick={onOpenFlags} className="cursor-pointer rounded-xl text-left transition hover:ring-2 hover:ring-coral-300">
           <Kpi
@@ -92,7 +82,7 @@ const MasdOverview: React.FC<{ report: MasdReport; onOpenLearners: () => void; o
         </Section>
       </div>
 
-      <MasdCumulative report={report} />
+      <MasdCumulative report={report} split={split} asOf={asOf} />
 
       <Section
         icon={<PhoneCall />}

@@ -371,8 +371,9 @@ def test_uptake_of_each_tranche(report):
     assert t1["started_by"]["d7"] == 1 and t1["started_by"]["d15"] == 1 and t1["started_by"]["not_yet"] == 1
     assert (t1["median_days_to_start"], t1["median_days_to_complete"]) == (6.5, 49.0)
     assert (t2["started"], t2["completed"], t2["started_by"]["before"]) == (1, 0, 1)
-    assert _learner(report, 1)["uptake"] == [{"step": 1, "started_days": 9, "completed_days": 49},
-                                             {"step": 2, "started_days": -31, "completed_days": None}]
+    assert [{k: u[k] for k in ("step", "started_days", "completed_days")} for u in _learner(report, 1)["uptake"]] ==         [{"step": 1, "started_days": 9, "completed_days": 49}, {"step": 2, "started_days": -31, "completed_days": None}]
+    first = _learner(report, 1)["uptake"][0]
+    assert (first["nth"], first["types"], first["asked"]) == ([9, 14, 49], ["pnc_lt5", "anc", "pnc_ge5"], 3)
     assert report["summary"]["tranche_mix"]["t2_pnc_ge5"] == 1, "adopted 20 Jul, after tranche 2 opened"
     texts = [f["text"] for f in I.uptake(report)]
     assert any(t.startswith("Tranche 1 (opened 01 Jun 2026") for t in texts)

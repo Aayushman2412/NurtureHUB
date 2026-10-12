@@ -43,7 +43,8 @@
     "rules": "Rules & definitions",
     "expected": "Expected activity",
     "flags": "Follow-up flags",
-    "descriptives": "Who the learners are"
+    "descriptives": "Who the learners are",
+    "glance": "At a glance"
   },
   "kpi": {
     "fulfilment": "Adoption target met",
@@ -66,7 +67,11 @@
     "nilMedianSub": "days since the last activity · middle half of learners: {{q1}}–{{q3}} days",
     "level1": "Level 1 · Ideal expected activity done ({{rol}} per learner, {{sn}} per Staff Nurse)",
     "level2": "Level 2 · Activity among the adopted cases",
-    "level3": "Level 3 · Each case by its own dates (preview)"
+    "level3": "Level 3 · Each case by its own dates (preview)",
+    "level1b": "% of ideal expected activity fulfilled",
+    "level1Sub": "{{n}} of {{ideal}} forms due if every adoption asked had been made",
+    "level2b": "% of expected activity fulfilled for the adoptions actually made",
+    "level3b": "% of expected activity fulfilled, each case by its own dates"
   },
   "overview": {
     "findingsTitle": "What the numbers say",
@@ -472,7 +477,7 @@
     "lapDays": "Due on day",
     "lapCount": "In all",
     "dayN": "day {{n}}",
-    "lapNote": "Days count from the adoption. A Staff Nurse's facility adoption expects {{gm}} growth checks and {{bf}} breastfeeding assessments. The cumulative chart expects one adoption per learner every {{pace}} days after the buffer."
+    "lapNote": "Days count from the adoption. A Staff Nurse's facility adoption expects {{gm}} growth checks and {{bf}} breastfeeding assessments. The cumulative chart counts these day by day: a tranche's adoptions are all expected the day its buffer ends, and their forms then fall due on these days."
   },
   "settings": {
     "title": "Programme settings",
@@ -588,7 +593,7 @@
     "tranche": "Tranche {{n}}",
     "opened": "Opened",
     "asked": "Asked for",
-    "askedNurse": "Staff Nurse +{{n}}",
+    "askedNurse": "Staff Nurse +{{n}} (PNC <{{pncM}}M)",
     "buffer": "Buffer",
     "allTranches": "All tranches",
     "byBatch": "By training batch",
@@ -641,8 +646,26 @@
       "anc": "ANC",
       "pnc_lt5": "PNC <{{pncM}}M",
       "pnc_ge5": "PNC ≥{{pncM}}M",
-      "sn": "Staff Nurse PNC <{{pncM}}M"
-    }
+      "sn": "Staff Nurse PNC <{{pncM}}M",
+      "all": "All types"
+    },
+    "uptakeSub2": "For each tranche: how long it ran before the next one opened, the learners who made at least one of its adoptions and those who made all it asked, and the days from its opening to each — median, with the middle half of learners in brackets",
+    "ranFor": "Ran for",
+    "ranForTitle": "From the day the tranche opened to the day the next one opened; the last one to the report date",
+    "toNext": "to the next tranche",
+    "toDate": "so far",
+    "started2": "Made at least one adoption",
+    "startedTitle": "Learners who made at least one of the adoptions this tranche asked",
+    "completed2": "Made all the adoptions asked",
+    "completedTitle": "Learners who made every adoption this tranche asked (3 for most learners; a Staff Nurse's own number)",
+    "nthSub2": "When each learner made their 1st, 2nd, 3rd … adoption of the tranche, counted from the day it opened — and what kind of case it was",
+    "askedT": {
+      "anc": "+{{n}} ANC",
+      "pnc_lt5": "+{{n}} PNC (<{{pncM}}M)",
+      "pnc_ge5": "+{{n}} PNC (≥{{pncM}}M)"
+    },
+    "best2": "Most of its expected activity done: {{name}} ({{pct}})",
+    "worst2": "Least of its expected activity done: {{name}} ({{pct}})"
   },
   "bandsOwn": {
     "none": "No activity",
@@ -808,13 +831,39 @@
       "day": "Day",
       "week": "Week",
       "month": "Month",
-      "quarter": "Quarter"
+      "quarter": "Quarter",
+      "tranche": "Tranche"
     },
     "adoptions": "Adoptions",
     "activities": "Activities",
     "expected": "Expected",
     "actual": "Actual",
-    "note": "Expected adoptions start when each batch's buffer ends (counted from its last day of training) and add one adoption per learner every {{n}} days until the tranche is taken. Expected activities follow the LAP table for the tranches open on each day, so the last point equals the expected activity figure above. F2F learners."
+    "note": "Expected adoptions start when each batch's buffer ends (counted from its last day of training) and add one adoption per learner every {{n}} days until the tranche is taken. Expected activities follow the LAP table for the tranches open on each day, so the last point equals the expected activity figure above. F2F learners.",
+    "sub2": "Where the project should be by each date (dashed: everything asked; dotted: what the cases actually adopted were due) and where it is (solid)",
+    "kind": "Adoptions:",
+    "kinds": {
+      "all": "All",
+      "anc": "ANC",
+      "pnc_lt5": "PNC <{{pncM}}M",
+      "pnc_ge5": "PNC ≥{{pncM}}M",
+      "sn": "Staff Nurse"
+    },
+    "perBar_one": "{{count}} day per bar",
+    "perBar_other": "{{count}} days per bar",
+    "perBarLabel": "Days per bar",
+    "slipping": "Activity has slipped for {{n}} days in a row — the share of expected forms done fell from {{from}} to {{to}}. Time to call the learners and monitors.",
+    "expectedAdoptions": "Expected (all asked, due when the buffer ends)",
+    "expectedIdeal": "Expected (if all asked had been adopted)",
+    "expectedCases": "Expected for the cases actually adopted",
+    "pctTitle": "% fulfilled over time",
+    "pctSub": "The same, as the share of what was expected by each date — move the slider to see each day, or a few days, a week or a month per bar",
+    "pctAdoption": "% of adoptions asked",
+    "pctIdeal": "% of ideal activity",
+    "pctCases": "% of activity due on the cases adopted",
+    "earlyTitle": "How each tranche began: the first {{n}} days",
+    "earlySub": "Forms due in the first days after each tranche's buffer ended, against forms done — the earliest point to step in",
+    "earlyValue": "{{done}} of {{due}} forms ({{pct}})",
+    "note2": "A tranche's adoptions are all expected the day its buffer ends (from each batch's last day of training), so the expected line rises straight up there. Its forms then fall due day by day on the LAP schedule. The dotted line counts every case adopted from its own dates (level 3). F2F learners; the filters above apply."
   },
   "descriptives": {
     "registered": "Registered",
@@ -870,5 +919,115 @@
     "noTrainers": "No trainers entered",
     "howToEdit": "Trainers and training dates are set per batch in Programme settings; monitors in the table below.",
     "endedOn": "ended {{date}}"
+  },
+  "scope": {
+    "split": "Split by {{dim}}",
+    "filter": "Filter on — {{what}}",
+    "groups": "{{n}} groups"
+  },
+  "levels": {
+    "tipTarget": "Adoptions made ÷ adoptions asked by the targets in force today. Above 100% means more mothers were adopted than asked.",
+    "tip1": "Level 1 — the ideal. If every learner had adopted exactly what each tranche asked, on the day its buffer ended, how many forms should they have filled by today? That comes to {{rol}} per learner and {{sn}} per Staff Nurse. Forms done ÷ that.",
+    "tip2": "Level 2 — the adoptions actually made. Whatever was asked, take the mothers each learner really adopted and ask how many forms those should have produced, counting each from its tranche's start (after the buffer) in 15-day steps. Forms done ÷ that.",
+    "tip3": "Level 3 — each case by its own dates. Every mother is counted from her own adoption day, and her baby from birth: a pregnant mother adopted late needs fewer antenatal visits; a baby born later starts its own visits. Forms done ÷ that.",
+    "title": "Three levels of expected activity, side by side",
+    "sub": "What each level asks, which adoptions it counts and from which day — and one learner worked through all three",
+    "name1": "Level 1 · Ideal",
+    "name2": "Level 2 · Adoptions made",
+    "name3": "Level 3 · Each case",
+    "row": {
+      "question": "The question",
+      "which": "Adoptions counted",
+      "from": "Counted from",
+      "days": "Days of follow-up",
+      "project": "This project today"
+    },
+    "l1": {
+      "question": "Did learners do what the targets ask?",
+      "which": "The adoptions asked by the targets (e.g. 1 ANC + 1 PNC <5M + 1 PNC ≥5M per tranche) — made or not",
+      "from": "The day each tranche's buffer ended",
+      "days": "Rounded down to 15-day steps of the LAP table"
+    },
+    "l2": {
+      "question": "For the mothers they actually took, did they do the visits?",
+      "which": "Only the adoptions each learner actually made — fewer or more than asked",
+      "from": "The day the tranche each adoption fills had its buffer end",
+      "days": "Rounded down to 15-day steps of the LAP table"
+    },
+    "l3": {
+      "question": "Case by case, were the visits each mother and baby needed done?",
+      "which": "Only the adoptions actually made",
+      "from": "Each mother's own adoption day, and her baby's birth",
+      "days": "The exact days, no buffer, no rounding"
+    },
+    "ofExpected": "of {{n}} forms expected",
+    "exampleTitle": "One learner, worked through",
+    "exampleAsked": "Asked: {{n}} adoptions over {{tranches}} tranches ({{types}}). She actually adopted:",
+    "exampleCase": "Case {{n}} — {{type}} in tranche {{tranche}}, adopted {{date}}",
+    "babyAge": "(baby {{n}} days old)",
+    "pregnant": "(about 7 months pregnant)",
+    "exampleCounts": "Level 2 counts {{l2}} forms (the tranche's {{fu}} days) · Level 3 counts {{l3}} forms ({{own}} days since this mother's adoption)",
+    "pictureTitle": "Forms due by today, for this learner",
+    "formsDue": "{{n}} forms",
+    "pictureNote1": "Everything asked, as if it had all been adopted on day one.",
+    "pictureNote2": "Only the three mothers she took, read from their tranches.",
+    "pictureNote3": "The same three, each from her own dates — a pregnancy needs antenatal checks until the baby comes, then the baby's visits begin."
+  },
+  "glance": {
+    "title": "{{name}} at a glance",
+    "intro": "Health workers (\"learners\") are trained face to face, then each one \"adopts\" a few pregnant mothers and mothers of young babies and visits them on a fixed schedule, filling in a form at each visit. This page shows, in plain numbers, whether the mothers are being adopted, whether the visits are happening, and whether the babies are growing better.",
+    "trainedTitle": "Learners trained face to face",
+    "trainedText": "{{n}} of the {{total}} learners registered in the project were trained face to face. Everything on this page is about them.",
+    "adoptTitle": "Mothers adopted, against the target",
+    "adoptText": "The learners were asked to adopt {{target}} mothers by now and have adopted {{n}}. Above 100% means more than asked.",
+    "visitsTitle": "Visits done, against the ideal",
+    "visitsText": "If every learner had adopted exactly what was asked, they should have filled {{ideal}} forms by today. They have filled {{n}}.",
+    "ownTitle": "Visits done for the mothers actually adopted",
+    "ownText": "Counting only the mothers the learners really took, {{expected}} forms were due by today; {{n}} were filled.",
+    "days": "{{n}} days",
+    "quietTitle": "Since a learner's last visit (middle learner)",
+    "quietText": "Line the learners up by the days since their last form: the one in the middle has gone this long. Half of them are between {{q1}} and {{q3}} days.",
+    "growthTitle": "Underweight babies: at adoption → at the last visit",
+    "growthText": "Of {{n}} mother–baby pairs with complete records, {{av}} of the babies were underweight when adopted and {{lv}} at their last visit.",
+    "chartTitle": "Adoptions asked and made, week by week",
+    "chartSub": "The dashed line is what was asked by each date; the solid line is what the learners actually did",
+    "asked": "Asked",
+    "made": "Made",
+    "wordsTitle": "The words the other pages use",
+    "words": {
+      "learner": {
+        "term": "Learner",
+        "meaning": "A health worker (Anganwadi worker, ASHA, ANM, Staff Nurse …) trained by NurtureHUB."
+      },
+      "adoption": {
+        "term": "Adoption",
+        "meaning": "A learner taking a mother (and her baby) under their care and visiting her on schedule."
+      },
+      "types": {
+        "term": "ANC / PNC <5M / PNC ≥5M",
+        "meaning": "A mother adopted while pregnant · after birth with a baby under 5 months · with a baby 5 months or older."
+      },
+      "tranche": {
+        "term": "Tranche and buffer",
+        "meaning": "A round of adoptions asked of each learner. Each round starts after a few days' grace (the buffer)."
+      },
+      "forms": {
+        "term": "Forms",
+        "meaning": "What a learner fills at a visit: growth check, breastfeeding, complementary feeding, antenatal check, protein count."
+      },
+      "levels": {
+        "term": "Level 1 / 2 / 3",
+        "meaning": "Three ways to count the visits that should have happened: for everything asked; for the mothers actually adopted; for each mother by her own dates."
+      },
+      "dyad": {
+        "term": "Dyad",
+        "meaning": "One mother and her baby, counted together in the growth results."
+      },
+      "visits": {
+        "term": "BV / AV / LV",
+        "meaning": "The baby's measurements at birth, at adoption and at the last visit."
+      }
+    },
+    "more": "See the full dashboard →"
   }
 }

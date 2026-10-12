@@ -9,6 +9,7 @@ import { averageLines, fmt1, MASD_COLORS } from '../../lib/masdDisplay';
 import { aggregate, applyFilters, pct, splitBy, type MasdAgg, type TypeAgg } from '../../lib/masdSplit';
 import type { MasdSplitState } from './MasdSplitBar';
 import RateLegend from './RateLegend';
+import ScopeBadge from './ScopeBadge';
 
 const WCD_ROLES = ['AWW', 'AWSup'];
 
@@ -50,7 +51,7 @@ const MasdActivity: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({
 
   return (
     <div className="space-y-5">
-      <Section icon={<ChartColumn />} title={t('activity.fulfilTitle', { what: word })} subtitle={t('activity.fulfilSub')}>
+      <Section icon={<ChartColumn />} title={<>{t('activity.fulfilTitle', { what: word })}<ScopeBadge split={split} splits /></>} subtitle={t('activity.fulfilSub')}>
         <GroupedColumns
           categories={categories}
           series={mainSeries}
@@ -62,7 +63,7 @@ const MasdActivity: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({
         {!filtered && split.dim === 'role_group' && <MasdFindings className="mt-5" findings={report.insights.roles} />}
       </Section>
 
-      <Section icon={<ChartScatter />} title={t('activity.bubbleTitle', { what: word })} subtitle={t('activity.bubbleSub')}>
+      <Section icon={<ChartScatter />} title={<>{t('activity.bubbleTitle', { what: word })}<ScopeBadge split={split} splits /></>} subtitle={t('activity.bubbleSub')}>
         <BubblePlot
           bubbles={groups.filter(g => g.fulfilment_pct != null && g.intensity_pct != null).map(g => ({
             key: g.key, label: g.label, x: g.fulfilment_pct!, y: g.intensity_pct!, size: g.learners,
@@ -77,7 +78,7 @@ const MasdActivity: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({
         />
       </Section>
 
-      <Section icon={<Table2 />} title={t('activity.dataTitle')} subtitle={t('activity.dataSub')}>
+      <Section icon={<Table2 />} title={<>{t('activity.dataTitle')}<ScopeBadge split={split} splits /></>} subtitle={t('activity.dataSub')}>
         <DataTable>
           <thead>
             <tr>
@@ -101,13 +102,13 @@ const MasdActivity: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({
         <RateLegend className="mt-3" />
       </Section>
 
-      <Section icon={<GitCompareArrows />} title={t('activity.pairsTitle', { what: word })} subtitle={t('activity.pairsSub')}>
+      <Section icon={<GitCompareArrows />} title={<>{t('activity.pairsTitle', { what: word })}<ScopeBadge split={split} splits /></>} subtitle={t('activity.pairsSub')}>
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3 [&>*]:min-w-0">
           {PAIRS.map(p => {
             const all = pairRates(total, p);
             return (
               <div key={p.key}>
-                <h4 className="text-sm font-semibold text-ink">{t(`activity.pair.${p.key}`)}</h4>
+                <h4 className="text-base font-bold text-ink">{t(`activity.pair.${p.key}`)}</h4>
                 <p className="mb-2 text-xs text-ink-muted">
                   {t('activity.pairAll', {
                     x: t(`activities.${p.x}`), xv: fmt1(all.x), xd: all.xDone.toLocaleString(), xe: all.xDue.toLocaleString(),
@@ -131,7 +132,7 @@ const MasdActivity: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({
         <p className="mt-3 text-xs text-ink-muted">{t('activity.pairsNote')}</p>
       </Section>
 
-      <Section icon={<Layers />} title={t('activity.subtypeTitle', { what: word })} subtitle={t('activity.subtypeSub')}>
+      <Section icon={<Layers />} title={<>{t('activity.subtypeTitle', { what: word })}<ScopeBadge split={split} splits /></>} subtitle={t('activity.subtypeSub')}>
         <DataTable>
           <thead>
             <tr>

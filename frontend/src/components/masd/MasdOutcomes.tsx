@@ -12,6 +12,7 @@ import { DataTable, GroupedColumns, GroupTh, RateCell, Th } from './MasdCharts';
 import { fmt1, MASD_COLORS } from '../../lib/masdDisplay';
 import { applyFilters, outcomeLearners, outcomeSplit, pct } from '../../lib/masdSplit';
 import type { MasdSplitState } from './MasdSplitBar';
+import ScopeBadge from './ScopeBadge';
 import { cn } from '../../utils/cn';
 
 const BANDS: Band[] = ['lt6', 'm6_11'];
@@ -179,7 +180,7 @@ const MasdOutcomes: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({
         <MasdFindings className="mt-5" findings={report.insights.outcomes} />
       </Section>
 
-      <Section icon={<ClipboardCheck />} title={t('outcomes.exclTitleBy', { what: word })} subtitle={t('outcomes.exclSub')}>
+      <Section icon={<ClipboardCheck />} title={<>{t('outcomes.exclTitleBy', { what: word })}<ScopeBadge split={split} splits /></>} subtitle={t('outcomes.exclSub')}>
         <DataTable>
           <thead>
             <tr>
@@ -217,7 +218,7 @@ const MasdOutcomes: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({
         <p className="mt-2 text-xs text-ink-muted">{t('outcomes.exclNote')}</p>
       </Section>
 
-      <Section icon={<UserCheck />} title={t('outcomes.retentionTitleBy', { what: word })} subtitle={t('outcomes.retentionSub')}>
+      <Section icon={<UserCheck />} title={<>{t('outcomes.retentionTitleBy', { what: word })}<ScopeBadge split={split} splits /></>} subtitle={t('outcomes.retentionSub')}>
         <DataTable>
           <thead>
             <tr>

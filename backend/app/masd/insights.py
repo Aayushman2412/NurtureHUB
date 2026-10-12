@@ -410,11 +410,16 @@ def flags(r: Dict[str, Any]) -> List[Dict[str, str]]:
     return out
 
 
+_ASKED = {R.ANC: "ANC", R.PNC_LT5: f"PNC (<{R.PNC_SPLIT_MONTHS}M)", R.PNC_GE5: f"PNC (≥{R.PNC_SPLIT_MONTHS}M)"}
+
+
 def asked(added: Dict[str, int]) -> str:
-    """'+1 ANC · +1 PNC <5M · +1 PNC ≥5M; Staff Nurse +3' — what a tranche asked for."""
-    parts = [f"+{added[t]} {R.ADOPTION_TYPE_LABELS[t]}" for t in R.ADOPTION_TYPES if added.get(t)]
+    """'+1 ANC · +1 PNC (<5M) · +1 PNC (≥5M); Staff Nurse +3 (PNC <5M)' — what
+    a tranche asked for. Brackets keep "<5M" from reading as part of the count
+    (review of 12 Oct 2026)."""
+    parts = [f"+{added[t]} {_ASKED[t]}" for t in R.ADOPTION_TYPES if added.get(t)]
     text = " · ".join(parts) or "no new community adoptions"
-    return text + (f"; Staff Nurse +{added['nurse']}" if added.get("nurse") else "")
+    return text + (f"; Staff Nurse +{added['nurse']} (PNC <{R.PNC_SPLIT_MONTHS}M)" if added.get("nurse") else "")
 
 
 def _days(v: Optional[float]) -> str:

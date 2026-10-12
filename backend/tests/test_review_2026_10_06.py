@@ -100,14 +100,53 @@ def test_uptake_by_group_and_adoption_by_adoption(report):
     assert nth[0]["done"] == g["rol"]["started"], "the first adoption is when a learner started"
 
 
-def test_cumulative_ends_on_the_target_and_the_ideal(report):
+def test_cumulative_steps_up_when_a_tranche_opens(report):
+    """Review of 12 Oct 2026: a tranche's whole ask is due the day its buffer
+    ends — a vertical rise, not a ramp — and its forms then fall due day by
+    day on the LAP schedule."""
     days = report["cumulative"]["days"]
     assert days[-1]["date"] == AS_OF.isoformat()
-    assert days[-1]["expected_activities"] == report["summary"]["ideal"]
     assert days[-1]["expected_adoptions"] == report["summary"]["target"], "every tranche long since taken by now"
+    assert days[-1]["expected_activities"] >= report["summary"]["ideal"], "day by day, never rounded down to 15"
     for a, b in zip(days, days[1:]):
         assert b["expected_adoptions"] >= a["expected_adoptions"] and b["adoptions"] >= a["adoptions"]
-    assert report["cumulative"]["pace_days"] == R.ADOPTION_PACE_DAYS
+        assert b["expected_activities"] >= a["expected_activities"]
+    clocks = {m["clock_from"] for m in report["cumulative"]["tranches"] if m["clock_from"]}
+    jumps = [(a, b) for a, b in zip(days, days[1:]) if b["expected_adoptions"] > a["expected_adoptions"]]
+    assert jumps and all(b["date"] in clocks for _, b in jumps), "the expected line only rises on a tranche's clock day"
+
+
+def test_expected_on_day_follows_the_lap_schedule():
+    t = R.default_expected_forms()
+    assert R.expected_on_day(t, R.PNC_LT5, 0) == {"gm": 1, "bf": 1}, "the adoption visit"
+    assert R.expected_on_day(t, R.PNC_LT5, 3) == {"gm": 4, "bf": 2}
+    assert R.expected_on_day(t, R.PNC_LT5, 15) == R.expected_at(t, R.PNC_LT5, 15), "meets the table at each step"
+    assert R.expected_on_day(t, R.NURSE, 200) == {"gm": 6, "bf": 5}, "a Staff Nurse's flat row caps it"
+    assert R.expected_on_day(t, R.PNC_GE5, 14)["cf"] == 0 and R.expected_on_day(t, R.PNC_GE5, 15)["cf"] == 1
+
+
+def test_cumulative_narrows_to_learners_and_kind():
+    data = _project()
+    r = E.compute(data, AS_OF)
+    cal = E.calendar(data)
+    steps = E.target_steps(data, cal)
+    ads = E.adoptions_of(data, steps, AS_OF)
+    acts = [a for a in data.activities if a.on <= AS_OF]
+    args = (data, r["learners"], ads, acts, steps, cal, data.expected_forms, AS_OF)
+    nurse = E.cumulative(*args, kind="sn")
+    assert nurse["days"][-1]["adoptions"] == 1, "the Staff Nurse's one case"
+    only_one = E.cumulative(*args, learner_ids=[1], per_case=True)
+    end = only_one["days"][-1]
+    assert end["adoptions"] == 6 and end["expected_cases"] == _learner(r, 1)["own"]["expected"]["total"]
+    anc = E.cumulative(*args, learner_ids=[1], kind="anc")
+    assert anc["days"][-1]["adoptions"] == 1 and anc["days"][-1]["activities"] == 4
+
+
+def test_levels_example_reads_the_project_table(report):
+    ex = report["levels_example"]
+    assert ex["level1"] == sum(tr["community"]["total"] for tr in report["calendar"]["tranches"])
+    assert ex["level2"] == sum(c["level2"] for c in ex["cases"]) and ex["level3"] > 0
+    assert {c["type"] for c in ex["cases"]} <= set(R.ADOPTION_TYPES)
 
 
 # ── Flags ───────────────────────────────────────────────────────────────────
@@ -357,3 +396,15 @@ def test_pnc_mother_registers_without_a_recent_lmp():
         MotherCreate(**base, declared_adoption_type="anc", lmp=(today - timedelta(days=330)).isoformat())
     with pytest.raises(ValueError):
         MotherCreate(**base, declared_adoption_type="twins")
+
+
+def test_cumulative_route_answers_for_filtered_learners(world):
+    """The chart's own endpoint (review of 12 Oct 2026): any learner subset,
+    any kind, aggregate counts only."""
+    from app.routers.masd import CumulativeIn, masd_cumulative
+
+    db, pd, a, b, c = world
+    out = masd_cumulative(CumulativeIn(learner_ids=[a.id], kind="pnc_lt5"), project="demo", db=db)
+    assert out["learners"] == 1 and out["kind"] == "pnc_lt5" and isinstance(out["days"], list)
+    with pytest.raises(ValueError):
+        CumulativeIn(kind="twins")

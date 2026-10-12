@@ -108,6 +108,35 @@ def masd_report_json(
     return report
 
 
+class CumulativeIn(BaseModel):
+    as_of: Optional[date] = None
+    # None = every F2F learner; otherwise the learners the dashboard's filters keep.
+    learner_ids: Optional[List[int]] = Field(None, max_length=20000)
+    kind: Optional[Literal["anc", "pnc_lt5", "pnc_ge5", "sn"]] = None
+    per_case: bool = True
+
+
+@router.post("/cumulative")
+def masd_cumulative(payload: CumulativeIn, project: str = Query(...), db: Session = Depends(get_db)):
+    """Expected vs actual adoptions and activities, day by day, for the
+    filtered learners and one kind of adoption (review of 12 Oct 2026).
+    Aggregate counts only."""
+    from app.masd import engine as masd_engine
+
+    p = _project(db, project)
+    as_of, _ = _dates(payload.as_of, None)
+    out = masd_engine.cumulative_for(masd_data.load(db, p), as_of, learner_ids=payload.learner_ids,
+                                     kind=payload.kind, per_case=payload.per_case)
+    phi.log_list(
+        resource_type="masd_cumulative",
+        count=out["learners"],
+        subject_type=phi.CHILD,
+        detail={"scope": "aggregate_daily_counts", "project": p.slug, "as_of": as_of.isoformat(),
+                "kind": payload.kind, "filtered": payload.learner_ids is not None},
+    )
+    return out
+
+
 def _download(db: Session, p: models.ProgramDistrict, as_of: date, compare: Optional[date],
               fmt: str, admin_email: str):
     report = masd_report.build(db, p, as_of, compare)

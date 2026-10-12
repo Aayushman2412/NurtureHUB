@@ -6,6 +6,7 @@ import { BigNumber, ChipRow, Kpi, KpiRow, Section } from '../results/InsightPart
 import { DataTable, Th } from './MasdCharts';
 import { applyFilters, groupOf, groupsOf, usefulDims, type MasdDim } from '../../lib/masdSplit';
 import type { MasdSplitState } from './MasdSplitBar';
+import ScopeBadge from './ScopeBadge';
 
 type DescDim = MasdDim | 'status';
 const STATUS_F2F = 'F2F trained';
@@ -53,7 +54,7 @@ const MasdDescriptives: React.FC<{ report: MasdReport; split: MasdSplitState }> 
         <Kpi visual={<BigNumber value={learners.filter(l => l.is_nurse).length.toLocaleString()} />} label={t('descriptives.nurses')} value={t('descriptives.nursesSub')} />
       </KpiRow>
 
-      <Section icon={<Grid3x3 />} title={t('descriptives.crossTitle', { rows: label(rowDim), cols: label(col) })} subtitle={t('descriptives.crossSub')}
+      <Section icon={<Grid3x3 />} title={<>{t('descriptives.crossTitle', { rows: label(rowDim), cols: label(col) })}<ScopeBadge split={split} /></>} subtitle={t('descriptives.crossSub')}
         actions={<ChipRow label={t('descriptives.columns')} value={col} onChange={v => setColDim(v as DescDim)}
           items={(['status', ...dims] as DescDim[]).filter(d => d !== rowDim).map(d => ({ key: d, label: label(d) }))} />}>
         <DataTable>
@@ -94,7 +95,7 @@ const MasdDescriptives: React.FC<{ report: MasdReport; split: MasdSplitState }> 
         <p className="mt-2 text-xs text-ink-muted">{t('descriptives.crossNote')}</p>
       </Section>
 
-      <Section icon={<ListTree />} title={t('descriptives.profileTitle')} subtitle={t('descriptives.profileSub')}>
+      <Section icon={<ListTree />} title={<>{t('descriptives.profileTitle')}<ScopeBadge split={split} /></>} subtitle={t('descriptives.profileSub')}>
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2 [&>*]:min-w-0">
           {profileDims.map(d => {
             const groups = groupsOf(learners, d);

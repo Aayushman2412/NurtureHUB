@@ -289,7 +289,7 @@ export const ActiveFilterBar: React.FC<{
 };
 
 /** A headline number: the picture on top, the words underneath. */
-export const Kpi: React.FC<{ visual: React.ReactNode; label: string; value: React.ReactNode; note?: string }> = ({ visual, label, value, note }) => (
+export const Kpi: React.FC<{ visual: React.ReactNode; label: React.ReactNode; value: React.ReactNode; note?: string }> = ({ visual, label, value, note }) => (
   <Card className="flex flex-col items-center gap-3 p-5 text-center">
     {visual}
     <div className="min-w-0">

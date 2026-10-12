@@ -115,8 +115,12 @@ export interface MasdLearner {
   fu_days: number | null;
   /** Every open tranche's follow-up (days counted), in order. */
   tranche_fu: number[];
-  /** Days from each tranche opening to the first / completing adoption; negative = before it opened. */
-  uptake?: { step: number; started_days: number | null; completed_days: number | null }[];
+  /** Days from each tranche opening to the first / completing adoption; negative = before it opened.
+   *  nth: days to each adoption asked (null = not made); types: the kind of each one made. */
+  uptake?: {
+    step: number; started_days: number | null; completed_days: number | null;
+    nth?: (number | null)[]; types?: AdoptionType[]; asked?: number;
+  }[];
   adoptions: { anc: number; pnc_lt5: number; pnc_ge5: number; unknown: number; total: number };
   targets: Record<AdoptionType, number> & { total: number };
   target: number;
@@ -297,6 +301,7 @@ export interface UptakeGroup extends Omit<TrancheUptake, 'step' | 'from' | 'buff
   q1_days_to_complete: number | null;
   q3_days_to_complete: number | null;
   nth: { n: number; learners: number; done: number; by: Record<UptakeBucket, number>;
+    types?: Record<AdoptionType, number>;
     median: number | null; q1: number | null; q3: number | null }[];
 }
 export type UptakeGroupKey = 'rol' | 'sn' | 'all';
@@ -309,6 +314,28 @@ export interface CumulativeDay {
   adoptions: number;
   expected_activities: number;
   activities: number;
+  /** What the cases actually adopted were due, each by its own dates (level 3). */
+  expected_cases?: number;
+}
+export type CumulativeKind = 'anc' | 'pnc_lt5' | 'pnc_ge5' | 'sn';
+export interface CumulativeSeries {
+  days: CumulativeDay[];
+  tranches: { step: number; from: string | null; clock_from: string | null }[];
+  learners: number;
+  kind: CumulativeKind | null;
+  per_case: boolean;
+}
+
+/** One made-up learner worked through the three levels on this project's tranches. */
+export interface LevelsExample {
+  asked: Record<AdoptionType, number>;
+  asked_total: number;
+  level1: number;
+  level2: number;
+  level3: number;
+  cases: { tranche: number; type: AdoptionType; adopted: string; baby_age_days: number | null;
+    fu_days: number | null; own_days: number; level2: number; level3: number }[];
+  tranches: { step: number; clock_from: string; fu_days: number | null }[];
 }
 
 export type PncFlagReason = 'visits_missed' | 'no_recent_visit';
@@ -434,7 +461,8 @@ export interface MasdReport {
     by_learner: { id: number; name: string; block: string; n: number }[];
   };
   uptake: TrancheUptakeFull[];
-  cumulative?: { days: CumulativeDay[]; pace_days: number };
+  cumulative?: CumulativeSeries;
+  levels_example?: LevelsExample | null;
   outcomes: MasdOutcomes;
   rules: {
     expected: {
@@ -453,7 +481,6 @@ export interface MasdReport {
       baby_max_age_days: number;
       lap_days?: Record<ActivityKey, number[]>;
       nurse_flat?: Partial<Record<ActivityKey, number>>;
-      adoption_pace_days?: number;
       pnc_flag_missed?: number;
       pnc_flag_silent_days?: number;
     };
@@ -641,6 +668,12 @@ export const downloadFlagList = async (
   });
   saveBlob(res.data as Blob, String(res.headers['content-disposition'] ?? ''), `MASD_${kind}_followup.xlsx`);
 };
+
+/** The cumulative series for the filtered learners and one kind of adoption. */
+export const getMasdCumulative = (
+  project: string,
+  body: { as_of?: string; learner_ids?: number[] | null; kind?: CumulativeKind | null; per_case?: boolean },
+) => client.post<CumulativeSeries>('/api/admin/masd/cumulative', body, { params: { project } }).then(r => r.data);
 
 export const getExpectedForms = () =>
   client.get<ExpectedFormsState>('/api/admin/masd/expected-forms').then(r => r.data);

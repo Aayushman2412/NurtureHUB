@@ -168,6 +168,19 @@ def follow_up(clock_from: Optional[date], as_of: date) -> Tuple[Optional[int], O
     return raw, round_follow_up(raw)
 
 
+def expected_on_day(table: Dict[str, Any], atype: str, day: int) -> Dict[str, int]:
+    """Forms ONE adoption of `atype` should have produced by day `day` of its
+    follow-up (day 0 = the adoption visit), day by day on the LAP schedule —
+    never more than the table allows by the end of that 15-day step, so an
+    edited table (and a Staff Nurse's flat row) still caps it."""
+    if day < 0:
+        return {}
+    row = (table.get("rows") or {}).get(atype) or {}
+    step = min(FU_MAX_DAYS, max(FU_STEP_DAYS, -(-day // FU_STEP_DAYS) * FU_STEP_DAYS))
+    cap = expected_at(table, atype, step)
+    return {k: min(cap.get(k, 0), _cumulative(LAP_SCHEDULE[k], day)) for k in row if k in LAP_SCHEDULE}
+
+
 def expected_at(table: Dict[str, Any], atype: str, days: Optional[int]) -> Dict[str, int]:
     """Cumulative forms expected from ONE adoption of `atype` followed for
     `days` (already rounded). Nothing is due before the first step."""
@@ -420,10 +433,11 @@ PNC_FLAG_REASONS = {
     "no_recent_visit": "No growth check in the last 45 days",
 }
 
-# The cumulative chart's expected adoptions: once a tranche's buffer is over,
-# a learner is expected to adopt one case every this many days until the
-# tranche is taken (an assumption, shown on the chart — review of 6 Oct 2026).
-ADOPTION_PACE_DAYS = 2
+# The cumulative chart (review of 12 Oct 2026): a tranche's whole ask is due
+# the day its buffer ends — the expected line rises straight up there, it
+# does not ramp — and its forms then fall due day by day on the LAP schedule.
+LAP_SCHEDULE = {"anc": LAP_ANC_DAYS, "protein": LAP_ANC_DAYS, "gm": LAP_GM_DAYS,
+                "bf": LAP_BF_DAYS, "cf": LAP_CF_DAYS}
 
 
 # ── Cadres (role groups) and departments ───────────────────────────────────
