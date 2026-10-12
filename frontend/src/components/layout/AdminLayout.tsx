@@ -11,6 +11,7 @@ import { defaultProject, groupProjects, listProjects, type ProjectGroups } from 
 import { getProjectSlug, onProjectChanged, setProjectSlug, type AdminProject } from '../../lib/adminProject';
 import { useTheme } from '../../context/ThemeContext';
 import { Avatar, Dropdown } from '../ui';
+import PageGuide from './PageGuide';
 import { cn } from '../../utils/cn';
 
 interface AdminLayoutProps {
@@ -191,6 +192,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           </button>
         </div>
 
+        {/* The page's guide, always in the same place (review of 5 Oct 2026). */}
+        <div className="px-3 pt-3 print:hidden">
+          <PageGuide variant="sidebar" />
+        </div>
+
         {/* Project switcher — states carry their district projects nested. */}
         <div className="px-3 pt-3">
           <Dropdown
@@ -300,6 +306,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               NurtureHUB <span className="text-primary-ink">{t('layout.panel')}</span>
             </span>
           </div>
+          <PageGuide variant="header" />
           <button
             onClick={toggleDarkMode}
             title={t('layout.toggleTheme')}

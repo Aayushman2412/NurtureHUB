@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useTranslation } from 'react-i18next';
+import { matchesLearner } from '../../lib/learnerSearch';
 import type { TFunction } from 'i18next';
 import { useAdminMonitorSocket } from '../../hooks/useAdminMonitorSocket';
 import type { CandidateState } from '../../hooks/useAdminMonitorSocket';
@@ -163,11 +164,7 @@ const AdminLiveMonitorPage: React.FC = () => {
 
     // Search
     if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(c =>
-        (c.user_name || '').toLowerCase().includes(q) ||
-        (c.user_email || '').toLowerCase().includes(q)
-      );
+      list = list.filter(c => matchesLearner(searchQuery, { id: c.user_id, name: c.user_name, email: c.user_email }));
     }
 
     // Sort
@@ -491,7 +488,7 @@ const AdminLiveMonitorPage: React.FC = () => {
                   <Avatar name={candidate.user_name || t('card.unknownUser')} size="md" />
                   <div className="min-w-0">
                     <div className="truncate font-semibold text-ink">{candidate.user_name || t('card.unknownUser')}</div>
-                    <div className="truncate text-xs text-ink-muted">{candidate.user_email}</div>
+                    <div className="truncate text-xs text-ink-muted"><span className="font-semibold text-ink">ID {candidate.user_id}</span> · {candidate.user_email}</div>
                   </div>
                 </div>
                 <StatusBadge status={candidate.status} t={t} />
@@ -595,7 +592,7 @@ const AdminLiveMonitorPage: React.FC = () => {
                         <Avatar name={candidate.user_name || t('table.unknown')} size="sm" />
                         <div className="min-w-0">
                           <div className="truncate font-semibold text-ink">{candidate.user_name || t('table.unknown')}</div>
-                          <div className="truncate text-xs text-ink-muted">{candidate.user_email}</div>
+                          <div className="truncate text-xs text-ink-muted"><span className="font-semibold text-ink">ID {candidate.user_id}</span> · {candidate.user_email}</div>
                         </div>
                       </div>
                     </Td>

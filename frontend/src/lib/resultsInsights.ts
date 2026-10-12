@@ -16,6 +16,19 @@ export function toneColor(value: number, good = 75, ok = 50): string {
 
 export const fmtPct = (x: number) => `${Math.round(x)}%`;
 
+const hex = (c: string) => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+const mix = (a: string, b: string, t: number) => {
+  const [x, y] = [hex(a), hex(b)];
+  return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * t)).join(', ')})`;
+};
+
+/** A continuous red → amber → green for a 0–100 rate (amber at 50, full
+ *  green from 90): numbers read like a heat map, not three steps. */
+export function gradientColor(value: number): string {
+  const v = Math.max(0, Math.min(100, value));
+  return v <= 50 ? mix(TONE_LOW, TONE_OK, v / 50) : mix(TONE_OK, TONE_GOOD, Math.min(1, (v - 50) / 40));
+}
+
 // ── Payload types (shared with AdminResultsPage) ────────────────────────────
 
 export interface TutorialMeta {
@@ -58,6 +71,15 @@ export interface TutorialProgressRow {
 }
 
 export interface LearnerProfile {
+  /** Admins only — a learner is recognised by user ID, mobile and cadre. */
+  mobile?: string | null;
+  /** "AWW", "ASHA", "SN" — the cadre as people say it. */
+  cadre_short?: string | null;
+  district?: string | null;
+  /** Batch monitors: tagged a monitor, and the monitor watching this learner. */
+  is_batch_monitor?: boolean;
+  batch_monitor_id?: number | null;
+  batch_monitor?: string | null;
   cadre?: string | null;
   department?: string | null;
   block?: string | null;
@@ -106,11 +128,13 @@ export interface ResultsData {
 // ── Dimensions: the ways a manager can split the cohort ─────────────────────
 
 export type DimensionKey =
-  | 'cadre' | 'department' | 'block' | 'experience' | 'qualification'
+  | 'district' | 'cadre' | 'department' | 'block' | 'monitor' | 'experience' | 'qualification'
   | 'ageGroup' | 'internet' | 'priorTraining';
 
+/** District leads for a state project (Meghalaya by district); in a district
+ *  project everyone shares one district, so it is not offered there. */
 export const DIMENSIONS: DimensionKey[] = [
-  'cadre', 'department', 'block', 'experience', 'qualification', 'ageGroup', 'internet', 'priorTraining',
+  'district', 'cadre', 'department', 'block', 'monitor', 'experience', 'qualification', 'ageGroup', 'internet', 'priorTraining',
 ];
 
 /** Sentinel for "the learner's profile doesn't say". Rendered via i18n. */
@@ -130,10 +154,13 @@ function tidy(value: string | null | undefined): string | null {
 export function groupOf(u: UserResultRow, dim: DimensionKey): string | null {
   const p = u.profile ?? {};
   switch (dim) {
+    case 'district': return tidy(p.district);
     case 'cadre': return tidy(p.cadre);
     // "Women & Child Development Department (WCD)" -> "Women & Child Development (WCD)"
     case 'department': return tidy(p.department)?.replace(/\s+Department\b/i, '') ?? null;
     case 'block': return tidy(p.block);
+    // A monitor sits in their own group, with the learners they watch.
+    case 'monitor': return p.is_batch_monitor ? tidy(u.name) : tidy(p.batch_monitor);
     case 'experience': return tidy(p.experience);
     case 'qualification': return tidy(p.qualification);
     case 'ageGroup': {
@@ -502,6 +529,87 @@ export interface TestQuestions {
   test_id: number;
   writers: number;
   questions: QuestionStat[];
+  /** user id → first-attempt answers, one entry per question in the order of
+   *  `questions`, "|"-separated ("" = blank, "A+C" = several picked). */
+  answers?: Record<string, string>;
+}
+
+const correctLabelsOf = (qs: QuestionStat[]) =>
+  qs.map(q => new Set((q.options ?? []).filter(o => o.correct).map(o => o.label ?? '')));
+
+/**
+ * The question table recounted for the learners kept by the filters (all of
+ * them when `userIds` is null): right, blank and every option's count.
+ * Difficulty is NOT recounted — it is a property of the question, judged on
+ * everyone who wrote the paper.
+ */
+export function recountQuestions(tq: TestQuestions, userIds: Set<number> | null): QuestionStat[] {
+  if (!userIds || !tq.answers) return tq.questions;
+  const qs = tq.questions;
+  const correct = correctLabelsOf(qs);
+  const counts = qs.map(() => new Map<string, number>());
+  const right = qs.map(() => 0);
+  const answered = qs.map(() => 0);
+  let writers = 0;
+  for (const [uid, raw] of Object.entries(tq.answers)) {
+    if (!userIds.has(Number(uid))) continue;
+    writers += 1;
+    const parts = raw.split('|');
+    for (let i = 0; i < qs.length; i++) {
+      const picks = parts[i] ? parts[i].split('+') : [];
+      if (picks.length === 0) continue;
+      answered[i] += 1;
+      for (const p of picks) counts[i].set(p, (counts[i].get(p) ?? 0) + 1);
+      if (picks.some(p => correct[i].has(p))) right[i] += 1;
+    }
+  }
+  return qs.map((q, i) => ({
+    ...q,
+    writers,
+    correct: right[i],
+    unanswered: writers - answered[i],
+    options: q.options?.map(o => ({ ...o, count: counts[i].get(o.label ?? '') ?? 0 })),
+  }));
+}
+
+export interface DifficultyCell { right: number; total: number; pct: number | null }
+export interface DifficultyRow {
+  key: string;
+  writers: number;
+  cells: Record<Difficulty, DifficultyCell>;
+}
+
+/**
+ * How each group did on the easy, medium and difficult questions: the share
+ * of those questions its learners got right on their first attempt. A group
+ * that keeps up on easy questions but falls away on difficult ones needs
+ * different help from one that is behind across the board.
+ */
+export function difficultyByGroup(
+  tq: TestQuestions, groups: { key: string; userIds: Set<number> }[],
+): DifficultyRow[] {
+  if (!tq.answers) return [];
+  const level = tq.questions.map(q => (q.writers > 0 ? questionDifficulty(q) : null));
+  const correct = correctLabelsOf(tq.questions);
+  const parsed = Object.entries(tq.answers).map(([uid, raw]) => [Number(uid), raw.split('|')] as const);
+  return groups.map(g => {
+    const cells: Record<Difficulty, DifficultyCell> = {
+      easy: { right: 0, total: 0, pct: null }, medium: { right: 0, total: 0, pct: null }, difficult: { right: 0, total: 0, pct: null },
+    };
+    let writers = 0;
+    for (const [uid, parts] of parsed) {
+      if (!g.userIds.has(uid)) continue;
+      writers += 1;
+      for (let i = 0; i < level.length; i++) {
+        const d = level[i];
+        if (!d) continue;
+        cells[d].total += 1;
+        if ((parts[i] ? parts[i].split('+') : []).some(p => correct[i].has(p))) cells[d].right += 1;
+      }
+    }
+    for (const c of Object.values(cells)) c.pct = c.total ? (c.right / c.total) * 100 : null;
+    return { key: g.key, writers, cells };
+  });
 }
 
 export interface ScoreBar {

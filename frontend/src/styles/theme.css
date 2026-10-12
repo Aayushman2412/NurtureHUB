@@ -141,10 +141,14 @@
      white, cream-100 background and cream-200 sunken — because muted/faint are
      used for real content (field labels, hints, node-card body) at 10–12px,
      which never qualifies for the relaxed large-text bar.
-     ink 15.8:1 · ink-muted 8.6:1 · ink-faint 5.9:1 (on white). */
-  --ink: var(--color-cream-900);
-  --ink-muted: var(--color-cream-700);
-  --ink-faint: var(--color-cream-600);
+     ink 17.6:1 · ink-muted 12.6:1 · ink-faint 8.6:1 (on white).
+     One step darker since the review of 5 Oct 2026: grey text was hard to read
+     on district-office screens ("wherever feasible, make it black"), so body
+     text is near-black and the muted greys are dark enough to read from a
+     distance; weight, not paleness, now carries the hierarchy. */
+  --ink: var(--color-cream-950);
+  --ink-muted: var(--color-cream-800);
+  --ink-faint: var(--color-cream-700);
   /* coral-600, not 500: primary buttons paint white 14px labels on this fill,
      and white-on-coral-500 was 3.44:1 (AA fail). On coral-600 it is 4.58:1.
      Brand gradients/banners keep using the raw coral-400/500 classes. */
@@ -175,9 +179,9 @@
   --border: #38322C;
   --border-strong: #4A423A;
   /* Same AA floor as light mode — the old faint (#7A7268) sat at 3.5:1. */
-  --ink: #F3EFE9;
-  --ink-muted: #C6BDB0;
-  --ink-faint: #A79E90;
+  --ink: #F7F4EF;
+  --ink-muted: #DDD6CB;
+  --ink-faint: #C6BDB0;
   --primary: var(--color-coral-400);
   --primary-hover: var(--color-coral-300);
   --primary-fg: #34120A;

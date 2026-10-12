@@ -15,5 +15,13 @@
   "theme": {
     "light": "Switch to Light Mode",
     "dark": "Switch to Dark Mode"
+  },
+  "layout": {
+    "button": "Layout",
+    "hiddenN": "{{n}} hidden",
+    "columns": "Columns:",
+    "compact": "Compact rows",
+    "compactHint": "Less space around each row, so more learners fit on the screen",
+    "reset": "Reset"
   }
 }

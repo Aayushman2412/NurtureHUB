@@ -19,7 +19,8 @@
     "learnersCount": "{{n}} of {{total}} learners",
     "clearAll": "Clear all",
     "clearDim": "Remove {{dim}} filter",
-    "filteredNotice": "Filtered: {{count}} of {{total}} learners"
+    "filteredNotice": "Filtered: {{count}} of {{total}} learners",
+    "andMore": "+{{n}} more"
   },
   "kpi": {
     "learners": "Learners",
@@ -144,7 +145,15 @@
     "quizCorrect": "Quiz answers correct",
     "noQuiz": "No quiz",
     "noAnswers": "No answers yet",
-    "answeredBy": "{{n}} answered"
+    "answeredBy": "{{n}} answered",
+    "splitSubtitle": "How many finished each video and answered its quiz right — everyone, then each {{dim}} group.",
+    "howToRead": "Each cell is a percentage: the share who finished the video, and the share of quiz answers that were right.",
+    "legendLow": "0%",
+    "legendHigh": "90%+",
+    "everyone": "Everyone",
+    "finishedShort": "Watched",
+    "quizShort": "Quiz right",
+    "finishedTitle": "Share of {{group}} who finished this video"
   },
   "top": {
     "title": "Top performers",
@@ -155,7 +164,7 @@
     "average": "Average",
     "faceToFace": "Face-to-face",
     "selected": "Selected",
-    "searchPlaceholder": "Search learner name, email, cadre, block...",
+    "searchPlaceholder": "Search by user ID, mobile, name, cadre or block…",
     "showLabel": "Show:",
     "showAll": "All performers",
     "f2fLabel": "Face-to-face:",
@@ -163,7 +172,11 @@
     "f2fSelected": "Selected only",
     "f2fNotSelected": "Not selected",
     "noPerformers": "No performers match your search or filter.",
-    "bottomK": "Lowest {{count}} performers"
+    "bottomK": "Lowest {{count}} performers",
+    "learnerId": "Learner (user ID · mobile · cadre)",
+    "colPlaceState": "District · block",
+    "colTests": "Test scores",
+    "testScore": "{{test}} score"
   },
   "dim": {
     "cadre": "Cadre / role",
@@ -173,7 +186,9 @@
     "qualification": "Education",
     "ageGroup": "Age group",
     "internet": "Internet at work",
-    "priorTraining": "Earlier nutrition training"
+    "priorTraining": "Earlier nutrition training",
+    "district": "District",
+    "monitor": "Batch monitor"
   },
   "dimSingular": {
     "cadre": "cadre",
@@ -183,7 +198,9 @@
     "qualification": "education",
     "ageGroup": "age group",
     "internet": "internet at work",
-    "priorTraining": "earlier nutrition training"
+    "priorTraining": "earlier nutrition training",
+    "district": "District",
+    "monitor": "Batch monitor"
   },
   "age": {
     "Under 25": "Under 25",
@@ -209,7 +226,9 @@
     "wrote": "Wrote the {{test}}",
     "passed": "Passed the {{test}}",
     "passRate": "{{test}} pass rate (%)",
-    "avgScore": "{{test}} average score (%)"
+    "avgScore": "{{test}} average score (%)",
+    "userId": "User ID",
+    "mobile": "Mobile"
   },
   "nav": {
     "label": "Insight pages",
@@ -300,7 +319,16 @@
       "difficult": "Difficult — under {{medium}}% right ({{n}})",
       "medium": "Medium — {{medium}}–{{below}}% right ({{n}})",
       "easy": "Easy — {{easy}}%+ right ({{n}})"
-    }
+    },
+    "download": "Download answers (Excel)",
+    "downloadHint": "Learners × questions with each learner's first-attempt answer, the same grid scored 1/0, and this question table",
+    "filteredNote": "These numbers are for the {{n}} learners the filters keep. Easy / medium / difficult is judged on everyone who wrote the test.",
+    "byLevelTitle": "Easy, medium and difficult questions — by {{dim}}",
+    "byLevelHint": "The share of each kind of question a group answered right on the first attempt. A group that keeps up on easy questions but falls away on difficult ones needs different help from one behind everywhere.",
+    "wroteN": "Wrote",
+    "nQuestions": "{{count}} questions",
+    "nQuestions_one": "{{count}} question",
+    "levelCellTitle": "{{right}} right answers out of {{total}}"
   },
   "cmp": {
     "eyebrow": "{{a}} vs {{b}}",
@@ -344,5 +372,14 @@
     "show": "Show",
     "all": "All",
     "howMany": "How many learners to show"
+  },
+  "mode": {
+    "label": "Split or filter the learners",
+    "split": "Split by",
+    "filter": "Filter by",
+    "filterTitle": "Show only these — {{dim}}",
+    "search": "Search…",
+    "all": "Tick all ({{n}})",
+    "clear": "Clear"
   }
 }

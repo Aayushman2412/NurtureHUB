@@ -1,0 +1,446 @@
+{
+  "button": "Guide to this page",
+  "buttonShort": "Guide",
+  "title": "Guide: {{page}}",
+  "termCol": "Term",
+  "meaningCol": "What it means",
+  "download": "Download guide (Excel)",
+  "close": "Close",
+  "everyPage": "Every page has its own guide — open it from the top of the side menu.",
+  "pages": {
+    "dashboard": {
+      "name": "Dashboard",
+      "intro": "The whole programme at a glance for the project picked in the side menu.",
+      "terms": {
+        "project": {
+          "term": "Project",
+          "meaning": "A district (analysed by block) or a state (analysed by district). Every admin page shows the project picked in the side menu."
+        },
+        "learner": {
+          "term": "Learner",
+          "meaning": "A health worker registered on NurtureHUB (ASHA, ANM, AWW, Staff Nurse …)."
+        },
+        "f2f": {
+          "term": "F2F",
+          "meaning": "Face-to-face training — the in-person training learners are selected for after the screening test."
+        }
+      }
+    },
+    "projects": {
+      "name": "Projects",
+      "intro": "Set up states and districts, their codes and whether a district uses its state's content.",
+      "terms": {
+        "state": {
+          "term": "State project",
+          "meaning": "Holds district projects; its reports are split by district."
+        },
+        "district": {
+          "term": "District project",
+          "meaning": "A project of its own; its reports are split by block."
+        },
+        "inherits": {
+          "term": "Uses state content",
+          "meaning": "The district serves its state's videos, tests and forms instead of its own."
+        },
+        "code": {
+          "term": "Code",
+          "meaning": "Short project code used in analysis files (UJ, JL, ML …)."
+        }
+      }
+    },
+    "learners": {
+      "name": "Learners",
+      "intro": "Every registered account: search, correct details, move someone to another project.",
+      "terms": {
+        "userId": {
+          "term": "User ID",
+          "meaning": "The learner's unique number on NurtureHUB — the surest way to find a learner. Type it in any search box."
+        },
+        "verified": {
+          "term": "Verified",
+          "meaning": "The learner confirmed their email with the one-time code."
+        },
+        "project": {
+          "term": "Project",
+          "meaning": "The district or state the learner is trained under."
+        }
+      }
+    },
+    "formBuilder": {
+      "name": "Form Builder",
+      "intro": "Every data-collection form, its versions, and which version each project uses.",
+      "terms": {
+        "lr": {
+          "term": "LR",
+          "meaning": "Learner Registration — the profile a health worker completes when joining."
+        },
+        "mr": {
+          "term": "MR",
+          "meaning": "Mother Registration — details captured when a learner registers a mother."
+        },
+        "cr": {
+          "term": "CR",
+          "meaning": "Child Registration — details captured when a child is added under a mother."
+        },
+        "bfa": {
+          "term": "BFA",
+          "meaning": "Breastfeeding Assessment — the learner observes a breastfeed and records each step."
+        },
+        "cfa": {
+          "term": "CFA",
+          "meaning": "Complementary Feeding Assessment — what the baby ate and how, from 150 days of age."
+        },
+        "cg": {
+          "term": "CG",
+          "meaning": "Check Growth — the child's weight and length at a visit, with feeding and illness questions."
+        },
+        "anc": {
+          "term": "ANC",
+          "meaning": "Antenatal care — the pregnant mother's visit record."
+        },
+        "pca": {
+          "term": "PCA / PC",
+          "meaning": "Protein Count Assessment — the mother's protein intake recall."
+        },
+        "lap": {
+          "term": "As per LAP",
+          "meaning": "Green verdict: the practice matches what was taught. Red (Needs tutorial): the learner is shown coaching."
+        },
+        "version": {
+          "term": "Version",
+          "meaning": "Every saved change is a new version; a project can be pinned to one, others get the default."
+        },
+        "questions": {
+          "term": "Download all questions",
+          "meaning": "One Excel of every question with its limits and skip patterns, for reviewing what changes per project."
+        }
+      }
+    },
+    "tutorials": {
+      "name": "Videos",
+      "intro": "The training videos learners watch, phase by phase, with their quizzes.",
+      "terms": {
+        "phase": {
+          "term": "Phase",
+          "meaning": "A stage of the course: videos, then a test, then the next phase."
+        },
+        "quiz": {
+          "term": "Quiz",
+          "meaning": "Short questions after a video; they do not count towards the test."
+        }
+      }
+    },
+    "tutorialTracking": {
+      "name": "Tutorial tracking",
+      "intro": "How much of each video every learner watched, and how they did on its quiz.",
+      "terms": {
+        "watch": {
+          "term": "Watch %",
+          "meaning": "How much of the video the learner actually played."
+        },
+        "quiz": {
+          "term": "Answered / Skipped / Pending",
+          "meaning": "Whether the learner answered the video's quiz, skipped it, or has not reached it."
+        },
+        "accuracy": {
+          "term": "Accuracy",
+          "meaning": "Share of quiz questions answered right."
+        },
+        "score": {
+          "term": "Video watching score",
+          "meaning": "One number for video learning, out of 100: 60% average watch % + 20% quiz participation + 20% quiz accuracy (just the watch % when there are no quizzes)."
+        }
+      }
+    },
+    "tests": {
+      "name": "Test manager",
+      "intro": "Create and schedule the tests; open the live monitor while one is running.",
+      "terms": {
+        "ft": {
+          "term": "FT — Formative test",
+          "meaning": "The learning check after the videos. Everyone goes on to the next phase whether they pass or not."
+        },
+        "st": {
+          "term": "ST — Screening test",
+          "meaning": "The final test; selection for face-to-face training follows from it."
+        },
+        "pass": {
+          "term": "Pass mark",
+          "meaning": "The lowest score (%) that counts as passing."
+        },
+        "attempts": {
+          "term": "Attempts",
+          "meaning": "How many times a learner may write the test."
+        }
+      }
+    },
+    "liveMonitor": {
+      "name": "Live monitor",
+      "intro": "Watch candidates while they write: progress, warnings and suspicious activity, as it happens.",
+      "terms": {
+        "risk": {
+          "term": "Risk score",
+          "meaning": "0–100, built up from suspicious events: many tab switches (+10/+15), leaving full screen (+8), copy/paste (+20), answering in under 2 seconds (+5), jumping between questions without answering (+10)."
+        },
+        "tabs": {
+          "term": "Tab switches",
+          "meaning": "Times the candidate left the test tab."
+        },
+        "fs": {
+          "term": "FS — Full-screen exits",
+          "meaning": "Times the candidate left full-screen mode."
+        },
+        "cp": {
+          "term": "CP — Copy/paste",
+          "meaning": "Copy, paste or right-click during the test."
+        },
+        "idle": {
+          "term": "Idle",
+          "meaning": "Connected but silent for 90 seconds or more."
+        },
+        "flag": {
+          "term": "Flagged",
+          "meaning": "Marked for review by an admin or by the rules above."
+        }
+      }
+    },
+    "results": {
+      "name": "Results",
+      "intro": "How learners did on the videos and tests, for the whole project or any group of it.",
+      "terms": {
+        "ft": {
+          "term": "FT score — Formative test score",
+          "meaning": "The learner's best score (%) on the formative test, with ✓ passed or ✗ not passed."
+        },
+        "st": {
+          "term": "ST score — Screening test score",
+          "meaning": "The learner's best score (%) on the screening test."
+        },
+        "videos": {
+          "term": "Videos watched",
+          "meaning": "Videos finished out of all videos, with average watch % and quizzes answered ✓ / skipped ⨯."
+        },
+        "score": {
+          "term": "Video watching score",
+          "meaning": "One number out of 100 for video learning: 60% average watch % + 20% quiz participation + 20% quiz accuracy."
+        },
+        "risk": {
+          "term": "Risk",
+          "meaning": "The highest proctoring risk score (0–100) across the learner's attempts."
+        },
+        "tabs": {
+          "term": "Tab switches",
+          "meaning": "Times the learner left the test tab."
+        },
+        "fs": {
+          "term": "FS — Full-screen exits",
+          "meaning": "Times the learner left full-screen mode during the test."
+        },
+        "cp": {
+          "term": "CP — Copy/paste",
+          "meaning": "Copy, paste or right-click events during the test."
+        },
+        "flow": {
+          "term": "Flow status",
+          "meaning": "Completed = every video watched and every test written; otherwise In progress."
+        },
+        "f2f": {
+          "term": "F2F — Face-to-face",
+          "meaning": "Selected for face-to-face training."
+        },
+        "bands": {
+          "term": "Score bands",
+          "meaning": "Needs support (well below the pass mark) · Near miss (within 20 points) · Passed · Excellent (85%+)."
+        },
+        "difficulty": {
+          "term": "Easy / Medium / Difficult",
+          "meaning": "A question answered right by 80%+ of writers is easy, 50–79% medium, below 50% difficult (first attempts)."
+        },
+        "split": {
+          "term": "Split by / Filter by",
+          "meaning": "Split by compares groups side by side. Filter by keeps only the ticked groups — e.g. HFW learners of two blocks — on every page."
+        },
+        "first": {
+          "term": "First attempt",
+          "meaning": "Question analysis uses each learner's first attempt: a retake after seeing the paper measures memory, not knowledge."
+        },
+        "userId": {
+          "term": "User ID",
+          "meaning": "The learner's unique number. Search by it anywhere; mobile number and cadre are shown beside every name."
+        },
+        "monitor": {
+          "term": "Batch monitor",
+          "meaning": "Split or filter by batch monitor to see each monitor's learners together (set on the MASD dashboard → Learners)."
+        }
+      }
+    },
+    "growth": {
+      "name": "Growth monitor",
+      "intro": "Every child's growth and the activities done for them, case by case.",
+      "terms": {
+        "bv": {
+          "term": "BV / AV / LV",
+          "meaning": "Baseline visit (first measurement), Assessment (mid) visit, Last visit."
+        },
+        "wfaz": {
+          "term": "WFAz",
+          "meaning": "Weight-for-age z-score: below −2 underweight, below −3 severely underweight."
+        },
+        "hfaz": {
+          "term": "HFAz",
+          "meaning": "Height (length)-for-age z-score: below −2 stunted, below −3 severely stunted."
+        },
+        "wfhz": {
+          "term": "WFHz",
+          "meaning": "Weight-for-height z-score: below −2 wasted (MAM), below −3 severely wasted (SAM)."
+        },
+        "ec": {
+          "term": "EC",
+          "meaning": "Expected count — how many of a form should have been filled by now for the case."
+        },
+        "ac": {
+          "term": "AC",
+          "meaning": "Actual count — how many were filled, and as a % of expected."
+        },
+        "ic": {
+          "term": "IC",
+          "meaning": "Incomplete count — forms started but not finished, and as a % of expected."
+        },
+        "cg": {
+          "term": "CG / BF / CF / ANC / PC",
+          "meaning": "Check Growth · Breastfeeding assessment · Complementary feeding assessment · Antenatal care · Protein count."
+        },
+        "fu": {
+          "term": "Follow-up (days)",
+          "meaning": "How long the case has been followed: in pregnancy, as a baby, before and after 195 days of age."
+        },
+        "tranche": {
+          "term": "Tranche",
+          "meaning": "The batch of adoptions the case was adopted in (1st, 2nd, 3rd tranche)."
+        },
+        "layout": {
+          "term": "Layout",
+          "meaning": "Tick column groups on or off and make rows compact — remembered in this browser."
+        }
+      }
+    },
+    "masd": {
+      "name": "MASD dashboard",
+      "intro": "Member Activity Summary: are learners adopting mothers and doing the expected activities, and how are the children growing?",
+      "terms": {
+        "masd": {
+          "term": "MASD",
+          "meaning": "Member Activity Summary Dashboard — the district report of adoptions, activities and outcomes."
+        },
+        "tranche": {
+          "term": "Tranche",
+          "meaning": "A round of adoptions asked of each learner (e.g. 1 ANC + 1 PNC <5M + 1 PNC ≥5M)."
+        },
+        "anc": {
+          "term": "ANC / PNC <5M / PNC ≥5M",
+          "meaning": "Mother adopted in pregnancy · after birth with the baby under 5 months · baby 5 months or older."
+        },
+        "fu": {
+          "term": "FU — Follow-up",
+          "meaning": "Days since a tranche's clock started (its start date or the learner's training end, plus the buffer), in steps of 15, at most 270."
+        },
+        "buffer": {
+          "term": "Buffer",
+          "meaning": "Days allowed after a tranche opens before activities are expected (7 for the first, 4 for later ones)."
+        },
+        "expected": {
+          "term": "Expected forms",
+          "meaning": "How many of each form a learner should have filled by now, added up tranche by tranche."
+        },
+        "codes": {
+          "term": "GM / BF / CF / Prot",
+          "meaning": "Growth monitoring · Breastfeeding · Complementary feeding · Protein intake forms."
+        },
+        "sn": {
+          "term": "SN",
+          "meaning": "Staff Nurse — expected to do growth monitoring and breastfeeding only."
+        },
+        "uptake": {
+          "term": "Uptake",
+          "meaning": "How quickly learners adopted after a tranche opened."
+        },
+        "nfhs": {
+          "term": "NFHS",
+          "meaning": "National Family Health Survey — the district benchmark the outcomes are compared with."
+        },
+        "severe": {
+          "term": "Severe (SAM, severe stunting / underweight)",
+          "meaning": "Below −3 z-scores — the children needing the most urgent attention."
+        },
+        "monitor": {
+          "term": "Batch monitor",
+          "meaning": "A learner trusted to watch over a few others. Learners → Batch monitor marks one and gives learners their monitor; the table above lists, per monitor, who is on track and who needs a call."
+        }
+      }
+    },
+    "dataProtection": {
+      "name": "Data protection",
+      "intro": "Who opened or exported mother and child records, consent, retention and breaches.",
+      "terms": {
+        "phi": {
+          "term": "PHI",
+          "meaning": "Personal health information — identified mother and child records."
+        },
+        "audit": {
+          "term": "Audit trail",
+          "meaning": "A tamper-evident record of every read, change and export of that information."
+        },
+        "dpdp": {
+          "term": "DPDP",
+          "meaning": "India's Digital Personal Data Protection Act."
+        }
+      }
+    },
+    "rawData": {
+      "name": "Raw data",
+      "intro": "Download the raw data in one place: the pipelines' input files, every test answer, and every form question.",
+      "terms": {
+        "answers": {
+          "term": "Test answers",
+          "meaning": "Learners down the rows, questions across: each learner's first-attempt answer, the same grid scored 1/0, and a question reference sheet."
+        },
+        "forms": {
+          "term": "Form questions",
+          "meaning": "Every question of every form with its type, limits and skip patterns."
+        },
+        "crosstabs": {
+          "term": "Crosstabs raw data",
+          "meaning": "The nine CSV files the crosstabs pipeline reads, built from NurtureHUB's forms."
+        },
+        "ingest": {
+          "term": "Ingest",
+          "meaning": "Copy the generated files into the pipeline's inputs so it can run."
+        }
+      }
+    },
+    "crosstabs": {
+      "name": "Crosstabs pipeline",
+      "intro": "Run the analysts' crosstab scripts on the latest raw data.",
+      "terms": {
+        "ct": {
+          "term": "CT",
+          "meaning": "Crosstab — a table of counts split by two variables (e.g. block × outcome)."
+        },
+        "exclusion": {
+          "term": "Exclusion",
+          "meaning": "Cases left out of the analysis, with the reason, before the tables are made."
+        }
+      }
+    },
+    "masdPipeline": {
+      "name": "MASD pipeline",
+      "intro": "Run the analysts' MASD scripts on the uploaded input files.",
+      "terms": {
+        "pool": {
+          "term": "Input pool",
+          "meaning": "The MASD CSVs per district that the run reads."
+        }
+      }
+    }
+  }
+}

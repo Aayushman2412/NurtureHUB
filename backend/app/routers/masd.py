@@ -481,3 +481,108 @@ def put_trainer_role(
     )
     db.commit()
     return {"user_id": user_id, "trainer_role": selection.trainer_role}
+
+
+# ── Batch monitors (review of 5 Oct 2026) ────────────────────────────────────
+# A batch monitor is a learner the programme trusts to watch over a few others:
+# the dashboard tells them "these many of yours are doing well; these two or
+# three are yours to chase". Tag a learner here, then give learners a monitor —
+# one at a time or a whole list at once.
+
+class BatchMonitorTagIn(BaseModel):
+    is_batch_monitor: bool
+
+
+class MonitorAssignIn(BaseModel):
+    batch_monitor_id: Optional[int] = None
+
+
+class MonitorLearnersIn(BaseModel):
+    user_ids: List[int] = Field(default_factory=list, max_length=5000)
+
+
+def _learner_or_404(db: Session, user_id: int) -> models.User:
+    user = db.query(models.User).filter(models.User.id == user_id, models.User.is_admin.is_(False)).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="Learner not found")
+    return user
+
+
+def _monitor_change(db: Session, admin_email: str, user_id: int, detail: dict) -> None:
+    audit.record_sync(
+        audit.Action.ADMIN_USER_CHANGE, db=db, resource_type="user", resource_id=user_id,
+        is_phi=False, detail={**detail, "by": admin_email},
+    )
+
+
+@router.put("/learners/{user_id}/batch-monitor")
+def put_batch_monitor_tag(
+    user_id: int,
+    payload: BatchMonitorTagIn,
+    admin_email: str = Depends(get_admin_email),
+    db: Session = Depends(get_db),
+):
+    """Tag a learner as a batch monitor, or remove the tag. Removing it frees
+    the learners they watched (they show as having no monitor again)."""
+    user = _learner_or_404(db, user_id)
+    before = bool(user.is_batch_monitor)
+    user.is_batch_monitor = payload.is_batch_monitor
+    released = 0
+    if before and not payload.is_batch_monitor:
+        released = (db.query(models.User).filter(models.User.batch_monitor_id == user_id)
+                    .update({models.User.batch_monitor_id: None}, synchronize_session="fetch"))
+    if payload.is_batch_monitor and user.batch_monitor_id is not None:
+        user.batch_monitor_id = None  # a monitor is not watched by another monitor
+    _monitor_change(db, admin_email, user_id, {"action": "batch_monitor_tag", "from": before,
+                                               "to": payload.is_batch_monitor, "released": released})
+    db.commit()
+    return {"user_id": user_id, "is_batch_monitor": user.is_batch_monitor, "released": released}
+
+
+@router.put("/learners/{user_id}/monitor")
+def put_learner_monitor(
+    user_id: int,
+    payload: MonitorAssignIn,
+    admin_email: str = Depends(get_admin_email),
+    db: Session = Depends(get_db),
+):
+    """Give a learner a batch monitor (or none)."""
+    user = _learner_or_404(db, user_id)
+    if payload.batch_monitor_id is not None:
+        if payload.batch_monitor_id == user_id:
+            raise HTTPException(status_code=400, detail="A learner cannot monitor themselves")
+        monitor = _learner_or_404(db, payload.batch_monitor_id)
+        if not monitor.is_batch_monitor:
+            raise HTTPException(status_code=400, detail="That learner is not tagged as a batch monitor")
+        if user.is_batch_monitor:
+            raise HTTPException(status_code=400, detail="A batch monitor is not watched by another monitor")
+    before = user.batch_monitor_id
+    user.batch_monitor_id = payload.batch_monitor_id
+    _monitor_change(db, admin_email, user_id, {"action": "batch_monitor_assign", "from": before,
+                                               "to": payload.batch_monitor_id})
+    db.commit()
+    return {"user_id": user_id, "batch_monitor_id": user.batch_monitor_id}
+
+
+@router.put("/monitors/{monitor_id}/learners")
+def put_monitor_learners(
+    monitor_id: int,
+    payload: MonitorLearnersIn,
+    admin_email: str = Depends(get_admin_email),
+    db: Session = Depends(get_db),
+):
+    """Give many learners the same batch monitor in one go (a whole training
+    batch, a block). Other monitors and the monitor themself are skipped."""
+    monitor = _learner_or_404(db, monitor_id)
+    if not monitor.is_batch_monitor:
+        raise HTTPException(status_code=400, detail="That learner is not tagged as a batch monitor")
+    ids = [i for i in dict.fromkeys(payload.user_ids) if i != monitor_id]
+    learners = db.query(models.User).filter(
+        models.User.id.in_(ids), models.User.is_admin.is_(False),
+        models.User.is_batch_monitor.is_(False)).all() if ids else []
+    for u in learners:
+        u.batch_monitor_id = monitor_id
+    _monitor_change(db, admin_email, monitor_id, {"action": "batch_monitor_assign_many",
+                                                  "count": len(learners), "requested": len(ids)})
+    db.commit()
+    return {"monitor_id": monitor_id, "assigned": len(learners), "skipped": len(ids) - len(learners)}

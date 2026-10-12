@@ -96,13 +96,13 @@
     "thisDistrict": "this district",
     "refresh": "Refresh",
     "downloadExcel": "Download Excel",
-    "searchPlaceholder": "Search by name or email…",
+    "searchPlaceholder": "Search by user ID, mobile, name, cadre or block…",
     "emptyTitle": "No users yet",
     "emptyBody": "No users are registered in this district yet.",
     "colUser": "User",
     "colAvgWatch": "Avg Watch %",
     "colQuizzes": "Quizzes",
-    "colPerformance": "Performance",
+    "colPerformance": "Video watching score",
     "skipped": "Skipped",
     "pending": "Pending",
     "answered": "Answered",
@@ -122,7 +122,11 @@
       "quizzesAnswered": "Quizzes Answered",
       "quizzesSkipped": "Quizzes Skipped",
       "quizAccuracy": "Quiz Accuracy %",
-      "performanceScore": "Performance Score"
+      "performanceScore": "Video watching score (out of 100)",
+      "userId": "User ID",
+      "mobile": "Mobile",
+      "cadre": "Cadre",
+      "block": "Block"
     }
   },
   "projects": {
@@ -176,7 +180,7 @@
     "loading": "Loading learners…",
     "search": "Search",
     "searchLabel": "Search",
-    "searchPlaceholder": "Name or email…",
+    "searchPlaceholder": "User ID, mobile, name or email…",
     "projectFilter": "Project",
     "allProjects": "All projects",
     "unassignedOnly": "Not assigned to a project",

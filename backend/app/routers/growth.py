@@ -27,7 +27,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func, text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app import growth_summary_mock as gsm  # MOCK: summary-table demo values (removable)
 from app import models, projects
@@ -446,13 +446,47 @@ def _mother_form_counts(db: Session, mother_ids: List[int]) -> Dict[int, Dict[st
     return out
 
 
+def _identifiers(db: Session, cases: List[Dict[str, Any]]) -> Dict[str, Dict[int, Dict[str, Any]]]:
+    """Who and where each case is (review of 5 Oct 2026): the learner's user
+    ID, mobile, cadre, block and district; the mother's ID, village, block,
+    district and health facility. Names only — read once for the whole table."""
+    learner_ids = sorted({c["learner"]["id"] for c in cases if c["learner"].get("id")})
+    mother_ids = sorted({c["mother"]["id"] for c in cases if c.get("mother")})
+    learners: Dict[int, Dict[str, Any]] = {}
+    for u in (db.query(models.User).options(
+            joinedload(models.User.designation_rel), joinedload(models.User.block),
+            joinedload(models.User.district_rel), joinedload(models.User.facility),
+    ).filter(models.User.id.in_(learner_ids)).all() if learner_ids else []):
+        learners[u.id] = {
+            "mobile": u.phone,
+            "cadre": (u.designation_rel.name if u.designation_rel else None) or u.designation_other or u.role,
+            "block": u.block.name if u.block else None,
+            "district": (u.district_rel.name if u.district_rel else None) or u.district,
+            "facility": (u.facility.name if u.facility else None) or u.work_center_name,
+        }
+    mothers: Dict[int, Dict[str, Any]] = {}
+    for m in (db.query(models.Mother).options(
+            joinedload(models.Mother.district), joinedload(models.Mother.taluk),
+            joinedload(models.Mother.hwc), joinedload(models.Mother.phc),
+    ).filter(models.Mother.id.in_(mother_ids)).all() if mother_ids else []):
+        mothers[m.id] = {
+            "village": m.village,
+            "block": m.taluk.name if m.taluk else None,
+            "district": m.district.name if m.district else None,
+            "hwc": (m.hwc.name if m.hwc else None) or m.hwc_other,
+            "phc": m.phc.name if m.phc else None,
+        }
+    return {"learners": learners, "mothers": mothers}
+
+
 def _rules_context(db: Session, cases: List[Dict[str, Any]]) -> Dict[str, Any]:
     """What the summary rows need beyond the cases: the days each project's
-    tranches opened, the expected-forms table and the mothers' own checks."""
+    tranches opened, the expected-forms table, the mothers' own checks and
+    the cases' identifiers."""
     from app.masd.data import expected_forms_for
     mother_ids = sorted({c["mother"]["id"] for c in cases if c.get("mother")})
     return {"tranches": _tranche_starts_by_project(db), "table": expected_forms_for(db)[0],
-            "mother_counts": _mother_form_counts(db, mother_ids)}
+            "mother_counts": _mother_form_counts(db, mother_ids), "ids": _identifiers(db, cases)}
 
 
 def _adoption(case: Dict[str, Any], tranche_starts: Optional[List[date]], today: date,
@@ -488,6 +522,22 @@ def _adoption(case: Dict[str, Any], tranche_starts: Optional[List[date]], today:
     return {"type": atype, "tranche": tranche, "expected": expected, "anchor": anchor, "segments": segments}
 
 
+# The analysts' grading of a z-score (as in the raw-data files): normal from
+# −1, mild below −1, moderate below −2, severe below −3.
+Z_CATEGORY_NAMES = {
+    "wfaz": ("Normal", "Mild underweight", "Moderate underweight (MUW)", "Severe underweight (SUW)"),
+    "hfaz": ("Normal", "Mild stunting", "Moderate stunting", "Severe stunting"),
+    "wfhz": ("Normal", "Mild wasting", "Moderate wasting (MAM)", "Severe wasting (SAM)"),
+}
+
+
+def z_category(metric: str, z: Optional[float]) -> Optional[str]:
+    if z is None:
+        return None
+    names = Z_CATEGORY_NAMES[metric]
+    return names[3] if z < -3 else names[2] if z < -2 else names[1] if z < -1 else names[0]
+
+
 def _summary_rows(cases: List[Dict[str, Any]], context: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     today = date.today()
@@ -495,6 +545,7 @@ def _summary_rows(cases: List[Dict[str, Any]], context: Optional[Dict[str, Any]]
     tranche_starts = context.get("tranches") or {}
     table = context.get("table")
     mother_counts = context.get("mother_counts") or {}
+    ids = context.get("ids") or {"learners": {}, "mothers": {}}
     for case in cases:
         child, mother, learner = case["child"], case["mother"], case["learner"]
         visits = case["visits"]
@@ -565,6 +616,15 @@ def _summary_rows(cases: List[Dict[str, Any]], context: Optional[Dict[str, Any]]
                 "mother_name": mother["name"],
                 "child_uid": child["uid"],
             },
+            # Identifiers (shown or hidden with the table's Layout; always in the
+            # download): who the learner is and where the case lives.
+            "ids": {
+                "learner_id": learner["id"],
+                **{f"learner_{k}": v for k, v in (ids["learners"].get(learner["id"]) or {}).items()},
+                "mother_uid": mother.get("uid"),
+                "child_name": child.get("name"),
+                **{f"case_{k}": v for k, v in (ids["mothers"].get(mother["id"]) or {}).items()},
+            },
             "case_details": {
                 "adoption_type": adoption_type,
                 "tranche": adoption["tranche"],
@@ -576,6 +636,8 @@ def _summary_rows(cases: List[Dict[str, Any]], context: Optional[Dict[str, Any]]
             },
             "activities": {"total": total, "cg": cg, "bf": bf, "cf": cf, "anc": anc, "protein": protein},
             "outcomes": {"wfaz": wfaz, "hfaz": hfaz, "wfhz": wfhz},
+            "categories": {m: {v: z_category(m, trip[v]) for v in ("bv", "av", "lv")}
+                           for m, trip in (("wfaz", wfaz), ("hfaz", hfaz), ("wfhz", wfhz))},
             "meta": {
                 "sex": sex,
                 "district": learner.get("district"),
@@ -704,6 +766,19 @@ def _xlsx_columns() -> List[_ColSpec]:
         ("Identity", "Role", lambda r: r["identity"]["role_group"], None),
         ("Identity", "Mother", lambda r: r["identity"]["mother_name"], None),
         ("Identity", "Child ID", lambda r: r["identity"]["child_uid"], None),
+        ("Learner", "User ID", lambda r: r["ids"].get("learner_id"), None),
+        ("Learner", "Mobile", lambda r: r["ids"].get("learner_mobile"), None),
+        ("Learner", "Cadre", lambda r: r["ids"].get("learner_cadre"), None),
+        ("Learner", "Block", lambda r: r["ids"].get("learner_block"), None),
+        ("Learner", "District", lambda r: r["ids"].get("learner_district"), None),
+        ("Learner", "Facility", lambda r: r["ids"].get("learner_facility"), None),
+        ("Case", "Mother ID", lambda r: r["ids"].get("mother_uid"), None),
+        ("Case", "Child", lambda r: r["ids"].get("child_name"), None),
+        ("Case", "Village", lambda r: r["ids"].get("case_village"), None),
+        ("Case", "Block", lambda r: r["ids"].get("case_block"), None),
+        ("Case", "District", lambda r: r["ids"].get("case_district"), None),
+        ("Case", "HWC", lambda r: r["ids"].get("case_hwc"), None),
+        ("Case", "PHC", lambda r: r["ids"].get("case_phc"), None),
         ("Case details", "Adoption type",
          lambda r: masd_rules.ADOPTION_TYPE_LABELS.get(r["case_details"]["adoption_type"],
                                                        r["case_details"]["adoption_type"]), None),
@@ -728,6 +803,9 @@ def _xlsx_columns() -> List[_ColSpec]:
         zcol("WH·BVz", "wfhz", "bv"),
         zcol("WH·AVz", "wfhz", "av"),
         zcol("WH·LVz", "wfhz", "lv"),
+        *[("Outcome categories", f"{lab}·{v.upper()}", (lambda r, m=m, v=v: r["categories"][m][v]),
+           (lambda r, m=m, v=v: _z_fill(r["outcomes"][m][v])))
+          for m, lab in (("wfaz", "W"), ("hfaz", "H"), ("wfhz", "WH")) for v in ("bv", "av", "lv")],
         *activity("CG (Check Growth)", "cg"),
         *activity("BF (Breastfeeding)", "bf"),
         *activity("CF (Compl. Feeding)", "cf"),
@@ -889,7 +967,9 @@ def admin_growth_summary(
         count=len(rows),
         subject_type=phi.CHILD,
         subject_ids=[c["child"]["id"] for c in cases if c.get("child")],
-        detail={"scope": "supervisory_summary", "mock": bool(gsm.MOCK_ENABLED)},
+        detail={"scope": "supervisory_summary", "mock": bool(gsm.MOCK_ENABLED),
+                "fields": ["mother_name", "mother_uid", "child_uid", "child_name", "case_village",
+                           "case_block", "case_district", "case_hwc", "case_phc", "learner_mobile"]},
     )
     return {"rows": rows, "mock": bool(gsm.MOCK_ENABLED)}
 
@@ -995,6 +1075,9 @@ def admin_growth_summary_export(
                 "learner_category": learner_category or None, "learner_id": learner_id,
             },
             "custody_note": "the exported file is in the custody of whoever holds it",
+            # Names of the identifying fields the file carries, never their values.
+            "fields": ["mother_name", "mother_uid", "child_uid", "child_name", "case_village",
+                       "case_block", "case_district", "case_hwc", "case_phc", "learner_mobile"],
         },
     )
     db.commit()

@@ -61,6 +61,7 @@ def load(db: Session, project: models.ProgramDistrict) -> MasdData:
         db.query(
             models.User.id, models.User.full_name, models.User.email, models.User.role,
             models.Designation.name, models.Block.name, models.Department.code,
+            models.User.is_batch_monitor, models.User.batch_monitor_id, models.User.phone,
         )
         .outerjoin(models.Designation, models.User.designation_id == models.Designation.id)
         .outerjoin(models.Block, models.User.block_id == models.Block.id)
@@ -80,7 +81,7 @@ def load(db: Session, project: models.ProgramDistrict) -> MasdData:
         .all()
     } if learner_ids else {}
     learners = []
-    for uid, full_name, email, role, designation, block, dept in rows:
+    for uid, full_name, email, role, designation, block, dept, is_monitor, monitor_id, phone in rows:
         trainer_role, batch_id = f2f.get(uid, (None, None))
         learners.append(LearnerIn(
             id=uid, name=full_name or email, email=email or "",
@@ -88,6 +89,7 @@ def load(db: Session, project: models.ProgramDistrict) -> MasdData:
             f2f=uid in f2f, trainer_role=trainer_role,
             batch_id=batch_id if batch_id in batch_end else None,
             training_end=batch_end.get(batch_id),
+            is_monitor=bool(is_monitor), monitor_id=monitor_id, mobile=phone,
         ))
 
     mothers: List[MotherIn] = []

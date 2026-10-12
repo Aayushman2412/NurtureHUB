@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Database, Download, FileArchive, FileSpreadsheet, FlaskConical, Import,
+  ClipboardList, Database, Download, FileArchive, FileSpreadsheet, FlaskConical, Import,
   RefreshCw, X,
 } from 'lucide-react';
 import {
@@ -14,6 +14,9 @@ import {
   type RawPipeline, type RawSet,
 } from '../../api/rawdata';
 import { getPipelineOverview } from '../../api/pipelines';
+import { downloadTestAnswers } from '../../api/results';
+import { adminDownloadFormCatalog } from '../../api/forms';
+import { getProjectSlug, onProjectChanged } from '../../lib/adminProject';
 import { formatBytes } from '../../components/pipelines/helpers';
 
 /** Projects come from the admin's project list, so a newly added state or
@@ -35,6 +38,10 @@ const AdminRawDataPage: React.FC = () => {
   const [busy, setBusy] = useState<string | null>(null);
 
   const projectParam = tab === 'crosstabs' ? project : undefined;
+  // The sidebar's project: test answers and form questions follow it, like
+  // the Results and Form Builder pages they come from.
+  const [adminProject, setAdminProject] = useState<string | null>(getProjectSlug);
+  useEffect(() => onProjectChanged(() => setAdminProject(getProjectSlug())), []);
 
   const refresh = () => {
     setLoading(true);
@@ -135,6 +142,37 @@ const AdminRawDataPage: React.FC = () => {
         title={t('rawdata.title')}
         description={t('rawdata.description')}
       />
+
+      {/* The learning side's raw data, in the same place (review of 5 Oct 2026). */}
+      <Card>
+        <CardBody className="flex flex-wrap items-center gap-3 p-5">
+          <ClipboardList className="size-5 shrink-0 text-coral-600 dark:text-coral-300" />
+          <div className="min-w-0 flex-1">
+            <div className="font-display text-sm font-bold text-ink">{t('rawdata.learning.title')}</div>
+            <p className="text-[13px] text-ink-muted">{t('rawdata.learning.hint')}</p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            iconLeft={<FileSpreadsheet className="size-4" />}
+            loading={busy === 'answers'}
+            disabled={busy !== null || !adminProject}
+            onClick={() => adminProject && void run('answers', () => downloadTestAnswers(adminProject), t('rawdata.downloaded'))}
+          >
+            {t('rawdata.learning.answers')}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            iconLeft={<FileSpreadsheet className="size-4" />}
+            loading={busy === 'questions'}
+            disabled={busy !== null}
+            onClick={() => void run('questions', () => adminDownloadFormCatalog(adminProject), t('rawdata.downloaded'))}
+          >
+            {t('rawdata.learning.forms')}
+          </Button>
+        </CardBody>
+      </Card>
 
       {/* Pipeline tabs + project picker */}
       <div className="flex flex-wrap items-center gap-2">

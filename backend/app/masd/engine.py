@@ -40,6 +40,9 @@ class LearnerIn:
     department: Optional[str] = None     # department code (WCD / HFW / OTHER)
     batch_id: Optional[int] = None       # F2F training batch
     training_end: Optional[date] = None  # the batch's last training day
+    mobile: Optional[str] = None         # shown to admins beside the name
+    is_monitor: bool = False             # tagged a batch monitor
+    monitor_id: Optional[int] = None     # the batch monitor watching this learner
 
 
 @dataclass
@@ -385,6 +388,9 @@ def _learner_rows(data: MasdData, adoptions: List[Adoption], acts: List[Activity
             "f2f": l.f2f,
             "trainer_role": l.trainer_role,
             "mtfl": bool(l.trainer_role),
+            "mobile": l.mobile,
+            "is_monitor": l.is_monitor,
+            "monitor_id": l.monitor_id,
             "is_nurse": is_nurse,
             "batch_id": l.batch_id,
             "batch": batch_names.get(l.batch_id) if l.batch_id else None,
@@ -504,6 +510,36 @@ def _weekly(acts: List[ActivityIn], adoptions: List[Adoption], f2f_ids: set,
     for w in out:
         w["total"] = sum(w[k] for k in R.ACTIVITY_KEYS)
     return out
+
+
+def _monitors(rows: List[Dict[str, Any]], attention: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Each batch monitor and the learners they answer for (review of 5 Oct
+    2026): how many, how many are on track, and which ones need a call this
+    week — "these many are doing well; these two or three are yours to chase"."""
+    by_id = {r["id"]: r for r in rows}
+    need = {a["id"]: a for a in attention}
+    out = []
+    for m in (r for r in rows if r["is_monitor"]):
+        mine = [r for r in rows if r["monitor_id"] == m["id"]]
+        calls = [need[r["id"]] for r in mine if r["id"] in need]
+        own = [r["own"]["pct"] for r in mine if r["own"]["pct"] is not None]
+        out.append({
+            "id": m["id"], "name": m["name"], "block": m["block"], "role_group": m["role_group"],
+            "learners": len(mine),
+            "on_track": len(mine) - len(calls),
+            "need_call": len(calls),
+            "own_pct": round(sum(own) / len(own), 1) if own else None,
+            "adoptions": sum(r["adoptions"]["total"] for r in mine),
+            "calls": calls,
+        })
+    out.sort(key=lambda x: (-x["need_call"], x["name"] or ""))
+    for r in rows:
+        mon = by_id.get(r["monitor_id"]) if r["monitor_id"] else None
+        r["monitor"] = mon["name"] if mon else None
+    return {
+        "monitors": out,
+        "f2f_without_monitor": sum(1 for r in rows if r["f2f"] and not r["monitor_id"] and not r["is_monitor"]),
+    }
 
 
 def _attention(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -1032,6 +1068,7 @@ def compute(data: MasdData, as_of: date) -> Dict[str, Any]:
     project_trs = R.tranches(steps, as_of, cal["training_date"])
     uptake = _uptake(data, rows, adoptions, steps, cal, as_of)
 
+    attention = _attention(f2f_rows)
     report = {
         "project": data.project,
         "as_of": as_of.isoformat(),
@@ -1064,7 +1101,8 @@ def compute(data: MasdData, as_of: date) -> Dict[str, Any]:
         "distribution": {b: dict(v) for b, v in distribution.items()},
         "learners": rows,
         "weekly": _weekly(acts, adoptions, f2f_ids, cal["training_date"], as_of),
-        "attention": _attention(f2f_rows),
+        "attention": attention,
+        "batch_monitors": _monitors(rows, attention),
         "flags": _flags(data, adoptions, acts, as_of, idx),
         "uptake": uptake,
         "outcomes": _outcomes(data, adoptions, as_of),

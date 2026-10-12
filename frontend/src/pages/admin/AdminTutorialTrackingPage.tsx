@@ -5,10 +5,12 @@ import * as XLSX from 'xlsx';
 import { Download, RefreshCw, MonitorPlay, SkipForward, CheckCircle2, Search } from 'lucide-react';
 import client from '../../api/client';
 import { getProjectSlug, PROJECT_EVENT } from '../../lib/adminProject';
+import { matchesLearner } from '../../lib/learnerSearch';
+import type { LearnerProfile } from '../../lib/resultsInsights';
 import {
   Button,
   EmptyState,
-  Input,
+  Input, LearnerIdentity,
   PageHeader,
   PageLoader,
   Pagination,
@@ -52,6 +54,7 @@ interface UserRow {
   user_id: number;
   name: string;
   email: string;
+  profile?: LearnerProfile;
   tutorials: Record<string, PerTutorial>;
   summary: {
     tutorials_completed: number;
@@ -122,12 +125,11 @@ const AdminTutorialTrackingPage: React.FC = () => {
     return () => window.removeEventListener(PROJECT_EVENT, handleDistrictChange);
   }, []);
 
-  const filteredUsers = (data?.users || []).filter(
-    (u) =>
-      !search ||
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase()),
-  );
+  // User ID first, then mobile, name, cadre, block (review of 5 Oct 2026).
+  const filteredUsers = (data?.users || []).filter(u => matchesLearner(search, {
+    id: u.user_id, name: u.name, email: u.email, mobile: u.profile?.mobile, cadre: u.profile?.cadre,
+    cadreShort: u.profile?.cadre_short, block: u.profile?.block, district: u.profile?.district,
+  }));
 
   const paginatedUsers = filteredUsers.slice(
     (page - 1) * pageSize,
@@ -137,7 +139,11 @@ const AdminTutorialTrackingPage: React.FC = () => {
   const downloadExcel = () => {
     if (!data) return;
     const headers = [
+      t('tracking.excel.userId'),
       t('tracking.excel.userName'),
+      t('tracking.excel.mobile'),
+      t('tracking.excel.cadre'),
+      t('tracking.excel.block'),
       t('tracking.excel.email'),
       ...data.tutorials.flatMap((tut) => [
         t('tracking.excel.watchPct', { module: tut.module_number || tut.title }),
@@ -153,7 +159,11 @@ const AdminTutorialTrackingPage: React.FC = () => {
       t('tracking.excel.performanceScore'),
     ];
     const rows = data.users.map((u) => [
+      u.user_id,
       u.name,
+      u.profile?.mobile ?? '',
+      u.profile?.cadre ?? '',
+      u.profile?.block ?? '',
       u.email,
       ...data.tutorials.flatMap((tut) => {
         const p = u.tutorials[String(tut.id)];
@@ -247,8 +257,8 @@ const AdminTutorialTrackingPage: React.FC = () => {
               {paginatedUsers.map((u) => (
                 <Tr key={u.user_id}>
                   <Td className="sticky left-0 z-10 whitespace-nowrap bg-surface">
-                    <div className="font-semibold text-ink">{u.name}</div>
-                    <div className="text-xs text-ink-faint">{u.email}</div>
+                    <LearnerIdentity name={u.name} id={u.user_id} mobile={u.profile?.mobile}
+                      cadre={u.profile?.cadre_short ?? u.profile?.cadre} email={u.email} />
                   </Td>
                   {data!.tutorials.map((tut) => {
                     const p = u.tutorials[String(tut.id)];

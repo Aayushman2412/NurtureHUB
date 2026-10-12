@@ -512,6 +512,62 @@ def list_forms(db: Session = Depends(get_db)):
     return out
 
 
+@router.get("/form-catalog")
+def download_form_catalog(project: Optional[str] = None, db: Session = Depends(get_db)):
+    """Every question of every form in one workbook, with its rules.
+
+    ``?project=<slug>`` lists the version that project's learners see (its
+    pinned version, else the default) — the sheet a programme lead reviews to
+    flag what changes for a new project. Without it, the default versions.
+    """
+    from app import projects
+    from app.form_catalog import build_workbook
+
+    ensure_form_definitions(db)
+    pd = None
+    pinned_project_id = None
+    if project:
+        pd = db.query(ProgramDistrict).filter(ProgramDistrict.slug == project).first()
+        if not pd:
+            raise HTTPException(status_code=404, detail="Project not found")
+        pinned_project_id = projects.content_project_id_for(db, pd.id)
+
+    definitions = {d.form_key: d for d in db.query(FormDefinition).all()}
+    forms = []
+    for form_key in FORM_SPECS:
+        definition = definitions.get(form_key)
+        if not definition:
+            continue
+        default = definition.default_version
+        version, schema, pinned = (default.version_number if default else definition.version), definition.schema_json, False
+        if pinned_project_id is not None:
+            assignment = (
+                db.query(FormDistrictAssignment)
+                .filter(FormDistrictAssignment.form_key == form_key,
+                        FormDistrictAssignment.program_district_id == pinned_project_id)
+                .first()
+            )
+            if assignment and assignment.version is not None:
+                version, schema, pinned = assignment.version.version_number, assignment.version.schema_json, True
+        forms.append({
+            "title": definition.title, "form_key": form_key, "version": version,
+            "default_version": default.version_number if default else None,
+            "pinned": pinned, "schema": schema or {},
+        })
+
+    today = date.today()
+    wb = build_workbook(forms, pd.name if pd else "All projects (default versions)", today.strftime("%d %b %Y"))
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    filename = f"nurturehub_form_questions_{(pd.slug if pd else 'default')}_{today.strftime('%d%m%y')}.xlsx"
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @router.get("/forms/{form_key}")
 def get_form(form_key: str, db: Session = Depends(get_db)):
     return _serialize(_get_definition(db, form_key))

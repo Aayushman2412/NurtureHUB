@@ -62,7 +62,7 @@
     "learners": "Learners",
     "allLearners": "All learners",
     "noLearners": "No learners match",
-    "searchLearners": "Search learners...",
+    "searchLearners": "Search by user ID or name…",
     "selectAll": "Select all",
     "learnersSelected": "{{count}} learner selected",
     "learnersSelected_other": "{{count}} learners selected"
@@ -124,7 +124,11 @@
       "fu": "Follow-up",
       "fuFull": "Follow-up segments (days) the expected counts come from",
       "anc": "Antenatal care (mother)",
-      "protein": "Protein count (mother)"
+      "protein": "Protein count (mother)",
+      "ids": "IDs & places",
+      "idsFull": "User ID, mobile and cadre of the learner; the mother's ID, village, block, district and health facility",
+      "cats": "Outcome categories",
+      "catsFull": "Normal / mild / moderate / severe, from each z-score (normal from −1, mild below −1, moderate below −2, severe below −3)"
     },
     "wfhz": "Weight-for-height z (WFHz)",
     "fuPreg": "Preg",
@@ -136,7 +140,30 @@
     "fuFrom195": "≥195d",
     "fuFrom195Full": "Follow-up from 195 days of age (complementary-feeding assessments)",
     "fuFrom150": "≥150d",
-    "fuFrom150Full": "Follow-up from 150 days of age (complementary-feeding counselling)"
+    "fuFrom150Full": "Follow-up from 150 days of age (complementary-feeding counselling)",
+    "ids": {
+      "userId": "User ID",
+      "userIdFull": "The learner's user ID",
+      "mobile": "Mobile",
+      "mobileFull": "The learner's mobile number",
+      "cadre": "Cadre",
+      "cadreFull": "The learner's cadre",
+      "motherId": "Mother ID",
+      "motherIdFull": "The mother's unique ID",
+      "village": "Village",
+      "villageFull": "The mother's village",
+      "block": "Block",
+      "blockFull": "The mother's block (taluk)",
+      "district": "District",
+      "districtFull": "The mother's district",
+      "facility": "Facility",
+      "facilityFull": "The mother's health and wellness centre"
+    },
+    "catsTitle": {
+      "wfaz": "Weight-for-age category — {{visit}}",
+      "hfaz": "Height-for-age category — {{visit}}",
+      "wfhz": "Weight-for-height category — {{visit}}"
+    }
   },
   "caseDetail": {
     "metrics": "Activity & outcome summary",

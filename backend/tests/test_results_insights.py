@@ -9,7 +9,8 @@ the counts have to be exactly right:
   * the most common wrong answer is a wrong option, never the right one;
   * administrators and learners of other projects are not counted;
   * each learner's row carries their professional profile (for splitting by
-    cadre, block …) and their first-attempt score.
+    cadre, block …), how admins recognise them (mobile, short cadre) and
+    their first-attempt score.
 
 The routes are called directly, as in test_login_surfaces.py.
 
@@ -177,6 +178,9 @@ def test_results_rows_carry_profile_and_first_attempt(world):
     assert ravi["passed_first_attempt"] is True and ravi["attempts_count"] == 2
     assert rows["sita@t.mock"]["tests"][str(test.id)]["passed_first_attempt"] is False
     assert rows["ravi@t.mock"]["profile"]["cadre"] == "ASHA"
-    assert "phone" not in rows["ravi@t.mock"]["profile"], "contact details never travel with the insights"
+    # Review of 5 Oct 2026: a learner is recognised by user ID, mobile and a
+    # short cadre wherever an admin sees them (mobile key; never a raw "phone").
+    assert "mobile" in rows["ravi@t.mock"]["profile"] and "phone" not in rows["ravi@t.mock"]["profile"]
+    assert rows["ravi@t.mock"]["profile"]["cadre_short"] == "ASHA"
     meta = next(t for t in data["tests"] if t["id"] == test.id)
     assert meta["passing_score_pct"] == 50

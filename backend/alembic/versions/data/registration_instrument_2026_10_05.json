@@ -1,0 +1,2126 @@
+{
+ "learner_registration": {
+  "fields": [
+   {
+    "id": "learner_id",
+    "label": "Learner ID",
+    "type": "text",
+    "placeholder": "",
+    "required": false,
+    "options": null,
+    "helpText": "Auto-generated unique ID — read only."
+   },
+   {
+    "id": "registration_datetime",
+    "label": "Registration date & time",
+    "type": "text",
+    "placeholder": "",
+    "required": false,
+    "options": null,
+    "helpText": "Auto-captured — read only."
+   },
+   {
+    "id": "learner_name",
+    "label": "Full name of learner",
+    "type": "text",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "helpText": "Minimum 2 characters."
+   },
+   {
+    "id": "dob",
+    "label": "Date of birth",
+    "type": "date",
+    "placeholder": "",
+    "required": false,
+    "options": null,
+    "noFuture": true,
+    "helpText": "Preferred. Cannot be a future date."
+   },
+   {
+    "id": "age",
+    "label": "Age (years)",
+    "type": "number",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "decimals": 0,
+    "helpText": "Auto-calculated from DOB; enter manually if DOB is unavailable."
+   },
+   {
+    "id": "sex",
+    "label": "Sex",
+    "type": "radio",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Female",
+      "value": "female"
+     },
+     {
+      "label": "Male",
+      "value": "male"
+     },
+     {
+      "label": "Other",
+      "value": "other"
+     }
+    ]
+   },
+   {
+    "id": "mobile",
+    "label": "Mobile number",
+    "type": "text",
+    "placeholder": "10-digit mobile",
+    "required": true,
+    "options": null,
+    "helpText": "Exactly 10 digits."
+   },
+   {
+    "id": "email",
+    "label": "Email ID",
+    "type": "text",
+    "placeholder": "",
+    "required": false,
+    "options": null,
+    "helpText": "Optional. Email validation."
+   },
+   {
+    "id": "department",
+    "label": "Department",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Health & Family Welfare Department (HFW)",
+      "value": "health_family_welfare_department_hfw"
+     },
+     {
+      "label": "Women & Child Development Department (WCD)",
+      "value": "women_child_development_department_wcd"
+     },
+     {
+      "label": "Other",
+      "value": "other"
+     }
+    ],
+    "helpText": "Controls the designation and education lists (first question for cascading logic)."
+   },
+   {
+    "id": "department_other",
+    "label": "Specify other department",
+    "type": "text",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "showIf": [
+     {
+      "kind": "field",
+      "fieldId": "department",
+      "anyOf": [
+       "other"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "designation",
+    "label": "Designation",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "ASHA",
+      "value": "asha"
+     },
+     {
+      "label": "ANM",
+      "value": "anm"
+     },
+     {
+      "label": "CHO (Community Health Officer)",
+      "value": "cho_community_health_officer"
+     },
+     {
+      "label": "Staff Nurse",
+      "value": "staff_nurse"
+     },
+     {
+      "label": "ASHA Facilitator",
+      "value": "asha_facilitator"
+     },
+     {
+      "label": "MLHP (Mid-Level Health Provider)",
+      "value": "mlhp_mid_level_health_provider"
+     },
+     {
+      "label": "MPHW (Male)",
+      "value": "mphw_male"
+     },
+     {
+      "label": "Health Assistant (Female)",
+      "value": "health_assistant_female"
+     },
+     {
+      "label": "Health Assistant (Male)",
+      "value": "health_assistant_male"
+     },
+     {
+      "label": "Health Inspector",
+      "value": "health_inspector"
+     },
+     {
+      "label": "Lab Technician",
+      "value": "lab_technician"
+     },
+     {
+      "label": "Pharmacist",
+      "value": "pharmacist"
+     },
+     {
+      "label": "Medical Officer",
+      "value": "medical_officer"
+     },
+     {
+      "label": "Specialist Medical Officer",
+      "value": "specialist_medical_officer"
+     },
+     {
+      "label": "Block Health Education Officer",
+      "value": "block_health_education_officer"
+     },
+     {
+      "label": "Taluk Health Officer",
+      "value": "taluk_health_officer"
+     },
+     {
+      "label": "District Health Officer",
+      "value": "district_health_officer"
+     },
+     {
+      "label": "District Epidemiologist",
+      "value": "district_epidemiologist"
+     },
+     {
+      "label": "District Surveillance Officer",
+      "value": "district_surveillance_officer"
+     },
+     {
+      "label": "Programme Manager",
+      "value": "programme_manager"
+     },
+     {
+      "label": "Data Entry Operator",
+      "value": "data_entry_operator"
+     },
+     {
+      "label": "Nutrition Counsellor",
+      "value": "nutrition_counsellor"
+     },
+     {
+      "label": "Counsellor",
+      "value": "counsellor"
+     },
+     {
+      "label": "Physiotherapist",
+      "value": "physiotherapist"
+     },
+     {
+      "label": "Anganwadi Worker (AWW)",
+      "value": "anganwadi_worker_aww"
+     },
+     {
+      "label": "Lady Supervisor",
+      "value": "lady_supervisor"
+     },
+     {
+      "label": "Child Development Project Officer (CDPO)",
+      "value": "child_development_project_officer_cdpo"
+     },
+     {
+      "label": "District Programme Officer",
+      "value": "district_programme_officer"
+     },
+     {
+      "label": "Poshan Coordinator",
+      "value": "poshan_coordinator"
+     },
+     {
+      "label": "Other (Specify)",
+      "value": "other_specify"
+     }
+    ],
+    "helpText": "Filtered based on Department (cascading dropdown)."
+   },
+   {
+    "id": "district",
+    "label": "District",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [],
+    "helpText": "Karnataka district master list — maintain this state's list here in the form builder."
+   },
+   {
+    "id": "taluk",
+    "label": "Taluk",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [],
+    "helpText": "Filtered based on District (cascading dropdown)."
+   },
+   {
+    "id": "village",
+    "label": "Village",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [],
+    "helpText": "Filtered based on Taluk. Search enabled."
+   },
+   {
+    "id": "facility_type",
+    "label": "Facility type",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Anganwadi Centre (AWC)",
+      "value": "anganwadi_centre_awc"
+     },
+     {
+      "label": "Sub-centre (SC)",
+      "value": "sub_centre_sc"
+     },
+     {
+      "label": "Health & Wellness Centre (HWC)",
+      "value": "health_wellness_centre_hwc"
+     },
+     {
+      "label": "Primary Health Centre (PHC)",
+      "value": "primary_health_centre_phc"
+     },
+     {
+      "label": "Community Health Centre (CHC)",
+      "value": "community_health_centre_chc"
+     },
+     {
+      "label": "Taluk Hospital (TH)",
+      "value": "taluk_hospital_th"
+     },
+     {
+      "label": "District Hospital (DH)",
+      "value": "district_hospital_dh"
+     },
+     {
+      "label": "Medical College Hospital",
+      "value": "medical_college_hospital"
+     },
+     {
+      "label": "ICDS Project Office (CDPO Office)",
+      "value": "icds_project_office_cdpo_office"
+     },
+     {
+      "label": "Taluk Health Office (THO)",
+      "value": "taluk_health_office_tho"
+     },
+     {
+      "label": "District Health Office (DHO)",
+      "value": "district_health_office_dho"
+     },
+     {
+      "label": "District ICDS Office",
+      "value": "district_icds_office"
+     },
+     {
+      "label": "Other (Specify)",
+      "value": "other_specify"
+     }
+    ],
+    "helpText": "Filtered based on Designation (cascading dropdown)."
+   },
+   {
+    "id": "facility_name",
+    "label": "Facility name",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [],
+    "helpText": "Filtered based on District + Taluk + Facility Type. Search enabled."
+   },
+   {
+    "id": "highest_education",
+    "label": "Highest educational qualification",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "No formal education",
+      "value": "no_formal_education"
+     },
+     {
+      "label": "Primary (I–IV)",
+      "value": "primary_i_iv"
+     },
+     {
+      "label": "Upper Primary (V–VII)",
+      "value": "upper_primary_v_vii"
+     },
+     {
+      "label": "High School (VIII–X)",
+      "value": "high_school_viii_x"
+     },
+     {
+      "label": "PUC (XI–XII)",
+      "value": "puc_xi_xii"
+     },
+     {
+      "label": "ANM",
+      "value": "anm"
+     },
+     {
+      "label": "GNM",
+      "value": "gnm"
+     },
+     {
+      "label": "B.Sc. Nursing",
+      "value": "b_sc_nursing"
+     },
+     {
+      "label": "Post Basic B.Sc. Nursing",
+      "value": "post_basic_b_sc_nursing"
+     },
+     {
+      "label": "M.Sc. Nursing",
+      "value": "m_sc_nursing"
+     },
+     {
+      "label": "MBBS",
+      "value": "mbbs"
+     },
+     {
+      "label": "BAMS",
+      "value": "bams"
+     },
+     {
+      "label": "BHMS",
+      "value": "bhms"
+     },
+     {
+      "label": "BDS",
+      "value": "bds"
+     },
+     {
+      "label": "BPT",
+      "value": "bpt"
+     },
+     {
+      "label": "B.Pharm",
+      "value": "b_pharm"
+     },
+     {
+      "label": "M.Pharm",
+      "value": "m_pharm"
+     },
+     {
+      "label": "MPH",
+      "value": "mph"
+     },
+     {
+      "label": "MD/MS",
+      "value": "md_ms"
+     },
+     {
+      "label": "Diploma",
+      "value": "diploma"
+     },
+     {
+      "label": "Graduate",
+      "value": "graduate"
+     },
+     {
+      "label": "Postgraduate",
+      "value": "postgraduate"
+     },
+     {
+      "label": "PhD",
+      "value": "phd"
+     },
+     {
+      "label": "Anganwadi Training Certificate",
+      "value": "anganwadi_training_certificate"
+     },
+     {
+      "label": "BSW",
+      "value": "bsw"
+     },
+     {
+      "label": "MSW",
+      "value": "msw"
+     },
+     {
+      "label": "Nutrition/Home Science",
+      "value": "nutrition_home_science"
+     },
+     {
+      "label": "Other",
+      "value": "other"
+     }
+    ],
+    "helpText": "Different lists for HFW and WCD — filtered based on Department."
+   },
+   {
+    "id": "marital_status",
+    "label": "Marital status",
+    "type": "radio",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Never married",
+      "value": "never_married"
+     },
+     {
+      "label": "Married",
+      "value": "married"
+     },
+     {
+      "label": "Widowed",
+      "value": "widowed"
+     },
+     {
+      "label": "Divorced",
+      "value": "divorced"
+     },
+     {
+      "label": "Separated",
+      "value": "separated"
+     }
+    ]
+   },
+   {
+    "id": "has_children",
+    "label": "Do you have any children?",
+    "type": "radio",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Yes",
+      "value": "yes"
+     },
+     {
+      "label": "No",
+      "value": "no"
+     }
+    ]
+   },
+   {
+    "id": "number_children",
+    "label": "Number of children",
+    "type": "number",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "decimals": 0,
+    "showIf": [
+     {
+      "kind": "field",
+      "fieldId": "has_children",
+      "anyOf": [
+       "yes"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "residence_distance",
+    "label": "Approximate distance between your residence and workplace (km)",
+    "type": "number",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "min": 0,
+    "max": 100,
+    "decimals": 1,
+    "helpText": "Range 0–100 km, one decimal place."
+   },
+   {
+    "id": "years_service",
+    "label": "Total years of service",
+    "type": "number",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "min": 0,
+    "max": 50,
+    "decimals": 1,
+    "helpText": "Range 0–50 years."
+   },
+   {
+    "id": "years_designation",
+    "label": "Years in current designation",
+    "type": "number",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "min": 0,
+    "max": 50,
+    "decimals": 1,
+    "helpText": "Cannot exceed total years of service."
+   },
+   {
+    "id": "years_facility",
+    "label": "Years at current facility",
+    "type": "number",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "min": 0,
+    "max": 50,
+    "decimals": 1,
+    "helpText": "Cannot exceed total years of service."
+   },
+   {
+    "id": "internet_workplace",
+    "label": "Is internet connectivity adequate in your work area?",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Always",
+      "value": "always"
+     },
+     {
+      "label": "Often",
+      "value": "often"
+     },
+     {
+      "label": "Sometimes",
+      "value": "sometimes"
+     },
+     {
+      "label": "Rarely",
+      "value": "rarely"
+     },
+     {
+      "label": "Never",
+      "value": "never"
+     }
+    ]
+   },
+   {
+    "id": "nutrition_training",
+    "label": "When did you last attend any nutrition-related training?",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Within the last 3 months",
+      "value": "within_the_last_3_months"
+     },
+     {
+      "label": "4–6 months ago",
+      "value": "4_6_months_ago"
+     },
+     {
+      "label": "7–12 months ago",
+      "value": "7_12_months_ago"
+     },
+     {
+      "label": "1–2 years ago",
+      "value": "1_2_years_ago"
+     },
+     {
+      "label": "More than 2 years ago",
+      "value": "more_than_2_years_ago"
+     },
+     {
+      "label": "Never attended",
+      "value": "never_attended"
+     },
+     {
+      "label": "Don't know",
+      "value": "don_t_know"
+     }
+    ]
+   },
+   {
+    "id": "pregnancy_nutrition_training",
+    "label": "When did you last attend a pregnancy nutrition-related training?",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Within the last 3 months",
+      "value": "within_the_last_3_months"
+     },
+     {
+      "label": "4–6 months ago",
+      "value": "4_6_months_ago"
+     },
+     {
+      "label": "7–12 months ago",
+      "value": "7_12_months_ago"
+     },
+     {
+      "label": "1–2 years ago",
+      "value": "1_2_years_ago"
+     },
+     {
+      "label": "More than 2 years ago",
+      "value": "more_than_2_years_ago"
+     },
+     {
+      "label": "Never attended",
+      "value": "never_attended"
+     },
+     {
+      "label": "Don't know",
+      "value": "don_t_know"
+     }
+    ]
+   },
+   {
+    "id": "breastfeeding_training",
+    "label": "When did you last attend a breastfeeding-related training?",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Within the last 3 months",
+      "value": "within_the_last_3_months"
+     },
+     {
+      "label": "4–6 months ago",
+      "value": "4_6_months_ago"
+     },
+     {
+      "label": "7–12 months ago",
+      "value": "7_12_months_ago"
+     },
+     {
+      "label": "1–2 years ago",
+      "value": "1_2_years_ago"
+     },
+     {
+      "label": "More than 2 years ago",
+      "value": "more_than_2_years_ago"
+     },
+     {
+      "label": "Never attended",
+      "value": "never_attended"
+     },
+     {
+      "label": "Don't know",
+      "value": "don_t_know"
+     }
+    ]
+   },
+   {
+    "id": "complementary_feeding_training",
+    "label": "When did you last attend a complementary feeding-related training?",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Within the last 3 months",
+      "value": "within_the_last_3_months"
+     },
+     {
+      "label": "4–6 months ago",
+      "value": "4_6_months_ago"
+     },
+     {
+      "label": "7–12 months ago",
+      "value": "7_12_months_ago"
+     },
+     {
+      "label": "1–2 years ago",
+      "value": "1_2_years_ago"
+     },
+     {
+      "label": "More than 2 years ago",
+      "value": "more_than_2_years_ago"
+     },
+     {
+      "label": "Never attended",
+      "value": "never_attended"
+     },
+     {
+      "label": "Don't know",
+      "value": "don_t_know"
+     }
+    ]
+   },
+   {
+    "id": "growth_monitoring_training",
+    "label": "When did you last attend a growth monitoring and growth chart interpretation training?",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Within the last 3 months",
+      "value": "within_the_last_3_months"
+     },
+     {
+      "label": "4–6 months ago",
+      "value": "4_6_months_ago"
+     },
+     {
+      "label": "7–12 months ago",
+      "value": "7_12_months_ago"
+     },
+     {
+      "label": "1–2 years ago",
+      "value": "1_2_years_ago"
+     },
+     {
+      "label": "More than 2 years ago",
+      "value": "more_than_2_years_ago"
+     },
+     {
+      "label": "Never attended",
+      "value": "never_attended"
+     },
+     {
+      "label": "Don't know",
+      "value": "don_t_know"
+     }
+    ]
+   }
+  ]
+ },
+ "mother_registration": {
+  "fields": [
+   {
+    "id": "submission_datetime",
+    "label": "Form submission date & time",
+    "type": "text",
+    "placeholder": "",
+    "required": false,
+    "options": null,
+    "helpText": "Auto-captured — read only."
+   },
+   {
+    "id": "mother_uid",
+    "label": "Mother Unique ID",
+    "type": "text",
+    "placeholder": "",
+    "required": false,
+    "options": null,
+    "helpText": "Auto-generated unique ID — read only."
+   },
+   {
+    "id": "mother_name",
+    "label": "Mother's name",
+    "type": "text",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "helpText": "Minimum 2 characters."
+   },
+   {
+    "id": "adoption_date",
+    "label": "Date of adoption of the mother",
+    "type": "date",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "noFuture": true
+   },
+   {
+    "id": "mother_dob",
+    "label": "Mother's date of birth",
+    "type": "date",
+    "placeholder": "",
+    "required": false,
+    "options": null,
+    "noFuture": true,
+    "helpText": "Preferred. Cannot be a future date."
+   },
+   {
+    "id": "mother_age",
+    "label": "Mother's age (years)",
+    "type": "number",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "min": 10,
+    "max": 50,
+    "decimals": 0,
+    "helpText": "Auto-calculated from DOB; manual editing allowed. Range 10–50 years."
+   },
+   {
+    "id": "weight",
+    "label": "Mother's weight during adoption (kg)",
+    "type": "number",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "min": 35.0,
+    "max": 200.0,
+    "decimals": 1,
+    "helpText": "35.0–200.0 kg, one decimal place."
+   },
+   {
+    "id": "height",
+    "label": "Mother's height during adoption (cm)",
+    "type": "number",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "min": 100.0,
+    "max": 230.0,
+    "decimals": 1,
+    "helpText": "100.0–230.0 cm, one decimal place."
+   },
+   {
+    "id": "lmp",
+    "label": "Last menstrual period (LMP)",
+    "type": "date",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "noFuture": true,
+    "helpText": "Cannot be a future date; cannot be more than 180 days before today."
+   },
+   {
+    "id": "edd_lmp",
+    "label": "Expected date of delivery as per LMP",
+    "type": "date",
+    "placeholder": "",
+    "required": false,
+    "options": null,
+    "helpText": "Auto-calculated (LMP + 280 days) — read only."
+   },
+   {
+    "id": "edd_latest",
+    "label": "Expected date of delivery as per latest records",
+    "type": "date",
+    "placeholder": "",
+    "required": true,
+    "options": null
+   },
+   {
+    "id": "gestational_weeks",
+    "label": "Gestational age (weeks)",
+    "type": "text",
+    "placeholder": "",
+    "required": false,
+    "options": null,
+    "helpText": "Auto-calculated: floor((Today − LMP) / 7) — read only."
+   },
+   {
+    "id": "gestational_months",
+    "label": "Gestational age (months)",
+    "type": "text",
+    "placeholder": "",
+    "required": false,
+    "options": null,
+    "helpText": "Auto-calculated: floor((Today − LMP) / 30) — read only."
+   },
+   {
+    "id": "mobile",
+    "label": "Mobile number",
+    "type": "text",
+    "placeholder": "10-digit mobile",
+    "required": true,
+    "options": null,
+    "helpText": "Exactly 10 digits."
+   },
+   {
+    "id": "alternate_mobile",
+    "label": "Alternate mobile number",
+    "type": "text",
+    "placeholder": "",
+    "required": false,
+    "options": null,
+    "helpText": "Exactly 10 digits; should not match the primary mobile."
+   },
+   {
+    "id": "email",
+    "label": "Email ID",
+    "type": "text",
+    "placeholder": "",
+    "required": false,
+    "options": null,
+    "helpText": "Optional. Email validation."
+   },
+   {
+    "id": "state",
+    "label": "State",
+    "type": "text",
+    "placeholder": "",
+    "required": false,
+    "options": null,
+    "helpText": "Auto-populated from project settings — read only."
+   },
+   {
+    "id": "district",
+    "label": "District",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [],
+    "helpText": "Master district list — filtered by State (cascading dropdown)."
+   },
+   {
+    "id": "taluk",
+    "label": "Taluk",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [],
+    "helpText": "Master taluk list — filtered by District (cascading dropdown)."
+   },
+   {
+    "id": "village",
+    "label": "Village",
+    "type": "text",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "helpText": "Open-ended."
+   },
+   {
+    "id": "hwc_name",
+    "label": "Under which Health and Wellness Centre (HWC) you are registered currently?",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [],
+    "helpText": "Master HWC list — filtered based on State → District → Taluk. Search enabled."
+   },
+   {
+    "id": "phc_name",
+    "label": "Under which Primary health centre you are registered currently?",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [],
+    "helpText": "Master PHC list — filtered based on the selected HWC; auto-populated when the HWC maps to a single PHC."
+   },
+   {
+    "id": "education",
+    "label": "Highest educational qualification",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Illiterate",
+      "value": "illiterate"
+     },
+     {
+      "label": "No formal education",
+      "value": "no_formal_education"
+     },
+     {
+      "label": "Lower Primary (I–IV)",
+      "value": "lower_primary_i_iv"
+     },
+     {
+      "label": "Higher Primary (V–VII)",
+      "value": "higher_primary_v_vii"
+     },
+     {
+      "label": "High School (VIII–X)",
+      "value": "high_school_viii_x"
+     },
+     {
+      "label": "PUC (XI–XII)",
+      "value": "puc_xi_xii"
+     },
+     {
+      "label": "Diploma",
+      "value": "diploma"
+     },
+     {
+      "label": "Graduate",
+      "value": "graduate"
+     },
+     {
+      "label": "Postgraduate",
+      "value": "postgraduate"
+     }
+    ]
+   },
+   {
+    "id": "education_field",
+    "label": "What was the broad field of your highest educational qualification?",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Health Sciences",
+      "value": "health_sciences"
+     },
+     {
+      "label": "Engineering & Technology",
+      "value": "engineering_technology"
+     },
+     {
+      "label": "Science",
+      "value": "science"
+     },
+     {
+      "label": "Arts, Commerce & Humanities",
+      "value": "arts_commerce_humanities"
+     },
+     {
+      "label": "Management",
+      "value": "management"
+     },
+     {
+      "label": "Law",
+      "value": "law"
+     },
+     {
+      "label": "Agriculture",
+      "value": "agriculture"
+     },
+     {
+      "label": "Education (Teaching)",
+      "value": "education_teaching"
+     },
+     {
+      "label": "Computer Science & Information Technology",
+      "value": "computer_science_information_technology"
+     },
+     {
+      "label": "Other",
+      "value": "other"
+     }
+    ],
+    "showIf": [
+     {
+      "kind": "field",
+      "fieldId": "education",
+      "anyOf": [
+       "diploma",
+       "graduate",
+       "postgraduate"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "education_degree",
+    "label": "Please specify your highest degree or diploma.",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "MBBS",
+      "value": "mbbs"
+     },
+     {
+      "label": "B.Sc. Nursing",
+      "value": "b_sc_nursing"
+     },
+     {
+      "label": "GNM",
+      "value": "gnm"
+     },
+     {
+      "label": "ANM",
+      "value": "anm"
+     },
+     {
+      "label": "BAMS",
+      "value": "bams"
+     },
+     {
+      "label": "BHMS",
+      "value": "bhms"
+     },
+     {
+      "label": "BDS",
+      "value": "bds"
+     },
+     {
+      "label": "B.Pharm",
+      "value": "b_pharm"
+     },
+     {
+      "label": "BPT",
+      "value": "bpt"
+     },
+     {
+      "label": "B.Sc. Nutrition",
+      "value": "b_sc_nutrition"
+     },
+     {
+      "label": "MPH",
+      "value": "mph"
+     },
+     {
+      "label": "MD",
+      "value": "md"
+     },
+     {
+      "label": "MS",
+      "value": "ms"
+     },
+     {
+      "label": "M.Sc. Nursing",
+      "value": "m_sc_nursing"
+     },
+     {
+      "label": "D.Pharm",
+      "value": "d_pharm"
+     },
+     {
+      "label": "DMLT",
+      "value": "dmlt"
+     },
+     {
+      "label": "Diploma in Nutrition and Dietetics",
+      "value": "diploma_in_nutrition_and_dietetics"
+     },
+     {
+      "label": "DPH",
+      "value": "dph"
+     },
+     {
+      "label": "Post Basic B.Sc. Nursing",
+      "value": "post_basic_b_sc_nursing"
+     },
+     {
+      "label": "B.Sc. Home Science",
+      "value": "b_sc_home_science"
+     },
+     {
+      "label": "B.Sc. MLT",
+      "value": "b_sc_mlt"
+     },
+     {
+      "label": "BPH",
+      "value": "bph"
+     },
+     {
+      "label": "BOT",
+      "value": "bot"
+     },
+     {
+      "label": "B.Optom",
+      "value": "b_optom"
+     },
+     {
+      "label": "M.Sc. Nutrition",
+      "value": "m_sc_nutrition"
+     },
+     {
+      "label": "M.Pharm",
+      "value": "m_pharm"
+     },
+     {
+      "label": "MDS",
+      "value": "mds"
+     },
+     {
+      "label": "MPT",
+      "value": "mpt"
+     },
+     {
+      "label": "MHA",
+      "value": "mha"
+     },
+     {
+      "label": "MOT",
+      "value": "mot"
+     },
+     {
+      "label": "PhD",
+      "value": "phd"
+     },
+     {
+      "label": "Diploma in Engineering",
+      "value": "diploma_in_engineering"
+     },
+     {
+      "label": "BE",
+      "value": "be"
+     },
+     {
+      "label": "B.Tech",
+      "value": "b_tech"
+     },
+     {
+      "label": "ME",
+      "value": "me"
+     },
+     {
+      "label": "M.Tech",
+      "value": "m_tech"
+     },
+     {
+      "label": "B.Sc.",
+      "value": "b_sc"
+     },
+     {
+      "label": "M.Sc.",
+      "value": "m_sc"
+     },
+     {
+      "label": "BA",
+      "value": "ba"
+     },
+     {
+      "label": "B.Com.",
+      "value": "b_com"
+     },
+     {
+      "label": "MA",
+      "value": "ma"
+     },
+     {
+      "label": "M.Com.",
+      "value": "m_com"
+     },
+     {
+      "label": "BSW",
+      "value": "bsw"
+     },
+     {
+      "label": "MSW",
+      "value": "msw"
+     },
+     {
+      "label": "BBA",
+      "value": "bba"
+     },
+     {
+      "label": "MBA",
+      "value": "mba"
+     },
+     {
+      "label": "LLB",
+      "value": "llb"
+     },
+     {
+      "label": "LLM",
+      "value": "llm"
+     },
+     {
+      "label": "B.Sc. Agriculture",
+      "value": "b_sc_agriculture"
+     },
+     {
+      "label": "M.Sc. Agriculture",
+      "value": "m_sc_agriculture"
+     },
+     {
+      "label": "BVSc & AH",
+      "value": "bvsc_ah"
+     },
+     {
+      "label": "MVSc",
+      "value": "mvsc"
+     },
+     {
+      "label": "D.Ed.",
+      "value": "d_ed"
+     },
+     {
+      "label": "B.Ed.",
+      "value": "b_ed"
+     },
+     {
+      "label": "M.Ed.",
+      "value": "m_ed"
+     },
+     {
+      "label": "BCA",
+      "value": "bca"
+     },
+     {
+      "label": "MCA",
+      "value": "mca"
+     },
+     {
+      "label": "B.Sc. Computer Science",
+      "value": "b_sc_computer_science"
+     },
+     {
+      "label": "M.Sc. Computer Science",
+      "value": "m_sc_computer_science"
+     },
+     {
+      "label": "Other",
+      "value": "other"
+     }
+    ],
+    "showIf": [
+     {
+      "kind": "field",
+      "fieldId": "education",
+      "anyOf": [
+       "diploma",
+       "graduate",
+       "postgraduate"
+      ]
+     }
+    ],
+    "helpText": "Filtered based on the selected field. Search enabled."
+   },
+   {
+    "id": "occupation",
+    "label": "Occupation",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Homemaker",
+      "value": "homemaker"
+     },
+     {
+      "label": "Agriculture",
+      "value": "agriculture"
+     },
+     {
+      "label": "Skilled Manual Worker",
+      "value": "skilled_manual_worker"
+     },
+     {
+      "label": "Semi-skilled Worker",
+      "value": "semi_skilled_worker"
+     },
+     {
+      "label": "Unskilled Worker",
+      "value": "unskilled_worker"
+     },
+     {
+      "label": "Service Provider",
+      "value": "service_provider"
+     },
+     {
+      "label": "Semi-professional",
+      "value": "semi_professional"
+     },
+     {
+      "label": "Professional",
+      "value": "professional"
+     },
+     {
+      "label": "Entrepreneur/Small Business",
+      "value": "entrepreneur_small_business"
+     },
+     {
+      "label": "Other",
+      "value": "other"
+     }
+    ]
+   },
+   {
+    "id": "occupation_other",
+    "label": "Specify occupation",
+    "type": "text",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "showIf": [
+     {
+      "kind": "field",
+      "fieldId": "occupation",
+      "anyOf": [
+       "other"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "ration_card",
+    "label": "Colour/Type of ration card",
+    "type": "radio",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "AAY",
+      "value": "aay"
+     },
+     {
+      "label": "Eligible for AAY but not applied",
+      "value": "eligible_for_aay_but_not_applied"
+     },
+     {
+      "label": "BPL",
+      "value": "bpl"
+     },
+     {
+      "label": "Eligible for BPL but not applied",
+      "value": "eligible_for_bpl_but_not_applied"
+     },
+     {
+      "label": "APL",
+      "value": "apl"
+     },
+     {
+      "label": "No ration card",
+      "value": "no_ration_card"
+     },
+     {
+      "label": "Others",
+      "value": "others"
+     }
+    ],
+    "helpText": "State-specific lookup."
+   },
+   {
+    "id": "social_category",
+    "label": "Social category",
+    "type": "radio",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "ST",
+      "value": "st"
+     },
+     {
+      "label": "SC",
+      "value": "sc"
+     },
+     {
+      "label": "OBC",
+      "value": "obc"
+     },
+     {
+      "label": "General",
+      "value": "general"
+     },
+     {
+      "label": "Do not know",
+      "value": "do_not_know"
+     },
+     {
+      "label": "Prefer not to say",
+      "value": "prefer_not_to_say"
+     }
+    ]
+   },
+   {
+    "id": "nutrition_course",
+    "label": "Have you completed any certificate course or formal training on nutrition, pregnancy or child care?",
+    "type": "radio",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Yes",
+      "value": "yes"
+     },
+     {
+      "label": "No",
+      "value": "no"
+     }
+    ]
+   },
+   {
+    "id": "nutrition_course_name",
+    "label": "Please specify the course completed.",
+    "type": "text",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "showIf": [
+     {
+      "kind": "field",
+      "fieldId": "nutrition_course",
+      "anyOf": [
+       "yes"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "video_frequency",
+    "label": "How often do you watch health-related videos on YouTube, Facebook, Instagram or other digital media platforms?",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Daily",
+      "value": "daily"
+     },
+     {
+      "label": "Alternate day, 2–3 times per week",
+      "value": "alternate_day_2_3_times_per_week"
+     },
+     {
+      "label": "Once a week",
+      "value": "once_a_week"
+     },
+     {
+      "label": "2–3 times per month",
+      "value": "2_3_times_per_month"
+     },
+     {
+      "label": "About once a month",
+      "value": "about_once_a_month"
+     },
+     {
+      "label": "Less than once a month",
+      "value": "less_than_once_a_month"
+     },
+     {
+      "label": "Never",
+      "value": "never"
+     }
+    ]
+   },
+   {
+    "id": "trusted_source",
+    "label": "Which source do you trust the most for health-related information?",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Doctor",
+      "value": "doctor"
+     },
+     {
+      "label": "Staff Nurse",
+      "value": "staff_nurse"
+     },
+     {
+      "label": "ANM",
+      "value": "anm"
+     },
+     {
+      "label": "ASHA",
+      "value": "asha"
+     },
+     {
+      "label": "Anganwadi Worker",
+      "value": "anganwadi_worker"
+     },
+     {
+      "label": "Nutritionist/Dietitian",
+      "value": "nutritionist_dietitian"
+     },
+     {
+      "label": "Family members",
+      "value": "family_members"
+     },
+     {
+      "label": "Friends",
+      "value": "friends"
+     },
+     {
+      "label": "YouTube",
+      "value": "youtube"
+     },
+     {
+      "label": "Facebook",
+      "value": "facebook"
+     },
+     {
+      "label": "Instagram",
+      "value": "instagram"
+     },
+     {
+      "label": "Other social media",
+      "value": "other_social_media"
+     },
+     {
+      "label": "Television",
+      "value": "television"
+     },
+     {
+      "label": "Internet websites",
+      "value": "internet_websites"
+     },
+     {
+      "label": "Books/Pamphlets",
+      "value": "books_pamphlets"
+     },
+     {
+      "label": "Other",
+      "value": "other"
+     }
+    ]
+   },
+   {
+    "id": "trusted_source_other",
+    "label": "Please specify the other trusted source.",
+    "type": "text",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "showIf": [
+     {
+      "kind": "field",
+      "fieldId": "trusted_source",
+      "anyOf": [
+       "other"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "implement_video",
+    "label": "How often do you follow the advice you receive from health-related videos?",
+    "type": "radio",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Never",
+      "value": "never"
+     },
+     {
+      "label": "Rarely",
+      "value": "rarely"
+     },
+     {
+      "label": "Sometimes",
+      "value": "sometimes"
+     },
+     {
+      "label": "Often",
+      "value": "often"
+     },
+     {
+      "label": "Always",
+      "value": "always"
+     }
+    ],
+    "helpText": "Measures behaviour adoption."
+   },
+   {
+    "id": "confidence_video",
+    "label": "How confident are you in trying a new health practice after watching a reliable educational video?",
+    "type": "radio",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Not at all confident",
+      "value": "not_at_all_confident"
+     },
+     {
+      "label": "Slightly confident",
+      "value": "slightly_confident"
+     },
+     {
+      "label": "Moderately confident",
+      "value": "moderately_confident"
+     },
+     {
+      "label": "Very confident",
+      "value": "very_confident"
+     },
+     {
+      "label": "Extremely confident",
+      "value": "extremely_confident"
+     }
+    ],
+    "helpText": "Measures self-efficacy."
+   },
+   {
+    "id": "willingness_hcw",
+    "label": "If a healthcare worker teaches you a new health practice, how willing are you to try it?",
+    "type": "radio",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Very unwilling",
+      "value": "very_unwilling"
+     },
+     {
+      "label": "Unwilling",
+      "value": "unwilling"
+     },
+     {
+      "label": "Neutral",
+      "value": "neutral"
+     },
+     {
+      "label": "Willing",
+      "value": "willing"
+     },
+     {
+      "label": "Very willing",
+      "value": "very_willing"
+     }
+    ],
+    "helpText": "Measures attitude."
+   },
+   {
+    "id": "information_seeking",
+    "label": "When you had a question about pregnancy, breastfeeding or feeding your baby, how often did you actively look for information?",
+    "type": "radio",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Never",
+      "value": "never"
+     },
+     {
+      "label": "Rarely",
+      "value": "rarely"
+     },
+     {
+      "label": "Sometimes",
+      "value": "sometimes"
+     },
+     {
+      "label": "Often",
+      "value": "often"
+     },
+     {
+      "label": "Always",
+      "value": "always"
+     }
+    ],
+    "helpText": "Measures proactive information seeking."
+   }
+  ]
+ },
+ "child_registration": {
+  "fields": [
+   {
+    "id": "submission_datetime",
+    "label": "Form submission date & time",
+    "type": "text",
+    "placeholder": "",
+    "required": false,
+    "options": null,
+    "helpText": "Auto-captured — read only."
+   },
+   {
+    "id": "child_uid",
+    "label": "Child Unique ID",
+    "type": "text",
+    "placeholder": "",
+    "required": false,
+    "options": null,
+    "helpText": "Auto-generated unique ID — read only."
+   },
+   {
+    "id": "mother_uid",
+    "label": "Mother Unique ID",
+    "type": "text",
+    "placeholder": "",
+    "required": false,
+    "options": null,
+    "helpText": "Linked to the mother registration — read only."
+   },
+   {
+    "id": "babies_born",
+    "label": "Babies born in this delivery",
+    "type": "radio",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Single",
+      "value": "single"
+     },
+     {
+      "label": "Twins",
+      "value": "twins"
+     }
+    ],
+    "helpText": "May be extended to Triplets+."
+   },
+   {
+    "id": "adoption_date",
+    "label": "Date of adoption of the baby",
+    "type": "date",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "noFuture": true,
+    "helpText": "Cannot be a future date; cannot be more than 14 days before today."
+   },
+   {
+    "id": "child_name",
+    "label": "Name of baby",
+    "type": "text",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "helpText": "Minimum 2 characters. A temporary name is allowed if the baby is unnamed."
+   },
+   {
+    "id": "dob",
+    "label": "Date of birth",
+    "type": "date",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "noFuture": true,
+    "helpText": "Cannot be a future date; cannot be more than 365 days before today."
+   },
+   {
+    "id": "birth_weight",
+    "label": "Birth weight (kg)",
+    "type": "number",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "min": 1.0,
+    "max": 5.0,
+    "decimals": 3,
+    "helpText": "1.000–5.000 kg, three decimal places."
+   },
+   {
+    "id": "birth_length",
+    "label": "Birth length (cm)",
+    "type": "number",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "min": 30.0,
+    "max": 65.0,
+    "decimals": 1,
+    "helpText": "30.0–65.0 cm, one decimal place."
+   },
+   {
+    "id": "sex",
+    "label": "Sex",
+    "type": "radio",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Female",
+      "value": "female"
+     },
+     {
+      "label": "Male",
+      "value": "male"
+     }
+    ]
+   },
+   {
+    "id": "delivery_method",
+    "label": "Delivery method",
+    "type": "radio",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Normal vaginal delivery",
+      "value": "normal_vaginal_delivery"
+     },
+     {
+      "label": "Caesarean section",
+      "value": "caesarean_section"
+     },
+     {
+      "label": "Assisted vaginal delivery",
+      "value": "assisted_vaginal_delivery"
+     }
+    ]
+   },
+   {
+    "id": "delivery_place",
+    "label": "Place of delivery",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "District Hospital (DH)",
+      "value": "district_hospital_dh"
+     },
+     {
+      "label": "Rural Hospital (RH)",
+      "value": "rural_hospital_rh"
+     },
+     {
+      "label": "Sub-District Hospital (SDH)",
+      "value": "sub_district_hospital_sdh"
+     },
+     {
+      "label": "Community Health Centre (CHC)",
+      "value": "community_health_centre_chc"
+     },
+     {
+      "label": "Primary Health Centre (PHC)",
+      "value": "primary_health_centre_phc"
+     },
+     {
+      "label": "Sub-centre (SC)",
+      "value": "sub_centre_sc"
+     },
+     {
+      "label": "Private Hospital/Nursing Home",
+      "value": "private_hospital_nursing_home"
+     },
+     {
+      "label": "Home",
+      "value": "home"
+     },
+     {
+      "label": "Other",
+      "value": "other"
+     }
+    ]
+   },
+   {
+    "id": "delivery_place_other",
+    "label": "Specify other place of delivery",
+    "type": "text",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "showIf": [
+     {
+      "kind": "field",
+      "fieldId": "delivery_place",
+      "anyOf": [
+       "other"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "bf_within_one_hour",
+    "label": "Was breastfeeding initiated within one hour of birth?",
+    "type": "radio",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Yes",
+      "value": "yes"
+     },
+     {
+      "label": "No",
+      "value": "no"
+     }
+    ]
+   },
+   {
+    "id": "ebf_during_stay",
+    "label": "Was the baby exclusively breastfed during the healthcare facility stay immediately after delivery?",
+    "type": "radio",
+    "placeholder": "",
+    "required": true,
+    "options": [
+     {
+      "label": "Yes",
+      "value": "yes"
+     },
+     {
+      "label": "No",
+      "value": "no"
+     }
+    ]
+   },
+   {
+    "id": "ebf_reason",
+    "label": "If exclusive breastfeeding was not done during the healthcare facility stay, mention the reason.",
+    "type": "textarea",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "showIf": [
+     {
+      "kind": "field",
+      "fieldId": "ebf_during_stay",
+      "anyOf": [
+       "no"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "pre_existing_conditions",
+    "label": "Pre-existing ill health conditions at birth",
+    "type": "dropdown",
+    "placeholder": "",
+    "required": false,
+    "options": [
+     {
+      "label": "None",
+      "value": "none"
+     },
+     {
+      "label": "Congenital anomaly/Birth defect",
+      "value": "congenital_anomaly_birth_defect"
+     },
+     {
+      "label": "Birth asphyxia (difficulty breathing at birth)",
+      "value": "birth_asphyxia_difficulty_breathing_at_birth"
+     },
+     {
+      "label": "Neonatal jaundice",
+      "value": "neonatal_jaundice"
+     },
+     {
+      "label": "Respiratory distress/Breathing difficulty",
+      "value": "respiratory_distress_breathing_difficulty"
+     },
+     {
+      "label": "Neonatal infection/Sepsis",
+      "value": "neonatal_infection_sepsis"
+     },
+     {
+      "label": "Hypoglycaemia (low blood sugar)",
+      "value": "hypoglycaemia_low_blood_sugar"
+     },
+     {
+      "label": "Others",
+      "value": "others"
+     }
+    ]
+   },
+   {
+    "id": "pre_existing_other",
+    "label": "Please specify the other health condition(s).",
+    "type": "text",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "showIf": [
+     {
+      "kind": "field",
+      "fieldId": "pre_existing_conditions",
+      "anyOf": [
+       "others"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "previous_living_children",
+    "label": "Apart from the current child, how many previous living children do you have?",
+    "type": "number",
+    "placeholder": "",
+    "required": true,
+    "options": null,
+    "min": 0,
+    "max": 10,
+    "decimals": 0,
+    "helpText": "Range 0–10."
+   }
+  ]
+ }
+}

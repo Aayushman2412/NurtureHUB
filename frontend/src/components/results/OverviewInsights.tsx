@@ -11,15 +11,16 @@ import {
   Lightbulb, PlayCircle, Search, Sparkles, UserPlus, Users, X,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { Badge, Button, Card, Input, Pagination } from '../ui';
+import { Badge, Button, Card, Input, LearnerIdentity, Pagination, useTableLayout } from '../ui';
+import { matchesLearner } from '../../lib/learnerSearch';
 import { BAND_COLORS, TEST_A_COLOR, TEST_B_COLOR } from '../../utils/brandColors';
 import { BarList, Donut, Journey, Ring, StackedBar, type BarRow, type Slice } from './InsightCharts';
 import {
-  CountPicker, FindingList, InlineBar, Kpi, KpiRow, RankBadge, ScoreCell, Section, ToneLegend,
+  CountPicker, FindingList, GradientLegend, HeatCell, Kpi, KpiRow, RankBadge, ScoreCell, Section, ToneLegend,
   type CountValue, type RankDir,
 } from './InsightParts';
 import {
-  cohortStats, findings, fmtPct, groupStats, journey, overallScore, pairStats, signed, toneColor,
+  NOT_RECORDED, cohortStats, findings, fmtPct, groupOf, groupStats, journey, overallScore, pairStats, signed, toneColor,
   topPerformers, videoStats,
   type Finding, type GroupStats,
 } from '../../lib/resultsInsights';
@@ -30,13 +31,26 @@ const pctOf = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100
 
 const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
   const { t } = useTranslation('resultsInsights');
-  const { data, tests, users, compareBase, dims, dim, filters, activeGroup, toggleFocus, clearFilter, groupLabel, colorOf, openView } = ctx;
+  const { data, tests, users, compareBase, dims, dim, filters, activeGroups, toggleFocus, clearFilter, groupLabel, colorOf, openView } = ctx;
   const lastTest = tests[tests.length - 1];
   const [metric, setMetric] = useState<string>(lastTest ? `pass:${lastTest.id}` : 'videos');
 
   const overall = useMemo(() => cohortStats(users, tests), [users, tests]);
   const groups = useMemo(() => groupStats(compareBase, dim, tests), [compareBase, dim, tests]);
   const videos = useMemo(() => videoStats(data, users), [data, users]);
+  // Videos split by the chosen dimension: everyone first, then each group.
+  const videoGroups = useMemo(() => {
+    const members = new Map<string, typeof compareBase>();
+    for (const u of compareBase) {
+      const g = groupOf(u, dim) ?? NOT_RECORDED;
+      if (!members.has(g)) members.set(g, []);
+      members.get(g)!.push(u);
+    }
+    return [
+      { key: '__all__', label: t('videos.everyone'), n: compareBase.length, stats: videoStats(data, compareBase) },
+      ...groups.map(g => ({ key: g.group, label: groupLabel(g.group), n: g.n, stats: videoStats(data, members.get(g.group) ?? []) })),
+    ];
+  }, [compareBase, dim, groups, data]); // eslint-disable-line react-hooks/exhaustive-deps
   const steps = useMemo(() => journey(users, tests), [users, tests]);
   const facts = useMemo(
     () => findings(users, tests, dim, groupStats(users, dim, tests), videos, g => groupLabel(g)),
@@ -55,6 +69,13 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
+  const showDistrict = dims.includes('district');
+  const topLayout = useTableLayout('results_top', [
+    { id: 'place', label: showDistrict ? t('top.colPlaceState') : t('dim.block') },
+    { id: 'tests', label: t('top.colTests') },
+    { id: 'average', label: t('top.average') },
+    { id: 'f2f', label: t('top.faceToFace') },
+  ]);
 
   const allRanked = useMemo(() => topPerformers(users, tests, users.length), [users, tests]);
   const rankedLearners = useMemo(() => {
@@ -72,21 +93,19 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
 
   const filteredLearners = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return topKLearners.filter(({ user }) => {
+    // A search looks through everyone, not just the top / bottom N shown —
+    // someone typing a user ID wants that learner wherever they rank.
+    return (q ? rankedLearners : topKLearners).filter(({ user }) => {
       if (f2fFilter === 'selected' && !user.face_to_face.selected) return false;
       if (f2fFilter === 'not_selected' && user.face_to_face.selected) return false;
-      if (q) {
-        const name = (user.name ?? '').toLowerCase();
-        const email = (user.email ?? '').toLowerCase();
-        const cadre = (user.profile?.cadre ?? '').toLowerCase();
-        const block = (user.profile?.block ?? '').toLowerCase();
-        if (!name.includes(q) && !email.includes(q) && !cadre.includes(q) && !block.includes(q)) {
-          return false;
-        }
-      }
-      return true;
+      // User ID first, then mobile, name, cadre, block, district (review of 5 Oct 2026).
+      return !q || matchesLearner(q, {
+        id: user.user_id, name: user.name, email: user.email, mobile: user.profile?.mobile,
+        cadre: user.profile?.cadre, cadreShort: user.profile?.cadre_short,
+        block: user.profile?.block, district: user.profile?.district,
+      });
     });
-  }, [topKLearners, f2fFilter, searchQuery]);
+  }, [topKLearners, rankedLearners, f2fFilter, searchQuery]);
 
   const sortedLearners = useMemo(() => {
     const list = [...filteredLearners];
@@ -96,10 +115,13 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
         diff = a.rank - b.rank;
       } else if (sortCol === 'name') {
         diff = a.user.name.localeCompare(b.user.name);
+      } else if (sortCol === 'id') {
+        diff = a.user.user_id - b.user.user_id;
       } else if (sortCol === 'cadre') {
         diff = (a.user.profile?.cadre ?? '').localeCompare(b.user.profile?.cadre ?? '');
       } else if (sortCol === 'block') {
-        diff = (a.user.profile?.block ?? '').localeCompare(b.user.profile?.block ?? '');
+        diff = (`${a.user.profile?.district ?? ''} ${a.user.profile?.block ?? ''}`)
+          .localeCompare(`${b.user.profile?.district ?? ''} ${b.user.profile?.block ?? ''}`);
       } else if (sortCol.startsWith('test:')) {
         const testId = sortCol.slice(5);
         const scoreA = a.user.tests[testId]?.best_score ?? -1;
@@ -447,7 +469,7 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
                 slices={whoSlices}
                 centerValue={notTakenTest ? whoTotal : compareBase.length}
                 centerLabel={notTakenTest ? t('compare.notTakenCenter') : t('compare.learners')}
-                activeKey={activeGroup}
+                activeKey={activeGroups}
                 onSelect={toggleFocus}
                 selectHint={t('compare.clickHint')}
               />
@@ -466,7 +488,7 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
               <BarList
                 rows={barRows}
                 reference={measure.overall !== null ? { value: measure.overall, label: t('compare.average', { value: fmtPct(measure.overall) }) } : undefined}
-                activeKey={activeGroup}
+                activeKey={activeGroups}
                 onSelect={toggleFocus}
                 selectHint={t('compare.clickHint')}
               />
@@ -503,8 +525,8 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
                       title={t('compare.clickHint')}
                       className={cn(
                         'cursor-pointer border-t border-border transition-colors hover:bg-surface-sunken',
-                        activeGroup === g.group && 'bg-surface-sunken',
-                        activeGroup && activeGroup !== g.group && 'opacity-50',
+                        activeGroups.includes(g.group) && 'bg-surface-sunken',
+                        activeGroups.length > 0 && !activeGroups.includes(g.group) && 'opacity-50',
                       )}
                     >
                       <td className="px-3 py-2">
@@ -541,7 +563,7 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
                   slices={selectedSlices}
                   centerValue={selectedSlices.reduce((a, s) => a + s.value, 0)}
                   centerLabel={t('compare.selectedCenter')}
-                  activeKey={activeGroup}
+                  activeKey={activeGroups}
                   onSelect={toggleFocus}
                   selectHint={t('compare.clickHint')}
                 />
@@ -555,31 +577,61 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
         </Section>
       )}
 
-      {/* Videos & quizzes */}
+      {/* Videos & quizzes — one table, split by the chosen dimension (review of
+          5 Oct 2026): every group gets "watched" and "quiz right" columns,
+          everyone first, and each number is coloured instead of drawn as a bar. */}
       {videos.length > 0 && (
-        <Section icon={<BookOpenCheck />} title={t('videos.title')} subtitle={t('videos.subtitle')}>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[36rem] text-sm">
-              <thead className="text-xs uppercase tracking-wide text-ink-muted">
+        <Section icon={<BookOpenCheck />} title={t('videos.title')} subtitle={t('videos.splitSubtitle', { dim: t(`dim.${dim}`) })}>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-ink">{t('videos.howToRead')}</p>
+            <GradientLegend low={t('videos.legendLow')} high={t('videos.legendHigh')} />
+          </div>
+          <div className="max-h-[70vh] overflow-auto rounded-xl border border-border">
+            <table className="w-max min-w-full border-separate border-spacing-0 text-sm">
+              <thead className="sticky top-0 z-[2] bg-surface-sunken text-ink">
                 <tr>
-                  <th className="pb-2 text-left">{t('videos.video')}</th>
-                  <th className="w-[34%] pb-2 text-left">{t('videos.finished')}</th>
-                  <th className="w-[34%] pb-2 text-left">{t('videos.quizCorrect')}</th>
+                  <th rowSpan={2} className="sticky left-0 z-[3] min-w-56 border-b border-r border-border bg-surface-sunken px-3 py-2 text-left align-bottom text-sm font-bold">
+                    {t('videos.video')}
+                  </th>
+                  {videoGroups.map(g => (
+                    <th key={g.key} colSpan={2}
+                      className={cn('border-b border-l border-border px-2 pt-2 text-center text-sm font-bold',
+                        g.key === '__all__' && 'bg-coral-50 dark:bg-coral-500/10')}>
+                      <div className="max-w-40 truncate" title={g.label}>{g.label}</div>
+                      <div className="text-xs font-semibold text-ink-muted">n = {g.n}</div>
+                    </th>
+                  ))}
+                </tr>
+                <tr>
+                  {videoGroups.map(g => (
+                    <React.Fragment key={g.key}>
+                      <th className={cn('border-b border-l border-border px-2 pb-1.5 text-xs font-semibold text-ink-muted', g.key === '__all__' && 'bg-coral-50 dark:bg-coral-500/10')}>{t('videos.finishedShort')}</th>
+                      <th className={cn('border-b border-border px-2 pb-1.5 text-xs font-semibold text-ink-muted', g.key === '__all__' && 'bg-coral-50 dark:bg-coral-500/10')}>{t('videos.quizShort')}</th>
+                    </React.Fragment>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {videos.map((v, i) => (
-                  <tr key={v.id} className="border-t border-border">
-                    <td className="py-2.5 pr-3">
-                      <div className="font-medium text-ink">{i + 1}. {v.title}</div>
-                      {v.phase && <div className="text-xs text-ink-faint">{v.phase}</div>}
+                  <tr key={v.id} className="hover:bg-surface-sunken/60">
+                    <td className="sticky left-0 z-[1] border-b border-r border-border bg-surface px-3 py-2">
+                      <div className="font-semibold text-ink">{i + 1}. {v.title}</div>
+                      {v.phase && <div className="text-xs text-ink-muted">{v.phase}</div>}
                     </td>
-                    <td className="py-2.5 pr-4"><InlineBar value={v.finishedPct} /></td>
-                    <td className="py-2.5">
-                      {v.quizCorrectPct === null
-                        ? <span className="text-xs text-ink-faint">{v.hasQuiz ? t('videos.noAnswers') : t('videos.noQuiz')}</span>
-                        : <InlineBar value={v.quizCorrectPct} note={t('videos.answeredBy', { n: v.quizAnswered })} />}
-                    </td>
+                    {videoGroups.map(g => {
+                      const gv = g.stats[i];
+                      return (
+                        <React.Fragment key={g.key}>
+                          <HeatCell className="border-b border-l border-border" value={gv.finishedPct}
+                            title={t('videos.finishedTitle', { group: g.label })} />
+                          <HeatCell className="border-b border-border"
+                            value={gv.quizCorrectPct}
+                            title={gv.quizCorrectPct === null
+                              ? (gv.hasQuiz ? t('videos.noAnswers') : t('videos.noQuiz'))
+                              : t('videos.answeredBy', { n: gv.quizAnswered })} />
+                        </React.Fragment>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>
@@ -631,8 +683,9 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
               </select>
             </div>
           </div>
-          <div className="mb-4">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <CountPicker n={topK} onN={setTopK} dir={rankDir} onDir={setRankDir} />
+            {topLayout.controls}
           </div>
 
           {sortedLearners.length === 0 ? (
@@ -645,41 +698,47 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
                 <thead className="sticky top-0 z-[1] bg-surface text-xs uppercase tracking-wide text-ink-muted">
                   <tr>
                     {renderSortHeader('rank', '#', 'left', 'w-12')}
-                    {renderSortHeader('name', t('top.learner'), 'left')}
-                    {renderSortHeader('cadre', t('dim.cadre'), 'left')}
-                    {renderSortHeader('block', t('dim.block'), 'left')}
-                    {tests.map(test => renderSortHeader(`test:${test.id}`, test.label, 'center'))}
-                    {renderSortHeader('average', t('top.average'), 'center')}
-                    {renderSortHeader('f2f', t('top.faceToFace'), 'center')}
+                    {renderSortHeader('name', t('top.learnerId'), 'left')}
+                    {topLayout.show('place') && renderSortHeader('block', showDistrict ? t('top.colPlaceState') : t('dim.block'), 'left')}
+                    {topLayout.show('tests') && tests.map(test => renderSortHeader(`test:${test.id}`, t('top.testScore', { test: test.label }), 'center'))}
+                    {topLayout.show('average') && renderSortHeader('average', t('top.average'), 'center')}
+                    {topLayout.show('f2f') && renderSortHeader('f2f', t('top.faceToFace'), 'center')}
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedLearners.map(({ user: u, rank, avgScore }) => (
                     <tr key={u.user_id} className="border-t border-border transition-colors hover:bg-surface-sunken">
-                      <td className="py-2"><RankBadge rank={rank} /></td>
-                      <td className="py-2">
-                        <div className="font-semibold text-ink">{u.name}</div>
-                        <div className="text-xs text-ink-muted">{u.email}</div>
+                      <td className={topLayout.pad}><RankBadge rank={rank} /></td>
+                      <td className={cn(topLayout.pad, 'pr-3')}>
+                        <LearnerIdentity name={u.name} id={u.user_id} mobile={u.profile?.mobile}
+                          cadre={u.profile?.cadre_short ?? u.profile?.cadre} email={u.email} />
                       </td>
-                      <td className="py-2 text-ink-muted">{u.profile?.cadre ?? '—'}</td>
-                      <td className="py-2 text-ink-muted">{u.profile?.block ?? '—'}</td>
-                      {tests.map(test => {
+                      {topLayout.show('place') && (
+                        <td className={cn(topLayout.pad, 'text-ink')}>
+                          {[showDistrict ? u.profile?.district : null, u.profile?.block].filter(Boolean).join(' · ') || '—'}
+                        </td>
+                      )}
+                      {topLayout.show('tests') && tests.map(test => {
                         const r = u.tests[String(test.id)];
                         return (
-                          <td key={test.id} className="py-2 text-center font-semibold tabular-nums"
+                          <td key={test.id} className={cn(topLayout.pad, 'text-center font-semibold tabular-nums')}
                             style={{ color: r?.attempts_count ? toneColor(r.best_score ?? 0) : undefined }}>
                             {r?.attempts_count ? fmtPct(r.best_score ?? 0) : '—'}
                           </td>
                         );
                       })}
-                      <td className="py-2 text-center font-display font-extrabold tabular-nums text-ink">
-                        {fmtPct(avgScore)}
-                      </td>
-                      <td className="py-2 text-center">
-                        {u.face_to_face.selected
-                          ? <Badge variant="coral" size="sm">{t('top.selected')}</Badge>
-                          : <span className="text-ink-faint">—</span>}
-                      </td>
+                      {topLayout.show('average') && (
+                        <td className={cn(topLayout.pad, 'text-center font-display font-extrabold tabular-nums text-ink')}>
+                          {fmtPct(avgScore)}
+                        </td>
+                      )}
+                      {topLayout.show('f2f') && (
+                        <td className={cn(topLayout.pad, 'text-center')}>
+                          {u.face_to_face.selected
+                            ? <Badge variant="coral" size="sm">{t('top.selected')}</Badge>
+                            : <span className="text-ink-faint">—</span>}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

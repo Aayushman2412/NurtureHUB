@@ -282,9 +282,11 @@
       "f2f": "F2F learners",
       "mtfl": "MT+FL",
       "attention": "Needs a call",
-      "outside": "Outside F2F, with cases"
+      "outside": "Outside F2F, with cases",
+      "monitors": "Batch monitors",
+      "unmonitored": "F2F without a monitor"
     },
-    "search": "Search name, email, block…",
+    "search": "Search by user ID, name, block…",
     "hint": "Put each F2F learner in their training batch — their follow-up is counted from its last day. Mark Master Trainers and Facilitators here too. Adoptions are shown as total / target (ANC · <{{pncM}}M · ≥{{pncM}}M).",
     "mtfl": "MT / FL",
     "mtflFor": "Master Trainer or Facilitator: {{name}}",
@@ -584,5 +586,29 @@
       "bf": "BF",
       "cf": "CF"
     }
+  },
+  "monitors": {
+    "column": "Batch monitor",
+    "none": "— no monitor —",
+    "isMonitor": "★ Is a batch monitor",
+    "for": "Batch monitor for {{name}}",
+    "saved": "Batch monitor saved for {{name}}.",
+    "failed": "Could not save the batch monitor.",
+    "hint": "Batch monitor: mark a learner \"★ Is a batch monitor\", then give other learners that monitor — one by one here, or all the learners shown at once.",
+    "bulkLabel": "Give the {{n}} learners shown a batch monitor:",
+    "bulkPick": "Pick a monitor",
+    "bulkApply": "Assign",
+    "bulkSaved": "{{n}} learners now have this batch monitor.",
+    "title": "Batch monitors ({{count}})",
+    "without": "{{count}} F2F learners have no batch monitor yet",
+    "explain": "Each monitor and the learners they answer for: how many are on track, and who needs a call this week.",
+    "monitor": "Monitor",
+    "learners": "Learners",
+    "onTrack": "On track",
+    "needCall": "Need a call",
+    "whoToCall": "Who to call, and why",
+    "allOnTrack": "All on track",
+    "noLearners": "No learners given yet",
+    "quietDays": "quiet {{n}} days"
   }
 }

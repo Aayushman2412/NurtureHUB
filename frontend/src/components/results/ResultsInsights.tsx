@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowRightLeft, ClipboardCheck, LayoutDashboard } from 'lucide-react';
 import client from '../../api/client';
 import { CHART_SERIES } from '../../utils/brandColors';
-import { ActiveFilterBar, ChipRow, SubNav } from './InsightParts';
+import { ActiveFilterBar, SplitFilterRow, SubNav, type GroupMode } from './InsightParts';
 import OverviewInsights from './OverviewInsights';
 import TestInsights from './TestInsights';
 import CompareTests from './CompareTests';
@@ -50,6 +50,7 @@ const ResultsInsights: React.FC<{ data: ResultsData }> = ({ data }) => {
   const [view, setViewState] = useState<string>(readView);
   const [dim, setDim] = useState<DimensionKey>(dims.includes('cadre') ? 'cadre' : dims[0] ?? 'cadre');
   const [filters, setFilters] = useState<DimensionFilters>({});
+  const [mode, setMode] = useState<GroupMode>('split');
   const [questions, setQuestions] = useState<Record<number, TestQuestions>>({});
   const [questionsLoaded, setQuestionsLoaded] = useState(false);
 
@@ -81,36 +82,64 @@ const ResultsInsights: React.FC<{ data: ResultsData }> = ({ data }) => {
     return g;
   };
 
-  const users = useMemo(() => {
-    const activeEntries = Object.entries(filters) as [DimensionKey, string][];
-    if (activeEntries.length === 0) return data.users;
-    return data.users.filter(u =>
-      activeEntries.every(([d, val]) => (groupOf(u, d) ?? NOT_RECORDED) === val)
-    );
-  }, [data.users, filters]);
+  // Each learner's group on every dimension, worked out once per payload: every
+  // filter and split below reads this table instead of re-deriving groups
+  // learner by learner on each click (what made filtering crawl on a big cohort).
+  const groupTable = useMemo(() => {
+    const table = new Map<number, Partial<Record<DimensionKey, string>>>();
+    for (const u of data.users) {
+      const row: Partial<Record<DimensionKey, string>> = {};
+      for (const d of dims) row[d] = groupOf(u, d) ?? NOT_RECORDED;
+      table.set(u.user_id, row);
+    }
+    return table;
+  }, [data.users, dims]);
 
-  const compareBase = useMemo(() => {
-    // When splitting by `dim`, apply all filters except `dim`
-    // so the reader sees all groups in `dim` (for the current cohort),
-    // with the active group for `dim` (if any) highlighted.
-    const otherEntries = (Object.entries(filters) as [DimensionKey, string][])
-      .filter(([d]) => d !== dim);
-    if (otherEntries.length === 0) return data.users;
-    return data.users.filter(u =>
-      otherEntries.every(([d, val]) => (groupOf(u, d) ?? NOT_RECORDED) === val)
-    );
-  }, [data.users, filters, dim]);
+  const keep = (except?: DimensionKey) => {
+    const entries = (Object.entries(filters) as [DimensionKey, string[]][])
+      .filter(([d, v]) => d !== except && v && v.length > 0)
+      .map(([d, v]) => [d, new Set(v)] as const);
+    if (entries.length === 0) return data.users;
+    return data.users.filter(u => {
+      const row = groupTable.get(u.user_id) ?? {};
+      return entries.every(([d, picked]) => picked.has(row[d] ?? NOT_RECORDED));
+    });
+  };
 
-  const toggleFocus = (group: string) => {
+  const users = useMemo(() => keep(), [data.users, filters, groupTable]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Split by `dim` over everyone the OTHER filters keep, so the reader sees
+  // all of `dim`'s groups with the picked ones highlighted.
+  const compareBase = useMemo(() => keep(dim), [data.users, filters, dim, groupTable]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Functional, so ticks in quick succession build on each other.
+  const setFilterValues = (d: DimensionKey, values: string[] | ((current: string[]) => string[])) => {
     setFilters(prev => {
       const next = { ...prev };
-      if (next[dim] === group) {
-        delete next[dim];
-      } else {
-        next[dim] = group;
-      }
+      const list = typeof values === 'function' ? values(prev[d] ?? []) : values;
+      if (list.length === 0) delete next[d];
+      else next[d] = list;
       return next;
     });
+  };
+
+  // Clicking a group in a chart or table adds it to (or drops it from) the
+  // groups kept for the current dimension.
+  const toggleFocus = (group: string) =>
+    setFilterValues(dim, current => (current.includes(group) ? current.filter(g => g !== group) : [...current, group]));
+
+  // The tick-list for Filter by: each group of a dimension and how many
+  // learners it holds among those the other filters keep.
+  const choices = (d: DimensionKey) => {
+    const counts = new Map<string, number>();
+    for (const u of keep(d)) {
+      const g = groupTable.get(u.user_id)?.[d] ?? NOT_RECORDED;
+      counts.set(g, (counts.get(g) ?? 0) + 1);
+    }
+    for (const g of filters[d] ?? []) if (!counts.has(g)) counts.set(g, 0);
+    return [...counts.entries()]
+      .sort((a, b) => (a[0] === NOT_RECORDED ? 1 : b[0] === NOT_RECORDED ? -1 : b[1] - a[1] || a[0].localeCompare(b[0])))
+      .map(([value, n]) => ({ value, label: groupLabel(value, d), n }));
   };
 
   const clearFilter = (dimension?: DimensionKey) => {
@@ -125,11 +154,13 @@ const ResultsInsights: React.FC<{ data: ResultsData }> = ({ data }) => {
     }
   };
 
+  const activeGroups = filters[dim] ?? [];
   const ctx: InsightCtx = {
     data, tests, dims, dim, setDim, users,
     compareBase,
     filters,
-    activeGroup: filters[dim] ?? null,
+    activeGroup: activeGroups.length === 1 ? activeGroups[0] : null,
+    activeGroups,
     toggleFocus,
     clearFilter,
     groupLabel,
@@ -154,16 +185,22 @@ const ResultsInsights: React.FC<{ data: ResultsData }> = ({ data }) => {
     <div className="space-y-5">
       {/* Frozen at the top while the page scrolls: which page, how learners
           are split, and any group filter in force — every chart below reads
-          them, so they stay in sight. */}
-      <div className="space-y-2.5 rounded-2xl border border-border bg-surface/95 p-2 shadow-(--shadow-card) backdrop-blur sm:sticky sm:top-[3.75rem] sm:z-20 lg:top-2">
+          them, so they stay in sight. Solid, not frosted: a blur behind a
+          sticky bar repaints the whole page on every scroll, which crawls on
+          a district-office laptop that is also screen-sharing. */}
+      <div className="space-y-2.5 rounded-2xl border border-border bg-surface p-2 shadow-(--shadow-card) sm:sticky sm:top-[3.75rem] sm:z-20 lg:top-2">
         <SubNav items={pages} value={current} onChange={setView} label={t('nav.label')} />
         {dims.length > 0 && (
           <div className="space-y-2 px-1.5 pb-1">
-            <ChipRow
-              label={t('compare.splitBy')}
+            <SplitFilterRow
+              mode={mode}
+              onMode={setMode}
               items={dims.map(d => ({ key: d, label: t(`dim.${d}`) }))}
-              value={dim}
-              onChange={k => setDim(k as DimensionKey)}
+              dim={dim}
+              onDim={setDim}
+              filters={filters}
+              choices={choices}
+              onFilter={setFilterValues}
             />
             <ActiveFilterBar
               className="mb-0"

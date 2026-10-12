@@ -96,13 +96,13 @@
     "thisDistrict": "इस ज़िले",
     "refresh": "रीफ़्रेश करें",
     "downloadExcel": "एक्सेल डाउनलोड करें",
-    "searchPlaceholder": "नाम या ईमेल से खोजें…",
+    "searchPlaceholder": "यूज़र ID, मोबाइल, नाम, कैडर या ब्लॉक से खोजें…",
     "emptyTitle": "अभी कोई उपयोगकर्ता नहीं",
     "emptyBody": "इस ज़िले में अभी कोई उपयोगकर्ता दर्ज नहीं है।",
     "colUser": "उपयोगकर्ता",
     "colAvgWatch": "औसत देखा %",
     "colQuizzes": "क्विज़",
-    "colPerformance": "प्रदर्शन",
+    "colPerformance": "वीडियो देखने का स्कोर",
     "skipped": "छोड़ा गया",
     "pending": "लंबित",
     "answered": "उत्तर दिए",
@@ -122,7 +122,11 @@
       "quizzesAnswered": "उत्तर दिए क्विज़",
       "quizzesSkipped": "छोड़े गए क्विज़",
       "quizAccuracy": "क्विज़ सटीकता %",
-      "performanceScore": "प्रदर्शन स्कोर"
+      "performanceScore": "वीडियो देखने का स्कोर (100 में से)",
+      "userId": "यूज़र ID",
+      "mobile": "मोबाइल",
+      "cadre": "कैडर",
+      "block": "ब्लॉक"
     }
   },
   "projects": {
@@ -176,7 +180,7 @@
     "loading": "लोड हो रहा है…",
     "search": "खोजें",
     "searchLabel": "खोजें",
-    "searchPlaceholder": "नाम या ईमेल…",
+    "searchPlaceholder": "यूज़र ID, मोबाइल, नाम या ईमेल…",
     "projectFilter": "प्रोजेक्ट",
     "allProjects": "सभी प्रोजेक्ट",
     "unassignedOnly": "किसी प्रोजेक्ट में नहीं",

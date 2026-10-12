@@ -10,11 +10,14 @@ import { getMasdBatches, setLearnerBatch } from '../../api/masd';
 import { getProjectSlug, PROJECT_EVENT } from '../../lib/adminProject';
 import * as XLSX from 'xlsx';
 import {
-  Badge, Button, Card, EmptyState, Input, PageHeader, PageLoader,
-  Pagination, Table, TBody, Tabs, Td, Th, THead, Tr,
+  Badge, Button, Card, EmptyState, Input, LearnerIdentity, PageHeader, PageLoader,
+  Pagination, Table, TBody, Tabs, Td, Th, THead, Tr, useTableLayout,
 } from '../../components/ui';
+import { matchesLearner } from '../../lib/learnerSearch';
+import { guideTerms } from '../../lib/pageGuide';
+import { downloadTestAnswers } from '../../api/results';
 import ResultsInsights from '../../components/results/ResultsInsights';
-import type { ResultsData, TestMeta } from '../../lib/resultsInsights';
+import type { LearnerProfile, ResultsData, TestMeta, UserResultRow } from '../../lib/resultsInsights';
 import { useToast } from '../../context/ToastContext';
 import { cn } from '../../utils/cn';
 
@@ -47,6 +50,7 @@ interface Selection {
   user_id: number;
   name: string;
   email: string;
+  profile?: LearnerProfile;
   selected_at: string | null;
   uploaded_by: string | null;
   notified: boolean;
@@ -127,18 +131,46 @@ const AdminResultsPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const filteredUsers = (data?.users || []).filter(u =>
-    !search ||
-    u.name.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const searchable = (u: UserResultRow) => ({
+    id: u.user_id, name: u.name, email: u.email, mobile: u.profile?.mobile, cadre: u.profile?.cadre,
+    cadreShort: u.profile?.cadre_short, block: u.profile?.block, district: u.profile?.district,
+  });
+  const filteredUsers = (data?.users || []).filter(u => matchesLearner(search, searchable(u)));
+  const [selectionSearch, setSelectionSearch] = useState('');
+  const filteredSelections = selections.filter(sel => matchesLearner(selectionSearch, {
+    id: sel.user_id, name: sel.name, email: sel.email, mobile: sel.profile?.mobile, cadre: sel.profile?.cadre,
+    cadreShort: sel.profile?.cadre_short, block: sel.profile?.block, district: sel.profile?.district,
+    extra: [sel.batch],
+  }));
+
+  // Column groups the reader can hide (review of 5 Oct 2026: a Layout on every table).
+  const learnersLayout = useTableLayout('results_learners', [
+    { id: 'place', label: t('table.colPlace') },
+    { id: 'videos', label: t('table.colVideos') },
+    { id: 'score', label: t('table.colVideoScore') },
+    { id: 'tests', label: t('table.colTests') },
+    { id: 'flow', label: t('table.colFlowStatus') },
+    { id: 'f2f', label: t('table.colFaceToFace') },
+  ]);
+  const [answersBusy, setAnswersBusy] = useState(false);
+  const downloadAnswers = async () => {
+    if (!data) return;
+    setAnswersBusy(true);
+    try {
+      await downloadTestAnswers(data.district);
+    } catch {
+      showToast(t('toasts.answersFailed'), 'error');
+    } finally {
+      setAnswersBusy(false);
+    }
+  };
 
   const paginatedUsers = filteredUsers.slice(
     (resultsPage - 1) * resultsPageSize,
     resultsPage * resultsPageSize,
   );
 
-  const paginatedSelections = selections.slice(
+  const paginatedSelections = filteredSelections.slice(
     (f2fPage - 1) * f2fPageSize,
     f2fPage * f2fPageSize,
   );
@@ -146,7 +178,8 @@ const AdminResultsPage: React.FC = () => {
   const downloadExcel = () => {
     if (!data) return;
     const headers = [
-      t('excel.userName'), t('excel.email'),
+      t('excel.userId'), t('excel.userName'), t('excel.mobile'), t('excel.cadre'), t('excel.department'),
+      t('excel.block'), t('excel.district'), t('excel.email'),
       t('excel.tutorialsCompleted'), t('excel.avgWatch'), t('excel.quizzesAnswered'), t('excel.quizzesSkipped'), t('excel.quizAccuracy'), t('excel.performanceScore'),
       ...data.tests.flatMap(test => {
         const label = testLabel(test, t);
@@ -164,7 +197,8 @@ const AdminResultsPage: React.FC = () => {
       t('excel.completedFullFlow'), t('excel.selectedForF2f'),
     ];
     const rows = data.users.map(u => [
-      u.name, u.email,
+      u.user_id, u.name, u.profile?.mobile ?? '', u.profile?.cadre ?? '', u.profile?.department ?? '',
+      u.profile?.block ?? '', u.profile?.district ?? '', u.email,
       `${u.summary.tutorials_completed}/${u.summary.total_tutorials}`,
       u.summary.avg_watch_pct,
       u.summary.quizzes_completed,
@@ -186,6 +220,13 @@ const AdminResultsPage: React.FC = () => {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     XLSX.utils.book_append_sheet(wb, ws, t('excel.sheet'));
+    // What every column means, for anyone opening the file cold.
+    const glossary = XLSX.utils.aoa_to_sheet([
+      [t('excel.glossaryTerm'), t('excel.glossaryMeaning')],
+      ...guideTerms(t, 'results').map(x => [x.term, x.meaning]),
+    ]);
+    glossary['!cols'] = [{ wch: 34 }, { wch: 110 }];
+    XLSX.utils.book_append_sheet(wb, glossary, t('excel.glossarySheet').slice(0, 31));
     XLSX.writeFile(wb, `results_${data.district}.xlsx`);
   };
 
@@ -299,6 +340,16 @@ const AdminResultsPage: React.FC = () => {
               {t('header.refresh')}
             </Button>
             <Button
+              variant="outline"
+              iconLeft={<Download className="size-4" />}
+              loading={answersBusy}
+              onClick={() => void downloadAnswers()}
+              disabled={!data || data.users.length === 0}
+              title={t('header.downloadAnswersHint')}
+            >
+              {t('header.downloadAnswers')}
+            </Button>
+            <Button
               iconLeft={<Download className="size-4" />}
               onClick={downloadExcel}
               disabled={!data || data.users.length === 0}
@@ -333,17 +384,20 @@ const AdminResultsPage: React.FC = () => {
       )}
 
       {tab === 'learners' && (<>
-      {/* Search */}
-      <div className="mb-4 max-w-sm">
-        <Input
-          leftIcon={<Search className="size-4" />}
-          placeholder={t('searchPlaceholder')}
-          value={search}
-          onChange={e => {
-            setSearch(e.target.value);
-            setResultsPage(1);
-          }}
-        />
+      {/* Search + layout */}
+      <div className="mb-4 flex flex-wrap items-start gap-3">
+        <div className="w-full max-w-sm">
+          <Input
+            leftIcon={<Search className="size-4" />}
+            placeholder={t('searchPlaceholder')}
+            value={search}
+            onChange={e => {
+              setSearch(e.target.value);
+              setResultsPage(1);
+            }}
+          />
+        </div>
+        {learnersLayout.controls}
       </div>
 
       {/* Combined results table */}
@@ -358,69 +412,81 @@ const AdminResultsPage: React.FC = () => {
           <Table density="compact">
             <THead>
               <Tr>
-                <Th className="sticky left-0 z-10 bg-surface-sunken">{t('table.colUser')}</Th>
-                <Th className="text-center">{t('table.colTutorials')}</Th>
-                <Th className="text-center">{t('table.colPerformance')}</Th>
-                {data.tests.map(test => (
-                  <Th key={test.id} title={test.title} className="text-center">{t('table.testSuffix', { label: testLabel(test, t) })}</Th>
+                <Th className="sticky left-0 z-10 bg-surface-sunken">{t('table.colLearner')}</Th>
+                {learnersLayout.show('place') && <Th>{t('table.colPlace')}</Th>}
+                {learnersLayout.show('videos') && <Th className="text-center" title={t('table.colVideosHint')}>{t('table.colVideos')}</Th>}
+                {learnersLayout.show('score') && <Th className="text-center" title={t('table.colVideoScoreHint')}>{t('table.colVideoScore')}</Th>}
+                {learnersLayout.show('tests') && data.tests.map(test => (
+                  <Th key={test.id} title={test.title} className="text-center">{t('table.testScore', { label: testLabel(test, t) })}</Th>
                 ))}
-                <Th className="text-center">{t('table.colFlowStatus')}</Th>
-                <Th className="text-center">{t('table.colFaceToFace')}</Th>
+                {learnersLayout.show('flow') && <Th className="text-center" title={t('table.colFlowStatusHint')}>{t('table.colFlowStatus')}</Th>}
+                {learnersLayout.show('f2f') && <Th className="text-center">{t('table.colFaceToFace')}</Th>}
               </Tr>
             </THead>
             <TBody>
               {paginatedUsers.map(u => (
                 <Tr key={u.user_id}>
-                  <Td className="sticky left-0 z-10 whitespace-nowrap bg-surface">
-                    <div className="font-semibold text-ink">{u.name}</div>
-                    <div className="text-xs text-ink-faint">{u.email}</div>
+                  <Td className={cn('sticky left-0 z-10 whitespace-nowrap bg-surface', learnersLayout.pad)}>
+                    <LearnerIdentity name={u.name} id={u.user_id} mobile={u.profile?.mobile}
+                      cadre={u.profile?.cadre_short ?? u.profile?.cadre} email={u.email} />
                   </Td>
-                  <Td className="whitespace-nowrap text-center">
+                  {learnersLayout.show('place') && (
+                    <Td className={cn('whitespace-nowrap text-ink', learnersLayout.pad)}>
+                      {[u.profile?.block, u.profile?.district].filter(Boolean).join(', ') || '—'}
+                    </Td>
+                  )}
+                  {learnersLayout.show('videos') && <Td className={cn('whitespace-nowrap text-center', learnersLayout.pad)}>
                     <div className="font-bold text-ink">
                       {u.summary.tutorials_completed}/{u.summary.total_tutorials}
                     </div>
-                    <div className="text-xs text-ink-faint">
+                    <div className="text-xs text-ink-muted">
                       {t('table.watchedLine', { pct: u.summary.avg_watch_pct, done: u.summary.quizzes_completed, skipped: u.summary.quizzes_skipped })}
                     </div>
-                  </Td>
-                  <Td className="text-center">
-                    <span className={cn('font-display font-extrabold', scoreColor(u.summary.performance_score))}>
-                      {u.summary.performance_score}
-                    </span>
-                    <span className="text-xs text-ink-faint">{t('table.outOf100')}</span>
-                  </Td>
-                  {data.tests.map(test => {
+                  </Td>}
+                  {learnersLayout.show('score') && (
+                    <Td className={cn('text-center', learnersLayout.pad)}>
+                      <span className={cn('font-display font-extrabold', scoreColor(u.summary.performance_score))}>
+                        {u.summary.performance_score}
+                      </span>
+                      <span className="text-xs text-ink-muted">{t('table.outOf100')}</span>
+                    </Td>
+                  )}
+                  {learnersLayout.show('tests') && data.tests.map(test => {
                     const r = u.tests[String(test.id)];
                     if (!r || r.attempts_count === 0) {
-                      return <Td key={test.id} className="text-center text-ink-faint">{t('table.notAttempted')}</Td>;
+                      return <Td key={test.id} className={cn('text-center text-ink-muted', learnersLayout.pad)}>{t('table.notAttempted')}</Td>;
                     }
                     const riskAlert = r.was_flagged || r.max_risk_score >= 50;
                     return (
-                      <Td key={test.id} className="whitespace-nowrap text-center">
+                      <Td key={test.id} className={cn('whitespace-nowrap text-center', learnersLayout.pad)}>
                         <div className={cn('font-bold', r.is_passed ? 'text-success-600' : 'text-error-600')}>
                           {r.best_score !== null ? `${Math.round(r.best_score)}%` : '—'} {r.is_passed ? '✓' : '✗'}
                         </div>
-                        <div className={cn('text-xs', riskAlert ? 'text-error-600' : 'text-ink-faint')}>
+                        <div className={cn('text-xs', riskAlert ? 'text-error-600' : 'text-ink-muted')}>
                           {t('table.riskLine', { risk: r.max_risk_score, tabs: r.tab_switches, fs: r.fullscreen_exits, cp: r.copy_paste_events })}
                           {r.was_flagged ? ` • ${t('table.flagged')}` : ''}
                         </div>
                       </Td>
                     );
                   })}
-                  <Td className="text-center">
-                    {u.completed_flow ? (
-                      <Badge variant="success" size="sm">{t('status.completed')}</Badge>
-                    ) : (
-                      <Badge variant="warning" size="sm">{t('status.inProgress')}</Badge>
-                    )}
-                  </Td>
-                  <Td className="text-center">
-                    {u.face_to_face.selected ? (
-                      <Badge variant="coral" size="sm">{t('status.selected')}</Badge>
-                    ) : (
-                      <span className="text-sm text-ink-faint">—</span>
-                    )}
-                  </Td>
+                  {learnersLayout.show('flow') && (
+                    <Td className={cn('text-center', learnersLayout.pad)}>
+                      {u.completed_flow ? (
+                        <Badge variant="success" size="sm">{t('status.completed')}</Badge>
+                      ) : (
+                        <Badge variant="warning" size="sm">{t('status.inProgress')}</Badge>
+                      )}
+                    </Td>
+                  )}
+                  {learnersLayout.show('f2f') && (
+                    <Td className={cn('text-center', learnersLayout.pad)}>
+                      {u.face_to_face.selected ? (
+                        <Badge variant="coral" size="sm">{t('status.selected')}</Badge>
+                      ) : (
+                        <span className="text-sm text-ink-muted">—</span>
+                      )}
+                    </Td>
+                  )}
                 </Tr>
               ))}
             </TBody>
@@ -504,14 +570,23 @@ const AdminResultsPage: React.FC = () => {
         />
       ) : (
         <div className="space-y-3">
+          <div className="max-w-sm">
+            <Input
+              leftIcon={<Search className="size-4" />}
+              placeholder={t('searchPlaceholder')}
+              value={selectionSearch}
+              onChange={e => { setSelectionSearch(e.target.value); setF2fPage(1); }}
+            />
+          </div>
           <Table density="compact">
             <THead>
               <Tr>
-                <Th>{t('selectionTable.colUser')}</Th>
-                <Th>{t('selectionTable.colEmail')}</Th>
+                <Th>{t('table.colLearner')}</Th>
+                <Th>{t('table.colPlace')}</Th>
                 <Th>{t('selectionTable.colSelectedAt')}</Th>
                 <Th>{t('selectionTable.colUploadedBy')}</Th>
                 <Th>{t('selectionTable.colBatch')}</Th>
+                <Th title={t('selectionTable.colMonitorHint')}>{t('selectionTable.colMonitor')}</Th>
                 <Th>{t('selectionTable.colNotified')}</Th>
                 <Th className="w-16 text-center">{t('selectionTable.colRemove')}</Th>
               </Tr>
@@ -519,8 +594,11 @@ const AdminResultsPage: React.FC = () => {
             <TBody>
               {paginatedSelections.map(sel => (
                 <Tr key={sel.user_id}>
-                  <Td className="font-semibold text-ink">{sel.name}</Td>
-                  <Td className="text-ink-muted">{sel.email}</Td>
+                  <Td>
+                    <LearnerIdentity name={sel.name} id={sel.user_id} mobile={sel.profile?.mobile}
+                      cadre={sel.profile?.cadre_short ?? sel.profile?.cadre} email={sel.email} />
+                  </Td>
+                  <Td className="text-ink">{[sel.profile?.block, sel.profile?.district].filter(Boolean).join(', ') || '—'}</Td>
                   <Td className="text-ink-muted">{sel.selected_at ? new Date(sel.selected_at).toLocaleString() : '—'}</Td>
                   <Td className="text-ink-muted">{sel.uploaded_by || '—'}</Td>
                   <Td>
@@ -544,6 +622,11 @@ const AdminResultsPage: React.FC = () => {
                       </div>
                     ) : <span className="text-xs text-ink-faint">{t('selectionTable.noBatches')}</span>}
                   </Td>
+                  <Td className="text-ink">
+                    {sel.profile?.is_batch_monitor
+                      ? <Badge variant="coral" size="sm">{t('selectionTable.isMonitor')}</Badge>
+                      : sel.profile?.batch_monitor ?? <span className="text-ink-muted">—</span>}
+                  </Td>
                   <Td>{sel.notified ? <span className="text-success-600">{t('selectionTable.yes')}</span> : t('selectionTable.no')}</Td>
                   <Td className="text-center">
                     <Button
@@ -563,7 +646,7 @@ const AdminResultsPage: React.FC = () => {
           </Table>
           <Pagination
             currentPage={f2fPage}
-            totalItems={selections.length}
+            totalItems={filteredSelections.length}
             pageSize={f2fPageSize}
             onPageChange={setF2fPage}
             onPageSizeChange={setF2fPageSize}

@@ -841,7 +841,7 @@ def _learner_activity(db: Session, user_ids: List[int]) -> Dict[int, Dict[str, i
 
 @router.get("/users")
 def list_users_for_admin(
-    q: str = Query("", description="Search name or email"),
+    q: str = Query("", description="Search by user ID, mobile (8+ digits), name or email"),
     project_id: Optional[int] = Query(None, description="Filter by project id; -1 = unassigned"),
     limit: int = Query(200, ge=1, le=1000),
     offset: int = Query(0, ge=0),
@@ -855,7 +855,21 @@ def list_users_for_admin(
     """
     query = db.query(User)
     term = (q or "").strip()
-    if term:
+    # "#123" / "id 123" / a bare number: the user ID first (the one thing unique
+    # in a project — review of 5 Oct 2026); 8+ digits also match a mobile.
+    id_term = re.sub(r"^(#|user\s*id\s*:?\s*|id\s*:?\s*)", "", term, flags=re.I).strip()
+    if id_term.isdigit():
+        matches = User.id == int(id_term)
+        if len(id_term) >= 8:
+            # Phones are encrypted (no SQL predicate possible) and users carry no
+            # blind index yet, so match them in Python — a few thousand rows.
+            digits = id_term
+            by_phone = [uid for uid, phone in db.query(User.id, User.phone).all()
+                        if phone and digits in re.sub(r"\D", "", phone)]
+            if by_phone:
+                matches = matches | User.id.in_(by_phone)
+        query = query.filter(matches)
+    elif term:
         like = f"%{term.lower()}%"
         query = query.filter(
             func.lower(User.email).like(like) | func.lower(func.coalesce(User.full_name, "")).like(like)
@@ -3436,10 +3450,18 @@ def _build_tutorial_tracking(db: Session, pd: ProgramDistrict) -> tuple:
             "has_quiz": has_quiz,
         })
 
-    users = db.query(User).filter(
-        User.program_district_id == pd.id,
+    # A state project's learners sit in its district projects — count them all.
+    users = db.query(User).options(
+        joinedload(User.designation_rel), joinedload(User.department_ref),
+        joinedload(User.block), joinedload(User.qualification),
+        joinedload(User.experience_range), joinedload(User.district_rel),
+        joinedload(User.program_district),
+    ).filter(
+        User.program_district_id.in_(projects.member_project_ids(db, pd)),
         User.is_admin == False,  # noqa: E712
     ).order_by(User.full_name).all()
+
+    monitors = _monitor_names(db, users)
 
     progress_map: Dict[tuple, UserTutorialProgress] = {}
     if tutorial_ids and users:
@@ -3499,6 +3521,7 @@ def _build_tutorial_tracking(db: Session, pd: ProgramDistrict) -> tuple:
             "user_id": u.id,
             "name": u.full_name or u.email,
             "email": u.email,
+            "profile": _learner_profile(u, monitors),
             "tutorials": per_tutorial,
             "summary": {
                 "tutorials_completed": completed_count,
@@ -3624,17 +3647,66 @@ class FaceToFaceUploadRequest(BaseModel):
 FACE_TO_FACE_NOTIFICATION_TITLE = "Selected for Face-to-Face Training"
 
 
-def _learner_profile(u: Optional[User]) -> Dict[str, Any]:
-    """The professional attributes the Results insights compare learners by —
-    cadre, department, block, experience, schooling, age. Names and labels
-    only; contact details never leave through here."""
+_CADRE_SHORT = {
+    "staff nurse": "SN", "asha facilitator": "ASHA-F", "lady supervisor": "LS",
+    "medical officer": "MO", "specialist medical officer": "SMO", "pharmacist": "Pharm",
+    "lab technician": "LT", "health inspector": "HI", "nutrition counsellor": "NC",
+    "data entry operator": "DEO", "programme manager": "PM", "counsellor": "Couns",
+    "physiotherapist": "PT", "poshan coordinator": "PC", "district health officer": "DHO",
+    "taluk health officer": "THO", "district epidemiologist": "DE",
+    "district surveillance officer": "DSO", "district programme officer": "DPO",
+    "block health education officer": "BHEO", "health assistant (female)": "HA-F",
+    "health assistant (male)": "HA-M", "mphw (male)": "MPHW", "anganwadi supervisor": "AWS",
+}
+
+
+def short_cadre(cadre: Optional[str]) -> Optional[str]:
+    """A cadre as people say it: "Anganwadi Worker (AWW)" -> "AWW",
+    "Staff Nurse" -> "SN"; one-word cadres (ASHA, ANM) are already short."""
+    if not cadre:
+        return None
+    name = cadre.strip()
+    if name.lower() in _CADRE_SHORT:
+        return _CADRE_SHORT[name.lower()]
+    m = re.search(r"\(([A-Z]{2,8})\)", name)  # an acronym in brackets, not "(Specify)"
+    if m:
+        return m.group(1)
+    head = re.split(r"\s*\(", name)[0].strip()
+    return head if len(head) <= 12 else name
+
+
+def _monitor_names(db: Session, users: List[User]) -> Dict[int, str]:
+    """Names of the batch monitors watching these learners, in one query."""
+    ids = {u.batch_monitor_id for u in users if u is not None and u.batch_monitor_id}
+    return {uid: (name or email) for uid, name, email in
+            db.query(User.id, User.full_name, User.email).filter(User.id.in_(ids)).all()} if ids else {}
+
+
+def _learner_profile(u: Optional[User], monitors: Optional[Dict[int, str]] = None) -> Dict[str, Any]:
+    """Who a learner is and the attributes the Results insights compare them
+    by — cadre, department, district, block, experience, schooling, age.
+
+    Mobile is included because the review of 5 Oct 2026 asked that a learner
+    be recognisable wherever listed (user ID, mobile, cadre — an email helps
+    no one in the field); it reaches admins only, as on the Learners page."""
     if u is None:
         return {}
     exp = u.experience_range
     dept = u.department_ref
+    cadre = (u.designation_rel.name if u.designation_rel else None) or u.designation_other or u.role or u.learner_category
+    # In a state project the district that matters is the learner's district
+    # project (Khasi, West Garo Hills …); elsewhere their home district.
+    pd = u.program_district
+    district = pd.name if pd is not None and pd.parent_id is not None else (
+        (u.district_rel.name if u.district_rel else None) or u.district)
     return {
-        "cadre": (u.designation_rel.name if u.designation_rel else None)
-        or u.designation_other or u.role or u.learner_category,
+        "mobile": u.phone,
+        "is_batch_monitor": bool(u.is_batch_monitor),
+        "batch_monitor_id": u.batch_monitor_id,
+        "batch_monitor": (monitors or {}).get(u.batch_monitor_id) if u.batch_monitor_id else None,
+        "cadre_short": short_cadre(cadre),
+        "district": district,
+        "cadre": cadre,
         "department": (dept.name if dept else None) or u.department_other or u.department,
         "block": u.block.name if u.block else None,
         "experience": exp.label if exp else None,
@@ -3694,14 +3766,6 @@ def get_combined_results(
         ).all()
     } if user_ids else {}
 
-    learners = {
-        u.id: u for u in db.query(User).options(
-            joinedload(User.designation_rel), joinedload(User.department_ref),
-            joinedload(User.block), joinedload(User.qualification),
-            joinedload(User.experience_range),
-        ).filter(User.id.in_(user_ids)).all()
-    } if user_ids else {}
-
     for row in user_rows:
         uid = row["user_id"]
         tests_out = {}
@@ -3735,7 +3799,6 @@ def get_combined_results(
         )
         selection = selections.get(uid)
         row["tests"] = tests_out
-        row["profile"] = _learner_profile(learners.get(uid))
         row["completed_flow"] = completed_flow
         row["face_to_face"] = {
             "selected": selection is not None,
@@ -3778,43 +3841,25 @@ def get_results_questions(
         Test.stage_id.in_([s.id for s in stages])
     ).order_by(Stage.order_index).all() if stages else []
     learner_ids = [uid for (uid,) in db.query(User.id).filter(
-        User.program_district_id == pd.id, User.is_admin == False,  # noqa: E712
+        User.program_district_id.in_(projects.member_project_ids(db, pd)),
+        User.is_admin == False,  # noqa: E712
     ).all()]
 
     out = []
     for test in tests:
-        questions = db.query(Question).options(selectinload(Question.options)).filter(
-            Question.test_id == test.id).order_by(Question.order_index, Question.id).all()
-        first: Dict[int, int] = {}      # user -> first submitted attempt id
-        if learner_ids:
-            for att_id, uid in (
-                db.query(TestAttempt.id, TestAttempt.user_id)
-                .filter(TestAttempt.test_id == test.id, TestAttempt.submitted_at.isnot(None),
-                        TestAttempt.user_id.in_(learner_ids))
-                .order_by(TestAttempt.user_id, TestAttempt.attempt_number, TestAttempt.id).all()
-            ):
-                first.setdefault(uid, att_id)
-        attempt_ids = list(first.values())
-
-        # (question, option) -> count, one GROUP BY per chunk of attempts.
-        chosen: Dict[tuple, int] = {}
-        for i in range(0, len(attempt_ids), 1000):
-            chunk = attempt_ids[i:i + 1000]
-            for qid, oid, n in (
-                db.query(TestAnswer.question_id, TestAnswer.selected_option_id, sa_func.count())
-                .filter(TestAnswer.attempt_id.in_(chunk))
-                .group_by(TestAnswer.question_id, TestAnswer.selected_option_id).all()
-            ):
-                chosen[(qid, oid)] = chosen.get((qid, oid), 0) + n
-
+        questions, first, chosen = _first_attempt_answers(db, test, learner_ids)
         rows = []
-        writers = len(attempt_ids)
+        writers = len(first)
         for q in questions:
             options = sorted(q.options, key=lambda o: o.label or "")
             correct_ids = {o.id for o in options if o.is_correct}
-            answered = {o.id: chosen.get((q.id, o.id), 0) for o in options}
-            n_correct = sum(n for oid, n in answered.items() if oid in correct_ids)
-            n_answered = sum(answered.values())
+            answered = {o.id: 0 for o in options}
+            for picks in chosen.values():
+                for oid in picks.get(q.id, ()):
+                    if oid in answered:
+                        answered[oid] += 1
+            n_correct = sum(1 for picks in chosen.values() if set(picks.get(q.id, ())) & correct_ids)
+            n_answered = sum(1 for picks in chosen.values() if picks.get(q.id))
             wrong = [(n, o) for o in options if o.id not in correct_ids for n in [answered[o.id]] if n > 0]
             top_wrong = max(wrong, key=lambda x: x[0]) if wrong else None
             right = next((o for o in options if o.is_correct), None)
@@ -3837,8 +3882,215 @@ def get_results_questions(
                 "top_wrong_text": top_wrong[1].text if top_wrong else None,
                 "top_wrong_count": top_wrong[0] if top_wrong else 0,
             })
-        out.append({"test_id": test.id, "writers": writers, "questions": rows})
+        # Each learner's first-attempt answers, one entry per question in the
+        # order above ("" = left blank): lets the dashboard recount every
+        # question for whichever groups are filtered, and compare easy, medium
+        # and difficult questions across cadres and blocks.
+        label_of = {o.id: (o.label or "") for q in questions for o in q.options}
+        answers = {
+            str(uid): "|".join("+".join(label_of.get(oid, "") for oid in picks.get(q.id, ())) for q in questions)
+            for uid, picks in chosen.items()
+        }
+        out.append({"test_id": test.id, "writers": writers, "questions": rows, "answers": answers})
     return {"district": pd.slug, "tests": out}
+
+
+from datetime import timedelta as dt_timedelta, timezone as dt_timezone  # noqa: E402
+
+from app.timeutils import to_utc  # noqa: E402
+
+# Question difficulty by the share who got it right on their first attempt
+# (mirrors DIFFICULTY_CUTOFFS in the dashboard): 80%+ easy, below 50% difficult.
+DIFFICULTY_EASY_FROM = 80
+_IST = dt_timezone(dt_timedelta(hours=5, minutes=30))
+DIFFICULTY_MEDIUM_FROM = 50
+
+
+def _difficulty(correct: int, writers: int) -> str:
+    if not writers:
+        return ""
+    pct = correct * 100 / writers
+    return "Easy" if pct >= DIFFICULTY_EASY_FROM else "Medium" if pct >= DIFFICULTY_MEDIUM_FROM else "Difficult"
+
+
+@router.get("/results/answers.xlsx")
+def download_test_answers(
+    district: str = Query("jalna", description="District slug"),
+    test_id: Optional[int] = Query(None, description="One test only"),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """The raw test data in one workbook (review of 5 Oct 2026): for each test,
+    learners down the rows and questions across — the answer each picked on
+    their first attempt, and the same grid scored 1/0 — plus a question
+    reference sheet (correct answer, every wrong answer, how many chose it,
+    easy / medium / difficult). Everything the dashboard's question analysis
+    is built from, ready for Excel or any other tool."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    pd = _get_district_or_404(db, district)
+    stages = _district_stages(db, pd.slug)
+    q = db.query(Test).join(Stage, Test.stage_id == Stage.id).filter(
+        Test.stage_id.in_([st.id for st in stages])) if stages else None
+    tests = q.order_by(Stage.order_index).all() if q is not None else []
+    if test_id is not None:
+        tests = [t for t in tests if t.id == test_id]
+        if not tests:
+            raise HTTPException(status_code=404, detail="Test not found in this project")
+
+    learners = db.query(User).options(
+        joinedload(User.designation_rel), joinedload(User.department_ref), joinedload(User.block),
+        joinedload(User.district_rel), joinedload(User.program_district),
+    ).filter(
+        User.program_district_id.in_(projects.member_project_ids(db, pd)),
+        User.is_admin == False,  # noqa: E712
+    ).order_by(User.full_name).all()
+    by_id = {u.id: u for u in learners}
+
+    wb = Workbook()
+    head_font = Font(bold=True, color="FFFFFF")
+    head_fill = PatternFill("solid", fgColor="1F2937")
+    green = PatternFill("solid", fgColor="DCFCE7")
+    red = PatternFill("solid", fgColor="FEE2E2")
+
+    readme = wb.active
+    readme.title = "Read me"
+    for row in (
+        ["NurtureHUB — test answers", f"{pd.name} · {datetime.now(_IST).strftime('%d %b %Y %H:%M')} IST"],
+        [],
+        ["Answers", "One row per learner who wrote the test, one column per question: the option they picked on their FIRST attempt (blank = left unanswered)."],
+        ["Scored", "The same grid marked 1 = right, 0 = wrong, blank = unanswered. Sum a row for the learner's first-attempt marks; average a column for the question's % right."],
+        ["Questions", "The reference sheet: each question, its correct answer, every option with how many chose it, % right and its difficulty."],
+        ["Difficulty", f"Easy: {DIFFICULTY_EASY_FROM}%+ answered right · Medium: {DIFFICULTY_MEDIUM_FROM}–{DIFFICULTY_EASY_FROM - 1}% · Difficult: below {DIFFICULTY_MEDIUM_FROM}%."],
+        ["Why first attempt", "A retake after seeing the paper measures memory of the questions, not knowledge of the topic."],
+    ):
+        readme.append(row)
+    readme["A1"].font = Font(bold=True, size=14)
+    readme.column_dimensions["A"].width = 20
+    readme.column_dimensions["B"].width = 120
+
+    def header(ws, cols):
+        ws.append(cols)
+        for c in ws[1]:
+            c.font = head_font
+            c.fill = head_fill
+            c.alignment = Alignment(wrap_text=True, vertical="center")
+
+    id_cols = ["User ID", "Learner", "Mobile", "Cadre", "Department", "Block", "District",
+               "Submitted (first attempt)", "First attempt score %", "Best score %", "Attempts"]
+
+    for test in tests:
+        questions, first, chosen = _first_attempt_answers(db, test, list(by_id))
+        label = {"formative": "Formative", "screening": "Screening"}.get(test.test_type or "", test.title)[:20]
+        attempts = {}
+        for att in db.query(TestAttempt).filter(
+                TestAttempt.test_id == test.id, TestAttempt.submitted_at.isnot(None),
+                TestAttempt.user_id.in_(list(first))).all():
+            attempts.setdefault(att.user_id, []).append(att)
+        att_by_id = {a.id: a for rows in attempts.values() for a in rows}
+        correct_of = {q.id: {o.id for o in q.options if o.is_correct} for q in questions}
+        label_of = {o.id: (o.label or "") for q in questions for o in q.options}
+
+        ans = wb.create_sheet(f"{label} – answers"[:31])
+        scored = wb.create_sheet(f"{label} – scored"[:31])
+        qcols = [f"Q{i}" for i in range(1, len(questions) + 1)]
+        header(ans, id_cols + qcols)
+        header(scored, id_cols + qcols + ["Total right", "Out of"])
+        for uid in sorted(first, key=lambda x: ((by_id[x].full_name or "").lower(), x)):
+            u = by_id[uid]
+            prof = _learner_profile(u)
+            att = att_by_id.get(first[uid])
+            mine = attempts.get(uid, [])
+            ident = [uid, u.full_name or u.email, prof.get("mobile") or "", prof.get("cadre") or "",
+                     prof.get("department") or "", prof.get("block") or "", prof.get("district") or "",
+                     to_utc(att.submitted_at).astimezone(_IST).strftime("%d/%m/%Y %H:%M") if att and att.submitted_at else "",
+                     round(att.score or 0, 1) if att else "", round(max((a.score or 0) for a in mine), 1) if mine else "",
+                     len(mine)]
+            picks = chosen.get(uid, {})
+            ans.append(ident + ["+".join(label_of.get(o, "") for o in picks.get(q.id, ())) for q in questions])
+            marks = [("" if not picks.get(q.id) else (1 if set(picks[q.id]) & correct_of[q.id] else 0)) for q in questions]
+            scored.append(ident + marks + [sum(m for m in marks if m != ""), len(questions)])
+            r = scored.max_row
+            for j, m in enumerate(marks, start=len(id_cols) + 1):
+                if m != "":
+                    scored.cell(r, j).fill = green if m == 1 else red
+        for ws in (ans, scored):
+            ws.freeze_panes = ws.cell(2, 3)
+            for j, w in enumerate([9, 26, 13, 22, 26, 16, 16, 18, 12, 12, 9], start=1):
+                ws.column_dimensions[get_column_letter(j)].width = w
+            ws.auto_filter.ref = f"A1:{get_column_letter(ws.max_column)}{max(1, ws.max_row)}"
+
+        ref = wb.create_sheet(f"{label} – questions"[:31])
+        max_opts = max((len(q.options) for q in questions), default=0)
+        opt_cols = []
+        for k in range(max_opts):
+            opt_cols += [f"Option {k + 1}", f"Option {k + 1} chosen by"]
+        header(ref, ["Q", "Question", "Topic", "Subtopic", "Correct answer", "Wrote", "Right", "% right",
+                     "Left blank", "Difficulty"] + opt_cols)
+        writers = len(first)
+        for i, q in enumerate(questions, start=1):
+            right = sum(1 for picks in chosen.values() if set(picks.get(q.id, ())) & correct_of[q.id])
+            blank = sum(1 for picks in chosen.values() if not picks.get(q.id))
+            correct = next((o for o in q.options if o.is_correct), None)
+            opts = []
+            for o in sorted(q.options, key=lambda o: o.label or ""):
+                n = sum(1 for picks in chosen.values() if o.id in picks.get(q.id, ()))
+                opts += [f"{o.label}. {o.text}{'  ✓' if o.is_correct else ''}", n]
+            ref.append([f"Q{i}", q.text, q.topic or "", q.subtopic or "",
+                        f"{correct.label}. {correct.text}" if correct else "", writers, right,
+                        round(right * 100 / writers, 1) if writers else "", blank,
+                        _difficulty(right, writers)] + opts)
+        for j, w in enumerate([6, 60, 18, 18, 36, 8, 8, 9, 10, 11], start=1):
+            ref.column_dimensions[get_column_letter(j)].width = w
+        for row in ref.iter_rows(min_row=2):
+            for c in row:
+                c.alignment = Alignment(wrap_text=True, vertical="top")
+        ref.freeze_panes = "C2"
+        ref.auto_filter.ref = f"A1:{get_column_letter(ref.max_column)}{max(1, ref.max_row)}"
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    suffix = f"_{tests[0].test_type or tests[0].id}" if test_id is not None and tests else ""
+    filename = f"test_answers_{pd.slug}{suffix}_{datetime.now(_IST).strftime('%d%m%y')}.xlsx"
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _first_attempt_answers(db: Session, test: Test, learner_ids: List[int]):
+    """(questions in paper order, {user: first submitted attempt id},
+    {user: {question id: [option ids picked]}}) for one test.
+
+    Everything here is counted on a learner's FIRST submitted attempt — what
+    they knew before they had seen the paper; a retake after reading the
+    questions says more about memory than about the topic."""
+    questions = db.query(Question).options(selectinload(Question.options)).filter(
+        Question.test_id == test.id).order_by(Question.order_index, Question.id).all()
+    first: Dict[int, int] = {}
+    if learner_ids:
+        for att_id, uid in (
+            db.query(TestAttempt.id, TestAttempt.user_id)
+            .filter(TestAttempt.test_id == test.id, TestAttempt.submitted_at.isnot(None),
+                    TestAttempt.user_id.in_(learner_ids))
+            .order_by(TestAttempt.user_id, TestAttempt.attempt_number, TestAttempt.id).all()
+        ):
+            first.setdefault(uid, att_id)
+    user_of = {att: uid for uid, att in first.items()}
+    chosen: Dict[int, Dict[int, List[int]]] = {uid: {} for uid in first}
+    attempt_ids = list(user_of)
+    for i in range(0, len(attempt_ids), 1000):
+        for att_id, qid, oid in (
+            db.query(TestAnswer.attempt_id, TestAnswer.question_id, TestAnswer.selected_option_id)
+            .filter(TestAnswer.attempt_id.in_(attempt_ids[i:i + 1000]),
+                    TestAnswer.selected_option_id.isnot(None)).all()
+        ):
+            chosen[user_of[att_id]].setdefault(qid, []).append(oid)
+    return questions, first, chosen
 
 
 @router.get("/results/face-to-face")
@@ -3851,12 +4103,20 @@ def list_face_to_face_selections(
     pd = _get_district_or_404(db, district)
     selections = db.query(FaceToFaceSelection).join(
         User, FaceToFaceSelection.user_id == User.id
-    ).filter(User.program_district_id == pd.id).order_by(FaceToFaceSelection.selected_at).all()
+    ).options(
+        joinedload(FaceToFaceSelection.user).joinedload(User.designation_rel),
+        joinedload(FaceToFaceSelection.user).joinedload(User.program_district),
+        joinedload(FaceToFaceSelection.user).joinedload(User.district_rel),
+    ).filter(
+        User.program_district_id.in_(projects.member_project_ids(db, pd)),
+    ).order_by(FaceToFaceSelection.selected_at).all()
+    monitors = _monitor_names(db, [sel.user for sel in selections])
     return [
         {
             "user_id": sel.user_id,
             "name": sel.user.full_name or sel.user.email,
             "email": sel.user.email,
+            "profile": _learner_profile(sel.user, monitors),
             "uploaded_by": sel.uploaded_by,
             "notified": sel.notified,
             "selected_at": sel.selected_at.isoformat() if sel.selected_at else None,
@@ -3883,7 +4143,8 @@ def upload_face_to_face_selection(
     newly selected user to await further instructions.
     """
     pd = _get_district_or_404(db, district)
-    district_users = db.query(User).filter(User.program_district_id == pd.id).all()
+    district_users = db.query(User).filter(
+        User.program_district_id.in_(projects.member_project_ids(db, pd))).all()
     by_email = {u.email.lower(): u for u in district_users}
 
     seen = set()

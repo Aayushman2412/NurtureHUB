@@ -25,7 +25,7 @@ const pctOf = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100
 
 const CompareTests: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
   const { t } = useTranslation('resultsInsights');
-  const { data, tests, users, compareBase, dims, dim, filters, activeGroup, toggleFocus, clearFilter, groupLabel } = ctx;
+  const { data, tests, users, compareBase, dims, dim, filters, activeGroups, toggleFocus, clearFilter, groupLabel } = ctx;
   const [aId, setAId] = useState<number>(tests[0].id);
   const [bId, setBId] = useState<number>(tests[tests.length - 1].id);
   const [measure, setMeasure] = useState<Measure>('score');
@@ -200,7 +200,7 @@ const CompareTests: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
               labelA={a.label}
               labelB={b.label}
               changeLabel={c => t('cmp.changeChip', { change: signed(c) })}
-              activeKey={activeGroup}
+              activeKey={activeGroups}
               onSelect={toggleFocus}
               selectHint={t('compare.clickHint')}
             />
@@ -232,8 +232,8 @@ const CompareTests: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
                         title={t('compare.clickHint')}
                         className={cn(
                           'cursor-pointer border-t border-border transition-colors hover:bg-surface-sunken',
-                          activeGroup === r.group && 'bg-surface-sunken',
-                          activeGroup && activeGroup !== r.group && 'opacity-50',
+                          activeGroups.includes(r.group) && 'bg-surface-sunken',
+                          activeGroups.length > 0 && !activeGroups.includes(r.group) && 'opacity-50',
                         )}
                       >
                         <td className="px-3 py-2">

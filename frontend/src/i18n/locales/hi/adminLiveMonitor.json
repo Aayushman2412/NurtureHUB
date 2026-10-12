@@ -28,7 +28,7 @@
     "avgAccuracy": "औसत सटीकता"
   },
   "controls": {
-    "searchPlaceholder": "नाम या ईमेल से खोजें…",
+    "searchPlaceholder": "यूज़र ID, नाम या ईमेल से खोजें…",
     "sort": {
       "riskScore": "खतरे का स्कोर",
       "timeRemaining": "शेष समय",

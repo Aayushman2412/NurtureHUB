@@ -6,7 +6,7 @@ import type { ActivityBlock, GrowthSummaryRow, ZTriplet } from '../../api/growth
 import { caseCategory, monthsDays, pctCellFill, zCellFill } from '../../lib/growthDisplay';
 
 /** Toggleable column groups (Identity is always shown). */
-type GroupId = 'case' | 'fu' | 'total' | 'cg' | 'bf' | 'cf' | 'anc' | 'protein' | 'outcomes';
+type GroupId = 'ids' | 'case' | 'fu' | 'total' | 'cg' | 'bf' | 'cf' | 'anc' | 'protein' | 'outcomes' | 'cats';
 
 const EMPTY_BLOCK: ActivityBlock = { expected: null, actual: 0, incomplete: null, actual_pct: null, incomplete_pct: null };
 
@@ -258,6 +258,36 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
         ],
       },
       {
+        // Who the learner is and where the case lives (review of 5 Oct 2026);
+        // toggled from Layout like every other group, always in the download.
+        id: 'ids',
+        label: t('summary.groups.ids'),
+        title: t('summary.groups.idsFull'),
+        tone: 'plain',
+        cols: ([
+          ['learner_id', 'userId', 72, 'center'],
+          ['learner_mobile', 'mobile', 104, 'left'],
+          ['learner_cadre', 'cadre', 120, 'left'],
+          ['mother_uid', 'motherId', 116, 'left'],
+          ['case_village', 'village', 110, 'left'],
+          ['case_block', 'block', 100, 'left'],
+          ['case_district', 'district', 100, 'left'],
+          ['case_hwc', 'facility', 130, 'left'],
+        ] as const).map(([field, code, base, align]) => ({
+          key: `ids_${field}`,
+          code: t(`summary.ids.${code}`),
+          title: t(`summary.ids.${code}Full`),
+          base,
+          align,
+          render: (r: GrowthSummaryRow) => {
+            const v = r.ids?.[field];
+            return v == null || v === ''
+              ? <span className="text-ink-faint">—</span>
+              : <span className={cn('truncate', field === 'learner_id' && 'font-semibold tabular-nums')} title={String(v)}>{String(v)}</span>;
+          },
+        })),
+      },
+      {
         id: 'case',
         label: t('summary.groups.case'),
         title: t('summary.groups.case'),
@@ -348,6 +378,24 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
           zCol('wfhz', 'av', 'WH·AVz'),
           zCol('wfhz', 'lv', 'WH·LVz'),
         ],
+      },
+      {
+        id: 'cats',
+        label: t('summary.groups.cats'),
+        title: t('summary.groups.catsFull'),
+        tone: 'outcome',
+        cols: (['wfaz', 'hfaz', 'wfhz'] as const).flatMap(m => (['bv', 'av', 'lv'] as const).map(v => ({
+          key: `cat_${m}_${v}`,
+          code: `${m === 'wfaz' ? 'W' : m === 'hfaz' ? 'H' : 'WH'}·${v.toUpperCase()}`,
+          title: t(`summary.catsTitle.${m}`, { visit: t(`summary.${v}`) }),
+          base: 116,
+          align: 'left' as const,
+          fill: (r: GrowthSummaryRow) => zCellFill(r.outcomes[m][v]),
+          render: (r: GrowthSummaryRow) => {
+            const c = r.categories?.[m]?.[v];
+            return c ? <span className="truncate text-ink" title={c}>{c}</span> : <span className="text-ink-faint">—</span>;
+          },
+        }))),
       },
       activityGroup('cg', 'CG', t('summary.groups.cg'), 'cg'),
       activityGroup('bf', 'BF', t('summary.groups.bf'), 'bf'),
@@ -445,7 +493,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
 
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-ink-muted">{t('summary.columns')}:</span>
-            {(['case', 'fu', 'total', 'outcomes', 'cg', 'bf', 'cf', 'anc', 'protein'] as GroupId[]).map(id => (
+            {(['ids', 'case', 'fu', 'total', 'outcomes', 'cats', 'cg', 'bf', 'cf', 'anc', 'protein'] as GroupId[]).map(id => (
               <button
                 key={id}
                 type="button"

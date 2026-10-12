@@ -161,6 +161,8 @@ class Dataset:
     stages: List[Any] = field(default_factory=list)
     tutorials_by_id: Dict[int, Any] = field(default_factory=dict)
     tests_by_id: Dict[int, Any] = field(default_factory=dict)
+    # user id → (batch name, last training day) of the F2F batch they trained in
+    training_batch_by_user: Dict[int, Any] = field(default_factory=dict)
 
     def learner_of(self, row: Any) -> Any:
         """The learner (User) who registered/submitted `row`, or None."""
@@ -227,6 +229,16 @@ def load_dataset(db: Session, district: str, project_code: str) -> Dataset:
         ds.designation_names = {d.id: d.name for d in db.query(models.Designation).all()}
     if hasattr(models, "Department"):
         ds.department_names = {d.id: d.name for d in db.query(models.Department).all()}
+
+    # The F2F training batch each learner trained in (MASD "Training Batch").
+    if learner_ids:
+        for uid, name, end in (
+            db.query(models.FaceToFaceSelection.user_id, models.MasdTrainingBatch.name,
+                     models.MasdTrainingBatch.end_date)
+            .join(models.MasdTrainingBatch, models.FaceToFaceSelection.batch_id == models.MasdTrainingBatch.id)
+            .filter(models.FaceToFaceSelection.user_id.in_(learner_ids)).all()
+        ):
+            ds.training_batch_by_user[uid] = (name, end)
 
     # MASD learner progress
     for p in db.query(models.UserTutorialProgress).all():

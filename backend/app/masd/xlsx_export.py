@@ -74,8 +74,9 @@ def build_workbook(report: Dict[str, Any]) -> BytesIO:
     types = list(R.ADOPTION_TYPES)
     tl = {t: R.ADOPTION_TYPE_LABELS[t] for t in types}
 
-    header = (["Learner", "Email", "Block", "Designation", "Role group", "Department", "F2F", "MT/FL",
-               "Batch", "Training ended", "Follow-up (days)", "Follow-up counted (days)"]
+    # User ID and mobile first: how a learner is recognised (review of 5 Oct 2026).
+    header = (["User ID", "Learner", "Mobile", "Email", "Block", "Designation", "Role group", "Department", "F2F", "MT/FL",
+               "Batch monitor", "Batch", "Training ended", "Follow-up (days)", "Follow-up counted (days)"]
               + [f"{tl[t]} target" for t in types] + [f"{tl[t]} adopted" for t in types]
               + ["Not typed", "Total adoptions", "Target", "% target fulfilled",
                  "Antenatal care", "Protein count", "Growth monitoring", "Breastfeeding", "Complementary feeding",
@@ -90,9 +91,10 @@ def build_workbook(report: Dict[str, Any]) -> BytesIO:
     rows = []
     for l in sorted(report["learners"], key=lambda x: (x["block"], x["name"] or "")):
         a, act, own = l["adoptions"], l["activities"], l["own"]
-        rows.append([l["name"], l["email"], l["block"], l["role"], l["role_group"], l["department"],
-                     "Yes" if l["f2f"] else "No",
+        rows.append([l["id"], l["name"], l.get("mobile") or "", l["email"], l["block"], l["role"], l["role_group"],
+                     l["department"], "Yes" if l["f2f"] else "No",
                      {"master_trainer": "Master Trainer", "facilitator": "Facilitator"}.get(l["trainer_role"] or "", ""),
+                     "★ Batch monitor" if l.get("is_monitor") else (l.get("monitor") or ""),
                      l["batch"] or "", l["training_end"], l["fu_raw"], l["fu_days"]]
                     + [l["by_type"][t]["target"] for t in types] + [l["by_type"][t]["adopted"] for t in types]
                     + [a["unknown"], a["total"], l["target"], l["fulfilment_pct"],
@@ -103,9 +105,9 @@ def build_workbook(report: Dict[str, Any]) -> BytesIO:
                        l["avg_per_adoption"], l["last_activity"], l["nil_days"],
                        " · ".join(str(fu) for fu in l.get("tranche_fu") or [])]
                     + [v for n in steps for v in _uptake_cells(l, n)])
-    pct_learner = (22, 30, 31, 32, 33, 36)
+    pct_learner = (25, 33, 34, 35, 36, 39)   # three identity columns ahead of the old positions
     _sheet(wb, "MASD learners", header, rows,
-           widths=[24, 30, 14, 20, 12, 10, 6, 14, 12, 12, 10, 10] + [8] * 8 + [7, 10] + [10] * 8 + [11] * 3
+           widths=[9, 24, 13, 30, 14, 20, 12, 10, 6, 14, 18, 12, 12, 10, 10] + [8] * 8 + [7, 10] + [10] * 8 + [11] * 3
            + [10, 10, 10, 12, 10, 12, 10, 14] + [12] * (2 * len(steps)),
            pct_cols=pct_learner, note=note)
 
@@ -221,11 +223,19 @@ def build_workbook(report: Dict[str, Any]) -> BytesIO:
     _sheet(wb, "Malnutrition", ["Group", "Age band", "Indicator", "n", "BV %", "AV %", "LV %", "Abs change (pts)",
                                 "Rel change %"], prev_rows, widths=[22, 14, 14, 8, 9, 9, 9, 14, 13])
 
-    _sheet(wb, "Needs attention", ["Learner", "Block", "Cadre", "Adoptions", "% target", "% of expected", "Nil-activity days",
-                                   "Reasons"],
-           [[a["name"], a["block"], a["role_group"], a["adoptions"], a["fulfilment_pct"], a["intensity_pct"],
+    _sheet(wb, "Needs attention", ["User ID", "Learner", "Block", "Cadre", "Adoptions", "% target", "% of expected",
+                                   "Nil-activity days", "Reasons"],
+           [[a["id"], a["name"], a["block"], a["role_group"], a["adoptions"], a["fulfilment_pct"], a["intensity_pct"],
              a["nil_days"], ", ".join(a["reasons"])] for a in report["attention"]],
-           widths=[24, 14, 12, 10, 10, 11, 14, 40], pct_cols=(6,))
+           widths=[9, 24, 14, 12, 10, 10, 11, 14, 40], pct_cols=(7,))
+    monitors = (report.get("batch_monitors") or {}).get("monitors") or []
+    if monitors:
+        _sheet(wb, "Batch monitors", ["User ID", "Batch monitor", "Block", "Cadre", "Learners", "On track", "Need a call",
+                                      "% own-case activity", "Who to call, and why"],
+               [[m["id"], m["name"], m["block"], m["role_group"], m["learners"], m["on_track"], m["need_call"], m["own_pct"],
+                 "; ".join(f"{c['name']} (ID {c['id']}): {', '.join(c['reasons'])}" for c in m["calls"])]
+                for m in monitors],
+               widths=[9, 24, 14, 12, 10, 10, 11, 14, 90], pct_cols=(8,))
     _sheet(wb, "Data corrections", ["Learner", "Block", "Cases", "Reasons"],
            [[f["name"], f["block"], f["cases"], "; ".join(f"{R.EXCLUSION_LABELS[k]} ({n})" for k, n in f["reasons"].items())]
             for f in o["data_fixes"]], widths=[24, 14, 8, 90])

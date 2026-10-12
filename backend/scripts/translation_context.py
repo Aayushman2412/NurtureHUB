@@ -92,6 +92,7 @@ SCREENS: Dict[Tuple[str, Optional[str]], str] = {
     ("pipelines", "rawdata"): "Admin - raw data",
     ("pipelines", None): "Admin - data pipelines",
     ("masd", None): "Admin - MASD dashboard (member activity summary)",
+    ("guide", None): "Admin - page guide pop-up (terms and abbreviations of each page)",
     ("server", "email"): "Verification email (sent by the system)",
     ("server", "notification"): "Notifications sent by the system",
 }

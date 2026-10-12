@@ -1,16 +1,21 @@
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { matchesLearner } from '../../lib/learnerSearch';
 import { ArrowDownUp, Search } from 'lucide-react';
-import { setLearnerBatch, setTrainerRole, type MasdLearner, type MasdReport } from '../../api/masd';
+import {
+  setBatchMonitorTag, setLearnerBatch, setLearnerMonitor, setMonitorLearners, setTrainerRole,
+  type MasdLearner, type MasdReport,
+} from '../../api/masd';
 import { useToast } from '../../context/ToastContext';
-import { Input } from '../ui';
+import { Button, Input, LearnerIdentity } from '../ui';
 import { ChipRow } from '../results/InsightParts';
 import { cn } from '../../utils/cn';
 import { DataTable, RateCell, Th } from './MasdCharts';
 import { fmt1 } from '../../lib/masdDisplay';
+import MasdMonitors from './MasdMonitors';
 
-type Filter = 'f2f' | 'mtfl' | 'attention' | 'outside';
-type SortKey = 'name' | 'block' | 'role_group' | 'batch' | 'adoptions' | 'fulfilment' | 'activities' | 'intensity' | 'own' | 'nil';
+type Filter = 'f2f' | 'mtfl' | 'attention' | 'outside' | 'monitors' | 'unmonitored';
+type SortKey = 'name' | 'block' | 'role_group' | 'batch' | 'monitor' | 'adoptions' | 'fulfilment' | 'activities' | 'intensity' | 'own' | 'nil';
 
 const sortValue = (l: MasdLearner, key: SortKey): number | string => {
   switch (key) {
@@ -18,6 +23,7 @@ const sortValue = (l: MasdLearner, key: SortKey): number | string => {
     case 'block': return l.block.toLowerCase();
     case 'role_group': return l.role_group;
     case 'batch': return `${l.batch ?? '~'} ${l.training_end ?? ''}`;
+    case 'monitor': return l.is_monitor ? ' ' : (l.monitor ?? '~').toLowerCase();
     case 'own': return l.own.pct ?? -1;
     case 'adoptions': return l.adoptions.total;
     case 'fulfilment': return l.fulfilment_pct ?? -1;
@@ -47,7 +53,9 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
       if (filter === 'mtfl' && !l.mtfl) return false;
       if (filter === 'attention' && !attentionIds.has(l.id)) return false;
       if (filter === 'outside' && (l.f2f || l.adoptions.total === 0)) return false;
-      return !q || [l.name, l.email, l.block, l.role_group].some(v => (v || '').toLowerCase().includes(q));
+      if (filter === 'monitors' && !l.is_monitor) return false;
+      if (filter === 'unmonitored' && (!l.f2f || l.is_monitor || l.monitor_id)) return false;
+      return !q || matchesLearner(q, { id: l.id, name: l.name, email: l.email, block: l.block, cadre: l.role_group });
     });
     return list.sort((a, b) => {
       const x = sortValue(a, sort.key), y = sortValue(b, sort.key);
@@ -97,16 +105,59 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
     mtfl: report.learners.filter(l => l.mtfl).length,
     attention: report.attention.length,
     outside: report.learners.filter(l => !l.f2f && l.adoptions.total > 0).length,
+    monitors: report.learners.filter(l => l.is_monitor).length,
+    unmonitored: report.learners.filter(l => l.f2f && !l.is_monitor && !l.monitor_id).length,
+  };
+
+  // Batch monitors (review of 5 Oct 2026): "SELF" in the picker marks the
+  // learner as a monitor; a name gives them that monitor.
+  const monitors = useMemo(
+    () => report.learners.filter(l => l.is_monitor).sort((a, b) => a.name.localeCompare(b.name)),
+    [report.learners],
+  );
+  const changeMonitor = async (l: MasdLearner, value: string) => {
+    setSaving(l.id);
+    try {
+      if (value === 'SELF') {
+        await setBatchMonitorTag(l.id, true);
+      } else {
+        if (l.is_monitor) await setBatchMonitorTag(l.id, false);
+        if (value || l.monitor_id) await setLearnerMonitor(l.id, value ? Number(value) : null);
+      }
+      showToast(t('monitors.saved', { name: l.name }), 'success');
+      onChanged();
+    } catch {
+      showToast(t('monitors.failed'), 'error');
+    } finally {
+      setSaving(null);
+    }
+  };
+  const [bulkMonitor, setBulkMonitor] = useState('');
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const assignShown = async () => {
+    if (!bulkMonitor) return;
+    setBulkBusy(true);
+    try {
+      const res = await setMonitorLearners(Number(bulkMonitor), rows.filter(l => !l.is_monitor).map(l => l.id));
+      showToast(t('monitors.bulkSaved', { n: res.assigned }), 'success');
+      setBulkMonitor('');
+      onChanged();
+    } catch {
+      showToast(t('monitors.failed'), 'error');
+    } finally {
+      setBulkBusy(false);
+    }
   };
 
   return (
     <div className="space-y-4">
+      <MasdMonitors report={report} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <ChipRow
           label={t('learners.show')}
           value={filter}
           onChange={v => { setFilter(v as Filter); setShown(PAGE); }}
-          items={(['f2f', 'mtfl', 'attention', 'outside'] as Filter[]).map(k => ({ key: k, label: `${t(`learners.filters.${k}`)} (${counts[k]})` }))}
+          items={(['f2f', 'mtfl', 'attention', 'outside', 'monitors', 'unmonitored'] as Filter[]).map(k => ({ key: k, label: `${t(`learners.filters.${k}`)} (${counts[k]})` }))}
         />
         <div className="relative w-full sm:w-72">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-faint" />
@@ -114,7 +165,18 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
             placeholder={t('learners.search')} className="pl-9" aria-label={t('learners.search')} />
         </div>
       </div>
-      <p className="text-xs text-ink-muted">{t('learners.hint')}</p>
+      <p className="text-xs text-ink-muted">{t('learners.hint')} {t('monitors.hint')}</p>
+      {monitors.length > 0 && rows.some(l => !l.is_monitor) && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface-sunken px-3 py-2 text-sm">
+          <span className="font-semibold text-ink">{t('monitors.bulkLabel', { n: rows.filter(l => !l.is_monitor).length })}</span>
+          <select value={bulkMonitor} onChange={e => setBulkMonitor(e.target.value)} aria-label={t('monitors.bulkPick')}
+            className="cursor-pointer rounded-md border border-border bg-surface px-2 py-1 text-sm text-ink">
+            <option value="">{t('monitors.bulkPick')}</option>
+            {monitors.map(m => <option key={m.id} value={m.id}>{m.name} (ID {m.id})</option>)}
+          </select>
+          <Button size="sm" disabled={!bulkMonitor} loading={bulkBusy} onClick={() => void assignShown()}>{t('monitors.bulkApply')}</Button>
+        </div>
+      )}
 
       <DataTable>
         <thead>
@@ -124,6 +186,7 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
             {head('role_group', t('table.cadre'))}
             <Th>{t('learners.mtfl')}</Th>
             {head('batch', t('learners.batch'))}
+            {head('monitor', t('monitors.column'))}
             {head('adoptions', t('table.adoptions'))}
             {head('fulfilment', t('table.fulfilment'))}
             {head('activities', t('learners.activities'))}
@@ -136,8 +199,7 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
           {rows.slice(0, shown).map(l => (
             <tr key={l.id} className={cn(attentionIds.has(l.id) && 'bg-amber-50/40 dark:bg-amber-500/5')}>
               <td className="px-3 py-2">
-                <div className="font-medium text-ink">{l.name}</div>
-                <div className="text-xs text-ink-faint">{l.email}</div>
+                <LearnerIdentity name={l.name} id={l.id} mobile={l.mobile} email={l.email} />
               </td>
               <td className="px-3 py-2 text-center text-ink-muted">{l.block}</td>
               <td className="px-3 py-2 text-center text-ink-muted">{l.role_group}</td>
@@ -173,6 +235,20 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
                   </div>
                 ) : <span className="text-xs text-ink-faint">—</span>}
               </td>
+              <td className="px-3 py-2 text-center">
+                <select
+                  value={l.is_monitor ? 'SELF' : (l.monitor_id ?? '')}
+                  disabled={saving === l.id}
+                  onChange={e => void changeMonitor(l, e.target.value)}
+                  aria-label={t('monitors.for', { name: l.name })}
+                  className={cn('max-w-40 cursor-pointer rounded-md border px-2 py-1 text-xs',
+                    l.is_monitor ? 'border-primary/40 bg-primary/10 font-semibold text-primary-ink' : 'border-border bg-surface text-ink')}
+                >
+                  <option value="">{t('monitors.none')}</option>
+                  <option value="SELF">{t('monitors.isMonitor')}</option>
+                  {monitors.filter(m => m.id !== l.id).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </td>
               <td className="px-3 py-2 text-center tabular-nums"
                 title={`ANC ${l.adoptions.anc}/${l.targets.anc} · <5M ${l.adoptions.pnc_lt5}/${l.targets.pnc_lt5} · ≥5M ${l.adoptions.pnc_ge5}/${l.targets.pnc_ge5}`}>
                 <span className="font-semibold">{l.adoptions.total}</span>
@@ -189,7 +265,7 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
             </tr>
           ))}
           {rows.length === 0 && (
-            <tr><td colSpan={11} className="px-3 py-8 text-center text-sm text-ink-muted">{t('learners.none')}</td></tr>
+            <tr><td colSpan={12} className="px-3 py-8 text-center text-sm text-ink-muted">{t('learners.none')}</td></tr>
           )}
         </tbody>
       </DataTable>

@@ -39,6 +39,11 @@ export const Ring: React.FC<{
   );
 };
 
+/** One picked group, several, or none. */
+type ActiveKey = string | string[] | null | undefined;
+const isOn = (a: ActiveKey, k: string) => (Array.isArray(a) ? a.includes(k) : a === k);
+const anyOn = (a: ActiveKey) => (Array.isArray(a) ? a.length > 0 : !!a);
+
 // ── Donut: who is in the picture ────────────────────────────────────────────
 
 export interface Slice {
@@ -53,7 +58,7 @@ export const Donut: React.FC<{
   size?: number;
   centerValue: React.ReactNode;
   centerLabel: React.ReactNode;
-  activeKey?: string | null;
+  activeKey?: ActiveKey;
   onSelect?: (key: string) => void;
   selectHint?: string;
 }> = ({ slices, size = 188, centerValue, centerLabel, activeKey, onSelect, selectHint }) => {
@@ -70,12 +75,12 @@ export const Donut: React.FC<{
           <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} className="stroke-surface-sunken" />
           {total > 0 && slices.map(s => {
             const len = (s.value / total) * c;
-            const dim = activeKey && activeKey !== s.key;
+            const dim = anyOn(activeKey) && !isOn(activeKey, s.key);
             const el = (
               <circle
                 key={s.key}
                 cx={size / 2} cy={size / 2} r={r} fill="none"
-                stroke={s.color} strokeWidth={activeKey === s.key ? stroke + 6 : stroke}
+                stroke={s.color} strokeWidth={isOn(activeKey, s.key) ? stroke + 6 : stroke}
                 strokeDasharray={`${Math.max(0, len - gap)} ${c}`}
                 strokeDashoffset={-offset}
                 opacity={dim ? 0.3 : 1}
@@ -106,8 +111,8 @@ export const Donut: React.FC<{
               className={cn(
                 'flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-sm transition-colors',
                 onSelect && 'cursor-pointer hover:bg-surface-sunken',
-                activeKey === s.key && 'bg-surface-sunken ring-1 ring-border-strong',
-                activeKey && activeKey !== s.key && 'opacity-50',
+                isOn(activeKey, s.key) && 'bg-surface-sunken ring-1 ring-border-strong',
+                anyOn(activeKey) && !isOn(activeKey, s.key) && 'opacity-50',
               )}
             >
               <span className="size-3 shrink-0 rounded-full" style={{ background: s.color }} aria-hidden />
@@ -139,7 +144,7 @@ export const BarList: React.FC<{
   rows: BarRow[];
   max?: number;
   reference?: { value: number; label: string };
-  activeKey?: string | null;
+  activeKey?: ActiveKey;
   onSelect?: (key: string) => void;
   selectHint?: string;
 }> = ({ rows, max = 100, reference, activeKey, onSelect, selectHint }) => (
@@ -156,8 +161,8 @@ export const BarList: React.FC<{
           className={cn(
             'grid w-full grid-cols-[minmax(6rem,11rem)_1fr_auto] items-center gap-3 rounded-lg px-1.5 py-1 text-left',
             onSelect && 'cursor-pointer hover:bg-surface-sunken',
-            activeKey === row.key && 'bg-surface-sunken ring-1 ring-border-strong',
-            activeKey && activeKey !== row.key && 'opacity-50',
+            isOn(activeKey, row.key) && 'bg-surface-sunken ring-1 ring-border-strong',
+            anyOn(activeKey) && !isOn(activeKey, row.key) && 'opacity-50',
           )}
         >
           <span className="truncate text-sm text-ink" title={row.label}>{row.label}</span>
@@ -294,7 +299,7 @@ export const PairedBars: React.FC<{
   labelA: string;
   labelB: string;
   changeLabel: (change: number) => string;
-  activeKey?: string | null;
+  activeKey?: ActiveKey;
   onSelect?: (key: string) => void;
   selectHint?: string;
 }> = ({ rows, colorA, colorB, labelA, labelB, changeLabel, activeKey, onSelect, selectHint }) => (
@@ -316,8 +321,8 @@ export const PairedBars: React.FC<{
             className={cn(
               'grid w-full grid-cols-[minmax(6rem,11rem)_1fr_4.5rem] items-center gap-3 rounded-lg px-1.5 py-1.5 text-left',
               onSelect && 'cursor-pointer hover:bg-surface-sunken',
-              activeKey === r.key && 'bg-surface-sunken ring-1 ring-border-strong',
-              activeKey && activeKey !== r.key && 'opacity-50',
+              isOn(activeKey, r.key) && 'bg-surface-sunken ring-1 ring-border-strong',
+              anyOn(activeKey) && !isOn(activeKey, r.key) && 'opacity-50',
             )}
           >
             <span className="min-w-0">

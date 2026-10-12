@@ -43,3 +43,7 @@ export { default as Skeleton } from './Skeleton';
 export { default as Stepper } from './Stepper';
 export { Pagination, default as PaginationDefault } from './Pagination';
 export type { PaginationProps } from './Pagination';
+export { default as LearnerIdentity } from './LearnerIdentity';
+export type { LearnerIdentityProps } from './LearnerIdentity';
+export { useTableLayout } from './TableLayout';
+export type { LayoutGroup, TableLayout } from './TableLayout';

@@ -5,10 +5,10 @@
  */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Filter, Lightbulb, ThumbsUp, TriangleAlert, X } from 'lucide-react';
+import { Check, ChevronDown, Filter, Lightbulb, Search, ThumbsUp, TriangleAlert, X } from 'lucide-react';
 import { Button, Card } from '../ui';
 import { cn } from '../../utils/cn';
-import { fmtPct, toneColor, type DimensionKey, type Finding } from '../../lib/resultsInsights';
+import { fmtPct, gradientColor, toneColor, type DimensionKey, type Finding } from '../../lib/resultsInsights';
 import type { DimensionFilters } from './types';
 
 export const Section: React.FC<{
@@ -65,6 +65,166 @@ export const ChipRow: React.FC<{
   </div>
 );
 
+export type GroupMode = 'split' | 'filter';
+
+export interface GroupChoice {
+  value: string;
+  label: string;
+  /** Learners in the group (among those the other filters keep). */
+  n: number;
+}
+
+/**
+ * "[Split by ▾] [Cadre] [Block] …" — the row every Insights page reads.
+ *
+ * Split by: the chips pick how groups are compared, as before. Filter by
+ * (review of 5 Oct 2026): the same chips open a tick-list of their groups —
+ * Department → HFW, WCD — and whatever is ticked narrows every page, any
+ * number of groups and dimensions at once (HFW learners of two blocks).
+ */
+export const SplitFilterRow: React.FC<{
+  mode: GroupMode;
+  onMode: (m: GroupMode) => void;
+  items: { key: DimensionKey; label: string }[];
+  dim: DimensionKey;
+  onDim: (d: DimensionKey) => void;
+  filters: DimensionFilters;
+  choices: (d: DimensionKey) => GroupChoice[];
+  onFilter: (d: DimensionKey, values: string[] | ((current: string[]) => string[])) => void;
+}> = ({ mode, onMode, items, dim, onDim, filters, choices, onFilter }) => {
+  const { t } = useTranslation('resultsInsights');
+  const [open, setOpen] = React.useState<DimensionKey | null>(null);
+  const [query, setQuery] = React.useState('');
+  const rootRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onPointer = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(null);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(null); };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+  React.useEffect(() => { setQuery(''); }, [open]);
+  React.useEffect(() => { if (mode === 'split') setOpen(null); }, [mode]);
+
+  const list = open ? choices(open) : [];
+  const q = query.trim().toLowerCase();
+  const shown = q ? list.filter(c => c.label.toLowerCase().includes(q)) : list;
+  const picked = new Set(open ? filters[open] ?? [] : []);
+  const toggle = (value: string) => {
+    if (!open) return;
+    onFilter(open, current => (current.includes(value) ? current.filter(v => v !== value) : [...current, value]));
+  };
+
+  return (
+    <div ref={rootRef} className="relative flex flex-wrap items-center gap-2">
+      <label className="relative inline-flex items-center">
+        <span className="sr-only">{t('mode.label')}</span>
+        <select
+          value={mode}
+          onChange={e => onMode(e.target.value as GroupMode)}
+          className={cn(
+            'cursor-pointer appearance-none rounded-lg border py-1.5 pl-3 pr-8 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/30',
+            mode === 'filter'
+              ? 'border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-300'
+              : 'border-border-strong bg-surface text-ink',
+          )}
+        >
+          <option value="split">{t('mode.split')}</option>
+          <option value="filter">{t('mode.filter')}</option>
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-2 size-4 text-ink-muted" aria-hidden />
+      </label>
+      {items.map(item => {
+        const count = filters[item.key]?.length ?? 0;
+        if (mode === 'split') {
+          return <Chip key={item.key} active={item.key === dim} onClick={() => onDim(item.key)}>{item.label}</Chip>;
+        }
+        return (
+          <button
+            key={item.key}
+            type="button"
+            aria-expanded={open === item.key}
+            aria-haspopup="listbox"
+            onClick={() => setOpen(o => (o === item.key ? null : item.key))}
+            className={cn(
+              'inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
+              count > 0
+                ? 'border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-300'
+                : 'border-border bg-surface text-ink hover:border-border-strong',
+            )}
+          >
+            {item.label}
+            {count > 0 && <span className="rounded-full bg-amber-500 px-1.5 text-xs font-bold text-white">{count}</span>}
+            <ChevronDown className="size-3.5" aria-hidden />
+          </button>
+        );
+      })}
+
+      {open && (
+        <div className="absolute left-0 top-full z-(--z-dropdown) mt-1.5 w-full max-w-sm overflow-hidden rounded-xl border border-border bg-surface-raised shadow-lg animate-fade-in">
+          <div className="border-b border-border px-3 py-2 text-sm font-bold text-ink">
+            {t('mode.filterTitle', { dim: items.find(i => i.key === open)?.label ?? '' })}
+          </div>
+          {list.length > 8 && (
+            <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+              <Search className="size-4 shrink-0 text-ink-faint" aria-hidden />
+              <input
+                autoFocus
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder={t('mode.search')}
+                aria-label={t('mode.search')}
+                className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-faint"
+              />
+            </div>
+          )}
+          <div className="flex items-center justify-between border-b border-border px-3 py-1.5 text-xs">
+            <button type="button" className="cursor-pointer font-semibold text-primary-ink hover:underline"
+              onClick={() => onFilter(open, [...new Set([...picked, ...shown.map(c => c.value)])])}>
+              {t('mode.all', { n: shown.length })}
+            </button>
+            <button type="button" className="cursor-pointer font-semibold text-ink-muted hover:underline disabled:opacity-40"
+              disabled={picked.size === 0} onClick={() => onFilter(open, [])}>
+              {t('mode.clear')}
+            </button>
+          </div>
+          <ul role="listbox" aria-multiselectable className="max-h-72 overflow-y-auto py-1">
+            {shown.map(c => {
+              const on = picked.has(c.value);
+              return (
+                <li key={c.value}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={on}
+                    onClick={() => toggle(c.value)}
+                    className={cn('flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-sm text-ink hover:bg-surface-sunken',
+                      on && 'font-semibold')}
+                  >
+                    <span className={cn('flex size-4 shrink-0 items-center justify-center rounded border',
+                      on ? 'border-primary bg-primary text-primary-fg' : 'border-border-strong')}>
+                      {on && <Check className="size-3" />}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{c.label}</span>
+                    <span className="tabular-nums text-ink-muted">{c.n}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+};
+
 /** Active multi-dimension filter pills shown right in the selection area */
 export const ActiveFilterBar: React.FC<{
   filters: DimensionFilters;
@@ -75,7 +235,7 @@ export const ActiveFilterBar: React.FC<{
   className?: string;
 }> = ({ filters, groupLabel, onClear, filteredCount, totalCount, className }) => {
   const { t } = useTranslation('resultsInsights');
-  const entries = Object.entries(filters) as [DimensionKey, string][];
+  const entries = (Object.entries(filters) as [DimensionKey, string[]][]).filter(([, v]) => v && v.length > 0);
   if (entries.length === 0) return null;
 
   return (
@@ -94,7 +254,10 @@ export const ActiveFilterBar: React.FC<{
             className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/80 bg-surface px-2.5 py-1 text-xs font-semibold text-ink shadow-xs dark:border-amber-500/40 dark:bg-surface"
           >
             <span className="font-normal text-ink-muted">{t(`dimSingular.${d}`)}:</span>
-            <span>{groupLabel(val, d)}</span>
+            <span>
+              {val.slice(0, 3).map(v => groupLabel(v, d)).join(', ')}
+              {val.length > 3 && ` ${t('focus.andMore', { n: val.length - 3 })}`}
+            </span>
             <button
               type="button"
               onClick={() => onClear(d)}
@@ -175,6 +338,24 @@ export const ScoreCell: React.FC<{ value: number | null; sub?: string }> = ({ va
   );
 };
 
+/** A number coloured on a continuous red → green scale, for tables read
+ *  like a heat map (no bar: the number is the point). */
+export const HeatCell: React.FC<{ value: number | null; sub?: string; title?: string; className?: string }> = ({ value, sub, title, className }) => {
+  if (value === null) return <td className={cn('px-2 py-1.5 text-center text-ink-faint', className)}>—</td>;
+  const c = gradientColor(value);
+  return (
+    <td className={cn('px-1.5 py-1 text-center', className)} title={title}>
+      <span
+        className="inline-block min-w-12 rounded-md px-1.5 py-1 text-sm font-bold tabular-nums text-ink"
+        style={{ background: `color-mix(in srgb, ${c} 30%, transparent)`, boxShadow: `inset 0 -3px 0 ${c}` }}
+      >
+        {fmtPct(value)}
+      </span>
+      {sub && <div className="text-xs text-ink-muted">{sub}</div>}
+    </td>
+  );
+};
+
 export const InlineBar: React.FC<{ value: number; note?: string }> = ({ value, note }) => (
   <div className="flex items-center gap-2.5">
     <span className="relative h-3.5 flex-1 rounded-full bg-surface-sunken">
@@ -183,6 +364,16 @@ export const InlineBar: React.FC<{ value: number; note?: string }> = ({ value, n
     </span>
     <span className="w-11 text-right text-sm font-bold tabular-nums text-ink">{fmtPct(value)}</span>
     {note && <span className="hidden text-xs text-ink-muted md:inline">{note}</span>}
+  </div>
+);
+
+/** Key for HeatCell numbers: 0% red, 50% amber, 90%+ green. */
+export const GradientLegend: React.FC<{ low: string; high: string }> = ({ low, high }) => (
+  <div className="flex items-center gap-2 text-xs font-medium text-ink-muted">
+    <span>{low}</span>
+    <span className="h-2.5 w-28 rounded-full" aria-hidden
+      style={{ background: `linear-gradient(90deg, ${gradientColor(0)}, ${gradientColor(50)}, ${gradientColor(90)})` }} />
+    <span>{high}</span>
   </div>
 );
 

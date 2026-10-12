@@ -65,6 +65,25 @@ export interface ZTriplet {
 }
 
 /** One learner-mother-child row of the growth-monitor summary table. */
+/** Identifiers of a summary row (names and IDs — admins only). */
+export interface GrowthRowIds {
+  learner_id?: number | null;
+  learner_mobile?: string | null;
+  learner_cadre?: string | null;
+  learner_block?: string | null;
+  learner_district?: string | null;
+  learner_facility?: string | null;
+  mother_uid?: string | null;
+  child_name?: string | null;
+  case_village?: string | null;
+  case_block?: string | null;
+  case_district?: string | null;
+  case_hwc?: string | null;
+  case_phc?: string | null;
+}
+
+export type ZCategories = Record<'wfaz' | 'hfaz' | 'wfhz', Record<'bv' | 'av' | 'lv', string | null>>;
+
 export interface GrowthSummaryRow {
   case_id: number;
   learner_id: number | null;
@@ -74,6 +93,9 @@ export interface GrowthSummaryRow {
     mother_name: string;
     child_uid: string;
   };
+  ids?: GrowthRowIds;
+  /** Normal / mild / moderate / severe, from each z-score (analysts' grading). */
+  categories?: ZCategories;
   case_details: {
     /** 'anc' | 'pnc_lt5' | 'pnc_ge5' — typed by the MASD programme rules. */
     adoption_type: string | null;

@@ -1,12 +1,14 @@
 {
   "loading": "Loading results…",
-  "searchPlaceholder": "Search by name or email…",
+  "searchPlaceholder": "Search by user ID, mobile, name, cadre or block…",
   "header": {
     "title": "Results",
     "description": "Combined tutorial + test performance for {{district}}, including anti-cheat summaries. Upload the final selection list to notify users about face-to-face training.",
     "thisDistrict": "this district",
     "refresh": "Refresh",
-    "downloadExcel": "Download Excel"
+    "downloadExcel": "Download Excel",
+    "downloadAnswers": "Test answers (Excel)",
+    "downloadAnswersHint": "Every learner's answer to every test question (first attempt), the same grid scored 1/0, and a question reference sheet"
   },
   "testType": {
     "formative": "Formative",
@@ -21,9 +23,18 @@
     "colFaceToFace": "Face-to-Face",
     "notAttempted": "Not attempted",
     "watchedLine": "{{pct}}% watched • quizzes {{done}}✓ {{skipped}}⨯",
-    "riskLine": "risk {{risk}} • tabs {{tabs}} • fs {{fs}} • cp {{cp}}",
+    "riskLine": "risk {{risk}} • tab switches {{tabs}} • full-screen exits {{fs}} • copy/paste {{cp}}",
     "flagged": "flagged",
-    "outOf100": "/100"
+    "outOf100": "/100",
+    "colLearner": "Learner (user ID · mobile · cadre)",
+    "colPlace": "Block, district",
+    "colVideos": "Videos watched",
+    "colVideosHint": "Videos finished out of all videos, average watch % and quizzes answered ✓ / skipped ⨯",
+    "colVideoScore": "Video watching score",
+    "colVideoScoreHint": "Out of 100: 60% average watch % + 20% quiz participation + 20% quiz accuracy",
+    "colTests": "Test scores",
+    "testScore": "{{label}} test score",
+    "colFlowStatusHint": "Completed = every video watched and every test written"
   },
   "status": {
     "completed": "Completed",
@@ -65,7 +76,10 @@
     "batchFor": "Training batch for {{name}}",
     "projectDate": "Project training date",
     "ended": "ended {{date}}",
-    "noBatches": "No batches yet"
+    "noBatches": "No batches yet",
+    "colMonitor": "Batch monitor",
+    "colMonitorHint": "Set on the MASD dashboard → Learners",
+    "isMonitor": "Batch monitor"
   },
   "excel": {
     "sheet": "Combined Results",
@@ -76,8 +90,8 @@
     "quizzesAnswered": "Quizzes Answered",
     "quizzesSkipped": "Quizzes Skipped",
     "quizAccuracy": "Quiz Accuracy %",
-    "performanceScore": "Performance Score",
-    "bestScore": "{{label}} - Best Score %",
+    "performanceScore": "Video watching score (out of 100)",
+    "bestScore": "{{label}} test - best score %",
     "attempts": "{{label}} - Attempts",
     "passed": "{{label}} - Passed",
     "riskScore": "{{label}} - Risk Score",
@@ -88,7 +102,16 @@
     "completedFullFlow": "Completed Full Flow",
     "selectedForF2f": "Selected for Face-to-Face",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "userId": "User ID",
+    "mobile": "Mobile",
+    "cadre": "Cadre",
+    "department": "Department",
+    "block": "Block",
+    "district": "District",
+    "glossarySheet": "What the columns mean",
+    "glossaryTerm": "Column / term",
+    "glossaryMeaning": "What it means"
   },
   "toasts": {
     "loadFailed": "Failed to load results.",
@@ -98,7 +121,8 @@
     "removed": "Removed from selection.",
     "removeFailed": "Failed to remove selection.",
     "batchSaved": "Training batch saved for {{name}}.",
-    "batchFailed": "Could not save the batch."
+    "batchFailed": "Could not save the batch.",
+    "answersFailed": "Could not download the test answers."
   },
   "confirm": {
     "removeSelection": "Remove this user from the face-to-face selection list?"

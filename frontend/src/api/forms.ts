@@ -49,6 +49,28 @@ export const adminExportForm = async (formKey: FormKey, version?: number): Promi
   URL.revokeObjectURL(url);
 };
 
+/**
+ * Every question of every form in one Excel workbook — answer type, limits,
+ * skip patterns, verdicts — for reviewing what changes between projects.
+ * With a project slug, the versions that project's learners see.
+ */
+export const adminDownloadFormCatalog = async (project?: string | null): Promise<void> => {
+  const res = await client.get('/api/admin/form-catalog', {
+    responseType: 'blob',
+    params: project ? { project } : undefined,
+  });
+  const disposition = String(res.headers?.['content-disposition'] ?? '');
+  const name = /filename="([^"]+)"/.exec(disposition)?.[1] ?? 'nurturehub_form_questions.xlsx';
+  const url = URL.createObjectURL(res.data as Blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = name;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+};
+
 /** Upload an image/GIF/video asset; returns a backend-relative `/uploads/...` URL. */
 export const adminUploadFormAsset = (file: File): Promise<{ url: string }> => {
   const data = new FormData();

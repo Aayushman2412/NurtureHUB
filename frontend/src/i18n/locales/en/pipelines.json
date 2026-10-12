@@ -190,6 +190,12 @@
     "selectedCount_one": "{{count}} file selected",
     "selectedCount_other": "{{count}} files selected",
     "clearSelection": "Clear",
-    "bundleHint": "ZIP keeps the CSVs as they are. Excel merges them into one workbook, a sheet per file, with a contents page."
+    "bundleHint": "ZIP keeps the CSVs as they are. Excel merges them into one workbook, a sheet per file, with a contents page.",
+    "learning": {
+      "title": "Tests and forms",
+      "hint": "For the project picked in the side menu: every learner's answer to every test question (with a question reference sheet), and every form question with its rules.",
+      "answers": "Test answers (Excel)",
+      "forms": "Form questions (Excel)"
+    }
   }
 }

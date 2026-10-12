@@ -33,6 +33,19 @@ _FORM_COLS = [
 ]
 
 
+
+def _training_batch(ds, u) -> str:
+    """The learner's F2F training batch as the legacy file writes it:
+    "<batch> (<last day>), <district>". The colour-coded MASD stage DROPS rows
+    whose Training Batch is blank, so a learner with no batch on record keeps
+    the deterministic placeholder ("Batch 1 (<join date>), <district>")."""
+    batch = getattr(ds, "training_batch_by_user", {}).get(u.id)
+    if batch:
+        name, end = batch
+        return f"{name} ({end:%b %d, %Y}), {ds.district}" if end else f"{name}, {ds.district}"
+    return (f"Batch 1 ({u.created_at:%b %d, %Y}), {ds.district}"
+            if getattr(u, "created_at", None) else f"Batch 1, {ds.district}")
+
 def _f(text) -> Optional[float]:
     try:
         return float(text)
@@ -187,13 +200,7 @@ def generate(ds: Dataset) -> list[list[str]]:
             str(stage["pre"]), str(stage["t1"]), str(stage["t2"]), str(stage["t3"]),
             str(stage["atd"]), str(stage["pnc_lte"]), str(stage["pnc_gte"]),
             no_activity,
-            # NurtureHUB has no training-batch entity, but the colour-coded
-            # MASD stage DROPS rows whose Training Batch is blank — a literal
-            # NULL would erase every learner from those workbooks. Emit a
-            # deterministic placeholder batch instead until batches are
-            # modelled ("Batch 1 (<join date>), <district>").
-            (f"Batch 1 ({u.created_at:%b %d, %Y}), {ds.district}"
-             if getattr(u, "created_at", None) else f"Batch 1, {ds.district}"),
+            _training_batch(ds, u),
             str(stars_low),
             str(stars_high),
         ])

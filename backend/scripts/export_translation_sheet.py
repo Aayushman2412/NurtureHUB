@@ -75,6 +75,7 @@ AREAS: Dict[str, Tuple[str, str]] = {
     "resultsInsights": ("Admin panel", "Admin - results insights"),
     "pipelines": ("Admin panel", "Admin - data pipelines"),
     "masd": ("Admin panel", "Admin - MASD dashboard"),
+    "guide": ("Admin panel", "Admin - page guide (the Guide button on every admin page)"),
 }
 
 # Sentences the SERVER sends. They are not in the translation files, so they

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Baby,
   Edit3,
+  FileSpreadsheet,
   GraduationCap,
   Heart,
   ListChecks,
@@ -14,7 +15,8 @@ import {
   Workflow,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { adminListForms } from '../../../api/forms';
+import { adminDownloadFormCatalog, adminListForms } from '../../../api/forms';
+import { getProjectSlug } from '../../../lib/adminProject';
 import { FORM_KEYS } from '../../../lib/flowTypes';
 import type { FormDefinitionSummary, FormKey } from '../../../lib/flowTypes';
 import { Alert, Badge, Button, Card, PageHeader, Skeleton } from '../../../components/ui';
@@ -23,15 +25,15 @@ import { cn } from '../../../utils/cn';
 const FORM_META: Record<FormKey, { icon: LucideIcon; blurb: string }> = {
   learner_registration: {
     icon: GraduationCap,
-    blurb: 'The profile a health worker completes when joining the program.',
+    blurb: 'The profile a health worker completes when joining the program. The registration page asks these questions (EP HST tools); this is their list and history.',
   },
   mother_registration: {
     icon: Heart,
-    blurb: 'Details captured when a learner registers a mother they serve.',
+    blurb: 'Details captured when a learner registers a mother they serve. The registration page asks these questions (EP HST tools); this is their list and history.',
   },
   child_registration: {
     icon: Baby,
-    blurb: 'Details captured when a child is added under a registered mother.',
+    blurb: 'Details captured when a child is added under a registered mother. The registration page asks these questions (EP HST tools); this is their list and history.',
   },
   breastfeeding: {
     icon: Milk,
@@ -171,12 +173,37 @@ const FormBuilderHubPage: React.FC = () => {
   const openForm = (summary: FormDefinitionSummary) =>
     navigate(`/admin/form-builder/versions/${summary.form_key}`);
 
+  const [downloading, setDownloading] = useState(false);
+  const [downloadFailed, setDownloadFailed] = useState(false);
+  const downloadCatalog = async () => {
+    setDownloading(true);
+    setDownloadFailed(false);
+    try {
+      await adminDownloadFormCatalog(getProjectSlug());
+    } catch {
+      setDownloadFailed(true);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div>
       <PageHeader
         title="Form Builder"
         description="Design every data-collection form learners use — registration field lists and canvas-based assessment flows. Saving publishes changes to learners immediately."
+        actions={(
+          <Button variant="outline" iconLeft={<FileSpreadsheet className="size-4" />} loading={downloading} onClick={downloadCatalog}
+            title="Every question of every form, in order, with its limits and skip patterns — the version this project's learners see">
+            Download all questions (Excel)
+          </Button>
+        )}
       />
+      {downloadFailed && (
+        <Alert variant="error" title="Could not download the questions sheet" className="mb-4">
+          Check your connection and try again.
+        </Alert>
+      )}
 
       {error ? (
         <div className="space-y-4">

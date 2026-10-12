@@ -7,34 +7,37 @@
 import React, { useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import {
-  Award, ClipboardCheck, Download, Filter, HelpCircle, LifeBuoy, Lightbulb, RotateCcw, Users,
+  ArrowDown, ArrowUp, ArrowUpDown, Award, ClipboardCheck, Download, Filter, HelpCircle, LifeBuoy, Lightbulb, RotateCcw, Users,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { Button, Card } from '../ui';
+import { Button, Card, LearnerIdentity } from '../ui';
 import { cn } from '../../utils/cn';
 import { BAND_COLORS } from '../../utils/brandColors';
 import { BarList, Donut, Histogram, Ring, StackedBar, type BarRow, type Slice } from './InsightCharts';
 import {
-  BigNumber, Chip, CountPicker, FindingList, InlineBar, Kpi, KpiRow, RankBadge, ScoreCell, Section, ToneLegend,
+  BigNumber, Chip, CountPicker, FindingList, HeatCell, Kpi, KpiRow, RankBadge, ScoreCell, Section, ToneLegend,
   type CountValue, type RankDir,
 } from './InsightParts';
 import {
-  DIFFICULTY_CUTOFFS, bottomScorers, fmtPct, lowestScorers, questionDifficulty, scoreDistribution, testFindings,
-  testGroupStats, testStats, toneColor, topScorers, wrongAnswers,
-  type ActiveTest, type Difficulty, type Finding, type TestStats, type UserResultRow,
+  DIFFICULTY_CUTOFFS, NOT_RECORDED, bottomScorers, difficultyByGroup, fmtPct, groupOf, lowestScorers, questionDifficulty,
+  recountQuestions, scoreDistribution, testFindings, testGroupStats, testStats, toneColor, topScorers, wrongAnswers,
+  type ActiveTest, type Difficulty, type Finding, type QuestionStat, type TestStats, type UserResultRow,
 } from '../../lib/resultsInsights';
+import { downloadTestAnswers } from '../../api/results';
 import type { InsightCtx } from './types';
 
 type Measure = 'pass' | 'score' | 'firstTry' | 'notTaken';
-type QuestionOrder = 'hardest' | 'paper';
+type QuestionSort = 'number' | 'difficulty' | 'right' | 'blank';
 
 const pctOf = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100 : 0);
 
 const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, test }) => {
   const { t } = useTranslation('resultsInsights');
-  const { data, users, compareBase, dims, dim, filters, activeGroup, toggleFocus, clearFilter, groupLabel, colorOf } = ctx;
+  const { data, users, compareBase, dims, dim, filters, activeGroups, toggleFocus, clearFilter, groupLabel, colorOf } = ctx;
   const [measure, setMeasure] = useState<Measure>('pass');
-  const [order, setOrder] = useState<QuestionOrder>('hardest');
+  // Hardest first, as before; any column header re-sorts.
+  const [qSort, setQSort] = useState<{ col: QuestionSort; asc: boolean }>({ col: 'right', asc: true });
+  const [downloading, setDownloading] = useState(false);
   const [difficulty, setDifficulty] = useState<Difficulty | 'all'>('all');
   const [topic, setTopic] = useState('');
   const [topN, setTopN] = useState<CountValue>(10);
@@ -105,13 +108,63 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
     for (const q of questions?.questions ?? []) if (q.writers > 0) c[questionDifficulty(q)] += 1;
     return c;
   }, [questions]);
+  // Difficulty belongs to the question (judged on everyone who wrote it);
+  // the counts follow the filters, so "HFW in Ambad" sees its own numbers.
+  const levelOf = useMemo(() => {
+    const m = new Map<number, Difficulty | null>();
+    for (const q of questions?.questions ?? []) m.set(q.id, q.writers > 0 ? questionDifficulty(q) : null);
+    return m;
+  }, [questions]);
+  const filtered = Object.values(filters).some(v => v && v.length > 0);
+  const counted = useMemo(
+    () => (questions ? recountQuestions(questions, filtered ? new Set(users.map(u => u.user_id)) : null) : []),
+    [questions, users, filtered],
+  );
+  const LEVEL_RANK: Record<Difficulty, number> = { difficult: 0, medium: 1, easy: 2 };
   const questionRows = useMemo(() => {
-    let qs = [...(questions?.questions ?? [])];
-    if (difficulty !== 'all') qs = qs.filter(q => q.writers > 0 && questionDifficulty(q) === difficulty);
+    let qs = [...counted];
+    if (difficulty !== 'all') qs = qs.filter(q => levelOf.get(q.id) === difficulty);
     if (topic) qs = qs.filter(q => q.topic === topic);
-    if (order === 'hardest') qs.sort((a, b) => pctOf(a.correct, a.writers) - pctOf(b.correct, b.writers));
+    const key = (q: QuestionStat): number => {
+      if (qSort.col === 'number') return q.number;
+      if (qSort.col === 'difficulty') { const l = levelOf.get(q.id); return l ? LEVEL_RANK[l] : 9; }
+      if (qSort.col === 'blank') return pctOf(q.unanswered, q.writers);
+      return pctOf(q.correct, q.writers);
+    };
+    qs.sort((a, b) => (key(a) - key(b)) * (qSort.asc ? 1 : -1) || a.number - b.number);
     return qs;
-  }, [questions, order, difficulty, topic]);
+  }, [counted, qSort, difficulty, topic, levelOf]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Easy / medium / difficult questions, by group: everyone first.
+  const levelRows = useMemo(() => {
+    if (!questions?.answers) return [];
+    const members = new Map<string, Set<number>>();
+    for (const u of compareBase) {
+      const g = groupOf(u, dim) ?? NOT_RECORDED;
+      if (!members.has(g)) members.set(g, new Set());
+      members.get(g)!.add(u.user_id);
+    }
+    return difficultyByGroup(questions, [
+      { key: '__all__', userIds: new Set(compareBase.map(u => u.user_id)) },
+      ...groups.map(g => ({ key: g.group, userIds: members.get(g.group) ?? new Set<number>() })),
+    ]).filter(r => r.writers > 0);
+  }, [questions, compareBase, dim, groups]);
+
+  const sortBy = (col: QuestionSort) =>
+    setQSort(prev => (prev.col === col ? { col, asc: !prev.asc } : { col, asc: true }));
+  const sortHead = (col: QuestionSort, label: string, className = '') => (
+    <th className={cn('pb-2', className)}>
+      <button type="button" onClick={() => sortBy(col)}
+        className={cn('inline-flex cursor-pointer items-center gap-1 uppercase tracking-wide hover:text-ink', qSort.col === col && 'font-bold text-primary-ink')}>
+        {label}
+        {qSort.col === col ? (qSort.asc ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />) : <ArrowUpDown className="size-3 opacity-40" />}
+      </button>
+    </th>
+  );
+  const downloadAnswers = async () => {
+    setDownloading(true);
+    try { await downloadTestAnswers(data.district, test.id); } catch { /* the button stays; try again */ } finally { setDownloading(false); }
+  };
 
   // ── Excel: this test only ──
   const download = () => {
@@ -158,12 +211,13 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
       ]), t('questions.sheet').slice(0, 31));
     }
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
-      [t('top.learner'), 'Email', t('dim.cadre'), t('dim.block'), t('testPage.bestScore'),
-        t('testPage.firstScore'), t('testPage.attempts'), t('test.passed')],
+      [t('excel.userId'), t('top.learner'), t('excel.mobile'), t('dim.cadre'), t('dim.block'), t('dim.district'),
+        t('testPage.bestScore'), t('testPage.firstScore'), t('testPage.attempts'), t('test.passed')],
       ...data.users.filter(u => (u.tests[String(test.id)]?.attempts_count ?? 0) > 0).map(u => {
         const r = u.tests[String(test.id)];
-        return [u.name, u.email, u.profile?.cadre ?? '', u.profile?.block ?? '', r.best_score ?? 0,
-          r.first_score ?? '', r.attempts_count, r.is_passed ? t('testPage.yes') : t('testPage.no')];
+        return [u.user_id, u.name, u.profile?.mobile ?? '', u.profile?.cadre ?? '', u.profile?.block ?? '',
+          u.profile?.district ?? '', r.best_score ?? 0, r.first_score ?? '', r.attempts_count,
+          r.is_passed ? t('testPage.yes') : t('testPage.no')];
       }),
     ]), t('testPage.learnersSheet').slice(0, 31));
     XLSX.writeFile(wb, `results_${data.district}_${test.label.replace(/\s+/g, '_').toLowerCase()}.xlsx`);
@@ -280,7 +334,7 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
                 slices={writersSlices}
                 centerValue={notTaken ? base.notTaken : base.wrote}
                 centerLabel={notTaken ? t('testPage.notTakenIt') : t('testPage.wroteIt')}
-                activeKey={activeGroup}
+                activeKey={activeGroups}
                 onSelect={toggleFocus}
                 selectHint={t('compare.clickHint')}
               />
@@ -302,7 +356,7 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
               <BarList
                 rows={barRows}
                 reference={overallValue !== null ? { value: overallValue, label: t('compare.average', { value: fmtPct(overallValue) }) } : undefined}
-                activeKey={activeGroup}
+                activeKey={activeGroups}
                 onSelect={toggleFocus}
                 selectHint={t('compare.clickHint')}
               />
@@ -335,8 +389,8 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
                       title={t('compare.clickHint')}
                       className={cn(
                         'cursor-pointer border-t border-border transition-colors hover:bg-surface-sunken',
-                        activeGroup === g.group && 'bg-surface-sunken',
-                        activeGroup && activeGroup !== g.group && 'opacity-50',
+                        activeGroups.includes(g.group) && 'bg-surface-sunken',
+                        activeGroups.length > 0 && !activeGroups.includes(g.group) && 'opacity-50',
                       )}
                     >
                       <td className="px-3 py-2">
@@ -377,18 +431,15 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
         title={t('questions.title')}
         subtitle={t('questions.subtitle')}
         actions={(
-          <div className="flex gap-2">
-            {(['hardest', 'paper'] as QuestionOrder[]).map(o => (
-              <Button key={o} size="sm" variant={order === o ? 'primary' : 'outline'} onClick={() => setOrder(o)}>
-                {t(`questions.order.${o}`)}
-              </Button>
-            ))}
-          </div>
+          <Button size="sm" variant="outline" iconLeft={<Download className="size-4" />} loading={downloading}
+            onClick={() => void downloadAnswers()} title={t('questions.downloadHint')}>
+            {t('questions.download')}
+          </Button>
         )}
       >
-        {ctx.activeGroup !== null && (
-          <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-500">
-            {t('questions.everyoneNote')}
+        {filtered && (
+          <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-500/10 dark:text-amber-300">
+            {t('questions.filteredNote', { n: counted[0]?.writers ?? 0 })}
           </p>
         )}
         {questions && questions.questions.length > 0 && (
@@ -426,52 +477,49 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
         ) : questionRows.length === 0 ? (
           <p className="text-sm text-ink-muted">{t('questions.noneMatch')}</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[52rem] text-sm">
-              <thead className="sticky top-0 z-[1] bg-surface text-xs uppercase tracking-wide text-ink-muted">
+          <div className="max-h-[75vh] overflow-auto">
+            <table className="w-full min-w-[56rem] text-sm">
+              <thead className="sticky top-0 z-[1] bg-surface text-xs text-ink-muted">
                 <tr>
-                  <th className="w-12 pb-2 text-left">#</th>
-                  <th className="pb-2 text-left">{t('questions.question')}</th>
-                  <th className="w-[22%] pb-2 text-left">{t('questions.correctPct')}</th>
-                  <th className="w-[30%] pb-2 text-left">{t('questions.wrongAnswers')}</th>
-                  <th className="w-20 pb-2 text-center">{t('questions.blank')}</th>
+                  {sortHead('number', '#', 'w-14 text-left')}
+                  <th className="pb-2 text-left uppercase tracking-wide">{t('questions.question')}</th>
+                  {sortHead('difficulty', t('questions.difficulty'), 'w-28 text-left')}
+                  {sortHead('right', t('questions.correctPct'), 'w-32 text-center')}
+                  <th className="w-[30%] pb-2 text-left uppercase tracking-wide">{t('questions.wrongAnswers')}</th>
+                  {sortHead('blank', t('questions.blank'), 'w-20 text-center')}
                 </tr>
               </thead>
               <tbody>
                 {questionRows.map(q => {
-                  const level = q.writers > 0 ? questionDifficulty(q) : null;
+                  const level = levelOf.get(q.id) ?? null;
                   const wrong = wrongAnswers(q);
                   return (
                     <tr key={q.id} className="border-t border-border align-top">
-                      <td className="py-3 text-base font-bold tabular-nums text-ink-muted">Q{q.number}</td>
-                      <td className="py-3 pr-4">
-                        <div className="line-clamp-3 text-ink" title={q.text}>{q.text}</div>
+                      <td className="py-2.5 text-base font-bold tabular-nums text-ink">Q{q.number}</td>
+                      <td className="py-2.5 pr-4">
+                        <div className="text-ink" title={q.text}>{q.text}</div>
                         {q.correct_label && (
-                          <div className="mt-1 text-sm font-medium text-success-600">
+                          <div className="mt-0.5 text-sm font-medium text-success-600">
                             {t('questions.answerIs', { label: q.correct_label, text: q.correct_text ?? '' })}
+                            {(q.topic || q.subtopic) && (
+                              <span className="ml-2 font-normal text-ink-muted">· {[q.topic, q.subtopic].filter(Boolean).join(' › ')}</span>
+                            )}
                           </div>
                         )}
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          {level && (
-                            <span className={cn(
-                              'rounded-full px-2 py-0.5 text-xs font-semibold',
-                              level === 'difficult' ? 'bg-error-50 text-error-600 dark:bg-error-500/15'
-                                : level === 'medium' ? 'bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400'
-                                  : 'bg-success-50 text-success-600 dark:bg-success-500/15',
-                            )}>{t(`questions.level.${level}`)}</span>
-                          )}
-                          {(q.topic || q.subtopic) && (
-                            <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-medium text-ink-muted">
-                              {[q.topic, q.subtopic].filter(Boolean).join(' › ')}
-                            </span>
-                          )}
-                        </div>
                       </td>
-                      <td className="py-3 pr-4">
-                        <InlineBar value={pctOf(q.correct, q.writers)} />
-                        <div className="mt-1 text-xs text-ink-muted">{t('scorecard.nOfM', { n: q.correct, m: q.writers })}</div>
+                      <td className="py-2.5 pr-2">
+                        {level ? (
+                          <span className={cn(
+                            'inline-block rounded-full px-2.5 py-0.5 text-sm font-semibold',
+                            level === 'difficult' ? 'bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-300'
+                              : level === 'medium' ? 'bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'
+                                : 'bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-300',
+                          )}>{t(`questions.level.${level}`)}</span>
+                        ) : <span className="text-ink-faint">—</span>}
                       </td>
-                      <td className="py-3 pr-3">
+                      <HeatCell value={q.writers ? pctOf(q.correct, q.writers) : null}
+                        sub={q.writers ? t('scorecard.nOfM', { n: q.correct, m: q.writers }) : undefined} />
+                      <td className="py-2.5 pr-3">
                         {wrong.length === 0 ? <span className="text-sm text-ink-muted">—</span> : (
                           <ul className="space-y-1">
                             {wrong.map(w => (
@@ -483,7 +531,7 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
                           </ul>
                         )}
                       </td>
-                      <td className="py-3 text-center text-sm font-semibold tabular-nums text-ink-muted">
+                      <td className="py-2.5 text-center text-sm font-semibold tabular-nums text-ink">
                         {q.writers ? fmtPct(pctOf(q.unanswered, q.writers)) : '—'}
                       </td>
                     </tr>
@@ -491,6 +539,42 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Easy, medium and difficult questions by group (review of 5 Oct 2026). */}
+        {levelRows.length > 0 && (
+          <div className="mt-8">
+            <h4 className="text-base font-semibold text-ink">{t('questions.byLevelTitle', { dim: t(`dim.${dim}`) })}</h4>
+            <p className="mb-3 text-sm text-ink">{t('questions.byLevelHint')}</p>
+            <div className="overflow-x-auto rounded-xl border border-border">
+              <table className="w-full min-w-[34rem] text-sm">
+                <thead className="bg-surface-sunken text-xs uppercase tracking-wide text-ink">
+                  <tr>
+                    <th className="px-3 py-2.5 text-left">{t(`dim.${dim}`)}</th>
+                    <th className="px-3 py-2.5 text-center">{t('questions.wroteN')}</th>
+                    {(['easy', 'medium', 'difficult'] as Difficulty[]).map(d => (
+                      <th key={d} className="px-3 py-2.5 text-center">
+                        {t(`questions.level.${d}`)}
+                        <div className="text-[12px] font-medium normal-case text-ink-muted">{t('questions.nQuestions', { count: difficultyCount[d] })}</div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {levelRows.map(r => (
+                    <tr key={r.key} className={cn('border-t border-border', r.key === '__all__' && 'bg-coral-50/60 font-semibold dark:bg-coral-500/10')}>
+                      <td className="px-3 py-2 font-semibold text-ink">{r.key === '__all__' ? t('videos.everyone') : groupLabel(r.key)}</td>
+                      <td className="px-3 py-2 text-center tabular-nums text-ink">{r.writers}</td>
+                      {(['easy', 'medium', 'difficult'] as Difficulty[]).map(d => (
+                        <HeatCell key={d} value={r.cells[d].pct}
+                          title={t('questions.levelCellTitle', { right: r.cells[d].right, total: r.cells[d].total })} />
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </Section>
@@ -526,8 +610,8 @@ const LearnerTable: React.FC<{ rows: UserResultRow[]; test: ActiveTest; ranked?:
         <thead className="text-xs uppercase tracking-wide text-ink-muted">
           <tr>
             {ranked && <th className="w-10 pb-2 text-left">#</th>}
-            <th className="pb-2 text-left">{t('top.learner')}</th>
-            <th className="pb-2 text-left">{t('dim.cadre')}</th>
+            <th className="pb-2 text-left">{t('top.learnerId')}</th>
+            <th className="pb-2 text-left">{t('dim.block')}</th>
             <th className="pb-2 text-center">{t('testPage.bestScore')}</th>
             <th className="pb-2 text-center">{t('testPage.attempts')}</th>
           </tr>
@@ -538,11 +622,11 @@ const LearnerTable: React.FC<{ rows: UserResultRow[]; test: ActiveTest; ranked?:
             return (
               <tr key={u.user_id} className="border-t border-border">
                 {ranked && <td className="py-2"><RankBadge rank={i + 1} /></td>}
-                <td className="py-2">
-                  <div className="font-semibold text-ink">{u.name}</div>
-                  <div className="text-xs text-ink-muted">{u.profile?.block ?? ''}</div>
+                <td className="py-2 pr-3">
+                  <LearnerIdentity name={u.name} id={u.user_id} mobile={u.profile?.mobile}
+                    cadre={u.profile?.cadre_short ?? u.profile?.cadre} email={u.email} />
                 </td>
-                <td className="py-2 text-ink-muted">{u.profile?.cadre ?? '—'}</td>
+                <td className="py-2 text-ink">{u.profile?.block ?? '—'}</td>
                 <td className="py-2 text-center font-display font-extrabold tabular-nums" style={{ color: toneColor(r.best_score ?? 0) }}>
                   {fmtPct(r.best_score ?? 0)}
                 </td>

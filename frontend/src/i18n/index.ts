@@ -24,6 +24,7 @@ import enPipelines from './locales/en/pipelines.json';
 import enOffline from './locales/en/offline.json';
 import enResultsInsights from './locales/en/resultsInsights.json';
 import enMasd from './locales/en/masd.json';
+import enGuide from './locales/en/guide.json';
 import hiCommon from './locales/hi/common.json';
 import hiAuth from './locales/hi/auth.json';
 import hiApp from './locales/hi/app.json';
@@ -46,6 +47,7 @@ import hiPipelines from './locales/hi/pipelines.json';
 import hiOffline from './locales/hi/offline.json';
 import hiResultsInsights from './locales/hi/resultsInsights.json';
 import hiMasd from './locales/hi/masd.json';
+import hiGuide from './locales/hi/guide.json';
 
 /**
  * Languages the UI actually ships translations for. The switcher only offers
@@ -61,7 +63,7 @@ export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 export const NAMESPACES = [
   'common', 'auth', 'app', 'tutorials', 'dashboard', 'tests', 'learner', 'mother', 'assessments', 'landing',
   'admin', 'adminResults', 'adminTests', 'adminTutorials', 'adminFormBuilder', 'adminLiveMonitor', 'validation',
-  'growth', 'pipelines', 'offline', 'resultsInsights', 'masd',
+  'growth', 'pipelines', 'offline', 'resultsInsights', 'masd', 'guide',
 ] as const;
 
 const resources = {
@@ -70,14 +72,14 @@ const resources = {
     learner: enLearner, mother: enMother, assessments: enAssessments, landing: enLanding, admin: enAdmin, adminResults: enAdminResults,
     adminTests: enAdminTests, adminTutorials: enAdminTutorials, adminFormBuilder: enAdminFormBuilder,
     adminLiveMonitor: enAdminLiveMonitor, validation: enValidation, growth: enGrowth, pipelines: enPipelines,
-    offline: enOffline, resultsInsights: enResultsInsights, masd: enMasd,
+    offline: enOffline, resultsInsights: enResultsInsights, masd: enMasd, guide: enGuide,
   },
   hi: {
     common: hiCommon, auth: hiAuth, app: hiApp, tutorials: hiTutorials, dashboard: hiDashboard, tests: hiTests,
     learner: hiLearner, mother: hiMother, assessments: hiAssessments, landing: hiLanding, admin: hiAdmin, adminResults: hiAdminResults,
     adminTests: hiAdminTests, adminTutorials: hiAdminTutorials, adminFormBuilder: hiAdminFormBuilder,
     adminLiveMonitor: hiAdminLiveMonitor, validation: hiValidation, growth: hiGrowth, pipelines: hiPipelines,
-    offline: hiOffline, resultsInsights: hiResultsInsights, masd: hiMasd,
+    offline: hiOffline, resultsInsights: hiResultsInsights, masd: hiMasd, guide: hiGuide,
   },
 } as const;
 

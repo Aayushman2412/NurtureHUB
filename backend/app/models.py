@@ -1,5 +1,5 @@
 from datetime import date
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Float, Text, Table, UniqueConstraint, Index, JSON
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Float, Text, Table, UniqueConstraint, Index, JSON, text
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -144,6 +144,15 @@ class User(Base):
     otp_attempts = Column(Integer, default=0, nullable=False)  # failed verify attempts for the current code
     google_id = Column(String, unique=True, nullable=True)
     program_district_id = Column(Integer, ForeignKey("program_districts.id"), nullable=True)
+    # Batch monitors (review of 5 Oct 2026): a learner can be tagged a batch
+    # monitor, and every learner can be given one. The monitor answers for the
+    # few in their batch who fall behind, so supervisors need not chase each
+    # learner themselves. See /api/admin/masd/monitors.
+    is_batch_monitor = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+    batch_monitor_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL", name="users_batch_monitor_id_fkey"),
+        nullable=True, index=True,
+    )
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

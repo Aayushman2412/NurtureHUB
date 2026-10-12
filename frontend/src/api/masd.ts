@@ -79,6 +79,13 @@ export interface MasdLearner {
   f2f: boolean;
   trainer_role: 'master_trainer' | 'facilitator' | null;
   mtfl: boolean;
+  /** Shown to admins beside the name, with the user ID. */
+  mobile?: string | null;
+  /** Tagged a batch monitor. */
+  is_monitor?: boolean;
+  /** The batch monitor watching this learner, and their name. */
+  monitor_id?: number | null;
+  monitor?: string | null;
   is_nurse: boolean;
   batch_id: number | null;
   batch: string | null;
@@ -323,6 +330,11 @@ export interface MasdReport {
   learners: MasdLearner[];
   weekly: ({ week: string; adoptions: number; total: number } & Record<ActivityKey, number>)[];
   attention: MasdAttention[];
+  /** Each batch monitor and the learners they answer for. */
+  batch_monitors?: {
+    monitors: MasdMonitor[];
+    f2f_without_monitor: number;
+  };
   flags: {
     summary: { open_pregnancies: number; flagged: number } & Record<FlagReason, number>;
     items: PregnancyFlag[];
@@ -421,6 +433,35 @@ export const saveMasdSettings = (
     batches?: MasdBatch[];
   },
 ) => client.put<MasdSettings>('/api/admin/masd/settings', body, { params: { project } }).then(r => r.data);
+
+/** One batch monitor: how many learners they watch, how many are on track
+ *  and which need a call this week. */
+export interface MasdMonitor {
+  id: number;
+  name: string;
+  block: string;
+  role_group: string;
+  learners: number;
+  on_track: number;
+  need_call: number;
+  own_pct: number | null;
+  adoptions: number;
+  calls: MasdAttention[];
+}
+
+/** Tag a learner as a batch monitor (or remove the tag — their learners are freed). */
+export const setBatchMonitorTag = (userId: number, isMonitor: boolean) =>
+  client.put<{ user_id: number; is_batch_monitor: boolean; released: number }>(
+    `/api/admin/masd/learners/${userId}/batch-monitor`, { is_batch_monitor: isMonitor }).then(r => r.data);
+
+/** Give a learner a batch monitor (null = none). */
+export const setLearnerMonitor = (userId: number, monitorId: number | null) =>
+  client.put(`/api/admin/masd/learners/${userId}/monitor`, { batch_monitor_id: monitorId }).then(r => r.data);
+
+/** Give many learners the same batch monitor. */
+export const setMonitorLearners = (monitorId: number, userIds: number[]) =>
+  client.put<{ monitor_id: number; assigned: number; skipped: number }>(
+    `/api/admin/masd/monitors/${monitorId}/learners`, { user_ids: userIds }).then(r => r.data);
 
 export const setTrainerRole = (userId: number, trainerRole: MasdLearner['trainer_role']) =>
   client.put(`/api/admin/masd/learners/${userId}/trainer-role`, { trainer_role: trainerRole }).then(r => r.data);

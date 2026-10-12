@@ -207,7 +207,7 @@ const AdminMasdPage: React.FC = () => {
         <>
           {/* Frozen at the top while the page scrolls, like every dashboard's
               controls (review of 3 Oct 2026). */}
-          <div className="rounded-2xl bg-background/95 py-1 backdrop-blur sm:sticky sm:top-[3.75rem] sm:z-20 lg:top-2">
+          <div className="rounded-2xl bg-background py-1 sm:sticky sm:top-[3.75rem] sm:z-20 lg:top-2">
             <SubNav items={navItems} value={view} onChange={v => setView(v as View)} label={t('views.label')} />
           </div>
           {view === 'overview' && <MasdOverview report={report} onOpenLearners={() => setView('learners')} onOpenFlags={() => setView('flags')} />}

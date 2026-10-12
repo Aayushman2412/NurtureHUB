@@ -28,7 +28,7 @@
     "avgAccuracy": "Avg Accuracy"
   },
   "controls": {
-    "searchPlaceholder": "Search by name or email…",
+    "searchPlaceholder": "Search by user ID, name or email…",
     "sort": {
       "riskScore": "Risk Score",
       "timeRemaining": "Time Remaining",

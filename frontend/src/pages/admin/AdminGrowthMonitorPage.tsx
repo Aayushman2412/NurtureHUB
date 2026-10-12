@@ -165,7 +165,8 @@ const AdminGrowthMonitorPage: React.FC = () => {
         .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
         .map(l => ({
           value: l.id,
-          label: l.district ? `${l.name} — ${l.district}` : l.name,
+          // "#123 Name — District": the ID makes the picker searchable by it.
+          label: `#${l.id} ${l.name}${l.district ? ` — ${l.district}` : ''}`,
         })),
     [options.learners],
   );
