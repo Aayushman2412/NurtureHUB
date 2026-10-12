@@ -1,9 +1,14 @@
+import base64
+import logging
 import random
 import string
 import smtplib
+import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class EmailDeliveryError(Exception):
@@ -15,6 +20,13 @@ class EmailDeliveryError(Exception):
 def generate_otp() -> str:
     """Generate a random 6-digit numeric OTP."""
     return "".join(random.choices(string.digits, k=6))
+
+
+def _mask_email(email: str) -> str:
+    parts = email.split("@")
+    if len(parts) == 2 and len(parts[0]) > 2:
+        return f"{parts[0][0]}***{parts[0][-1]}@{parts[1]}"
+    return email
 
 
 def _build_otp_message(to_email: str, otp: str) -> MIMEMultipart:
@@ -50,6 +62,61 @@ def _build_otp_message(to_email: str, otp: str) -> MIMEMultipart:
     return msg
 
 
+def _login_smtp(server: smtplib.SMTP, user: str, password: str) -> None:
+    """
+    Authenticate against the SMTP server.
+    
+    Google SMTP responds with `535 5.7.8 BadCredentials` and abruptly closes the
+    TCP connection if credentials fail. When smtplib retries with AUTH LOGIN on a
+    closed socket, it hides the 535 error and raises `Connection unexpectedly closed`.
+    We test AUTH PLAIN first to catch and surface the authentic 535 rejection.
+    """
+    try:
+        auth_plain = base64.b64encode(f"\0{user}\0{password}".encode()).decode()
+        code, resp = server.docmd("AUTH", f"PLAIN {auth_plain}")
+        if code == 235:
+            return
+        if code == 535:
+            detail = resp.decode("utf-8", errors="ignore").replace("\n", " ").strip()
+            raise smtplib.SMTPAuthenticationError(
+                code,
+                f"Google SMTP rejected credentials: {detail}. "
+                "Ensure a valid 16-character Google App Password (not your account password) "
+                "is set in SMTP_PASSWORD with 2-Step Verification enabled."
+            )
+    except smtplib.SMTPAuthenticationError:
+        raise
+    except Exception:
+        pass
+
+    # Standard fallback
+    server.login(user, password)
+
+
+def _deliver_smtp(host: str, port: int, use_starttls: bool, user: str, password: str, to_email: str, msg: MIMEMultipart) -> None:
+    context = ssl.create_default_context()
+    if use_starttls:
+        server = smtplib.SMTP(host, port, timeout=settings.SMTP_TIMEOUT)
+        server.ehlo()
+        server.starttls(context=context)
+        server.ehlo()
+    else:
+        server = smtplib.SMTP_SSL(host, port, context=context, timeout=settings.SMTP_TIMEOUT)
+
+    _login_smtp(server, user, password)
+    server.sendmail(user, to_email, msg.as_string())
+
+    # Some mail servers immediately terminate the socket upon completion, causing
+    # server.quit() to raise SMTPServerDisconnected even though the email was sent.
+    try:
+        server.quit()
+    except Exception:
+        try:
+            server.close()
+        except Exception:
+            pass
+
+
 def send_otp_email(to_email: str, otp: str) -> None:
     """
     Deliver an OTP email over SMTP.
@@ -69,32 +136,56 @@ def send_otp_email(to_email: str, otp: str) -> None:
         print("=" * 50 + "\n")
 
     # SMTP not configured
-    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+    smtp_user = (settings.SMTP_USER or "").strip()
+    smtp_password = (settings.SMTP_PASSWORD or "").strip().replace(" ", "")
+
+    if not smtp_user or not smtp_password:
         if settings.is_production:
             raise EmailDeliveryError("SMTP credentials are not configured.")
         print("SMTP credentials not configured. OTP printed to console above (dev only).")
         return
 
-    try:
-        msg = _build_otp_message(to_email, otp)
+    msg = _build_otp_message(to_email, otp)
+    host = settings.SMTP_HOST.strip()
+    primary_port = int(settings.SMTP_PORT)
 
-        # Port 465 → implicit SSL; 587/25 → STARTTLS. A timeout prevents a slow
-        # or unreachable mail server from hanging the request worker.
-        if settings.SMTP_PORT == 465:
-            server = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=settings.SMTP_TIMEOUT)
-        else:
-            server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=settings.SMTP_TIMEOUT)
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
+    # Build connection attempts: try configured port, and if that fails due to
+    # port blocking or network reset, fall back between 587 (STARTTLS) and 465 (SSL).
+    attempts: list[tuple[bool, int]] = []
+    if primary_port == 465:
+        attempts.append((False, 465))
+        if host in ("smtp.gmail.com", "smtp.googlemail.com"):
+            attempts.append((True, 587))
+    else:
+        attempts.append((True, primary_port))
+        if host in ("smtp.gmail.com", "smtp.googlemail.com") and primary_port != 465:
+            attempts.append((False, 465))
 
-        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-        server.sendmail(settings.SMTP_USER, to_email, msg.as_string())
-        server.quit()
-        print(f"Successfully sent OTP email to {to_email} via SMTP")
-    except Exception as e:
-        print(f"Error sending OTP email via SMTP to {to_email}: {e}")
-        if settings.is_production:
-            # Fail loud so the endpoint returns an error and the user can retry.
-            raise EmailDeliveryError(str(e)) from e
-        # Dev: don't block local flows on a flaky/unconfigured mail server.
+    last_error: Exception | None = None
+    for use_starttls, port in attempts:
+        mode = "STARTTLS" if use_starttls else "SSL"
+        try:
+            _deliver_smtp(
+                host=host,
+                port=port,
+                use_starttls=use_starttls,
+                user=smtp_user,
+                password=smtp_password,
+                to_email=to_email,
+                msg=msg,
+            )
+            print(f"Successfully sent OTP email to {to_email} via SMTP ({host}:{port} {mode})")
+            return
+        except smtplib.SMTPAuthenticationError as auth_err:
+            last_error = auth_err
+            print(f"Error authenticating with SMTP ({host}:{port} {mode}) as {_mask_email(smtp_user)}: {auth_err}")
+            # Authentication errors indicate bad credentials — don't retry other ports
+            break
+        except Exception as e:
+            last_error = e
+            print(f"SMTP attempt failed on {host}:{port} ({mode}) for {to_email}: {type(e).__name__}: {e}")
+
+    # All attempts exhausted
+    print(f"Error sending OTP email via SMTP to {to_email}: {last_error}")
+    if settings.is_production:
+        raise EmailDeliveryError(str(last_error)) from last_error
