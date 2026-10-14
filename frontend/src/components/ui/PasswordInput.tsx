@@ -8,7 +8,8 @@ const PasswordInput = React.forwardRef<HTMLInputElement, Omit<InputProps, 'type'
     const [visible, setVisible] = useState(false);
     return (
       <div className="relative">
-        <Input ref={ref} type={visible ? 'text' : 'password'} className="pr-10" {...rest} />
+        <Input ref={ref} type={visible ? 'text' : 'password'} className="pr-10"
+          autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="current-password" {...rest} />
         <button
           type="button"
           onClick={() => setVisible(v => !v)}

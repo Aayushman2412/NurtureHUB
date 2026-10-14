@@ -8,7 +8,7 @@ from app.database import get_db
 from app.models import User
 from app.schemas import UserRegister, UserLogin, OTPVerify, ForgotPasswordRequest, Token, GoogleLoginRequest
 from app.auth import (
-    get_password_hash, verify_password, create_access_token, verify_google_token,
+    get_password_hash, verify_password, match_password, create_access_token, verify_google_token,
     hash_otp, verify_otp_code, needs_rehash,
 )
 from app.utils import generate_otp, send_otp_email, EmailDeliveryError
@@ -236,7 +236,8 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
     user_role = user.role if user else None
     db.commit()
 
-    if not stored_hash or not verify_password(credentials.password, stored_hash):
+    matched = match_password(credentials.password, stored_hash) if stored_hash else None
+    if not matched:
         # The attempt is recorded before the 401 is raised — a failed sign-in
         # against an account that does not exist is as interesting to an
         # investigation as one against an account that does.
@@ -270,10 +271,17 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
     # The check runs AFTER the password verification deliberately. Refusing
     # before it would answer instantly for administrators and only after ~300ms
     # of bcrypt for everyone else — enough of a timing difference to enumerate
-    # who the administrators are. The message stays the generic one for the same
-    # reason. It is NOT counted as a lockout attempt: the password was correct,
-    # so this is a wrong-door mistake, not a credential guess, and counting it
-    # would let an admin lock themselves out of the console by habit.
+    # who the administrators are. It is NOT counted as a lockout attempt: the
+    # password was correct, so this is a wrong-door mistake, not a credential
+    # guess, and counting it would let an admin lock themselves out of the
+    # console by habit.
+    #
+    # The answer names the right door ("use_admin_sign_in"), and the sign-in
+    # page then signs in at /api/admin/login itself (review of 14 Oct 2026: an
+    # admin on a new phone, another laptop or the installed app lands on this
+    # form and was told "incorrect email or password" for a correct password).
+    # Only someone who already holds the correct password ever sees it, so it
+    # tells an attacker nothing they could not learn by trying the admin form.
     if user_is_admin:
         audit.record(
             audit.Action.LOGIN_FAILURE,
@@ -287,7 +295,7 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="use_admin_sign_in",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -297,7 +305,7 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
     # The stored hash may predate a change to BCRYPT_ROUNDS. This is the only
     # moment the plaintext is available, so it is the only moment a rehash is
     # possible — see app/auth.py:needs_rehash.
-    upgraded = maybe_upgrade_hash(db, user_id, stored_hash, credentials.password)
+    upgraded = maybe_upgrade_hash(db, user_id, stored_hash, matched)
 
     lockout.record_attempt(
         db, principal=norm_email, successful=True, surface="learner", request=request, commit=False

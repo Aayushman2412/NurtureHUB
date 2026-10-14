@@ -51,6 +51,40 @@ const LoginPage: React.FC = () => {
     }
   }, [searchParams]);
 
+  // Why a sign-in failed, in words that point at the real problem. Before
+  // 14 Oct 2026 every failure without a server message — no connection, a
+  // proxy or rate-limit page, a server error — read "Invalid credentials",
+  // which sent people re-typing a password that was right.
+  const failure = (err: any, fallback: string): string => {
+    const res = err?.response;
+    if (!res) return t('login.toast.network');
+    const detail = res.data?.detail;
+    if (res.status === 429) return typeof detail === 'string' ? detail : t('login.toast.tooMany');
+    if (res.status >= 500) return t('login.toast.serverError');
+    if (typeof detail === 'string' && detail) return detail;
+    return res.status === 401 ? fallback : t('login.toast.unexpected', { status: res.status });
+  };
+
+  // An administrator who signs in on the ordinary form (a new phone, another
+  // laptop, the installed app — all open on this form) is signed in at the
+  // admin console instead, with the second factor asked for if they have one.
+  const signInAsAdmin = async (mail: string, pass: string, code?: string): Promise<'ok' | 'mfa'> => {
+    try {
+      const res = await client.post('/api/admin/login', {
+        email: mail, password: pass, ...(code ? { mfa_code: code } : {}),
+      });
+      localStorage.setItem('nh_admin', 'true');
+      localStorage.setItem('nh_admin_token', res.data.access_token);
+      localStorage.setItem('nh_admin_name', res.data.admin_name);
+      localStorage.setItem('nh_token', res.data.access_token);
+      localStorage.setItem('nh_user_email', mail.toLowerCase());
+      return 'ok';
+    } catch (err: any) {
+      if (err.response?.data?.detail === 'mfa_required') return 'mfa';
+      throw err;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -78,8 +112,25 @@ const LoginPage: React.FC = () => {
         navigate('/dashboard');
       }
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || t('login.toast.invalidCreds');
-      updateToast(toastId, errorMsg, 'error');
+      if (err.response?.data?.detail === 'use_admin_sign_in') {
+        try {
+          const outcome = await signInAsAdmin(email.trim(), password);
+          if (outcome === 'mfa') {
+            setAdminEmail(email.trim());
+            setAdminPassword(password);
+            setMfaRequired(true);
+            setShowAdminForm(true);
+            updateToast(toastId, t('login.toast.mfaRequired'), 'info');
+            return;
+          }
+          updateToast(toastId, t('login.toast.adminGranted'), 'success');
+          navigate('/admin');
+        } catch (adminErr: any) {
+          updateToast(toastId, failure(adminErr, t('login.toast.invalidAdmin')), 'error');
+        }
+        return;
+      }
+      updateToast(toastId, failure(err, t('login.toast.invalidCreds')), 'error');
     } finally {
       setLoading(false);
     }
@@ -98,32 +149,21 @@ const LoginPage: React.FC = () => {
     }
     setAdminLoading(true);
     try {
-      const res = await client.post('/api/admin/login', {
-        email: trimmedEmail,
-        password: adminPassword,
-        ...(mfaCode.trim() ? { mfa_code: mfaCode.trim() } : {}),
-      });
-      localStorage.setItem('nh_admin', 'true');
-      localStorage.setItem('nh_admin_token', res.data.access_token);
-      localStorage.setItem('nh_admin_name', res.data.admin_name);
-      localStorage.setItem('nh_token', res.data.access_token);
-      localStorage.setItem('nh_user_email', trimmedEmail.toLowerCase());
-      setMfaRequired(false);
-      setMfaCode('');
-      showToast(t('login.toast.adminGranted'), 'success');
-      navigate('/admin');
-    } catch (err: any) {
-      // The password was right but a second factor is needed. Say so plainly
-      // rather than showing "invalid credentials", which would send someone
-      // resetting a password that is not the problem.
-      if (err.response?.data?.detail === 'mfa_required') {
+      if (await signInAsAdmin(trimmedEmail, adminPassword, mfaCode.trim() || undefined) === 'mfa') {
         setMfaRequired(true);
         setMfaCode('');
         showToast(t('login.toast.mfaRequired'), 'info');
         return;
       }
+      setMfaRequired(false);
       setMfaCode('');
-      showToast(err.response?.data?.detail || t('login.toast.invalidAdmin'), 'error');
+      showToast(t('login.toast.adminGranted'), 'success');
+      navigate('/admin');
+    } catch (err: any) {
+      // (A second factor being needed is not an error: signInAsAdmin answers
+      // 'mfa' and the code field appears above.)
+      setMfaCode('');
+      showToast(failure(err, t('login.toast.invalidAdmin')), 'error');
     } finally {
       setAdminLoading(false);
     }
@@ -139,6 +179,10 @@ const LoginPage: React.FC = () => {
             <Input
               id="admin-email"
               type="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              autoComplete="username"
               placeholder="admin@nurturehub.org"
               value={adminEmail}
               onChange={e => setAdminEmail(e.target.value)}
@@ -244,6 +288,10 @@ const LoginPage: React.FC = () => {
           <Input
             id="email-input"
             type="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            autoComplete="username"
             placeholder={t('fields.emailPlaceholder')}
             value={email}
             onChange={e => setEmail(e.target.value)}

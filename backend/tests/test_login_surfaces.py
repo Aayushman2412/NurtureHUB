@@ -100,17 +100,29 @@ class TestLearnerSignIn:
         assert exc.value.status_code == 401
 
     def test_refusal_does_not_reveal_that_the_account_is_an_admin(self, db):
-        """The message must match a plain wrong-password answer.
-
-        Anything more specific turns the learner form into an oracle for which
-        accounts are administrators.
+        """A wrong password gets the same answer on an admin account as on a
+        learner's — the learner form is no oracle for who the administrators
+        are. Only the CORRECT admin password is told to use the admin door
+        (review of 14 Oct 2026): whoever sees that already holds the password.
         """
-        with pytest.raises(HTTPException) as admin:
-            _login(db, "admin@example.org", PASSWORD)
-        with pytest.raises(HTTPException) as wrong:
+        with pytest.raises(HTTPException) as admin_wrong:
+            _login(db, "admin@example.org", "not-the-password")
+        with pytest.raises(HTTPException) as learner_wrong:
             _login(db, "learner@example.org", "not-the-password")
-        assert admin.value.status_code == wrong.value.status_code == 401
-        assert admin.value.detail == wrong.value.detail
+        assert admin_wrong.value.status_code == learner_wrong.value.status_code == 401
+        assert admin_wrong.value.detail == learner_wrong.value.detail
+        with pytest.raises(HTTPException) as admin_right:
+            _login(db, "admin@example.org", PASSWORD)
+        assert admin_right.value.status_code == 401 and admin_right.value.detail == "use_admin_sign_in"
+
+    def test_keyboard_debris_around_a_password_is_forgiven(self, db):
+        """A trailing space from a word suggestion, a non-breaking space or a
+        zero-width character from a paste: the password as the person meant it
+        still signs in. The exact form is always tried first."""
+        for typed in (PASSWORD + " ", " " + PASSWORD, PASSWORD + " ", "​" + PASSWORD):
+            assert _login(db, "learner@example.org", typed)["access_token"]
+        with pytest.raises(HTTPException):
+            _login(db, "learner@example.org", PASSWORD.upper() if PASSWORD.upper() != PASSWORD else PASSWORD + "x")
 
     def test_unknown_account_refused(self, db):
         with pytest.raises(HTTPException) as exc:

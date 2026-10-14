@@ -15,6 +15,38 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     except Exception:
         return False
 
+# What a phone keyboard or a paste from WhatsApp can do to a password the
+# person typed correctly: a trailing space after a word suggestion, a
+# non-breaking space, a zero-width joiner, a full-width character from an
+# Indic keyboard. None of it is visible in a password field.
+_INVISIBLE = dict.fromkeys(map(ord, "\u200b\u200c\u200d\u2060\ufeff"), None)
+
+
+def _typed_variants(plain: str) -> list:
+    import unicodedata
+
+    v = unicodedata.normalize("NFKC", plain or "").translate(_INVISIBLE).replace("\u00a0", " ").strip()
+    return [v] if v and v != plain else []
+
+
+def match_password(plain_password: str, hashed_password: Optional[str]) -> Optional[str]:
+    """The plaintext that matches the hash — exactly as typed, else as typed
+    without invisible characters and surrounding spaces — or None.
+
+    The exact form is always tried first, so a password that really does
+    contain such a character still works; the cleaned form costs a second
+    bcrypt only when cleaning changed something. Callers re-hash with the
+    returned value, never the raw input."""
+    if not hashed_password:
+        return None
+    if verify_password(plain_password, hashed_password):
+        return plain_password
+    for candidate in _typed_variants(plain_password):
+        if verify_password(candidate, hashed_password):
+            return candidate
+    return None
+
+
 def get_password_hash(password: str) -> str:
     salt = bcrypt.gensalt(rounds=settings.BCRYPT_ROUNDS)
     return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")

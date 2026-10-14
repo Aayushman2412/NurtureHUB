@@ -28,7 +28,7 @@ from app.models import (
     Mother, FormDefinition, FormDistrictAssignment, FormVersion,
 )
 from app.seed_forms import FORM_SPECS, ensure_form_definitions
-from app.auth import verify_password, create_access_token, get_password_hash
+from app.auth import verify_password, match_password, create_access_token, get_password_hash
 from app.dependencies import (
     get_current_admin, get_admin_email, invalidate_user_cache, oauth2_scheme,
 )
@@ -255,7 +255,7 @@ def admin_login(request: Request, credentials: AdminLoginRequest, db: Session = 
         user
         and user.is_admin
         and user.password_hash
-        and verify_password(credentials.password, user.password_hash)
+        and match_password(credentials.password, user.password_hash)
     ):
         authenticated = True
         admin_name = user.full_name or "Admin"
