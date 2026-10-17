@@ -38,6 +38,7 @@ from app.models import (
     ExperienceRange,
     Facility,
     FaceToFaceSelection,
+    GramPanchayat,
     Notification,
     ProgramDistrict,
     Question,
@@ -83,6 +84,16 @@ GEO_DATA = {
         "blocks": [
             "Mawlai", "Mylliem", "Umling", "Rongram", "Mawkynrew",
         ],
+    },
+    # Real geography (migration 5d2a9c7e41f3): learners go into the district's
+    # actual talukas, with a gram panchayat of that taluka as their village —
+    # and NO invented village or facility rows are added, because real
+    # learners registering in Chandrapur pick from those lists.
+    "chandrapur": {
+        "state_name": "Maharashtra",
+        "district_name": "Chandrapur",
+        "blocks": None,
+        "real": True,
     },
 }
 
@@ -148,6 +159,13 @@ def _ensure_geography(db: Session, district_slug: str) -> Tuple[int, int, List[i
     info = GEO_DATA.get(district_slug)
     if not info:
         raise ValueError(f"Unknown district slug: {district_slug}")
+    if info.get("real"):
+        district = (db.query(District).join(State)
+                    .filter(State.name == info["state_name"], District.name == info["district_name"]).first())
+        if district is None:
+            raise ValueError(f"{info['district_name']} is not in the geography — run the migrations first")
+        blocks = db.query(Block).filter(Block.district_id == district.id).order_by(Block.id).all()
+        return district.state_id, district.id, [b.id for b in blocks], [], []
 
     # State
     state = db.query(State).filter(State.name == info["state_name"]).first()
@@ -390,6 +408,8 @@ def seed_learners_for_district(db: Session, district_slug: str, count: int = 300
     seeded_users = []
     existing_ids = set()
     face_to_face_candidates = []
+    gp_names: Dict[int, List[str]] = {}
+    place_rng = random.Random(f"places-{district_slug}")
 
     # Map district slug to short prefix
     dist_prefix = {"jalna": "jl", "ujjain": "uj", "meghalaya": "ml"}.get(district_slug, district_slug[:2])
@@ -490,6 +510,13 @@ def seed_learners_for_district(db: Session, district_slug: str, count: int = 300
             program_district_id=pd.id,
             created_at=now - timedelta(days=random.randint(15, 60)),
         )
+        if GEO_DATA[district_slug].get("real") and user.block_id:
+            # A real gram panchayat of the learner's taluka as her village, from
+            # a separate generator so the other districts' draws are unchanged.
+            gps = gp_names.setdefault(user.block_id, [g for (g,) in db.query(GramPanchayat.name)
+                                                     .filter(GramPanchayat.block_id == user.block_id)])
+            user.village_name = place_rng.choice(gps) if gps else None
+            user.work_center_name = f"{user.village_name or 'Village'} {'AWC' if is_wcd else 'Sub-centre'}"
         db.add(user)
         seeded_users.append((user, cohort_assignments[i - 1]))
 

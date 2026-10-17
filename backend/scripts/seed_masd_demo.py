@@ -608,18 +608,24 @@ def _definitions(db) -> Dict[str, Tuple[dict, int]]:
     return out
 
 
-def seed_project(db, slug: str, today: date) -> Dict[str, int]:
+def seed_project(db, slug: str, today: date, conf: Optional[dict] = None,
+                 names: Optional[tuple] = None, only_new: bool = False) -> Dict[str, int]:
+    """`conf` / `names` let a project not in PROJECTS be seeded (the Chandrapur
+    demo — scripts/chandrapur_demo.py); `conf["targets_like"]` takes another
+    project's target steps. With `only_new`, learners who already have cases
+    are left alone, the project's existing batches are reused and its MASD
+    calendar is kept."""
     project = db.query(models.ProgramDistrict).filter_by(slug=slug).one_or_none()
     if project is None:
         print(f"  {slug}: project not found, skipped")
         return {}
-    conf = PROJECTS[slug]
+    conf = conf or PROJECTS[slug]
     training = conf.get("training") or today - timedelta(days=conf["training_days_ago"])
     tranche2 = conf.get("tranche2") or training + timedelta(days=conf["tranche2_after"])
     rng = Random(f"masd-{slug}-2026")
-    steps = R.default_targets(slug, training, tranche2)
+    steps = R.default_targets(conf.get("targets_like", slug), training, tranche2)
     ctx = Ctx(db=db, rng=rng, today=today, training=training, tranche2=tranche2,
-              defs=_definitions(db), names=NAMES[conf["state"]], project_slug=slug,
+              defs=_definitions(db), names=names or NAMES[conf["state"]], project_slug=slug,
               steps=steps, table=expected_forms_for(db)[0])
 
     learners = (
@@ -628,6 +634,12 @@ def seed_project(db, slug: str, today: date) -> Dict[str, int]:
         .order_by(models.User.id)
         .all()
     )
+    if only_new:
+        busy = {uid for (uid,) in db.query(models.Mother.registered_by_user_id)
+                .filter(models.Mother.registered_by_user_id.in_([u.id for u in learners]))} if learners else set()
+        learners = [u for u in learners if u.id not in busy]
+        ctx.seq = db.query(models.Mother).filter(
+            models.Mother.mother_uid.like(f"{MARK}{slug[:2].upper()}M%")).count()
     selections = {s.user_id: s for s in db.query(models.FaceToFaceSelection)
                   .filter(models.FaceToFaceSelection.user_id.in_([u.id for u in learners]))}
     f2f = [u for u in learners if u.id in selections]
@@ -671,12 +683,17 @@ def seed_project(db, slug: str, today: date) -> Dict[str, int]:
     # Five F2F batches ending over the fortnight up to the training date; a
     # batch trains a block or two, so learners are split in block order.
     batches = []
-    for i, back in enumerate(BATCH_ENDS_BEFORE_TRAINING):
-        batch = models.MasdTrainingBatch(program_district_id=project.id, name=f"Batch {i + 1}",
-                                         end_date=training - timedelta(days=back), updated_by=SEEDED_BY)
-        db.add(batch)
-        batches.append(batch)
-    db.flush()
+    if only_new:
+        batches = (db.query(models.MasdTrainingBatch)
+                   .filter(models.MasdTrainingBatch.program_district_id == project.id)
+                   .order_by(models.MasdTrainingBatch.end_date, models.MasdTrainingBatch.name).all())
+    if not batches:
+        for i, back in enumerate(BATCH_ENDS_BEFORE_TRAINING):
+            batch = models.MasdTrainingBatch(program_district_id=project.id, name=f"Batch {i + 1}",
+                                             end_date=training - timedelta(days=back), updated_by=SEEDED_BY)
+            db.add(batch)
+            batches.append(batch)
+        db.flush()
     ordered = sorted(f2f, key=lambda u: (u.block_id or 0, u.id))
     size = math.ceil(len(ordered) / len(batches)) if ordered else 1
     for i, u in enumerate(ordered):
@@ -686,8 +703,10 @@ def seed_project(db, slug: str, today: date) -> Dict[str, int]:
     if settings is None:
         settings = models.MasdProjectSettings(program_district_id=project.id)
         db.add(settings)
-    settings.training_date, settings.tranche2_start, settings.updated_by = training, tranche2, SEEDED_BY
-    settings.targets_json = steps
+        only_new = False          # nothing to keep: set the calendar below
+    if not only_new:
+        settings.training_date, settings.tranche2_start, settings.updated_by = training, tranche2, SEEDED_BY
+        settings.targets_json = steps
     db.commit()
     return {**ctx.counters, "f2f": len(f2f), "mtfl": len(chosen), "batches": len(batches),
             "edges_left": len(edges)}

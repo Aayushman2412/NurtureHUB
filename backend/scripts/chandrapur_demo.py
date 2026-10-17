@@ -21,6 +21,14 @@ irrespective of whatever district, and show it as Chandrapur."
     # 3. Put every moved learner back exactly as they were.
     python -m scripts.chandrapur_demo undo-mock
 
+    # 4. NEW synthetic learners for Chandrapur (learner.ch.NNN@nurturehub.mock),
+    #    in its real talukas with a gram panchayat as their village, with video
+    #    progress, quizzes and F2F training like the other demo projects, and —
+    #    for the F2F ones — adoptions and forms on Jalna's programme calendar.
+    #    Nothing is added to the village or facility lists.
+    python -m scripts.chandrapur_demo add-new [--count 260]
+    python -m scripts.chandrapur_demo remove-new      # deletes exactly those
+
     python -m scripts.chandrapur_demo status
 
 What was moved, and where from, is kept in masd_rule_tables under
@@ -246,6 +254,64 @@ def undo_mock(db) -> None:
     print(f"put back {sum(len(v) for v in by_source.values())} synthetic learners")
 
 
+NEW_PREFIX = "learner.ch."
+# Jalna's programme calendar and target steps: Chandrapur's MASD settings are
+# copied from Jalna by `setup`, so its new cases follow the same tranches.
+CHANDRAPUR_CONF = {"training": None, "tranche2": None, "targets_like": "jalna"}
+
+
+def _gp_sample(db, district_id: int, n: int = 80) -> List[str]:
+    from random import Random
+
+    names = [g for (g,) in db.query(models.GramPanchayat.name).join(models.Block)
+             .filter(models.Block.district_id == district_id).order_by(models.GramPanchayat.name)]
+    return Random("chandrapur-villages").sample(names, min(n, len(names))) or ["Chandrapur"]
+
+
+def add_new(db, count: int) -> None:
+    from datetime import date
+
+    from scripts import seed_masd_demo as masd
+    from scripts import seed_mock_learners as mock
+
+    project = _project(db, SLUG)
+    settings = db.get(models.MasdProjectSettings, project.id) if project else None
+    if project is None or settings is None or settings.training_date is None:
+        sys.exit("Run `setup` first (it gives Chandrapur its programme calendar).")
+    have = db.query(models.User).filter(models.User.email.like(f"{NEW_PREFIX}%")).count()
+    if have:
+        print(f"{have} new Chandrapur learners already exist; adding up to {count} in all")
+    mock.seed_learners_for_district(db, SLUG, count=count)
+    _, district = _place(db)
+    conf = {**CHANDRAPUR_CONF, "training": settings.training_date, "tranche2": settings.tranche2_start}
+    names = (masd.NAMES["mh"][0], masd.NAMES["mh"][1], _gp_sample(db, district.id))
+    stats = masd.seed_project(db, SLUG, date.today(), conf=conf, names=names, only_new=True)
+    print(f"cases for the new learners: {stats}")
+
+
+def remove_new(db) -> None:
+    users = db.query(models.User).filter(models.User.email.like(f"{NEW_PREFIX}%"),
+                                         models.User.email.like(f"%{MOCK_DOMAIN}")).all()
+    ids = [u.id for u in users]
+    if not ids:
+        print("no new Chandrapur learners to remove")
+        return
+    mothers = [m for (m,) in db.query(models.Mother.id).filter(models.Mother.registered_by_user_id.in_(ids))]
+    kids = [c for (c,) in db.query(models.Child.id).filter(models.Child.mother_id.in_(mothers))] if mothers else []
+    for chunk in (kids[i:i + 1000] for i in range(0, len(kids), 1000)):
+        db.query(models.FormResponse).filter(models.FormResponse.child_id.in_(chunk)).delete(synchronize_session=False)
+    for chunk in (mothers[i:i + 1000] for i in range(0, len(mothers), 1000)):
+        db.query(models.FormResponse).filter(models.FormResponse.mother_id.in_(chunk)).delete(synchronize_session=False)
+        db.query(models.Child).filter(models.Child.mother_id.in_(chunk)).delete(synchronize_session=False)
+        db.query(models.Mother).filter(models.Mother.id.in_(chunk)).delete(synchronize_session=False)
+    for model in (models.FaceToFaceSelection, models.Notification, models.TutorialQuizResponse,
+                  models.UserTutorialProgress):
+        db.query(model).filter(model.user_id.in_(ids)).delete(synchronize_session=False)
+    db.query(models.User).filter(models.User.id.in_(ids)).delete(synchronize_session=False)
+    db.commit()
+    print(f"removed {len(ids)} new Chandrapur learners, {len(mothers)} mothers, {len(kids)} children")
+
+
 def status(db) -> None:
     project = _project(db, SLUG)
     if project is None:
@@ -253,24 +319,30 @@ def status(db) -> None:
         return
     learners = db.query(models.User).filter(models.User.program_district_id == project.id).count()
     row = db.get(models.MasdRuleTable, UNDO_KEY)
+    new = db.query(models.User).filter(models.User.program_district_id == project.id,
+                                       models.User.email.like(f"{NEW_PREFIX}%")).count()
     print(f"Chandrapur (id {project.id}): registration {'OPEN' if project.registration_open else 'closed'}, "
-          f"{learners} learners, {len(row.value_json) if row else 0} of them moved synthetic learners")
+          f"{learners} learners — {len(row.value_json) if row else 0} moved synthetic, {new} new synthetic")
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("action", choices=["setup", "move-mock", "undo-mock", "status"])
+    ap.add_argument("action", choices=["setup", "move-mock", "undo-mock", "add-new", "remove-new", "status"])
     ap.add_argument("--source", default="jalna", help="project to copy content / take synthetic learners from")
-    ap.add_argument("--count", type=int, default=40, help="synthetic learners to move")
+    ap.add_argument("--count", type=int, default=None, help="synthetic learners to move (40) or add (260)")
     a = ap.parse_args()
     db = SessionLocal()
     try:
         if a.action == "setup":
             setup(db, a.source)
         elif a.action == "move-mock":
-            move_mock(db, a.source, a.count)
+            move_mock(db, a.source, a.count or 40)
         elif a.action == "undo-mock":
             undo_mock(db)
+        elif a.action == "add-new":
+            add_new(db, a.count or 260)
+        elif a.action == "remove-new":
+            remove_new(db)
         status(db)
     finally:
         db.close()
