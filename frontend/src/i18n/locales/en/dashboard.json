@@ -5,7 +5,7 @@
   },
   "welcome": {
     "districtEyebrow": "{{district}} District",
-    "defaultEyebrow": "Welcome back, Supervisor",
+    "defaultEyebrow": "Welcome back",
     "nameFallback": "Healthcare Worker",
     "subtitle": "You have completed {{completed}} of {{total}} video lessons. Keep up the good work!",
     "overall": "Overall",
@@ -73,5 +73,100 @@
     "watching_one": "You are batch monitor for {{count}} learner",
     "watching_other": "You are batch monitor for {{count}} learners",
     "watchingNone": "No learners have been given to you yet."
+  },
+  "weakPassword": {
+    "body": "Your password is easy to guess. You can keep it, but choosing a harder one keeps your mothers' records safer.",
+    "action": "Change password"
+  },
+  "noProject": {
+    "title": "Your account is not in a project yet",
+    "body": "Your trainer will add you to your project. Your video lessons and tests will appear here then."
+  },
+  "rings": {
+    "videos": "Videos completed",
+    "videosHint": "Lessons you finished",
+    "watched": "Watched",
+    "watchedHint": "Of all the video time — skipping does not count",
+    "quizzes": "Quizzes",
+    "quizzesHint": "Short quizzes after the videos",
+    "tests": "Assessments passed",
+    "testsHint": "Formative and screening tests"
+  },
+  "work": {
+    "title": "My mothers and babies",
+    "subtitle": "Your own work in the {{project}} project — what is done and what is due next.",
+    "adoptions": "Mothers adopted",
+    "ofTarget": "{{n}} of {{of}}",
+    "ofDue": "{{n}} of {{of}} due",
+    "types": {
+      "anc": "Pregnant (ANC)",
+      "pnc_lt5": "Baby under 5 months",
+      "pnc_ge5": "Baby 5 months or older"
+    },
+    "noTarget": "Your adoption target appears after your face-to-face training.",
+    "forms": {
+      "title": "Visits & forms done",
+      "gm_one": "{{count}} growth check",
+      "gm_other": "{{count}} growth checks",
+      "bf_one": "{{count}} breastfeeding",
+      "bf_other": "{{count}} breastfeeding",
+      "cf_one": "{{count}} complementary feeding",
+      "cf_other": "{{count}} complementary feeding",
+      "anc_one": "{{count}} antenatal",
+      "anc_other": "{{count}} antenatal",
+      "protein_one": "{{count}} protein count",
+      "protein_other": "{{count}} protein counts"
+    },
+    "formsPct": "{{pct}}% of the forms your mothers and babies were due by today",
+    "noFormsDue": "No forms are due yet for the mothers you adopted.",
+    "quiet": "No forms filled for {{days}} days",
+    "nextDays": "What needs you now (next {{days}} days)",
+    "behind": "Behind:",
+    "dueSoon": "Due in {{days}} days:",
+    "growthAlert": "Latest growth check: {{label}}",
+    "baby": "baby",
+    "allCaughtUp": "You are up to date — nothing is behind and nothing falls due in these days.",
+    "noCases": "No mothers adopted yet. Register a mother from My Mothers to start.",
+    "more": "and {{n}} more — see My Mothers",
+    "faltering_one": "{{count}} case needs you",
+    "faltering_other": "{{count}} cases need you",
+    "noneFaltering": "No case is behind or flagged — well done.",
+    "showAll": "Show all {{n}}",
+    "showFewer": "Show fewer",
+    "warn": {
+      "edd_passed": "Due date passed {{days}} days ago — record the birth",
+      "anc_behind": "Antenatal checks behind ({{done}} of {{expected}} done)",
+      "no_lmp": "No LMP — add it so the due date can be tracked",
+      "visits_missed": "{{n}} growth checks missed",
+      "no_recent_visit": "No visit for {{days}} days",
+      "type_mismatch": "You chose {{declared}}, the dates say {{computed}}"
+    }
+  },
+  "progress": {
+    "title": "My progress over time",
+    "subtitle": "Forms filled against the forms your cases were due, and adoptions against what was asked of you — by date.",
+    "perBar_one": "{{count}} day per bar",
+    "perBar_other": "{{count}} days per bar",
+    "perBarLabel": "Days per bar",
+    "forms": "Forms",
+    "formsDue": "Due for my cases",
+    "formsDone": "I filled",
+    "adoptions": "Adoptions",
+    "adoptionsAsked": "Asked of me",
+    "adoptionsMade": "I made",
+    "pctTitle": "% of the forms due that were filled",
+    "pctForms": "Forms filled",
+    "target": "100% — all due forms filled"
+  },
+  "team": {
+    "title": "My batch — who needs a call",
+    "subtitle": "The learners you are batch monitor for, lowest forms first.",
+    "learner": "Learner",
+    "adopted": "Adopted",
+    "forms": "Forms done",
+    "lastActive": "Last active",
+    "never": "Not yet",
+    "daysAgo_one": "{{count}} day ago",
+    "daysAgo_other": "{{count}} days ago"
   }
 }

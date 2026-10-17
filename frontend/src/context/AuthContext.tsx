@@ -17,13 +17,16 @@ export interface User {
   block_id: number | null;
   village_id: number | null;
   village_name: string | null;
+  gram_panchayat_id?: number | null;
+  gram_panchayat_name?: string | null;
+  gram_panchayat?: { id: number; block_id: number; name: string } | null;
   facility_id: number | null;
   qualification_id: number | null;
   experience_range_id: number | null;
   qualification_other_detail: string | null;
   state?: { id: number; name: string; is_active: boolean } | null;
   district_rel?: { id: number; state_id: number; name: string } | null;
-  block?: { id: number; district_id: number; name: string } | null;
+  block?: { id: number; district_id: number; name: string; subdivision?: string | null } | null;
   village?: { id: number; block_id: number; name: string } | null;
   facility?: { id: number; block_id: number; name: string; facility_type: string } | null;
   qualification?: { id: number; qualification_name: string; has_semi_open_input: boolean } | null;
@@ -39,6 +42,15 @@ export interface User {
   program_district_id: number | null;
   program_district: { id: number; name: string; slug: string; is_active: boolean } | null;
   created_at: string;
+  // Mobile-first sign-up (review of 17 Oct 2026): `email` is an internal
+  // placeholder when email_is_placeholder; the learner's own address is
+  // contact_email. password_weak = accepted, but easy to guess.
+  email_is_placeholder?: boolean;
+  phone_verified?: boolean;
+  contact_email?: string | null;
+  contact_email_verified?: boolean;
+  password_weak?: boolean;
+  is_batch_monitor?: boolean;
 
   // ── Learner Registration: professional-axis FKs + extension fields ──
   department_id: number | null;
@@ -74,8 +86,12 @@ interface AuthContextType {
   forgotPassword: (email: string) => Promise<any>;
   resetPassword: (email: string, code: string, newPassword: string) => Promise<any>;
   googleLogin: (idToken: string) => Promise<any>;
+  loginMobile: (phone: string, password: string) => Promise<any>;
+  registerMobile: (fullName: string, phone: string, password: string, joinProject?: string | null) => Promise<any>;
+  verifyPhone: (code: string) => Promise<any>;
+  resendPhoneCode: () => Promise<any>;
   logout: () => void;
-  updateProfile: (profileData: Partial<User>) => Promise<User>;
+  updateProfile: (profileData: Partial<User> & { join_project?: string }) => Promise<User>;
   refreshUser: () => Promise<void>;
 }
 
@@ -255,6 +271,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return response.data;
   };
 
+  // ── Mobile number first (review of 17 Oct 2026) ──
+  // The account's identity (`principal`) is an internal placeholder address
+  // for a learner who signed up with a mobile number; it is what the app
+  // keys its per-account caches on, never shown.
+  const adoptSession = async (data: any) => {
+    const { access_token, is_verified, is_profile_complete, principal } = data;
+    localStorage.setItem('nh_token', access_token);
+    if (principal) localStorage.setItem('nh_user_email', String(principal).toLowerCase());
+    await clearCachesOnIdentityChange(emailFromToken(access_token) ?? principal ?? null);
+    setIsVerified(is_verified);
+    setIsProfileComplete(is_profile_complete);
+    await refreshUser();
+    return data;
+  };
+
+  const loginMobile = async (phone: string, password: string) => {
+    const response = await client.post('/api/auth/login-mobile', { phone: phone.trim(), password });
+    return adoptSession(response.data);
+  };
+
+  const registerMobile = async (fullName: string, phone: string, password: string, joinProject?: string | null) => {
+    const response = await client.post('/api/auth/register-mobile', {
+      full_name: fullName.trim(), phone: phone.trim(), password,
+    });
+    if (joinProject) localStorage.setItem('nh_join_project', joinProject);
+    return adoptSession(response.data);
+  };
+
+  const verifyPhone = async (code: string) => {
+    const response = await client.post('/api/auth/verify-phone', { code: code.trim() });
+    return adoptSession(response.data);
+  };
+
+  const resendPhoneCode = async () => (await client.post('/api/auth/resend-phone-code')).data;
+
   const googleLogin = async (idToken: string) => {
     const response = await client.post('/api/auth/google', { id_token: idToken });
     const { access_token, is_verified, is_profile_complete, is_admin } = response.data;
@@ -301,7 +352,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(false);
   };
 
-  const updateProfile = async (profileData: Partial<User>) => {
+  const updateProfile = async (profileData: Partial<User> & { join_project?: string }) => {
     const response = await client.put('/api/users/me', profileData);
     setUser(response.data);
     setIsProfileComplete(!!response.data.role || !!response.data.is_admin);
@@ -320,6 +371,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     forgotPassword,
     resetPassword,
     googleLogin,
+    loginMobile,
+    registerMobile,
+    verifyPhone,
+    resendPhoneCode,
     logout,
     updateProfile,
     refreshUser

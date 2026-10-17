@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Lock, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -6,8 +7,10 @@ import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
 import { Button, ComboBox, DateInput, Field, Input, Radio, SelectField, Stepper } from '../components/ui';
 import { useLearnerMetadata } from '../hooks/useLearnerMetadata';
+import client from '../api/client';
+import { clearJoinProject, getRegistrationScope, joinProjectSlug, type RegistrationScope } from '../api/registration';
 import {
-  TRAINING_KEYS, ageFromDob, maxDobForAge,
+  TRAINING_KEYS, ageFromDob, maxDobForAge, blockLabel, NEVER_MARRIED,
   genderOptions, maritalOptions, internetOptions, recencyOptions,
 } from '../lib/learnerFields';
 import { validateLearner, validateLearnerStep, LR_STEP_FIELDS, type LearnerFormValues } from '../lib/learnerSchema';
@@ -48,6 +51,8 @@ const RegistrationPage: React.FC = () => {
   const [blockId, setBlockId] = useState<number | ''>('');
   const [villageId, setVillageId] = useState<number | ''>('');
   const [villageName, setVillageName] = useState('');
+  const [gpId, setGpId] = useState<number | ''>('');
+  const [gpName, setGpName] = useState('');
   const [facilityId, setFacilityId] = useState<number | ''>('');
   const [facilityName, setFacilityName] = useState('');
   const [residenceDistance, setResidenceDistance] = useState<number | ''>('');
@@ -62,18 +67,45 @@ const RegistrationPage: React.FC = () => {
 
   // ── Training recency (keyed) ──
   const [trainings, setTrainings] = useState<Record<string, string>>({});
+  // ── Email, last and optional (review of 17 Oct 2026) ──
+  const [contactEmail, setContactEmail] = useState('');
 
   const { t } = useTranslation('learner');
-  const { updateProfile, logout } = useAuth();
+  const { updateProfile, logout, user } = useAuth();
   const { showToast, updateToast } = useToast();
   const navigate = useNavigate();
 
   const steps = STEP_KEYS.map(k => t(`registration.steps.${k}`));
 
+  // Registration by project (review of 17 Oct 2026): through a project's
+  // link the state and district come filled in and locked; otherwise only
+  // the places open for registration are offered.
+  const joining = joinProjectSlug();
+  const [scope, setScope] = useState<RegistrationScope | null>(null);
+  const locked = scope?.locked ?? null;
+  useEffect(() => {
+    getRegistrationScope(joining).then(s => {
+      setScope(s);
+      if (s.locked?.state && s.locked.district) {
+        setStateId(s.locked.state.id);
+        setDistrictId(s.locked.district.id);
+      } else if (s.places.length === 1 && s.places[0]!.state && s.places[0]!.district) {
+        // One project open: its place is the only answer — fill it in.
+        setStateId(s.places[0]!.state.id);
+        setDistrictId(s.places[0]!.district.id);
+      }
+    }).catch(() => { /* offer every place, as before */ });
+  }, [joining]);
+  // A learner who signed up with a mobile number already gave it.
+  useEffect(() => { if (user?.phone && !phone) setPhone(user.phone); }, [user?.phone]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const meta = useLearnerMetadata(
     { departmentId, designationId, stateId, districtId, blockId },
     msg => showToast(msg, 'error'),
+    { project: locked ? joining : null },
   );
+  const hasSubdivisions = meta.blocks.some(b => b.subdivision);
+  const askChildren = maritalStatus !== NEVER_MARRIED;
 
   const selectedDept = meta.departments.find(d => d.id === Number(departmentId));
   const isOtherDept = selectedDept?.code === 'OTHER';
@@ -104,7 +136,15 @@ const RegistrationPage: React.FC = () => {
     clearError('stateId');
   };
   const onDistrict = (v: string) => { setDistrictId(v ? Number(v) : ''); setBlockId(''); setVillageId(''); setVillageName(''); setFacilityId(''); setFacilityName(''); clearError('districtId'); };
-  const onBlock = (v: string) => { setBlockId(v ? Number(v) : ''); setVillageId(''); setVillageName(''); setFacilityId(''); setFacilityName(''); clearError('blockId'); };
+  const onBlock = (v: string) => {
+    setBlockId(v ? Number(v) : ''); setVillageId(''); setVillageName(''); setFacilityId(''); setFacilityName('');
+    setGpId(''); setGpName(''); clearError('blockId');
+  };
+  const onMarital = (v: string) => {
+    setMaritalStatus(v); clearError('maritalStatus');
+    // Never married: the children question is not asked, and the answer is No.
+    if (v === NEVER_MARRIED) { setHasChildren('No'); setNumberChildren(''); clearError('hasChildren'); }
+  };
 
   // Village combobox: pick a known village (sets the id) or type a custom name (clears it).
   const onVillagePick = (o: { value: number | string; label: string }) => {
@@ -112,12 +152,8 @@ const RegistrationPage: React.FC = () => {
   };
   const onVillageType = (text: string) => { setVillageName(text); setVillageId(''); clearError('villageName'); };
 
-  // Facility combobox: same pick-or-type pattern; labels carry the "(type)" suffix
-  // but the stored name is the raw facility name.
-  const onFacilityPick = (o: { value: number | string; label: string }) => {
-    const f = meta.facilities.find(x => x.id === Number(o.value));
-    setFacilityId(Number(o.value)); setFacilityName(f?.name ?? o.label); clearError('facilityName');
-  };
+  // Facility name is typed (review of 17 Oct 2026: "it should be typed, text
+  // format, not selection format" — the facility lists are not complete).
   const onFacilityTyped = (text: string) => { setFacilityName(text); setFacilityId(''); clearError('facilityName'); };
 
   // Age is derived from DOB — display only, never an input.
@@ -160,6 +196,7 @@ const RegistrationPage: React.FC = () => {
       const facilityTypeName = isOtherDept || isOtherFacilityType ? facilityTypeOther.trim() : selectedFacilityType?.name;
 
       await updateProfile({
+        join_project: joining || undefined,
         date_of_birth: dob,
         age: age === '' ? undefined : Number(age),
         gender,
@@ -183,6 +220,8 @@ const RegistrationPage: React.FC = () => {
         block_id: Number(blockId),
         village_id: villageId ? Number(villageId) : null,
         village_name: villageId ? null : (villageName || null),
+        gram_panchayat_id: gpId ? Number(gpId) : null,
+        gram_panchayat_name: gpId ? null : (gpName.trim() || null),
         facility_id: facilityId ? Number(facilityId) : null,
         district: districtName,
         work_center_name: facilityName.trim() || null,
@@ -201,10 +240,23 @@ const RegistrationPage: React.FC = () => {
         complementary_feeding_training: trainings.complementary_feeding_training,
         growth_monitoring_training: trainings.growth_monitoring_training,
       });
+      clearJoinProject();
+      // The email address comes last and is optional; a failure here never
+      // undoes the registration — it can be added from the profile.
+      if (contactEmail.trim() && user?.email_is_placeholder) {
+        try {
+          const res = await client.post('/api/auth/contact-email', { email: contactEmail.trim() });
+          showToast(t(res.data.code_sent ? 'registration.emailCodeSent' : 'registration.emailSaved'), 'info');
+        } catch (err: any) {
+          const detail = err?.response?.data?.detail;
+          showToast(typeof detail === 'string' ? detail : t('registration.emailLater'), 'warning');
+        }
+      }
       updateToast(toastId, t('registration.toastSuccess'), 'success');
       navigate('/dashboard');
-    } catch {
-      updateToast(toastId, t('registration.toastFail'), 'error');
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      updateToast(toastId, typeof detail === 'string' ? detail : t('registration.toastFail'), 'error');
     } finally {
       setLoading(false);
     }
@@ -265,26 +317,6 @@ const RegistrationPage: React.FC = () => {
                 </Field>
               </div>
 
-              <SelectField label={t('fields.maritalStatus')} value={maritalStatus} error={errors.maritalStatus}
-                onChange={v => { setMaritalStatus(v); clearError('maritalStatus'); }}
-                placeholder={t('placeholders.selectMarital')} options={maritalOptions(t)} />
-
-              <Field label={t('fields.hasChildren')} error={errors.hasChildren}>
-                <div className="mt-1 flex gap-4">
-                  {[['Yes', t('options.yes')], ['No', t('options.no')]].map(([val, lbl]) => (
-                    <Radio key={val} name="has_children" value={val} checked={hasChildren === val}
-                      onChange={e => { setHasChildren(e.target.value); clearError('hasChildren'); }} label={lbl} />
-                  ))}
-                </div>
-              </Field>
-
-              {hasChildren === 'Yes' && (
-                <Field label={t('fields.numberChildren')} htmlFor="num-children" error={errors.numberChildren}>
-                  <Input id="num-children" type="number" min={0} max={10} placeholder={t('fields.numberChildrenPlaceholder')} value={numberChildren}
-                    error={!!errors.numberChildren}
-                    onChange={e => { setNumberChildren(e.target.value ? Number(e.target.value) : ''); clearError('numberChildren'); }} />
-                </Field>
-              )}
             </div>
           </div>
         )}
@@ -332,26 +364,47 @@ const RegistrationPage: React.FC = () => {
                 </Field>
               )}
 
-              <SelectField label={t('fields.state')} value={stateId} onChange={onState} error={errors.stateId}
+              {locked && (
+                <div className="flex items-start gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm text-ink">
+                  <MapPin className="mt-0.5 size-4 shrink-0 text-primary-ink" />
+                  <span>{t('registration.lockedPlace', {
+                    project: locked.project.name,
+                    place: [locked.district?.name, locked.state?.name].filter(Boolean).join(', '),
+                  })}</span>
+                </div>
+              )}
+
+              <SelectField label={<span className="inline-flex items-center gap-1.5">{t('fields.state')}{locked && <Lock className="size-3.5 text-ink-faint" />}</span>}
+                value={stateId} onChange={onState} error={errors.stateId} disabled={!!locked}
                 placeholder={t('placeholders.selectState')} options={meta.states.map(s => ({ value: s.id, label: s.name }))} />
 
-              <SelectField label={t('fields.district')} value={districtId} onChange={onDistrict} error={errors.districtId}
-                placeholder={t('placeholders.selectDistrict')} disabled={!stateId}
+              <SelectField label={<span className="inline-flex items-center gap-1.5">{t('fields.district')}{locked && <Lock className="size-3.5 text-ink-faint" />}</span>}
+                value={districtId} onChange={onDistrict} error={errors.districtId}
+                placeholder={t('placeholders.selectDistrict')} disabled={!stateId || !!locked}
                 options={meta.districts.map(d => ({ value: d.id, label: d.name }))} />
 
-              <SelectField label={t('fields.block')} value={blockId} onChange={onBlock} error={errors.blockId}
+              <SelectField label={hasSubdivisions ? t('fields.subdivisionTaluk') : t('fields.block')} value={blockId} onChange={onBlock} error={errors.blockId}
                 placeholder={t('placeholders.selectTaluk')} disabled={!districtId}
-                options={meta.blocks.map(b => ({ value: b.id, label: b.name }))} />
+                options={meta.blocks.map(b => ({ value: b.id, label: blockLabel(b) }))} />
+
+              {blockId !== '' && (
+                <ComboBox label={t('fields.gramPanchayat')} value={gpName}
+                  onValueChange={text => { setGpName(text); setGpId(''); }}
+                  onPick={o => { setGpId(Number(o.value)); setGpName(o.label); }}
+                  placeholder={meta.gramPanchayats.length ? t('fields.gramPanchayatPlaceholder') : t('fields.gramPanchayatType')}
+                  options={meta.gramPanchayats.map(g => ({ value: g.id, label: g.name }))} />
+              )}
 
               <ComboBox label={t('fields.village')} value={villageName} error={errors.villageName}
                 onValueChange={onVillageType} onPick={onVillagePick}
-                placeholder={t('fields.villagePlaceholder')} disabled={!blockId}
+                placeholder={t('fields.villageTypePlaceholder')} disabled={!blockId}
                 options={meta.villages.map(v => ({ value: v.id, label: v.name }))} />
 
-              <ComboBox label={t('fields.facilityName')} value={facilityName} error={errors.facilityName}
-                onValueChange={onFacilityTyped} onPick={onFacilityPick}
-                placeholder={t('fields.facilityPlaceholder')} disabled={!blockId}
-                options={meta.facilities.map(f => ({ value: f.id, label: `${f.name} (${f.facility_type})` }))} />
+              <Field label={t('fields.facilityName')} htmlFor="facility-name" error={errors.facilityName}>
+                <Input id="facility-name" type="text" placeholder={t('fields.facilityTypePlaceholder')}
+                  value={facilityName} error={!!errors.facilityName} disabled={!blockId}
+                  onChange={e => onFacilityTyped(e.target.value)} />
+              </Field>
 
               <Field label={t('fields.residenceDistance')} htmlFor="residence-distance" error={errors.residenceDistance}>
                 <Input id="residence-distance" type="number" min={0.1} max={100} step={0.1} placeholder={t('fields.residenceDistancePlaceholder')}
@@ -402,6 +455,35 @@ const RegistrationPage: React.FC = () => {
                 error={errors.internetWorkplace}
                 onChange={v => { setInternetWorkplace(v); clearError('internetWorkplace'); }} placeholder={t('placeholders.selectOne')}
                 options={internetOptions(t)} />
+
+              {/* Personal questions come last (review of 17 Oct 2026), with why they are asked. */}
+              <div className="mt-2 rounded-xl border border-border bg-surface-sunken/60 p-4">
+                <p className="mb-3 text-sm leading-relaxed text-ink-muted">{t('registration.personalNote')}</p>
+                <div className="flex flex-col gap-4">
+                  <SelectField label={t('fields.maritalStatus')} value={maritalStatus} error={errors.maritalStatus}
+                    onChange={onMarital}
+                    placeholder={t('placeholders.selectMarital')} options={maritalOptions(t)} />
+
+                  {askChildren && (
+                    <Field label={t('fields.hasChildren')} error={errors.hasChildren}>
+                      <div className="mt-1 flex gap-4">
+                        {[['Yes', t('options.yes')], ['No', t('options.no')]].map(([val, lbl]) => (
+                          <Radio key={val} name="has_children" value={val} checked={hasChildren === val}
+                            onChange={e => { setHasChildren(e.target.value); clearError('hasChildren'); }} label={lbl} />
+                        ))}
+                      </div>
+                    </Field>
+                  )}
+
+                  {askChildren && hasChildren === 'Yes' && (
+                    <Field label={t('fields.numberChildren')} htmlFor="num-children" error={errors.numberChildren}>
+                      <Input id="num-children" type="number" min={0} max={10} placeholder={t('fields.numberChildrenPlaceholder')} value={numberChildren}
+                        error={!!errors.numberChildren}
+                        onChange={e => { setNumberChildren(e.target.value ? Number(e.target.value) : ''); clearError('numberChildren'); }} />
+                    </Field>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -417,6 +499,15 @@ const RegistrationPage: React.FC = () => {
                   onChange={v => { setTrainings(prev => ({ ...prev, [key]: v })); clearError(`trainings.${key}`); }}
                   placeholder={t('placeholders.selectOne')} options={recencyOptions(t)} />
               ))}
+
+              {user?.email_is_placeholder && (
+                <Field label={t('fields.contactEmail')} htmlFor="contact-email">
+                  <Input id="contact-email" type="email" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                    placeholder={t('fields.contactEmailPlaceholder')} value={contactEmail}
+                    onChange={e => setContactEmail(e.target.value)} />
+                  <p className="mt-1.5 text-xs text-ink-muted">{t('fields.contactEmailHint')}</p>
+                </Field>
+              )}
             </div>
           </div>
         )}

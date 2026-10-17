@@ -51,6 +51,20 @@ class ProgramDistrict(Base):
     # ("MP Ujjain_…", "ML East Khasi Hills_…").
     code = Column(String, nullable=True, unique=True)
     state_prefix = Column(String, nullable=True)
+    # Registration (review of 17 Oct 2026): the state and district a learner
+    # joining this project registers in. A project's own sign-up link fills
+    # both in and locks them; while any project is open for registration the
+    # plain registration form offers only the open projects' places, so a
+    # learner cannot land in the wrong state or district by mistake.
+    registration_open = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+    reg_state_id = Column(
+        Integer, ForeignKey("states.id", ondelete="SET NULL", name="program_districts_reg_state_id_fkey"),
+        nullable=True,
+    )
+    reg_district_id = Column(
+        Integer, ForeignKey("districts.id", ondelete="SET NULL", name="program_districts_reg_district_id_fkey"),
+        nullable=True,
+    )
 
     # Relationships
     users = relationship("User", back_populates="program_district")
@@ -100,6 +114,13 @@ class User(Base):
     block_id = Column(Integer, ForeignKey("blocks.id"), nullable=True)
     village_id = Column(Integer, ForeignKey("villages.id"), nullable=True)
     village_name = Column(String, nullable=True)         # free-text village (when not in the master list)
+    # Gram panchayat (review of 17 Oct 2026): picked from the taluka's list, or
+    # typed when it is not there (kept apart so it can be standardised later).
+    gram_panchayat_id = Column(
+        Integer, ForeignKey("gram_panchayats.id", ondelete="SET NULL", name="users_gram_panchayat_id_fkey"),
+        nullable=True,
+    )
+    gram_panchayat_name = Column(String, nullable=True)
     facility_id = Column(Integer, ForeignKey("facilities.id"), nullable=True)
     qualification_id = Column(Integer, ForeignKey("educational_qualifications.id"), nullable=True)
     experience_range_id = Column(Integer, ForeignKey("experience_ranges.id"), nullable=True)
@@ -139,6 +160,18 @@ class User(Base):
     growth_monitoring_training = Column(String, nullable=True)
     is_verified = Column(Boolean, default=False, nullable=False)
     is_admin = Column(Boolean, default=False, nullable=False)
+    # Mobile-first sign-up (review of 17 Oct 2026). A learner who signs up
+    # with a mobile number has no email: `email` then holds an internal,
+    # undeliverable placeholder (app/identity.py) because every session, lock
+    # and audit row is keyed on it, and the address they add later — if they
+    # do — is kept here until verified. Email never blocks registration.
+    phone_verified = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+    contact_email = Column(String, nullable=True)
+    contact_email_verified = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+    # Set whenever the password is chosen or used: the minimal rules accept
+    # passwords like "abcd1111", so the app asks — never forces — the learner
+    # to pick a harder one. Never says why (that would describe the password).
+    password_weak = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     otp_code = Column(String, nullable=True)  # stores a bcrypt hash of the OTP, never plaintext
     otp_expires_at = Column(DateTime, nullable=True)
     otp_attempts = Column(Integer, default=0, nullable=False)  # failed verify attempts for the current code
@@ -161,6 +194,7 @@ class User(Base):
     district_rel = relationship("District")
     block = relationship("Block")
     village = relationship("Village")
+    gram_panchayat = relationship("GramPanchayat")
     facility = relationship("Facility")
     qualification = relationship("EducationalQualification")
     experience_range = relationship("ExperienceRange")
@@ -170,6 +204,18 @@ class User(Base):
     program_district = relationship("ProgramDistrict", back_populates="users")
     tutorial_progress = relationship("UserTutorialProgress", back_populates="user", cascade="all, delete-orphan")
     test_attempts = relationship("TestAttempt", back_populates="user", cascade="all, delete-orphan")
+
+    @property
+    def email_is_placeholder(self) -> bool:
+        from app.identity import is_placeholder
+        return is_placeholder(self.email)
+
+    def sync_lookups(self) -> None:
+        """Recompute the blind index from the current phone — after any write
+        to it. Sign-in by mobile number finds the account through this index
+        (review of 17 Oct 2026), so it must never drift from the column. The
+        domain is the one scripts/encrypt_phi.py back-filled with."""
+        self.phone_lookup = phone_index(self.phone, "user.phone")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
     achievements = relationship("UserAchievement", back_populates="user", cascade="all, delete-orphan")
 
@@ -576,11 +622,26 @@ class Block(Base):
     id = Column(Integer, primary_key=True, index=True)
     district_id = Column(Integer, ForeignKey("districts.id", ondelete="CASCADE"), nullable=False)
     name = Column(String, nullable=False)
+    # The revenue subdivision the taluka belongs to (Chandrapur's eight —
+    # review of 17 Oct 2026). Null where a state does not use them.
+    subdivision = Column(String, nullable=True)
 
     # Relationships
     district = relationship("District", back_populates="blocks")
     villages = relationship("Village", back_populates="block", cascade="all, delete-orphan")
     facilities = relationship("Facility", back_populates="block", cascade="all, delete-orphan")
+    gram_panchayats = relationship("GramPanchayat", back_populates="block", cascade="all, delete-orphan")
+
+
+class GramPanchayat(Base):
+    """A gram panchayat of a taluka (block) — the district's published list."""
+    __tablename__ = "gram_panchayats"
+
+    id = Column(Integer, primary_key=True, index=True)
+    block_id = Column(Integer, ForeignKey("blocks.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+
+    block = relationship("Block", back_populates="gram_panchayats")
 
 
 class Village(Base):
@@ -676,6 +737,13 @@ class FacilityType(Base):
     name = Column(String, nullable=False)
     order_index = Column(Integer, default=0, nullable=False)
     is_other = Column(Boolean, default=False, nullable=False)
+    # The one department whose staff work at this kind of facility; null =
+    # any (only "Other (Specify)"). An Anganwadi Centre is never offered to
+    # Health staff, a PHC never to WCD staff (review of 17 Oct 2026).
+    department_id = Column(
+        Integer, ForeignKey("departments.id", ondelete="SET NULL", name="facility_types_department_id_fkey"),
+        nullable=True,
+    )
 
     designations = relationship(
         "Designation", secondary=designation_facility_types, back_populates="facility_types"

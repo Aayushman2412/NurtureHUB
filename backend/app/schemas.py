@@ -26,6 +26,16 @@ class BlockOut(BaseModel):
     id: int
     district_id: int
     name: str
+    subdivision: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class GramPanchayatOut(BaseModel):
+    id: int
+    block_id: int
+    name: str
 
     class Config:
         from_attributes = True
@@ -87,6 +97,7 @@ class FacilityTypeOut(BaseModel):
     name: str
     order_index: int
     is_other: bool
+    department_id: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -445,6 +456,11 @@ class Token(BaseModel):
     is_verified: bool
     is_profile_complete: bool
     is_admin: bool = False
+    # Mobile sign-up / sign-in (review of 17 Oct 2026): where the one-time
+    # code went ("whatsapp"), or None when the number is confirmed later; and
+    # the account's internal identity, so the app can tell accounts apart.
+    otp_channel: Optional[str] = None
+    principal: Optional[str] = None
 
 # Profile Schema
 class UserProfileUpdate(BaseModel):
@@ -459,6 +475,8 @@ class UserProfileUpdate(BaseModel):
     block_id: Optional[int] = None
     village_id: Optional[int] = None
     village_name: Optional[str] = None
+    gram_panchayat_id: Optional[int] = None
+    gram_panchayat_name: Optional[str] = None
     facility_id: Optional[int] = None
     qualification_id: Optional[int] = None
     experience_range_id: Optional[int] = None
@@ -469,6 +487,10 @@ class UserProfileUpdate(BaseModel):
     work_center_name: Optional[str] = None
     district: Optional[str] = None
     avatar_initials: Optional[str] = None
+    # The slug of the project whose sign-up link was used (review of 17 Oct
+    # 2026). Not a column: it puts the learner in that project when they
+    # finish registering — app/registration.py.
+    join_project: Optional[str] = Field(default=None, max_length=64)
 
     # ── Learner Registration: professional-axis FKs + extension fields ──
     department_id: Optional[int] = None
@@ -529,6 +551,8 @@ class UserOut(BaseModel):
     block_id: Optional[int] = None
     village_id: Optional[int] = None
     village_name: Optional[str] = None
+    gram_panchayat_id: Optional[int] = None
+    gram_panchayat_name: Optional[str] = None
     facility_id: Optional[int] = None
     qualification_id: Optional[int] = None
     experience_range_id: Optional[int] = None
@@ -543,6 +567,15 @@ class UserOut(BaseModel):
     is_verified: bool
     program_district_id: Optional[int] = None
     created_at: datetime
+    # Mobile-first sign-up (review of 17 Oct 2026): `email` is an internal
+    # placeholder when `email_is_placeholder`; the learner's own address, if
+    # they added one, is `contact_email`.
+    email_is_placeholder: bool = False
+    phone_verified: bool = False
+    contact_email: Optional[str] = None
+    contact_email_verified: bool = False
+    password_weak: bool = False
+    is_batch_monitor: bool = False
 
     # ── Learner Registration: professional-axis FKs + extension fields ──
     department_id: Optional[int] = None
@@ -570,6 +603,7 @@ class UserOut(BaseModel):
     district_rel: Optional[DistrictOut] = None
     block: Optional[BlockOut] = None
     village: Optional[VillageOut] = None
+    gram_panchayat: Optional[GramPanchayatOut] = None
     facility: Optional[FacilityOut] = None
     qualification: Optional[EducationalQualificationOut] = None
     experience_range: Optional[ExperienceRangeOut] = None

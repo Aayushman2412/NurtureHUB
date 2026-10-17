@@ -463,7 +463,7 @@
     "days": "{{n}} d",
     "nurseRow": "Staff Nurse <{{pncM}}M",
     "caseTitle": "One case's expected forms",
-    "caseSub": "Used for each learner's own cases, the Growth Monitor and the follow-up flags",
+    "caseSub": "Used for each learner's own cases, Learner Activities and the follow-up flags",
     "case1": "In pregnancy: an antenatal and a protein check on the adoption day and every {{every}} days, until the birth — or, if no birth is entered, until the due date (LMP + {{days}} days).",
     "case2": "From the baby's adoption (its first contact, whatever its age): growth checks by the table; breastfeeding assessments by the table, only for follow-up before {{bf}} days of age.",
     "case3": "Complementary feeding by age — at {{ages}} days. Counselling starts from {{from}} days, but the first assessment is at {{first}}: feeding starts at 180 days and needs 15 days to take hold. A baby adopted after {{first}} days is assessed from the first visit.",

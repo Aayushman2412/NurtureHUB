@@ -44,7 +44,16 @@
     "yearsDesignation": "Years in current designation",
     "yearsFacility": "Years at current facility",
     "yearsPlaceholder": "years",
-    "internet": "Is internet connectivity adequate in your work area?"
+    "internet": "Is internet connectivity adequate in your work area?",
+    "subdivisionTaluk": "Subdivision – Taluka",
+    "gramPanchayat": "Gram Panchayat (optional)",
+    "gramPanchayatPlaceholder": "Search or type your gram panchayat",
+    "gramPanchayatType": "Type your gram panchayat",
+    "villageTypePlaceholder": "Type your village name",
+    "facilityTypePlaceholder": "Type the name of your facility",
+    "contactEmail": "Email address (optional)",
+    "contactEmailPlaceholder": "you@example.com",
+    "contactEmailHint": "Not needed to start. If you add one, we will send a code to confirm it — you can do that later."
   },
   "placeholders": {
     "selectMarital": "Select marital status",
@@ -117,7 +126,12 @@
     "complete": "Complete Registration ✓",
     "toastSubmitting": "Submitting your registration...",
     "toastSuccess": "Registration completed! Welcome to NurtureHUB.",
-    "toastFail": "Failed to save registration. Please try again."
+    "toastFail": "Failed to save registration. Please try again.",
+    "lockedPlace": "You are registering for the {{project}} project — {{place}} is filled in for you.",
+    "personalNote": "These questions help us understand your own experience of pregnancy, nutrition, breastfeeding and complementary feeding within your family — as a mother, or in caring for a family member who was pregnant or breastfeeding.",
+    "emailCodeSent": "We sent a code to your email. You can confirm it any time from your profile.",
+    "emailSaved": "Email saved. You can confirm it later from your profile.",
+    "emailLater": "Your email could not be saved now — you can add it from your profile."
   },
   "profile": {
     "nameFallback": "Healthcare Professional",
@@ -133,6 +147,38 @@
     "toastFixFields": "Please fix the highlighted fields.",
     "toastSaving": "Saving profile updates...",
     "toastSuccess": "Profile updated successfully!",
-    "toastFail": "Failed to update profile details"
+    "toastFail": "Failed to update profile details",
+    "mobileLabel": "Mobile:",
+    "emailNotAdded": "not added",
+    "tabWork": "Work & location",
+    "tabEducation": "Education & training",
+    "tabAccount": "Sign-in & password"
+  },
+  "account": {
+    "mobile": "Mobile number (you sign in with this)",
+    "noMobile": "Not added",
+    "confirmed": "Confirmed",
+    "notConfirmed": "Not confirmed yet",
+    "mobileHint": "To change your mobile number, edit it on the Personal tab and save.",
+    "email": "Email address",
+    "noEmail": "No email added — that is fine.",
+    "saveEmail": "Save email",
+    "resendCode": "Send the code again",
+    "codePlaceholder": "6-digit code from the email",
+    "confirmEmail": "Confirm email",
+    "emailHint": "Optional. Once confirmed you can also sign in with it, and reset your password by email.",
+    "codeSent": "We sent a code to your email.",
+    "emailSaved": "Email saved. Confirm it when the code arrives.",
+    "emailFailed": "Could not save the email. Please try again.",
+    "emailVerified": "Email confirmed.",
+    "codeWrong": "That code did not work. Check it and try again.",
+    "password": "Password",
+    "weak": "Your current password is easy to guess. You can keep it, but a harder one keeps your mothers' records safer.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "passwordRules": "The new password does not meet the rules yet.",
+    "changePassword": "Change password",
+    "passwordChanged": "Password changed.",
+    "passwordFailed": "Could not change the password."
   }
 }

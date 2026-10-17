@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import client from '../api/client';
 import type {
   StateOption, DistrictOption, BlockOption, VillageOption, FacilityOption,
-  QualificationOption, DepartmentOption, DesignationOption, FacilityTypeOption,
+  QualificationOption, DepartmentOption, DesignationOption, FacilityTypeOption, GramPanchayatOption,
 } from '../lib/learnerFields';
 
 export interface LearnerSelection {
@@ -19,7 +19,17 @@ export interface LearnerSelection {
  * handlers); this hook only fetches the option lists for the given selection, so
  * it is shared by both the registration wizard and the profile editor.
  */
-export function useLearnerMetadata(sel: LearnerSelection, onError?: (msg: string) => void) {
+/**
+ * `registration` (the registration form only — review of 17 Oct 2026): offer
+ * only the states and districts open for registration, or exactly the place
+ * of the project whose sign-up link was used. The profile editor passes
+ * nothing and sees every place.
+ */
+export function useLearnerMetadata(
+  sel: LearnerSelection,
+  onError?: (msg: string) => void,
+  registration?: { project: string | null } | null,
+) {
   const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [designations, setDesignations] = useState<DesignationOption[]>([]);
   const [facilityTypes, setFacilityTypes] = useState<FacilityTypeOption[]>([]);
@@ -29,6 +39,7 @@ export function useLearnerMetadata(sel: LearnerSelection, onError?: (msg: string
   const [blocks, setBlocks] = useState<BlockOption[]>([]);
   const [villages, setVillages] = useState<VillageOption[]>([]);
   const [facilities, setFacilities] = useState<FacilityOption[]>([]);
+  const [gramPanchayats, setGramPanchayats] = useState<GramPanchayatOption[]>([]);
 
   // Keep the latest onError without re-running effects when the caller re-renders.
   const errRef = useRef(onError);
@@ -36,13 +47,18 @@ export function useLearnerMetadata(sel: LearnerSelection, onError?: (msg: string
   const fail = (msg: string) => errRef.current?.(msg);
 
   const { departmentId, designationId, stateId, districtId, blockId } = sel;
+  const scope = registration
+    ? { registration: true, ...(registration.project ? { project: registration.project } : {}) }
+    : {};
+  const scopeKey = registration ? `reg:${registration.project ?? ''}` : 'all';
 
   // Mount: top-level lists that never cascade.
   useEffect(() => {
-    Promise.all([client.get('/api/metadata/departments'), client.get('/api/metadata/states')])
+    Promise.all([client.get('/api/metadata/departments'), client.get('/api/metadata/states', { params: scope })])
       .then(([d, s]) => { setDepartments(d.data); setStates(s.data); })
       .catch(() => fail('Failed to load form options'));
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scopeKey]);
 
   // Department → designations + department-scoped qualifications.
   useEffect(() => {
@@ -55,19 +71,20 @@ export function useLearnerMetadata(sel: LearnerSelection, onError?: (msg: string
       .catch(() => fail('Failed to load designations'));
   }, [departmentId]);
 
-  // Designation → mapped facility types (or all, server decides).
+  // Designation → mapped facility types, only the department's own (server decides).
   useEffect(() => {
     if (!designationId) { setFacilityTypes([]); return; }
-    client.get(`/api/metadata/facility-types?designation_id=${designationId}`)
+    client.get('/api/metadata/facility-types', { params: { designation_id: designationId, department_id: departmentId || undefined } })
       .then(res => setFacilityTypes(res.data)).catch(() => fail('Failed to load facility types'));
-  }, [designationId]);
+  }, [designationId, departmentId]);
 
   // State → districts.
   useEffect(() => {
     if (!stateId) { setDistricts([]); return; }
-    client.get(`/api/metadata/districts?state_id=${stateId}`)
+    client.get('/api/metadata/districts', { params: { state_id: stateId, ...scope } })
       .then(res => setDistricts(res.data)).catch(() => fail('Failed to load districts'));
-  }, [stateId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stateId, scopeKey]);
 
   // District → blocks (taluks).
   useEffect(() => {
@@ -76,18 +93,22 @@ export function useLearnerMetadata(sel: LearnerSelection, onError?: (msg: string
       .then(res => setBlocks(res.data)).catch(() => fail('Failed to load taluks'));
   }, [districtId]);
 
-  // Block → villages + facilities.
+  // Block → villages + facilities + gram panchayats.
   useEffect(() => {
-    if (!blockId) { setVillages([]); setFacilities([]); return; }
+    if (!blockId) { setVillages([]); setFacilities([]); setGramPanchayats([]); return; }
     Promise.all([
       client.get(`/api/metadata/villages?block_id=${blockId}`),
       client.get(`/api/metadata/facilities?block_id=${blockId}`),
+      client.get(`/api/metadata/gram-panchayats?block_id=${blockId}`),
     ])
-      .then(([v, f]) => { setVillages(v.data); setFacilities(f.data); })
+      .then(([v, f, g]) => { setVillages(v.data); setFacilities(f.data); setGramPanchayats(g.data); })
       .catch(() => fail('Failed to load villages & facilities'));
   }, [blockId]);
 
-  return { departments, designations, facilityTypes, qualifications, states, districts, blocks, villages, facilities };
+  return {
+    departments, designations, facilityTypes, qualifications, states, districts, blocks, villages, facilities,
+    gramPanchayats,
+  };
 }
 
 export type LearnerMetadata = ReturnType<typeof useLearnerMetadata>;

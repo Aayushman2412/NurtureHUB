@@ -30,6 +30,8 @@ export interface AdminProject {
   state_prefix: string | null;
   analysis_level?: ProjectLevel;
   children?: AdminProject[];
+  /** Registration by project (review of 17 Oct 2026). */
+  registration?: { open: boolean; state_id: number | null; district_id: number | null; link_path: string };
 }
 
 /** Selected project slug, or null when nothing is chosen yet. */

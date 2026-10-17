@@ -5,8 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
 import GoogleButton from '../components/auth/GoogleButton';
+import MobileInput from '../components/auth/MobileInput';
 import client from '../api/client';
-import { Mail, ArrowLeft, Shield } from 'lucide-react';
+import { useSignInOptions } from '../hooks/useSignInOptions';
+import { Mail, ArrowLeft, Shield, Smartphone } from 'lucide-react';
 import { Button, Divider, FieldLabel, Input, PasswordInput } from '../components/ui';
 
 const BackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
@@ -28,7 +30,11 @@ const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  // Mobile number first (review of 17 Oct 2026): the page opens on the
+  // mobile-number form; email is the alternative, not the front door.
   const [showEmailForm, setShowEmailForm] = useState(false);
+  const [mobile, setMobile] = useState('');
+  const [mobilePassword, setMobilePassword] = useState('');
   const [showAdminForm, setShowAdminForm] = useState(false);
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
@@ -39,7 +45,8 @@ const LoginPage: React.FC = () => {
   const [mfaCode, setMfaCode] = useState('');
   const [adminLoading, setAdminLoading] = useState(false);
 
-  const { login } = useAuth();
+  const { login, loginMobile } = useAuth();
+  const options = useSignInOptions();
   const { showToast, updateToast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -131,6 +138,31 @@ const LoginPage: React.FC = () => {
         return;
       }
       updateToast(toastId, failure(err, t('login.toast.invalidCreds')), 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const routeAfter = (response: any) => {
+    if (!response.is_verified) navigate('/verify?via=whatsapp');
+    else if (!response.is_profile_complete) navigate('/register');
+    else navigate('/dashboard');
+  };
+
+  const handleMobileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mobile || !mobilePassword) {
+      showToast(t('login.toast.fillAllMobile'), 'warning');
+      return;
+    }
+    setLoading(true);
+    const toastId = showToast(t('login.toast.signingIn'), 'loading');
+    try {
+      const response = await loginMobile(mobile, mobilePassword);
+      updateToast(toastId, t('login.toast.welcomeBack'), 'success');
+      routeAfter(response);
+    } catch (err: any) {
+      updateToast(toastId, failure(err, t('login.toast.invalidMobile')), 'error');
     } finally {
       setLoading(false);
     }
@@ -240,10 +272,42 @@ const LoginPage: React.FC = () => {
 
   if (!showEmailForm) {
     return (
-      <AuthLayout title={t('login.welcomeTitle')} subtitle={t('login.welcomeSubtitle')}>
+      <AuthLayout title={t('login.welcomeTitle')} subtitle={t('login.mobileSubtitle')}>
         <div className="flex w-full flex-col gap-4">
+          <form onSubmit={handleMobileSubmit} className="flex flex-col gap-4">
+            <div>
+              <FieldLabel htmlFor="mobile-input">{t('fields.mobile')}</FieldLabel>
+              <MobileInput id="mobile-input" value={mobile} onChange={setMobile} disabled={loading} autoFocus />
+            </div>
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <label htmlFor="mobile-password" className="text-sm font-semibold text-ink">{t('fields.password')}</label>
+                <Link to="/forgot-password?via=mobile" className="text-[13px] font-semibold text-primary-ink hover:text-primary-ink-hover">
+                  {t('login.forgotPassword')}
+                </Link>
+              </div>
+              <PasswordInput
+                id="mobile-password" placeholder="••••••••" value={mobilePassword}
+                onChange={e => setMobilePassword(e.target.value)} required disabled={loading}
+              />
+            </div>
+            <Button type="submit" size="lg" fullWidth loading={loading} iconLeft={<Smartphone className="size-4.5" />}>
+              {loading ? t('login.signingIn') : t('login.signIn')}
+            </Button>
+          </form>
+
+          <p className="text-center text-sm text-ink-muted">
+            {t('login.noAccount')}{' '}
+            <Link to="/signup" className="font-semibold text-primary-ink hover:text-primary-ink-hover">
+              {t('login.createAccount')}
+            </Link>
+          </p>
+
+          <Divider label={t('login.otherWays')} />
+
           <Button
             type="button"
+            variant="outline"
             size="lg"
             fullWidth
             iconLeft={<Mail className="size-4.5" />}
@@ -252,11 +316,8 @@ const LoginPage: React.FC = () => {
             {t('login.signInWithEmail')}
           </Button>
 
-          <Divider label={t('login.orContinueWith')} />
-
-          <GoogleButton />
-
-          <Divider label={t('login.adminAccess')} />
+          {/* Only when it really works (review of 17 Oct 2026). */}
+          {options.google && <GoogleButton />}
 
           <Button
             type="button"
@@ -268,13 +329,6 @@ const LoginPage: React.FC = () => {
           >
             {t('login.loginAsAdmin')}
           </Button>
-
-          <p className="mt-6 text-center text-sm text-ink-muted">
-            {t('login.noAccount')}{' '}
-            <Link to="/signup" className="font-semibold text-primary-ink hover:text-primary-ink-hover">
-              {t('login.createAccount')}
-            </Link>
-          </p>
         </div>
       </AuthLayout>
     );

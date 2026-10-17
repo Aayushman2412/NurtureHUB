@@ -5,7 +5,14 @@
 // ── Option list shapes (from /api/metadata/*) ──
 export interface StateOption { id: number; name: string; }
 export interface DistrictOption { id: number; state_id: number; name: string; }
-export interface BlockOption { id: number; district_id: number; name: string; }
+export interface BlockOption { id: number; district_id: number; name: string; subdivision?: string | null; }
+export interface GramPanchayatOption { id: number; block_id: number; name: string; }
+
+/** "Subdivision – Taluka" in one option where the district has subdivisions (review of 17 Oct 2026). */
+export const blockLabel = (b: BlockOption) => (b.subdivision ? `${b.subdivision} – ${b.name}` : b.name);
+
+/** Marital status for which "do you have children" is not asked (and is No). */
+export const NEVER_MARRIED = 'Never married';
 export interface VillageOption { id: number; block_id: number; name: string; }
 export interface FacilityOption { id: number; block_id: number; name: string; facility_type: string; }
 export interface QualificationOption { id: number; qualification_name: string; has_semi_open_input: boolean; }

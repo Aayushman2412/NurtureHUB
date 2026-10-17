@@ -14,7 +14,8 @@
   },
   "theme": {
     "light": "Switch to Light Mode",
-    "dark": "Switch to Dark Mode"
+    "dark": "Switch to Dark Mode",
+    "label": "Theme"
   },
   "layout": {
     "button": "Layout",

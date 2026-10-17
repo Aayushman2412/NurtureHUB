@@ -11,6 +11,7 @@ import LoginPage from './pages/LoginPage';
 
 // Public & Auth pages (lazy)
 const SignupPage = lazy(() => import('./pages/SignupPage'));
+const JoinPage = lazy(() => import('./pages/JoinPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const OTPPage = lazy(() => import('./pages/OTPPage'));
 const RegistrationPage = lazy(() => import('./pages/RegistrationPage'));
@@ -34,6 +35,7 @@ const AssessmentHistoryPage = lazy(() => import('./pages/assessments/AssessmentH
 const AssessmentRunnerRoute = lazy(() => import('./pages/assessments/AssessmentRunnerRoute'));
 const AssessmentPlanPage = lazy(() => import('./pages/assessments/AssessmentPlanPage'));
 const GrowthChartsPage = lazy(() => import('./pages/growth/GrowthChartsPage'));
+const MyCasePage = lazy(() => import('./pages/growth/MyCasePage'));
 
 // Layout
 import { PageLoader } from './components/ui';
@@ -147,6 +149,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
+        <Route path="/join/:slug" element={<JoinPage />} />
         <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
         {/* Reachable signed out AND signed in: the DPDP right to know what is held
             about you must not depend on being able to log in. */}
@@ -195,6 +198,7 @@ const AppRoutes: React.FC = () => {
 
         {/* Growth charts (LAP monitoring) — case-wise WHO percentile charts */}
         <Route path="/growth" element={<CompleteRoute><GrowthChartsPage /></CompleteRoute>} />
+        <Route path="/growth/cases/:childId" element={<CompleteRoute><MyCasePage /></CompleteRoute>} />
 
         {/* Admin Panel Routes */}
         <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />

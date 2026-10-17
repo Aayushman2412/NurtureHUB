@@ -18,23 +18,55 @@ def programme_constants():
     return {"pnc_split_days": R.FIVE_MONTHS_DAYS, "pnc_split_months": R.PNC_SPLIT_MONTHS}
 
 
+@router.get("/registration-scope")
+def registration_scope(project: str = Query("", description="Slug from a project's sign-up link"),
+                       db: Session = Depends(get_read_db)):
+    """Which state / district the learner registration form may offer
+    (review of 17 Oct 2026) — see app/registration.py."""
+    from app import registration
+    return registration.scope(db, project or None)
+
+
+def _registration_ids(db: Session, registration: bool, project: str, key: str):
+    if not registration and not project:
+        return None
+    from app import registration as reg
+    return reg.scope(db, project or None)[key]
+
+
 @router.get("/states", response_model=List[schemas.StateOut])
-def get_states(db: Session = Depends(get_read_db)):
-    return db.query(models.State).filter(models.State.is_active == True).all()
+def get_states(registration: bool = Query(False, description="Only states open for registration"),
+               project: str = Query(""), db: Session = Depends(get_read_db)):
+    query = db.query(models.State).filter(models.State.is_active == True)
+    allowed = _registration_ids(db, registration, project, "state_ids")
+    if allowed is not None:
+        query = query.filter(models.State.id.in_(allowed))
+    return query.order_by(models.State.id).all()
 
 @router.get("/districts", response_model=List[schemas.DistrictOut])
-def get_districts(state_id: Optional[int] = Query(None), db: Session = Depends(get_read_db)):
+def get_districts(state_id: Optional[int] = Query(None),
+                  registration: bool = Query(False, description="Only districts open for registration"),
+                  project: str = Query(""), db: Session = Depends(get_read_db)):
     query = db.query(models.District)
     if state_id is not None:
         query = query.filter(models.District.state_id == state_id)
-    return query.all()
+    allowed = _registration_ids(db, registration, project, "district_ids")
+    if allowed is not None:
+        query = query.filter(models.District.id.in_(allowed))
+    return query.order_by(models.District.name).all()
 
 @router.get("/blocks", response_model=List[schemas.BlockOut])
 def get_blocks(district_id: Optional[int] = Query(None), db: Session = Depends(get_read_db)):
     query = db.query(models.Block)
     if district_id is not None:
         query = query.filter(models.Block.district_id == district_id)
-    return query.all()
+    return query.order_by(models.Block.subdivision, models.Block.name).all()
+
+@router.get("/gram-panchayats", response_model=List[schemas.GramPanchayatOut])
+def get_gram_panchayats(block_id: int = Query(...), db: Session = Depends(get_read_db)):
+    """A taluka's gram panchayats, as the district publishes them."""
+    return (db.query(models.GramPanchayat).filter(models.GramPanchayat.block_id == block_id)
+            .order_by(models.GramPanchayat.name).all())
 
 @router.get("/villages", response_model=List[schemas.VillageOut])
 def get_villages(block_id: Optional[int] = Query(None), db: Session = Depends(get_read_db)):
@@ -76,14 +108,27 @@ def get_designations(department_id: Optional[int] = Query(None), db: Session = D
     return query.order_by(models.Designation.order_index).all()
 
 @router.get("/facility-types", response_model=List[schemas.FacilityTypeOut])
-def get_facility_types(designation_id: Optional[int] = Query(None), db: Session = Depends(get_read_db)):
-    # Filtered by designation → return only its mapped facility types. If the designation
-    # has no mapping (empty), fall back to the full list. No filter → full list.
+def get_facility_types(designation_id: Optional[int] = Query(None),
+                       department_id: Optional[int] = Query(None),
+                       db: Session = Depends(get_read_db)):
+    # Filtered by designation → its mapped facility types; a designation with no
+    # mapping ("Other (Specify)", Counsellor …) falls back to every type. Either
+    # way only the department's own types (review of 17 Oct 2026: an Anganwadi
+    # Centre or an ICDS office is never offered to Health staff, a PHC or a
+    # health office never to WCD staff); "Other (Specify)" belongs to all.
+    types = db.query(models.FacilityType).order_by(models.FacilityType.order_index).all()
     if designation_id is not None:
         designation = db.query(models.Designation).filter(models.Designation.id == designation_id).first()
-        if designation is not None and designation.facility_types:
-            return sorted(designation.facility_types, key=lambda ft: ft.order_index)
-    return db.query(models.FacilityType).order_by(models.FacilityType.order_index).all()
+        if designation is not None:
+            department_id = department_id or designation.department_id
+            if designation.facility_types:
+                mapped = {ft.id for ft in designation.facility_types}
+                types = [ft for ft in types if ft.id in mapped]
+    if department_id is not None:
+        dept = db.get(models.Department, department_id)
+        if dept is not None and dept.code in ("HFW", "WCD"):
+            types = [ft for ft in types if ft.department_id in (None, dept.id)]
+    return types
 
 
 # ── Mother Registration cascades ──

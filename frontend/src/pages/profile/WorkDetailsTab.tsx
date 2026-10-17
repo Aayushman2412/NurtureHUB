@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ComboBox, Field, Input, SelectField } from '../../components/ui';
 import type { LearnerMetadata } from '../../hooks/useLearnerMetadata';
-import { TRAINING_KEYS, internetOptions, recencyOptions } from '../../lib/learnerFields';
+import { TRAINING_KEYS, blockLabel, internetOptions, recencyOptions } from '../../lib/learnerFields';
 import type { FieldErrors } from '../../lib/validation';
 
 export interface WorkDetailsValues {
@@ -17,6 +17,8 @@ export interface WorkDetailsValues {
   blockId: number | '';
   villageId: number | '';
   villageName: string;
+  gpId: number | '';
+  gpName: string;
   facilityId: number | '';
   facilityName: string;
   residenceDistance: number | '';
@@ -30,6 +32,9 @@ export interface WorkDetailsValues {
 }
 
 interface WorkDetailsTabProps {
+  /** Review of 17 Oct 2026: work & location, and education & training, are
+   *  separate tabs — on one long tab people did not scroll to find the rest. */
+  section: 'work' | 'education';
   values: WorkDetailsValues;
   meta: LearnerMetadata;
   errors: FieldErrors;
@@ -50,10 +55,60 @@ interface WorkDetailsTabProps {
 const numOr = (v: string): number | '' => (v ? Number(v) : '');
 
 const WorkDetailsTab: React.FC<WorkDetailsTabProps> = ({
-  values, meta, errors, isOtherDept, isOtherDesignation, isOtherFacilityType, showQualificationOther, onChange,
+  section, values, meta, errors, isOtherDept, isOtherDesignation, isOtherFacilityType, showQualificationOther, onChange,
   onDepartment, onDesignation, onFacilityType, onState, onDistrict, onBlock,
 }) => {
   const { t } = useTranslation('learner');
+  const hasSubdivisions = meta.blocks.some(b => b.subdivision);
+  if (section === 'education') return (
+  <div className="flex flex-col gap-5">
+    <SelectField label={t('fields.qualification')} value={values.qualificationId} error={errors.qualificationId}
+      onChange={v => onChange('qualificationId', numOr(v))}
+      placeholder={values.departmentId ? t('placeholders.selectQualification') : t('placeholders.selectDeptFirst')}
+      disabled={!values.departmentId}
+      options={meta.qualifications.map(q => ({ value: q.id, label: q.qualification_name }))} />
+
+    {showQualificationOther && (
+      <Field label={t('fields.specifyQualification')} htmlFor="qualification-other-input" error={errors.qualificationOther}>
+        <Input id="qualification-other-input" type="text" placeholder={t('fields.enterDetails')} error={!!errors.qualificationOther}
+          value={values.qualificationOther} onChange={e => onChange('qualificationOther', e.target.value)} required />
+      </Field>
+    )}
+
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+      <Field label={t('fields.yearsService')} htmlFor="years-service-input" error={errors.yearsService}>
+        <Input id="years-service-input" type="number" min={0} max={50} step={0.1} placeholder={t('fields.yearsServicePlaceholder')}
+          value={values.yearsService} error={!!errors.yearsService}
+          onChange={e => onChange('yearsService', numOr(e.target.value))} />
+      </Field>
+      <Field label={t('fields.yearsDesignation')} htmlFor="years-designation-input" error={errors.yearsDesignation}>
+        <Input id="years-designation-input" type="number" min={0} max={50} step={0.1} placeholder={t('fields.yearsPlaceholder')}
+          value={values.yearsDesignation} error={!!errors.yearsDesignation}
+          onChange={e => onChange('yearsDesignation', numOr(e.target.value))} />
+      </Field>
+      <Field label={t('fields.yearsFacility')} htmlFor="years-facility-input" error={errors.yearsFacility}>
+        <Input id="years-facility-input" type="number" min={0} max={50} step={0.1} placeholder={t('fields.yearsPlaceholder')}
+          value={values.yearsFacility} error={!!errors.yearsFacility}
+          onChange={e => onChange('yearsFacility', numOr(e.target.value))} />
+      </Field>
+    </div>
+
+    <SelectField label={t('fields.internet')} value={values.internetWorkplace}
+      error={errors.internetWorkplace}
+      onChange={v => onChange('internetWorkplace', v)} placeholder={t('placeholders.selectOne')}
+      options={internetOptions(t)} />
+
+    <h4 className="mt-2 border-b border-border pb-1.5 text-[13px] font-bold uppercase tracking-wider text-primary-ink">
+      {t('registration.sectionTraining')}
+    </h4>
+    {TRAINING_KEYS.map(key => (
+      <SelectField key={key} label={t(`trainings.${key}`)} value={values.trainings[key] ?? ''}
+        error={errors[`trainings.${key}`]}
+        onChange={v => onChange('trainings', { ...values.trainings, [key]: v })}
+        placeholder={t('placeholders.selectOne')} options={recencyOptions(t)} />
+    ))}
+  </div>
+  );
   return (
   <div className="flex flex-col gap-5">
     <SelectField label={t('fields.department')} value={values.departmentId} onChange={onDepartment} error={errors.departmentId}
@@ -100,9 +155,18 @@ const WorkDetailsTab: React.FC<WorkDetailsTabProps> = ({
       placeholder={t('placeholders.selectDistrict')} disabled={!values.stateId}
       options={meta.districts.map(d => ({ value: d.id, label: d.name }))} />
 
-    <SelectField label={t('fields.block')} value={values.blockId} onChange={onBlock} error={errors.blockId}
+    <SelectField label={hasSubdivisions ? t('fields.subdivisionTaluk') : t('fields.block')} value={values.blockId}
+      onChange={onBlock} error={errors.blockId}
       placeholder={t('placeholders.selectTaluk')} disabled={!values.districtId}
-      options={meta.blocks.map(b => ({ value: b.id, label: b.name }))} />
+      options={meta.blocks.map(b => ({ value: b.id, label: blockLabel(b) }))} />
+
+    {values.blockId !== '' && (
+      <ComboBox label={t('fields.gramPanchayat')} value={values.gpName}
+        onValueChange={txt => { onChange('gpName', txt); onChange('gpId', ''); }}
+        onPick={o => { onChange('gpName', o.label); onChange('gpId', Number(o.value)); }}
+        placeholder={meta.gramPanchayats.length ? t('fields.gramPanchayatPlaceholder') : t('fields.gramPanchayatType')}
+        options={meta.gramPanchayats.map(g => ({ value: g.id, label: g.name }))} />
+    )}
 
     <ComboBox label={t('fields.villageCity')} value={values.villageName} error={errors.villageName}
       onValueChange={txt => { onChange('villageName', txt); onChange('villageId', ''); }}
@@ -110,16 +174,12 @@ const WorkDetailsTab: React.FC<WorkDetailsTabProps> = ({
       placeholder={t('fields.villagePlaceholder')} disabled={!values.blockId}
       options={meta.villages.map(v => ({ value: v.id, label: v.name }))} />
 
-    {/* Facility: pick a known one (sets the id) or type a name — labels carry the
-        "(type)" suffix but the stored name is the raw facility name. */}
-    <ComboBox label={t('fields.facilityName')} value={values.facilityName} error={errors.facilityName}
-      onValueChange={txt => { onChange('facilityName', txt); onChange('facilityId', ''); }}
-      onPick={o => {
-        const f = meta.facilities.find(x => x.id === Number(o.value));
-        onChange('facilityName', f?.name ?? o.label); onChange('facilityId', Number(o.value));
-      }}
-      placeholder={t('fields.facilityPlaceholder')} disabled={!values.blockId}
-      options={meta.facilities.map(f => ({ value: f.id, label: `${f.name} (${f.facility_type})` }))} />
+    {/* Facility name is typed (review of 17 Oct 2026) — the lists are not complete. */}
+    <Field label={t('fields.facilityName')} htmlFor="facility-name-input" error={errors.facilityName}>
+      <Input id="facility-name-input" type="text" placeholder={t('fields.facilityTypePlaceholder')}
+        value={values.facilityName} error={!!errors.facilityName} disabled={!values.blockId}
+        onChange={e => { onChange('facilityName', e.target.value); onChange('facilityId', ''); }} />
+    </Field>
 
     <Field label={t('fields.residenceDistance')} htmlFor="residence-distance-input" error={errors.residenceDistance}>
       <Input id="residence-distance-input" type="number" min={0.1} max={100} step={0.1} placeholder={t('fields.residenceDistancePlaceholder')}
@@ -127,48 +187,6 @@ const WorkDetailsTab: React.FC<WorkDetailsTabProps> = ({
         onChange={e => onChange('residenceDistance', numOr(e.target.value))} />
     </Field>
 
-    <SelectField label={t('fields.qualification')} value={values.qualificationId} error={errors.qualificationId}
-      onChange={v => onChange('qualificationId', numOr(v))}
-      placeholder={values.departmentId ? t('placeholders.selectQualification') : t('placeholders.selectDeptFirst')}
-      disabled={!values.departmentId}
-      options={meta.qualifications.map(q => ({ value: q.id, label: q.qualification_name }))} />
-
-    {showQualificationOther && (
-      <Field label={t('fields.specifyQualification')} htmlFor="qualification-other-input" error={errors.qualificationOther}>
-        <Input id="qualification-other-input" type="text" placeholder={t('fields.enterDetails')} error={!!errors.qualificationOther}
-          value={values.qualificationOther} onChange={e => onChange('qualificationOther', e.target.value)} required />
-      </Field>
-    )}
-
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-      <Field label={t('fields.yearsService')} htmlFor="years-service-input" error={errors.yearsService}>
-        <Input id="years-service-input" type="number" min={0} max={50} step={0.1} placeholder={t('fields.yearsServicePlaceholder')}
-          value={values.yearsService} error={!!errors.yearsService}
-          onChange={e => onChange('yearsService', numOr(e.target.value))} />
-      </Field>
-      <Field label={t('fields.yearsDesignation')} htmlFor="years-designation-input" error={errors.yearsDesignation}>
-        <Input id="years-designation-input" type="number" min={0} max={50} step={0.1} placeholder={t('fields.yearsPlaceholder')}
-          value={values.yearsDesignation} error={!!errors.yearsDesignation}
-          onChange={e => onChange('yearsDesignation', numOr(e.target.value))} />
-      </Field>
-      <Field label={t('fields.yearsFacility')} htmlFor="years-facility-input" error={errors.yearsFacility}>
-        <Input id="years-facility-input" type="number" min={0} max={50} step={0.1} placeholder={t('fields.yearsPlaceholder')}
-          value={values.yearsFacility} error={!!errors.yearsFacility}
-          onChange={e => onChange('yearsFacility', numOr(e.target.value))} />
-      </Field>
-    </div>
-
-    <SelectField label={t('fields.internet')} value={values.internetWorkplace}
-      error={errors.internetWorkplace}
-      onChange={v => onChange('internetWorkplace', v)} placeholder={t('placeholders.selectOne')}
-      options={internetOptions(t)} />
-
-    {TRAINING_KEYS.map(key => (
-      <SelectField key={key} label={t(`trainings.${key}`)} value={values.trainings[key] ?? ''}
-        error={errors[`trainings.${key}`]}
-        onChange={v => onChange('trainings', { ...values.trainings, [key]: v })}
-        placeholder={t('placeholders.selectOne')} options={recencyOptions(t)} />
-    ))}
   </div>
   );
 };

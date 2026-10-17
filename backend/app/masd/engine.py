@@ -1050,6 +1050,137 @@ def cumulative_for(data: MasdData, as_of: date, *, learner_ids: Optional[Iterabl
                       learner_ids=learner_ids, kind=kind, per_case=per_case)
 
 
+def learner_view(data: MasdData, as_of: date, learner_id: int, due_days: int = 7) -> Optional[Dict[str, Any]]:
+    """One learner's own work, for their dashboard (review of 17 Oct 2026:
+    "it must be easy for them to track their own activities and adoptions,
+    with clues to what percentage of work is done and what is expected of
+    them in the next few days").
+
+    The same numbers the MASD dashboard shows for that learner — targets and
+    adoptions by type, forms due and done for the cases they adopted (level
+    3, each case by its own dates), the cumulative series — plus, per case,
+    the forms already behind and the forms falling due in the next
+    `due_days` days. Expects `data` narrowed to the learner (data.load with
+    `only_learners`), though any project data works."""
+    cal = calendar(data)
+    steps = target_steps(data, cal)
+    targets_now, _ = R.targets_in_force(steps, as_of)
+    table = data.expected_forms
+    adoptions = adoptions_of(data, steps, as_of)
+    acts = [a for a in data.activities if a.on <= as_of]
+    idx = _index(adoptions)
+    rows = _learner_rows(data, adoptions, acts, as_of, cal, steps, targets_now, table, idx)
+    row = next((r for r in rows if r["id"] == learner_id), None)
+    if row is None:
+        return None
+    is_nurse = row["is_nurse"]
+
+    done_by_case: Dict[int, Counter] = defaultdict(Counter)
+    last_on: Dict[int, date] = {}
+    for act in acts:
+        key = R.FORM_TO_ACTIVITY.get(act.form_key)
+        a = idx.adoption_of(act)
+        if key and a is not None and a.mother.learner_id == learner_id and act.learner_id == learner_id:
+            done_by_case[a.mother.id][key] += 1
+            if act.on > last_on.get(a.mother.id, date.min):
+                last_on[a.mother.id] = act.on
+    soon = as_of + timedelta(days=due_days)
+
+    # The supervisors' follow-up warnings for this learner's own cases
+    # (review of 17 Oct 2026: "the full faltering list"): a pregnancy past its
+    # due date or behind on antenatal checks, a baby missing growth checks or
+    # not visited for weeks, an adoption type that does not match the dates.
+    flags = _flags(data, adoptions, acts, as_of, idx, table)
+    warnings: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
+    for item in flags["items"]:
+        if item["learner_id"] != learner_id:
+            continue
+        for reason in item["reasons"]:
+            warnings[item["mother_id"]].append({
+                "code": reason, "days_past_edd": item["days_past_edd"], "edd": item["edd"],
+                "anc_expected": item["anc_expected"], "anc_done": item["anc_done"],
+            })
+    for item in flags["pnc"]:
+        if item["learner_id"] != learner_id:
+            continue
+        for reason in item["reasons"]:
+            warnings[item["mother_id"]].append({
+                "code": reason, "visits_missed": item["visits_missed"],
+                "days_since_visit": item["days_since_visit"],
+            })
+    for item in flags["type_mismatch"]:
+        if item["learner_id"] == learner_id:
+            warnings[item["mother_id"]].append({"code": "type_mismatch", "declared": item["declared"],
+                                                "computed": item["computed"]})
+    cases = []
+    for a in adoptions:
+        if a.mother.learner_id != learner_id:
+            continue
+        now = case_expected_for(a, table, as_of, is_nurse)
+        later = case_expected_for(a, table, soon, is_nurse)
+        done = done_by_case.get(a.mother.id, Counter())
+        behind = {k: max(0, now[k] - done[k]) for k in R.ACTIVITY_KEYS}
+        upcoming = {k: max(0, later[k] - max(now[k], done[k])) for k in R.ACTIVITY_KEYS}
+        cases.append({
+            "mother_id": a.mother.id,
+            "child_ids": [c.id for c in a.children],
+            "type": _bucket(a.type, is_nurse) or R.UNKNOWN,
+            "adopted_on": a.anchor.isoformat() if a.anchor else None,
+            "expected": now, "done": {k: done[k] for k in R.ACTIVITY_KEYS},
+            "behind": behind, "upcoming": upcoming,
+            "behind_total": sum(behind.values()), "upcoming_total": sum(upcoming.values()),
+            "warnings": warnings.get(a.mother.id, []),
+            "last_form": last_on[a.mother.id].isoformat() if a.mother.id in last_on else None,
+            "days_since_form": (as_of - last_on.get(a.mother.id, a.anchor or as_of)).days,
+        })
+    cases.sort(key=lambda c: (-len(c["warnings"]), -c["behind_total"], -c["upcoming_total"], c["adopted_on"] or ""))
+    series = cumulative(data, rows, adoptions, acts, steps, cal, table, as_of,
+                        learner_ids=[learner_id], per_case=True)
+    tranches = R.tranches(steps, as_of, row["training_end"] and date.fromisoformat(row["training_end"]))
+    return {
+        "as_of": as_of.isoformat(),
+        "due_days": due_days,
+        "f2f": row["f2f"],
+        "is_nurse": is_nurse,
+        "training_end": row["training_end"],
+        "tranches": [{"step": tr["step"], "from": tr["from"], "clock_from": tr["clock_from"]} for tr in tranches],
+        "targets": row["targets"],
+        "adoptions": row["adoptions"],
+        "fulfilment_pct": row["fulfilment_pct"],
+        "own": row["own"],
+        "ideal": row["ideal"],
+        "activities": row["activities"],
+        "by_type": {t: {k: v for k, v in d.items() if k in ("target", "adopted", "adoption_pct")}
+                    for t, d in row["by_type"].items()},
+        "last_activity": row["last_activity"],
+        "nil_days": row["nil_days"],
+        "cases": cases,
+        "behind_total": sum(c["behind_total"] for c in cases),
+        "upcoming_total": sum(c["upcoming_total"] for c in cases),
+        "cumulative": series,
+    }
+
+
+def team_view(data: MasdData, as_of: date, learner_ids: Iterable[int]) -> List[Dict[str, Any]]:
+    """A batch monitor's learners at a glance: adoptions against target,
+    forms done against due (level 3) and days since they last did anything.
+    Counts about the learners only — no mother or child is named."""
+    keep = set(learner_ids)
+    cal = calendar(data)
+    steps = target_steps(data, cal)
+    targets_now, _ = R.targets_in_force(steps, as_of)
+    adoptions = adoptions_of(data, steps, as_of)
+    acts = [a for a in data.activities if a.on <= as_of]
+    rows = _learner_rows(data, adoptions, acts, as_of, cal, steps, targets_now, data.expected_forms,
+                         _index(adoptions))
+    return [{
+        "id": r["id"], "name": r["name"], "role_group": r["role_group"],
+        "adoptions": r["adoptions"]["total"], "target": r["target"], "fulfilment_pct": r["fulfilment_pct"],
+        "forms_done": r["own"]["actual"]["total"], "forms_due": r["own"]["expected"]["total"],
+        "forms_pct": r["own"]["pct"], "nil_days": r["nil_days"], "last_activity": r["last_activity"],
+    } for r in rows if r["id"] in keep]
+
+
 def _levels_example(table: Dict[str, Any], steps: List[Dict[str, Any]], cal: Dict[str, Any],
                     as_of: date) -> Optional[Dict[str, Any]]:
     """One made-up community learner, worked through the three levels of

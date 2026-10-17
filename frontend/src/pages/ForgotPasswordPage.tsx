@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
@@ -8,14 +8,21 @@ import OTPInput from '../components/auth/OTPInput';
 import { Button, FieldLabel, Input, PasswordInput } from '../components/ui';
 import PasswordRules from '../components/auth/PasswordRules';
 import { usePasswordCheck } from '../hooks/usePasswordCheck';
+import MobileInput from '../components/auth/MobileInput';
+import client from '../api/client';
 
 const ForgotPasswordPage: React.FC = () => {
   const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
+  // Reset by WhatsApp code for an account made with a mobile number (review
+  // of 17 Oct 2026); by email for the rest.
+  const [params] = useSearchParams();
+  const [viaMobile, setViaMobile] = useState(params.get('via') === 'mobile');
+  const [mobile, setMobile] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   // A reset is a new password too: same rules, plus "not a recent one".
-  const pw = usePasswordCheck(newPassword, { email, includeHistory: true });
+  const pw = usePasswordCheck(newPassword, { email: viaMobile ? undefined : email, includeHistory: true });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -25,8 +32,8 @@ const ForgotPasswordPage: React.FC = () => {
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) {
-      showToast(t('forgot.toast.enterEmail'), 'warning');
+    if (viaMobile ? mobile.length !== 10 : !email) {
+      showToast(t(viaMobile ? 'forgot.toast.enterMobile' : 'forgot.toast.enterEmail'), 'warning');
       return;
     }
 
@@ -34,8 +41,9 @@ const ForgotPasswordPage: React.FC = () => {
     const toastId = showToast(t('forgot.toast.sendingCode'), 'loading');
 
     try {
-      await forgotPassword(email);
-      updateToast(toastId, t('forgot.toast.codeSent'), 'success');
+      if (viaMobile) await client.post('/api/auth/forgot-password-mobile', { phone: mobile });
+      else await forgotPassword(email);
+      updateToast(toastId, t(viaMobile ? 'forgot.toast.codeSentWhatsapp' : 'forgot.toast.codeSent'), 'success');
       setSubmitted(true);
     } catch (err: any) {
       updateToast(toastId, err.response?.data?.detail || t('forgot.toast.requestFailed'), 'error');
@@ -61,7 +69,11 @@ const ForgotPasswordPage: React.FC = () => {
     const toastId = showToast(t('forgot.toast.resetting'), 'loading');
 
     try {
-      await resetPassword(email, code, newPassword);
+      if (viaMobile) {
+        await client.post('/api/auth/reset-password-mobile', { phone: mobile, code, new_password: newPassword });
+      } else {
+        await resetPassword(email, code, newPassword);
+      }
       updateToast(toastId, t('forgot.toast.resetSuccess'), 'success');
       navigate('/login');
     } catch (err: any) {
@@ -78,18 +90,31 @@ const ForgotPasswordPage: React.FC = () => {
     >
       {!submitted ? (
         <form onSubmit={handleSendCode} className="flex flex-col gap-5">
-          <div>
-            <FieldLabel htmlFor="email-input">{t('fields.email')}</FieldLabel>
-            <Input
-              id="email-input"
-              type="email"
-              placeholder={t('fields.emailPlaceholder')}
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              disabled={loading}
-            />
-          </div>
+          {viaMobile ? (
+            <div>
+              <FieldLabel htmlFor="mobile-input">{t('fields.mobile')}</FieldLabel>
+              <MobileInput id="mobile-input" value={mobile} onChange={setMobile} disabled={loading} />
+            </div>
+          ) : (
+            <div>
+              <FieldLabel htmlFor="email-input">{t('fields.email')}</FieldLabel>
+              <Input
+                id="email-input"
+                type="email"
+                placeholder={t('fields.emailPlaceholder')}
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                disabled={loading}
+              />
+            </div>
+          )}
+          <button
+            type="button" onClick={() => setViaMobile(v => !v)} disabled={loading}
+            className="-mt-2 self-start cursor-pointer text-[13px] font-semibold text-primary-ink hover:text-primary-ink-hover"
+          >
+            {viaMobile ? t('forgot.useEmail') : t('forgot.useMobile')}
+          </button>
 
           <Button type="submit" size="lg" fullWidth loading={loading} className="mt-2">
             {loading ? t('forgot.sendingCode') : t('forgot.sendCode')}
@@ -123,7 +148,7 @@ const ForgotPasswordPage: React.FC = () => {
               autoComplete="new-password"
               aria-describedby="newpassword-rules"
             />
-            <PasswordRules id="newpassword-rules" className="mt-2.5" password={newPassword} policy={pw.policy} results={pw.results} />
+            <PasswordRules id="newpassword-rules" className="mt-2.5" password={newPassword} policy={pw.policy} results={pw.results} easy={pw.easy} />
           </div>
 
           <Button type="submit" size="lg" fullWidth loading={loading} disabled={code.length < 6} className="mt-2">

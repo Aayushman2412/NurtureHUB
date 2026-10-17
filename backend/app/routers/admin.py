@@ -25,7 +25,7 @@ from app.models import (
     User, ProgramDistrict, Stage, Tutorial, Test, Question, QuestionOption,
     TestAttempt, TestAnswer, TutorialQuestion, TutorialQuestionOption,
     TutorialQuizResponse, UserTutorialProgress, Notification, FaceToFaceSelection,
-    Mother, FormDefinition, FormDistrictAssignment, FormVersion,
+    Mother, FormDefinition, FormDistrictAssignment, FormVersion, District,
 )
 from app.seed_forms import FORM_SPECS, ensure_form_definitions
 from app.auth import verify_password, match_password, create_access_token, get_password_hash
@@ -499,6 +499,52 @@ def update_project(project_id: int, data: ProjectUpdate, db: Session = Depends(g
     if data.state_prefix is not None:
         project.state_prefix = data.state_prefix.strip().upper() or None
 
+    db.commit()
+    db.refresh(project)
+    counts = _user_counts(db)
+    return projects.serialize(db, project, user_count=counts.get(project.id, 0))
+
+
+class ProjectRegistrationIn(BaseModel):
+    open: bool
+    state_id: Optional[int] = None
+    district_id: Optional[int] = None
+
+
+@router.put("/projects/{project_id}/registration")
+def update_project_registration(project_id: int, data: ProjectRegistrationIn, db: Session = Depends(get_db),
+                                admin_email: str = Depends(get_admin_email)):
+    """Set where a project's learners register and open or close its
+    registration (review of 17 Oct 2026). While any project is open, the
+    learner registration form offers only the open projects' places, and
+    each project's own link (/join/<slug>) locks the state and district."""
+    project = db.query(ProgramDistrict).filter(ProgramDistrict.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    district = db.get(District, data.district_id) if data.district_id else None
+    if data.district_id and district is None:
+        raise HTTPException(status_code=404, detail="District not found")
+    state_id = data.state_id or (district.state_id if district else None)
+    if district is not None and state_id != district.state_id:
+        raise HTTPException(status_code=400, detail="That district is not in that state")
+    if data.open and district is None:
+        raise HTTPException(status_code=400,
+                            detail="Choose the state and district this project registers in before opening it")
+    before = {"open": bool(project.registration_open), "state_id": project.reg_state_id,
+              "district_id": project.reg_district_id}
+    project.reg_state_id = state_id
+    project.reg_district_id = district.id if district else None
+    project.registration_open = bool(data.open)
+    after = {"open": bool(project.registration_open), "state_id": project.reg_state_id,
+             "district_id": project.reg_district_id}
+    audit.record_sync(
+        audit.Action.ADMIN_CONFIG_CHANGE,
+        db=db,
+        resource_type="project_registration",
+        resource_id=project.slug,
+        is_phi=False,
+        detail={"project": project.slug, "before": before, "after": after, "by": admin_email},
+    )
     db.commit()
     db.refresh(project)
     counts = _user_counts(db)
@@ -995,6 +1041,8 @@ def update_learner(
         if key in payload:
             value = payload[key]
             setattr(user, key, (value or None) if isinstance(value, str) else value)
+    if "phone" in payload:
+        user.sync_lookups()   # sign-in by mobile number finds the account by it
 
     if "email" in payload:
         # Emails are the login identity and are stored lowercase everywhere.

@@ -9,6 +9,12 @@
  */
 
 export interface PasswordPolicy {
+  /** 'simple' = the learners' few rules (review of 17 Oct 2026); 'strict' = administrators'. */
+  style?: 'simple' | 'strict';
+  /** Learners: this many numbers in a row counting up or down is refused (1234). */
+  number_run_length?: number;
+  /** Learners: below this length a password is accepted but called easy to guess. */
+  strong_min_length?: number;
   min_length: number;
   max_length: number;
   history_depth: number;
@@ -23,7 +29,10 @@ export interface PasswordPolicy {
 }
 
 export const FALLBACK_POLICY: PasswordPolicy = {
-  min_length: 10,
+  style: 'simple',
+  number_run_length: 4,
+  strong_min_length: 10,
+  min_length: 8,
   max_length: 128,
   history_depth: 5,
   min_character_kinds: 3,
@@ -36,7 +45,9 @@ export const FALLBACK_POLICY: PasswordPolicy = {
   common_passwords: [],
 };
 
-export type RuleId = 'length' | 'variety' | 'common' | 'patterns' | 'personal' | 'spaces' | 'history';
+export type RuleId =
+  | 'length' | 'variety' | 'common' | 'patterns' | 'personal' | 'spaces' | 'history'
+  | 'minLength' | 'lettersDigits' | 'sequence';
 /** pass / fail as typed; `pending` = nothing typed yet, or only the server can tell (history). */
 export type RuleStatus = 'pass' | 'fail' | 'pending';
 
@@ -94,8 +105,70 @@ export interface CheckContext {
   includeHistory?: boolean;
 }
 
+/** 1234, 2345 … 9876 — `n` or more numbers counting up or down by one. */
+export function hasNumberRun(password: string, n: number): boolean {
+  let up = 1;
+  let down = 1;
+  for (let i = 1; i < password.length; i++) {
+    const a = password[i - 1]!;
+    const b = password[i]!;
+    if (/\d/.test(a) && /\d/.test(b)) {
+      up = Number(b) === Number(a) + 1 ? up + 1 : 1;
+      down = Number(b) === Number(a) - 1 ? down + 1 : 1;
+    } else {
+      up = 1;
+      down = 1;
+    }
+    if (up >= n || down >= n) return true;
+  }
+  return false;
+}
+
+/** The learners' rules (backend passwords.validate, is_admin=False). */
+function checkSimple(password: string, policy: PasswordPolicy, ctx: CheckContext): RuleResult[] {
+  const typed = password.length > 0;
+  const status = (ok: boolean): RuleStatus => (!typed ? 'pending' : ok ? 'pass' : 'fail');
+  const lowered = password.toLowerCase();
+  const common = new Set(policy.common_passwords);
+  const n = length(password);
+  const results: RuleResult[] = [
+    { id: 'minLength', status: status(n >= policy.min_length && n <= policy.max_length) },
+    { id: 'lettersDigits', status: status(n >= policy.passphrase_length || (/\p{L}/u.test(password) && /\d/.test(password))) },
+    { id: 'sequence', status: status(!hasNumberRun(password, policy.number_run_length ?? 4)) },
+    { id: 'common', status: status(!common.has(lowered) && !common.has(lowered.replace(/[^a-z]/g, ''))) },
+    { id: 'spaces', status: status(password === password.trim()) },
+  ];
+  if (ctx.includeHistory) results.push({ id: 'history', status: 'pending' });
+  return results;
+}
+
+/**
+ * Accepted for a learner but easy to guess (backend passwords.is_weak): what
+ * the stronger rule would refuse — short, few kinds of character, repeats,
+ * "abcd" or "qwerty", their own name. A nudge, never a refusal.
+ */
+export function isEasyToGuess(raw: string, policy: PasswordPolicy, ctx: CheckContext = {}): boolean {
+  const password = raw.normalize('NFKC');
+  if (!password) return false;
+  const strong: PasswordPolicy = { ...policy, min_length: policy.strong_min_length ?? 10 };
+  const strict = checkStrict(password, strong, ctx).every(r => r.status === 'pass');
+  const lowered = password.toLowerCase();
+  const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+  let alphaRun = false;
+  for (let i = 0; i + 4 <= alphabet.length; i++) {
+    const chunk = alphabet.slice(i, i + 4);
+    if (lowered.includes(chunk) || lowered.includes([...chunk].reverse().join(''))) alphaRun = true;
+  }
+  return !strict || alphaRun;
+}
+
 export function checkPassword(raw: string, policy: PasswordPolicy, ctx: CheckContext = {}): RuleResult[] {
   const password = raw.normalize('NFKC');
+  if (policy.style === 'simple') return checkSimple(password, policy, ctx);
+  return checkStrict(password, policy, ctx);
+}
+
+function checkStrict(password: string, policy: PasswordPolicy, ctx: CheckContext): RuleResult[] {
   const typed = password.length > 0;
   const lowered = password.toLowerCase();
   const n = length(password);

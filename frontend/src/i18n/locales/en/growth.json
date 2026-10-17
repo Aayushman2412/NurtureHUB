@@ -177,7 +177,7 @@
     "noVisits": "No submitted visits for this case yet.",
     "noAnswers": "No answers recorded.",
     "formCount": "{{count}} forms",
-    "title": "Case detail",
+    "title": "Learner activity details",
     "learnerDetails": "Learner details",
     "motherDetails": "Mother details",
     "childDetails": "Child details",
@@ -219,7 +219,7 @@
     "antenatal": "Antenatal Assessment"
   },
   "casePage": {
-    "title": "Case detail",
+    "title": "Learner activity details",
     "loading": "Loading case…",
     "notFound": "Case not found",
     "whoCharts": "WHO growth charts (this pair, all visits)",
@@ -227,8 +227,8 @@
     "visitDate": "Visit date",
     "age": "Age",
     "formsFilled": "Forms filled (LAP status)",
-    "infoForms": "Info forms",
-    "lapMatrices": "LAP assessment matrices",
+    "infoForms": "Other forms — what was recorded at each visit",
+    "lapMatrices": "LAP assessments — visit by visit",
     "question": "Question",
     "forms": "Forms",
     "weightKg": "Weight (kg)",
@@ -258,11 +258,18 @@
     "legendNeutral": "Answered (no LAP verdict)",
     "legendNotAsked": "Not asked on this visit",
     "matrixCount": "{{count}} visits",
-    "matrixCount_one": "{{count}} visit"
+    "matrixCount_one": "{{count}} visit",
+    "visitN": "Visit {{n}}",
+    "visitWindow": "Visits {{from}}–{{to}} of {{total}}",
+    "visitSlider": "Move along the visits",
+    "pointsCorrect": "Points correct (as per LAP)",
+    "protein24": "Protein in the last 24 hours",
+    "proteinAvg": "{{g}} g/day usual",
+    "legendNotYet": "Visit not done yet"
   },
   "admin": {
-    "title": "Growth Monitor",
-    "description": "Learner-level activity completion and WHO growth outcomes across all cases, plotted from LAP visit records. Filter by district, role, department or learner.",
+    "title": "Learner Activities",
+    "description": "Every learner's cases: forms done against what was due, and the babies' WHO growth outcomes, from the LAP visit records. Filter by district, role, department or learner; open a row for the learner activity details.",
     "loading": "Loading growth data…",
     "district": "District",
     "allDistricts": "All districts",
@@ -276,8 +283,8 @@
     "proteinAlertsSub": "A recorded 24-hour total above 100g is almost always a portion-size slip. The learner has been notified too."
   },
   "learner": {
-    "title": "Growth Charts",
-    "description": "Your babies' growth plotted against the WHO standards, visit by visit.",
+    "title": "My cases & growth",
+    "description": "Every mother and baby you adopted — forms done against what was due, and the babies' growth against the WHO standards.",
     "loading": "Loading your growth charts…",
     "allCases": "All my cases",
     "caseLabel": "{{child}} ({{mother}})",
@@ -287,6 +294,11 @@
     "noGender": "Add this child's gender in the child record to plot the WHO charts.",
     "noVisits": "No growth visits recorded for this child yet.",
     "noCasesForSex": "No cases here",
-    "noCasesForSexHint": "None of your registered children match this tab."
+    "noCasesForSexHint": "None of your registered children match this tab.",
+    "openCase": "Open the full case page",
+    "openCaseHint": "Every form, visit by visit, with the growth charts",
+    "tabTable": "My cases",
+    "tabCharts": "Growth charts",
+    "tableHint": "One row per baby, as your supervisors see it. Tap a row for the full case: every form, visit by visit."
   }
 }

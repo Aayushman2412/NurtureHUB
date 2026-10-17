@@ -39,6 +39,9 @@ def seed_database(db: Session):
     _seed_achievements(db)
     _seed_professional_axis(db)   # LR reference data — essential, always seeded
     _ensure_other_dept_rows(db)   # dept=Other designation + education — idempotent per-row, always run
+    _ensure_facility_type_departments(db)  # AWC → WCD, PHC → HFW … — idempotent, always run
+    _ensure_chandrapur(db)        # Chandrapur talukas + gram panchayats — idempotent, always run
+    _ensure_user_phone_lookups(db)  # sign-in by mobile number needs every phone indexed
     _seed_mother_reference(db)    # MR education cascade — essential, always seeded
     ensure_form_definitions(db)   # form-builder definitions (BF/CF trees) — essential
 
@@ -996,6 +999,82 @@ def _ensure_other_dept_rows(db: Session):
                 qualification_name=name, department_id=other_dept.id, order_index=i,
                 has_semi_open_input=(name == "Other"),
             ))
+    db.commit()
+
+
+# Facility type → the department whose staff work there (review of 17 Oct
+# 2026). The same lists as migration 5d2a9c7e41f3, which scopes existing
+# databases; this covers a fresh install, whose types are created after it.
+_WCD_FACILITY_TYPES = ("Anganwadi Centre (AWC)", "ICDS Project Office (CDPO Office)", "District ICDS Office")
+_HFW_FACILITY_TYPES = (
+    "Sub-centre (SC)", "Health & Wellness Centre (HWC)", "Primary Health Centre (PHC)",
+    "Community Health Centre (CHC)", "Taluk Hospital (TH)", "District Hospital (DH)",
+    "Medical College Hospital", "Taluk Health Office (THO)", "District Health Office (DHO)",
+)
+
+
+def _ensure_facility_type_departments(db: Session):
+    for code, names in (("WCD", _WCD_FACILITY_TYPES), ("HFW", _HFW_FACILITY_TYPES)):
+        dept = db.query(Department).filter(Department.code == code).first()
+        if dept is None:
+            continue
+        (db.query(FacilityType)
+         .filter(FacilityType.name.in_(names), FacilityType.department_id.is_(None))
+         .update({FacilityType.department_id: dept.id}, synchronize_session=False))
+    db.commit()
+
+
+def _ensure_user_phone_lookups(db: Session):
+    """Index any learner phone saved without its blind index (profile edits
+    before 17 Oct 2026 did not keep it), so they can sign in by mobile number.
+    Only the missing ones: after the first start this finds nothing."""
+    missing = (db.query(User)
+               .filter(User.phone_lookup.is_(None), User.phone.isnot(None))
+               .limit(20000).all())
+    for user in missing:
+        user.sync_lookups()
+    if missing:
+        db.commit()
+        print(f"Indexed {len(missing)} learner phone number(s) for mobile sign-in.")
+
+
+def _ensure_chandrapur(db: Session):
+    """Chandrapur district (Maharashtra): 15 talukas in 8 subdivisions and
+    their gram panchayats (823 distinct names), as the district publishes them. The snapshot
+    file is the one migration 5d2a9c7e41f3 loads into existing databases."""
+    import json
+    from pathlib import Path
+    from app.models import GramPanchayat
+
+    path = Path(__file__).resolve().parent.parent / "alembic" / "versions" / "data" / "chandrapur_geography_2026_10_17.json"
+    if not path.exists():
+        return
+    geo = json.loads(path.read_text(encoding="utf-8"))
+    state = db.query(State).filter(State.name.ilike(geo["state"])).first()
+    if state is None:
+        state = State(name=geo["state"], is_active=True)
+        db.add(state)
+        db.flush()
+    district = (db.query(District)
+                .filter(District.state_id == state.id, District.name.ilike(geo["district"])).first())
+    if district is None:
+        district = District(state_id=state.id, name=geo["district"])
+        db.add(district)
+        db.flush()
+    for taluka in geo["talukas"]:
+        block = (db.query(Block)
+                 .filter(Block.district_id == district.id, Block.name.ilike(taluka["name"])).first())
+        if block is None:
+            block = Block(district_id=district.id, name=taluka["name"], subdivision=taluka["subdivision"])
+            db.add(block)
+            db.flush()
+        elif not block.subdivision:
+            block.subdivision = taluka["subdivision"]
+        have = {name.lower() for (name,) in db.query(GramPanchayat.name).filter(GramPanchayat.block_id == block.id)}
+        for name in taluka["gram_panchayats"]:
+            if name.lower() not in have:
+                db.add(GramPanchayat(block_id=block.id, name=name))
+                have.add(name.lower())
     db.commit()
 
 

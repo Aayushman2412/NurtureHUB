@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Plus, Baby, ChevronRight, CloudUpload, Heart, Ruler, Salad, Stethoscope, Utensils, Activity } from 'lucide-react';
 import { Button, Card, EmptyState, PageHeader, PageLoader } from '../../components/ui';
@@ -161,6 +161,14 @@ const MotherDetailPage: React.FC = () => {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-semibold text-ink">{c.child_name}</div>
+                    {/* Every form visit by visit, with the growth charts (review of 17 Oct 2026). */}
+                    <Link
+                      to={`/growth/cases/${c.id}?from=mother-${motherId}`}
+                      onClick={e => e.stopPropagation()}
+                      className="text-xs font-semibold text-primary-ink hover:text-primary-ink-hover"
+                    >
+                      {t('detail.openCasePage')}
+                    </Link>
                     <div className="truncate text-xs text-ink-muted">
                       {c.child_uid}
                       {c.gender ? ` · ${t(`options.gender.${c.gender}`)}` : ''}

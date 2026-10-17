@@ -146,6 +146,15 @@ def serialize(db: Session, project: ProgramDistrict, *, user_count: Optional[int
         "code": project.code,
         "state_prefix": project.state_prefix,
         "analysis_level": analysis_level(project),
+        # Registration (review of 17 Oct 2026): where this project's learners
+        # register, and whether its sign-up link / the open registration form
+        # are taking learners now — app/registration.py.
+        "registration": {
+            "open": bool(project.registration_open),
+            "state_id": project.reg_state_id,
+            "district_id": project.reg_district_id,
+            "link_path": f"/join/{project.slug}",
+        },
     }
     if user_count is not None:
         data["user_count"] = user_count

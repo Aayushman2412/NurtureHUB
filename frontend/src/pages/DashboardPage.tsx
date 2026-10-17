@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getDashboardData } from '../api/dashboard';
 import {
-  BookOpen,
-  Award,
   CheckCircle2,
   ChevronRight,
   Lock,
@@ -16,9 +14,16 @@ import {
   CalendarClock,
   FileText,
   Hourglass,
+  KeyRound,
+  MapPinOff,
 } from 'lucide-react';
-import { Badge, Button, Card, PageLoader, ProgressBar, ProgressRing, StatCard, WelcomeBanner } from '../components/ui';
+import { Badge, Button, Card, PageLoader, ProgressBar, ProgressRing, WelcomeBanner } from '../components/ui';
 import SupportTeamCard from '../components/SupportTeamCard';
+import TrainingRings from '../components/dashboard/TrainingRings';
+import MyWorkCard from '../components/dashboard/MyWorkCard';
+import MyProgressChart from '../components/dashboard/MyProgressChart';
+import MyTeamCard from '../components/dashboard/MyTeamCard';
+import { getMyWork, type MyWork } from '../api/myWork';
 
 interface Achievement {
   id: number;
@@ -40,6 +45,10 @@ interface Tutorial {
   id: number;
   title: string;
   is_completed: boolean;
+  duration_minutes?: number;
+  watch_pct?: number;
+  quiz_available?: boolean;
+  quiz_status?: 'pending' | 'completed' | 'skipped';
 }
 
 interface StageTest {
@@ -95,7 +104,7 @@ const formatScheduled = (iso: string | null, t: TFunction): string => {
 const testStatusBadge = (status: StageTest['status'], t: TFunction) => {
   switch (status) {
     case 'active':
-      return <Badge variant="success">â— {t('test.status.live')}</Badge>;
+      return <Badge variant="success"><span className="mr-1 inline-block size-1.5 animate-pulse rounded-full bg-current" aria-hidden />{t('test.status.live')}</Badge>;
     case 'scheduled':
       return <Badge variant="info">{t('test.status.scheduled')}</Badge>;
     case 'ended':
@@ -117,6 +126,9 @@ const testPhaseMessage = (stg: Stage, t: TFunction): string => {
 const DashboardPage: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  // The learner's own adoptions and forms (review of 17 Oct 2026); optional —
+  // the dashboard renders without it.
+  const [work, setWork] = useState<MyWork | null>(null);
 
   const { t } = useTranslation('dashboard');
   const { user } = useAuth();
@@ -136,6 +148,7 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     loadDashboard();
+    getMyWork().then(setWork).catch(() => { /* optional card */ });
   }, []);
 
   if (loading) return <PageLoader label={t('loading')} />;
@@ -181,42 +194,43 @@ const DashboardPage: React.FC = () => {
         </Card>
       )}
 
-      <SupportTeamCard />
+      {/* An easy password is allowed, never forced — but asked about (review of 17 Oct 2026). */}
+      {user?.password_weak && (
+        <Card accent="amber" className="flex flex-wrap items-center gap-3 p-4">
+          <KeyRound className="size-5 shrink-0 text-amber-600" />
+          <p className="min-w-0 flex-1 text-sm text-ink">{t('weakPassword.body')}</p>
+          <Link to="/profile?tab=account" className="text-sm font-semibold text-primary-ink hover:text-primary-ink-hover">
+            {t('weakPassword.action')}
+          </Link>
+        </Card>
+      )}
 
-      {/* Metrics */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          icon={<BookOpen />}
-          tone="coral"
-          label={t('stats.tutorials')}
-          value={
-            <>
-              {data.tutorials_completed}{' '}
-              <span className="text-base font-medium text-ink-faint">/ {data.total_tutorials}</span>
-            </>
-          }
+      {/* Not in a project yet: say so, rather than "0 of 0 lessons". */}
+      {!user?.program_district_id && (
+        <Card className="flex items-start gap-3 p-4">
+          <MapPinOff className="mt-0.5 size-5 shrink-0 text-ink-muted" />
+          <div>
+            <h4 className="font-display font-bold text-ink">{t('noProject.title')}</h4>
+            <p className="text-sm text-ink-muted">{t('noProject.body')}</p>
+          </div>
+        </Card>
+      )}
+
+      {/* Training at a glance: four circles, two by two on a phone. */}
+      {data.total_tutorials + data.total_tests > 0 && (
+        <TrainingRings
+          tutorials={data.stages.flatMap(s => s.tutorials)}
+          testsPassed={data.tests_passed}
+          totalTests={data.total_tests}
         />
-        <StatCard
-          icon={<Award />}
-          tone="amber"
-          label={t('stats.assessments')}
-          value={
-            <>
-              {data.tests_passed} <span className="text-base font-medium text-ink-faint">/ {data.total_tests}</span>
-            </>
-          }
-        />
-        <StatCard
-          icon={<Trophy />}
-          tone="sage"
-          label={t('stats.achievements')}
-          value={
-            <>
-              {data.achievements.length} <span className="text-base font-medium text-ink-faint">/ 3</span>
-            </>
-          }
-        />
-      </div>
+      )}
+
+      {/* My mothers and babies: adoptions, forms, what is due next. */}
+      {work?.available && <MyWorkCard work={work} />}
+      {work?.available && work.cumulative && <MyProgressChart series={work.cumulative} />}
+      {user?.is_batch_monitor && <MyTeamCard />}
+
+      <SupportTeamCard />
 
       {/* Main grid */}
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">

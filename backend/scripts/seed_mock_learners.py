@@ -440,7 +440,7 @@ def seed_learners_for_district(db: Session, district_slug: str, count: int = 300
                 category = "Staff Nurse"
 
         phone_num = f"98{random.randint(10000000, 99999999)}"
-        p_lookup = phone_index(phone_num, "users.phone")
+        p_lookup = phone_index(phone_num, "user.phone")
 
         years_service = round(random.uniform(2.0, 18.0), 1)
         years_desig = round(min(years_service, random.uniform(1.0, years_service)), 1)

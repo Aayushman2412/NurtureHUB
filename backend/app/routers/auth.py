@@ -16,6 +16,8 @@ from app.config import settings
 from app.rate_limit import limiter
 from app.dependencies import get_current_user, oauth2_scheme
 from app.security import audit, lockout, mfa, passwords, sessions
+from app import identity
+from app.messaging import whatsapp
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -56,6 +58,19 @@ def maybe_upgrade_hash(db: Session, user_id, stored_hash: str, plaintext: str) -
         return True
     except Exception:  # noqa: BLE001 — never fail a valid sign-in over this
         return False
+
+
+def _note_weakness(db: Session, user_id, plaintext: str, email: Optional[str]) -> None:
+    """Re-judge an existing password as it is used — accounts made before the
+    learners' simpler rule (review of 17 Oct 2026) get the "choose a harder
+    password" nudge too. Best-effort, like the rehash beside it."""
+    if not user_id or not plaintext:
+        return
+    try:
+        db.query(User).filter(User.id == user_id).update(
+            {"password_weak": passwords.is_weak(plaintext, email=email)}, synchronize_session=False)
+    except Exception:  # noqa: BLE001 — never fail a valid sign-in over this
+        pass
 
 
 def _guard_lockout(db: Session, principal: str) -> None:
@@ -163,6 +178,7 @@ def register(request: Request, user_data: UserRegister, db: Session = Depends(ge
     new_user = User(
         email=norm_email,
         password_hash=get_password_hash(user_data.password),
+        password_weak=passwords.is_weak(user_data.password, email=norm_email, full_name=user_data.full_name),
         full_name=user_data.full_name,
         is_verified=False,
         otp_code=hash_otp(otp),
@@ -217,6 +233,13 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
     _guard_lockout(db, norm_email)
 
     user = db.query(User).filter(func.lower(User.email) == norm_email).first()
+    if user is None:
+        # A learner who signed up with a mobile number and later added — and
+        # verified — an email address can sign in with that address too.
+        user = (db.query(User)
+                .filter(func.lower(User.contact_email) == norm_email,
+                        User.contact_email_verified.is_(True), User.is_admin.is_(False))
+                .first())
 
     # Read everything needed off the row, then END THE TRANSACTION before
     # hashing.
@@ -306,6 +329,7 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
     # moment the plaintext is available, so it is the only moment a rehash is
     # possible — see app/auth.py:needs_rehash.
     upgraded = maybe_upgrade_hash(db, user_id, stored_hash, matched)
+    _note_weakness(db, user_id, matched, user_email)
 
     lockout.record_attempt(
         db, principal=norm_email, successful=True, surface="learner", request=request, commit=False
@@ -467,6 +491,7 @@ def reset_password(
 
     _consume_otp(user, data.code, db)
     user.password_hash = get_password_hash(submitted)
+    user.password_weak = passwords.is_weak(submitted, email=user.email, full_name=user.full_name)
     user.is_verified = True
     passwords.record_history(db, user.email, user.password_hash)
 
@@ -534,6 +559,8 @@ def change_password(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
     current_user.password_hash = get_password_hash(payload.new_password)
+    current_user.password_weak = passwords.is_weak(
+        payload.new_password, email=current_user.email, full_name=current_user.full_name)
     passwords.record_history(db, current_user.email, current_user.password_hash)
 
     from app.security import context as security_context
@@ -594,6 +621,389 @@ def logout(
 def password_policy(is_admin: bool = False):
     """The rules, so the sign-up form can state them instead of guessing."""
     return passwords.describe_policy(is_admin=is_admin)
+
+
+# ── Mobile number first (review of 17 Oct 2026) ───────────────────────────
+#
+# Sir: "let's not take email as the first step to login — let's take WhatsApp
+# number based login as the first approach … email would be the last
+# information which you collect … email issue should not be a hindrance for a
+# person to register." A learner signs up with her name, mobile number and a
+# password; the number is confirmed by a WhatsApp code when WhatsApp is set
+# up, and later otherwise; an email address is optional and comes last.
+
+
+@router.get("/options")
+def sign_in_options():
+    """What the sign-in screens can offer on this deployment — so nothing is
+    shown that does not work (Google sign-in said "not configured" on the live
+    site on 17 Oct 2026)."""
+    return {
+        "google": bool((settings.GOOGLE_CLIENT_ID or "").strip()),
+        "whatsapp_otp": whatsapp.available(),
+        "whatsapp_configured": whatsapp.configured(),
+    }
+
+
+class MobileRegister(BaseModel):
+    full_name: str = Field(min_length=1, max_length=120)
+    phone: str = Field(min_length=10, max_length=20)
+    password: str = Field(min_length=1, max_length=256)
+
+
+class MobileLogin(BaseModel):
+    phone: str = Field(min_length=1, max_length=20)
+    password: str = Field(min_length=1, max_length=256)
+
+
+class MobileOnly(BaseModel):
+    phone: str = Field(min_length=1, max_length=20)
+
+
+class MobileReset(BaseModel):
+    phone: str = Field(min_length=1, max_length=20)
+    code: str = Field(min_length=4, max_length=8)
+    new_password: str = Field(min_length=1, max_length=256)
+
+
+class CodeOnly(BaseModel):
+    code: str = Field(min_length=4, max_length=8)
+
+
+class ContactEmailIn(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+
+
+def _mobile_or_400(raw: str) -> str:
+    mobile = identity.normalise_mobile(raw)
+    if mobile is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Enter a valid 10-digit mobile number.")
+    return mobile
+
+
+def _send_phone_code(db: Session, user: User, mobile: str) -> bool:
+    """Give the account a fresh code and send it by WhatsApp. False when it
+    could not be sent — the caller carries on without it."""
+    if not whatsapp.available():
+        return False
+    from app.utils import generate_otp
+
+    code = generate_otp()
+    user.otp_code = hash_otp(code)
+    user.otp_expires_at = _otp_expiry()
+    user.otp_attempts = 0
+    try:
+        whatsapp.send_otp(mobile, code)
+    except whatsapp.WhatsAppDeliveryError:
+        user.otp_code = None
+        user.otp_expires_at = None
+        return False
+    return True
+
+
+def _token_body(user: User, token: str, otp_channel: Optional[str] = None) -> dict:
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "is_verified": bool(user.is_verified),
+        "is_profile_complete": bool(user.role is not None or user.is_admin),
+        "is_admin": False,
+        "otp_channel": otp_channel,
+        "principal": user.email,
+    }
+
+
+@router.post("/register-mobile", response_model=Token)
+@limiter.limit(lambda: settings.RATE_LIMIT_REGISTER)
+def register_mobile(request: Request, data: MobileRegister, db: Session = Depends(get_db)):
+    mobile = _mobile_or_400(data.phone)
+    full_name = " ".join(data.full_name.split())
+    if not full_name:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Enter your full name.")
+    if identity.users_with_mobile(db, mobile, limit=1):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=(
+            "This mobile number is already registered. Sign in with it, "
+            "or use “Forgot password”."))
+    try:
+        passwords.validate(data.password, full_name=full_name)
+    except passwords.PasswordPolicyError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    user = User(
+        email=identity.placeholder_email(),
+        phone=mobile,
+        full_name=full_name,
+        password_hash=get_password_hash(data.password),
+        password_weak=passwords.is_weak(data.password, full_name=full_name),
+        is_verified=False,
+        phone_verified=False,
+        otp_attempts=0,
+        avatar_initials="".join(part[0].upper() for part in full_name.split()[:2]),
+    )
+    user.sync_lookups()
+    db.add(user)
+    db.flush()
+
+    sent = _send_phone_code(db, user, mobile)
+    if not sent:
+        # No way to send a code (WhatsApp not set up, or it refused): the
+        # number is confirmed later, and registration is not held up by it.
+        user.is_verified = True
+    passwords.record_history(db, user.email, user.password_hash)
+    token = _issue(db, user, request)
+    audit.record_sync(
+        audit.Action.OTP_SENT if sent else "auth.register.mobile",
+        db=db,
+        resource_type="account",
+        resource_id=user.email,
+        is_phi=False,
+        actor_override={"actor_type": "learner", "actor_label": user.email, "actor_id": user.id},
+        detail={"principal": user.email, "stage": "registration", "method": "mobile",
+                "channel": "whatsapp" if sent else "none"},
+    )
+    db.commit()
+    db.refresh(user)
+    return _token_body(user, token, "whatsapp" if sent else None)
+
+
+@router.post("/verify-phone", response_model=Token)
+@limiter.limit(lambda: settings.RATE_LIMIT_OTP)
+def verify_phone(request: Request, data: CodeOnly, current_user: User = Depends(get_current_user),
+                 token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """Confirm the account's mobile number with the WhatsApp code."""
+    _consume_otp(current_user, data.code.strip(), db)
+    current_user.phone_verified = True
+    current_user.is_verified = True
+    audit.record_sync(
+        audit.Action.OTP_VERIFIED,
+        db=db,
+        resource_type="account",
+        resource_id=current_user.email,
+        is_phi=False,
+        detail={"principal": current_user.email, "method": "mobile"},
+    )
+    db.commit()
+    from app.dependencies import invalidate_user_cache
+
+    invalidate_user_cache(current_user.email)
+    return _token_body(current_user, token)
+
+
+@router.post("/resend-phone-code")
+@limiter.limit(lambda: settings.RATE_LIMIT_OTP)
+def resend_phone_code(request: Request, current_user: User = Depends(get_current_user),
+                      db: Session = Depends(get_db)):
+    mobile = identity.normalise_mobile(current_user.phone)
+    if mobile is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Add your mobile number to your profile first.")
+    if _recently_sent(current_user):
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                            detail="A code was just sent. Please wait a minute before asking again.")
+    if not _send_phone_code(db, current_user, mobile):
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="WhatsApp codes cannot be sent right now. Please try again later.")
+    db.commit()
+    return {"message": "A new code has been sent on WhatsApp.", "channel": "whatsapp"}
+
+
+@router.post("/login-mobile", response_model=Token)
+@limiter.limit(lambda: settings.RATE_LIMIT_LOGIN)
+def login_mobile(request: Request, credentials: MobileLogin, db: Session = Depends(get_db)):
+    mobile = _mobile_or_400(credentials.phone)
+    # Accounts holding this number, through the blind index (usually one; a
+    # shared facility phone can give a few — the password tells them apart).
+    candidates = [(u.id, u.email, u.password_hash, bool(u.is_verified), u.role)
+                  for u in identity.users_with_mobile(db, mobile)]
+    # The lockout counts per account when the number names one; otherwise
+    # per number — keyed by its blind index, never the number itself.
+    principal = candidates[0][1] if len(candidates) == 1 else f"mobile:{identity.lookup_token(mobile)}"
+    _guard_lockout(db, principal)
+    db.commit()   # no connection held across bcrypt — see login()
+
+    hit = None
+    for uid, email, stored_hash, verified, role in candidates:
+        matched = match_password(credentials.password, stored_hash) if stored_hash else None
+        if matched:
+            hit = (uid, email, stored_hash, verified, role, matched)
+            break
+    if hit is None:
+        lockout.record_attempt(
+            db, principal=principal, successful=False, surface="learner",
+            reason="no_such_user" if not candidates else "bad_password", request=request,
+        )
+        audit.record(
+            audit.Action.LOGIN_FAILURE,
+            resource_type="account",
+            resource_id=principal,
+            outcome="denied",
+            is_phi=False,
+            record_count=0,
+            detail={"principal": principal, "surface": "learner", "method": "mobile"},
+        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Incorrect mobile number or password",
+                            headers={"WWW-Authenticate": "Bearer"})
+
+    uid, email, stored_hash, verified, role, matched = hit
+    upgraded = maybe_upgrade_hash(db, uid, stored_hash, matched)
+    _note_weakness(db, uid, matched, email)
+    lockout.record_attempt(db, principal=email, successful=True, surface="learner",
+                           request=request, commit=False)
+    access_token, _session = sessions.issue(db, principal=email, is_admin=False, user_id=uid,
+                                            request=request, commit=False)
+    audit.record_sync(
+        audit.Action.LOGIN_SUCCESS,
+        db=db,
+        resource_type="account",
+        resource_id=email,
+        is_phi=False,
+        actor_override={"actor_type": "learner", "actor_label": email, "actor_id": uid},
+        detail={"principal": email, "surface": "learner", "method": "mobile", "verified": verified,
+                "password_hash_upgraded": upgraded},
+    )
+    db.commit()
+    return {
+        "access_token": access_token, "token_type": "bearer", "is_verified": verified,
+        "is_profile_complete": role is not None, "is_admin": False, "principal": email,
+    }
+
+
+@router.post("/forgot-password-mobile")
+@limiter.limit(lambda: settings.RATE_LIMIT_REGISTER)
+def forgot_password_mobile(request: Request, data: MobileOnly, db: Session = Depends(get_db)):
+    """A reset code by WhatsApp. The answer is the same whether or not the
+    number is registered."""
+    mobile = _mobile_or_400(data.phone)
+    if not whatsapp.available():
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=(
+            "Password reset by WhatsApp is not switched on yet. Reset it with your email "
+            "address if you added one, or ask your trainer or batch monitor for help."))
+    generic = {"message": "If the number is registered, a code has been sent on WhatsApp."}
+    users = identity.users_with_mobile(db, mobile, limit=1)
+    if not users or _recently_sent(users[0]):
+        return generic
+    if _send_phone_code(db, users[0], mobile):
+        db.commit()
+    else:
+        db.rollback()
+    return generic
+
+
+@router.post("/reset-password-mobile")
+@limiter.limit(lambda: settings.RATE_LIMIT_OTP)
+def reset_password_mobile(request: Request, data: MobileReset, db: Session = Depends(get_db)):
+    mobile = _mobile_or_400(data.phone)
+    users = identity.users_with_mobile(db, mobile, limit=1)
+    if not users:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="No active verification code. Please request a new one.")
+    user = users[0]
+    try:
+        passwords.enforce(db, data.new_password, principal=user.email, full_name=user.full_name)
+    except passwords.PasswordPolicyError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    _consume_otp(user, data.code.strip(), db)
+    user.password_hash = get_password_hash(data.new_password)
+    user.password_weak = passwords.is_weak(data.new_password, email=user.email, full_name=user.full_name)
+    user.phone_verified = True
+    user.is_verified = True
+    passwords.record_history(db, user.email, user.password_hash)
+    revoked = sessions.revoke_all_for(db, user.email, reason="password_reset", by=user.email, commit=False)
+    lockout.clear(db, user.email, by="password_reset", commit=False)
+    audit.record_sync(
+        audit.Action.PASSWORD_RESET,
+        db=db,
+        resource_type="account",
+        resource_id=user.email,
+        is_phi=False,
+        actor_override={"actor_type": "learner", "actor_label": user.email, "actor_id": user.id},
+        detail={"principal": user.email, "method": "mobile", "sessions_revoked": revoked},
+    )
+    db.commit()
+    return {"message": "Password reset. You can now sign in with your new password.",
+            "sessions_ended": revoked}
+
+
+# ── Email, last and optional ──────────────────────────────────────────────
+
+
+@router.post("/contact-email")
+@limiter.limit(lambda: settings.RATE_LIMIT_REGISTER)
+def add_contact_email(request: Request, data: ContactEmailIn,
+                      current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Add (or change) the email address of an account made with a mobile
+    number, and send a code to confirm it. Confirming can wait."""
+    from pydantic import EmailStr, TypeAdapter, ValidationError
+
+    try:
+        email = TypeAdapter(EmailStr).validate_python(data.email.strip()).lower()
+    except ValidationError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Enter a valid email address.")
+    if not identity.is_placeholder(current_user.email):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="This account already signs in with an email address.")
+    clash = (db.query(User.id)
+             .filter(User.id != current_user.id)
+             .filter((func.lower(User.email) == email) | (func.lower(User.contact_email) == email))
+             .first())
+    if clash:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Another account already uses that email address.")
+    if _recently_sent(current_user) and (current_user.contact_email or "").lower() == email:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                            detail="A code was just sent. Please wait a minute before asking again.")
+    from app.utils import generate_otp
+
+    code = generate_otp()
+    current_user.contact_email = email
+    current_user.contact_email_verified = False
+    current_user.otp_code = hash_otp(code)
+    current_user.otp_expires_at = _otp_expiry()
+    current_user.otp_attempts = 0
+    try:
+        send_otp_email(email, code)
+        sent = True
+    except EmailDeliveryError:
+        # Saved anyway — the learner can confirm it later from her profile.
+        current_user.otp_code = None
+        current_user.otp_expires_at = None
+        sent = False
+    audit.record_sync(
+        audit.Action.OTP_SENT if sent else "auth.contact_email.saved",
+        db=db,
+        resource_type="account",
+        resource_id=current_user.email,
+        is_phi=False,
+        detail={"principal": current_user.email, "stage": "contact_email", "sent": sent},
+    )
+    db.commit()
+    return {"saved": True, "code_sent": sent}
+
+
+@router.post("/contact-email/verify")
+@limiter.limit(lambda: settings.RATE_LIMIT_OTP)
+def verify_contact_email(request: Request, data: CodeOnly,
+                         current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not current_user.contact_email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Add an email address first.")
+    _consume_otp(current_user, data.code.strip(), db)
+    current_user.contact_email_verified = True
+    audit.record_sync(
+        audit.Action.OTP_VERIFIED,
+        db=db,
+        resource_type="account",
+        resource_id=current_user.email,
+        is_phi=False,
+        detail={"principal": current_user.email, "stage": "contact_email"},
+    )
+    db.commit()
+    from app.dependencies import invalidate_user_cache
+
+    invalidate_user_cache(current_user.email)
+    return {"verified": True}
 
 
 @router.post("/google", response_model=Token)

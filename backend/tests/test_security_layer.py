@@ -429,7 +429,9 @@ class TestPasswordPolicy:
             passwords.validate(bad)
 
     def test_rejects_too_short(self):
-        with pytest.raises(passwords.PasswordPolicyError, match="at least 10"):
+        # Learners: 8 since the review of 17 Oct 2026 (minimal rules, paired
+        # with lockout and rate limiting); administrators: 12.
+        with pytest.raises(passwords.PasswordPolicyError, match="at least 8"):
             passwords.validate("Ab3$xyz")
 
     def test_admins_need_more_length(self):
@@ -439,7 +441,10 @@ class TestPasswordPolicy:
 
     def test_rejects_password_built_from_the_account(self):
         with pytest.raises(passwords.PasswordPolicyError, match="name or email"):
-            passwords.validate("Sunita#Kamble99", email="sunita@example.org", full_name="Sunita Kamble")
+            passwords.validate("Sunita#Kamble99", is_admin=True, email="sunita@example.org", full_name="Sunita Kamble")
+        # A learner may keep it — and is asked to choose a harder one.
+        passwords.validate("Sunita#Kamble99", email="sunita@example.org", full_name="Sunita Kamble")
+        assert passwords.is_weak("Sunita#Kamble99", email="sunita@example.org", full_name="Sunita Kamble")
 
     def test_long_passphrase_needs_no_symbols(self):
         """Length carries the strength — forcing symbol classes mostly produces
@@ -451,7 +456,8 @@ class TestPasswordPolicy:
 
     def test_rejects_keyboard_runs(self):
         with pytest.raises(passwords.PasswordPolicyError, match="keyboard sequence"):
-            passwords.validate("Asdfghjkl#9")
+            passwords.validate("Asdfghjkl#9xy", is_admin=True)
+        assert passwords.is_weak("Asdfghjkl#9")            # a learner is nudged, not refused
 
 
 # ═══════════════════════════════════════════════════════════════════════════

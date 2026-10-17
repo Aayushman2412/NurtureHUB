@@ -8,7 +8,7 @@ export interface SelectFieldOption {
 }
 
 export interface SelectFieldProps {
-  label: string;
+  label: React.ReactNode;
   value: number | string;
   onChange: (value: string) => void;
   options: SelectFieldOption[];

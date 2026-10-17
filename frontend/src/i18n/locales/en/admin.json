@@ -17,7 +17,7 @@
       "testManager": "Test Manager",
       "liveMonitor": "Live Monitor",
       "results": "Results",
-      "growthMonitor": "Growth Monitor",
+      "growthMonitor": "Learner Activities",
       "masd": "MASD Dashboard",
       "databaseSection": "Database",
       "crosstabsPipeline": "Crosstabs Pipeline",
@@ -172,7 +172,25 @@
     "errNameRequired": "Name is required.",
     "errCreate": "Could not create the project.",
     "errUpdate": "Could not update the project.",
-    "errDelete": "Could not delete the project."
+    "errDelete": "Could not delete the project.",
+    "registration": {
+      "title": "Learner registration",
+      "open": "Open",
+      "closed": "Closed",
+      "manage": "Manage",
+      "hide": "Hide",
+      "help": "Choose the state and district this project's learners register in, then open registration. While it is open, the registration form offers only the open projects' places, and this project's link fills them in and locks them. Learners who finish registering here are put in this project.",
+      "state": "Select state",
+      "district": "Select district",
+      "openIt": "Open registration",
+      "close": "Close registration",
+      "savePlace": "Save place",
+      "link": "Sign-up link:",
+      "copy": "Copy",
+      "copied": "Copied",
+      "linkClosedNote": "The link works once registration is open.",
+      "saveFailed": "Could not save. Please try again."
+    }
   },
   "learners": {
     "title": "Learners",

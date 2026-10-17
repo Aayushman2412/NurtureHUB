@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import client from '../api/client';
 import {
-  FALLBACK_POLICY, checkPassword, meetsPolicy,
+  FALLBACK_POLICY, checkPassword, isEasyToGuess, meetsPolicy,
   type CheckContext, type PasswordPolicy, type RuleResult,
 } from '../lib/passwordRules';
 
@@ -23,7 +23,9 @@ function loadPolicy(isAdmin: boolean): Promise<PasswordPolicy> {
       .then(r => ({ ...FALLBACK_POLICY, ...r.data }) as PasswordPolicy)
       .catch(() => {
         delete cache[key];          // try again next time the form opens
-        return { ...FALLBACK_POLICY, min_length: isAdmin ? 12 : FALLBACK_POLICY.min_length };
+        return isAdmin
+          ? { ...FALLBACK_POLICY, style: 'strict', min_length: 12 }
+          : FALLBACK_POLICY;
       });
   }
   return cache[key]!;
@@ -33,6 +35,8 @@ export interface PasswordCheck {
   policy: PasswordPolicy;
   results: RuleResult[];
   ok: boolean;
+  /** Learners: allowed, but easy to guess — say so, never refuse. */
+  easy: boolean;
 }
 
 export function usePasswordCheck(password: string, ctx: CheckContext & { isAdmin?: boolean } = {}): PasswordCheck {
@@ -49,5 +53,9 @@ export function usePasswordCheck(password: string, ctx: CheckContext & { isAdmin
     () => checkPassword(password, policy, { email: ctx.email, fullName: ctx.fullName, includeHistory: ctx.includeHistory }),
     [password, policy, ctx.email, ctx.fullName, ctx.includeHistory],
   );
-  return { policy, results, ok: meetsPolicy(results) };
+  const easy = useMemo(
+    () => policy.style === 'simple' && isEasyToGuess(password, policy, { email: ctx.email, fullName: ctx.fullName }),
+    [password, policy, ctx.email, ctx.fullName],
+  );
+  return { policy, results, ok: meetsPolicy(results), easy };
 }

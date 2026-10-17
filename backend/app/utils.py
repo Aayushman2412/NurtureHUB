@@ -1,6 +1,5 @@
 import base64
 import logging
-import random
 import string
 import smtplib
 import ssl
@@ -18,8 +17,10 @@ class EmailDeliveryError(Exception):
 
 
 def generate_otp() -> str:
-    """Generate a random 6-digit numeric OTP."""
-    return "".join(random.choices(string.digits, k=6))
+    """Generate a random 6-digit numeric OTP (from the OS's CSPRNG — a code
+    that guards an account must not come from a predictable generator)."""
+    import secrets
+    return "".join(secrets.choice(string.digits) for _ in range(6))
 
 
 def _mask_email(email: str) -> str:

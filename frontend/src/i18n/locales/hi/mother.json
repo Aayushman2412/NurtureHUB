@@ -63,7 +63,8 @@
     "growthChart": "चार्ट",
     "growthChartTitle": "इस बच्चे के WHO वृद्धि चार्ट देखें",
     "ancVisits": "ANC भेंटें",
-    "proteinIntake": "प्रोटीन सेवन"
+    "proteinIntake": "प्रोटीन सेवन",
+    "openCasePage": "पूरा केस पेज खोलें →"
   },
   "form": {
     "title": "एक माता दर्ज करें",

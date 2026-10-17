@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { User, Phone } from 'lucide-react';
 import { DateInput, Field, Input, Radio, Select } from '../../components/ui';
-import { genderOptions, maritalOptions, ageFromDob, maxDobForAge } from '../../lib/learnerFields';
+import { genderOptions, maritalOptions, ageFromDob, maxDobForAge, NEVER_MARRIED } from '../../lib/learnerFields';
 import type { FieldErrors } from '../../lib/validation';
 
 export interface PersonalInfoValues {
@@ -105,9 +105,14 @@ const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
       </Field>
     </div>
 
+    {/* Why these are asked (review of 17 Oct 2026). */}
+    <p className="mt-2 rounded-lg bg-surface-sunken/60 px-3 py-2 text-sm leading-relaxed text-ink-muted">{t('registration.personalNote')}</p>
     <Field label={t('fields.maritalStatus')} htmlFor="marital-select" error={errors.maritalStatus}>
       <Select id="marital-select" value={maritalStatus} error={!!errors.maritalStatus}
-        onChange={e => onChange('maritalStatus', e.target.value)}>
+        onChange={e => {
+          onChange('maritalStatus', e.target.value);
+          if (e.target.value === NEVER_MARRIED) { onChange('hasChildren', 'No'); onChange('numberChildren', ''); }
+        }}>
         <option value="">{t('placeholders.selectMarital')}</option>
         {maritalOptions(t).map(m => (
           <option key={m.value} value={m.value}>{m.label}</option>
@@ -115,6 +120,7 @@ const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
       </Select>
     </Field>
 
+    {maritalStatus !== NEVER_MARRIED && (
     <Field label={t('fields.hasChildren')} error={errors.hasChildren}>
       <div className="mt-1 flex gap-4">
         {[['Yes', t('options.yes')], ['No', t('options.no')]].map(([val, lbl]) => (
@@ -129,8 +135,9 @@ const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
         ))}
       </div>
     </Field>
+    )}
 
-    {hasChildren === 'Yes' && (
+    {maritalStatus !== NEVER_MARRIED && hasChildren === 'Yes' && (
       <Field label={t('fields.numberChildren')} htmlFor="number-children-input" error={errors.numberChildren}>
         <Input
           id="number-children-input"

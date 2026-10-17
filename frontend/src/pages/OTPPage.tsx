@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import AuthLayout from '../components/auth/AuthLayout';
@@ -13,11 +13,15 @@ const OTPPage: React.FC = () => {
   const [resending, setResending] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const { verifyOtp, forgotPassword, logout } = useAuth();
+  const { verifyOtp, forgotPassword, logout, verifyPhone, resendPhoneCode, user } = useAuth();
   const { showToast, updateToast } = useToast();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  // Mobile sign-up (review of 17 Oct 2026): the code came on WhatsApp.
+  const phoneMode = params.get('via') === 'whatsapp' || Boolean(user?.email_is_placeholder);
 
   useEffect(() => {
+    if (phoneMode) return;
     const savedEmail = localStorage.getItem('nh_user_email') || '';
     if (!savedEmail) {
       showToast(t('otp.toast.noSession'), 'warning');
@@ -25,14 +29,14 @@ const OTPPage: React.FC = () => {
       return;
     }
     setEmail(savedEmail);
-  }, [navigate]);
+  }, [navigate, phoneMode]);
 
   const handleVerify = async (otpCode: string) => {
     setLoading(true);
     const toastId = showToast(t('otp.toast.verifying'), 'loading');
 
     try {
-      const response = await verifyOtp(email, otpCode);
+      const response = phoneMode ? await verifyPhone(otpCode) : await verifyOtp(email, otpCode);
       updateToast(toastId, t('otp.toast.verified'), 'success');
 
       if (response.is_profile_complete) {
@@ -52,10 +56,12 @@ const OTPPage: React.FC = () => {
     setResending(true);
     const toastId = showToast(t('otp.toast.requestingNew'), 'loading');
     try {
-      await forgotPassword(email);
-      updateToast(toastId, t('otp.toast.newCodeSent'), 'success');
-    } catch {
-      updateToast(toastId, t('otp.toast.resendFailed'), 'error');
+      if (phoneMode) await resendPhoneCode();
+      else await forgotPassword(email);
+      updateToast(toastId, t(phoneMode ? 'otp.toast.newCodeWhatsapp' : 'otp.toast.newCodeSent'), 'success');
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      updateToast(toastId, typeof detail === 'string' ? detail : t('otp.toast.resendFailed'), 'error');
     } finally {
       setResending(false);
     }
@@ -64,7 +70,9 @@ const OTPPage: React.FC = () => {
   return (
     <AuthLayout
       title={t('otp.title')}
-      subtitle={t('otp.subtitle', { email: email || t('otp.subtitleFallback') })}
+      subtitle={phoneMode
+        ? t('otp.subtitleWhatsapp', { last4: (user?.phone ?? '').slice(-4) || '••••' })
+        : t('otp.subtitle', { email: email || t('otp.subtitleFallback') })}
       onSignOut={() => {
         logout();
         // @ts-ignore
@@ -80,7 +88,7 @@ const OTPPage: React.FC = () => {
 
         <div className="mt-3 text-center">
           <p className="text-sm text-ink-muted">
-            {t('otp.notReceived')}{' '}
+            {t(phoneMode ? 'otp.notReceivedWhatsapp' : 'otp.notReceived')}{' '}
             <button
               onClick={handleResend}
               disabled={resending || loading}
@@ -91,7 +99,7 @@ const OTPPage: React.FC = () => {
             </button>
           </p>
           <p className="mt-1 text-xs text-ink-faint">
-            {t('otp.hint')}
+            {t(phoneMode ? 'otp.hintWhatsapp' : 'otp.hint')}
           </p>
         </div>
 

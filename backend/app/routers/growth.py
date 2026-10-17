@@ -538,7 +538,8 @@ def z_category(metric: str, z: Optional[float]) -> Optional[str]:
     return names[3] if z < -3 else names[2] if z < -2 else names[1] if z < -1 else names[0]
 
 
-def _summary_rows(cases: List[Dict[str, Any]], context: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+def _summary_rows(cases: List[Dict[str, Any]], context: Optional[Dict[str, Any]] = None,
+                  allow_mock: bool = True) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     today = date.today()
     context = context or {}
@@ -564,7 +565,7 @@ def _summary_rows(cases: List[Dict[str, Any]], context: Optional[Dict[str, Any]]
         age_at_adoption = (adopted - dob).days if (dob and adopted) else None
         duration_days = (today - adopted).days if adopted else None
         timing_is_mock = False
-        if gsm.MOCK_ENABLED and (age_at_adoption is None or duration_days is None):
+        if allow_mock and gsm.MOCK_ENABLED and (age_at_adoption is None or duration_days is None):
             m_age, m_duration = gsm.mock_adoption_timing(child_id)  # MOCK: adoption timing
             age_at_adoption = m_age if age_at_adoption is None else age_at_adoption
             duration_days = m_duration if duration_days is None else duration_days
@@ -580,7 +581,7 @@ def _summary_rows(cases: List[Dict[str, Any]], context: Optional[Dict[str, Any]]
         adoption_type = adoption["type"]
         expected = adoption["expected"] or {"cg": None, "bf": None, "cf": None, "anc": None, "protein": None}
         expected_is_mock = False
-        if adoption_type is None and gsm.MOCK_ENABLED:
+        if adoption_type is None and allow_mock and gsm.MOCK_ENABLED:
             # No dates to type the case by: the demo layer fills in (removable).
             mock_type = gsm.adoption_type(child_id, age_at_adoption)   # MOCK: adoption type
             expected = {**gsm.expected_counts(child_id, mock_type, duration_days),  # MOCK: expected rules
@@ -897,6 +898,74 @@ def my_growth_cases(
     return {"cases": cases}
 
 
+@router.get("/my-cases/{child_id}/detail")
+def my_case_detail(
+    child_id: int,
+    current_user: models.User = Depends(get_verified_user),
+    db: Session = Depends(get_db),
+):
+    """The learner's own case page — the same page the supervisors see, for a
+    child the learner registered (review of 17 Oct 2026). Anyone else's case
+    answers 404, and the refusal is recorded with the true reason."""
+    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+    mother = db.query(models.Mother).filter(models.Mother.id == child.mother_id).first() if child else None
+    if child is None or mother is None or mother.registered_by_user_id != current_user.id:
+        phi.log_denied(
+            resource_type="growth_case", resource_id=child_id,
+            subject_type=phi.CHILD, subject_id=child_id,
+            reason="no_such_record" if child is None else "not_owner",
+        )
+        raise HTTPException(status_code=404, detail="Child not found")
+    phi.log_read(
+        resource_type="growth_case",
+        resource_id=child_id,
+        subject_type=phi.CHILD,
+        subject_id=child_id,
+        fields=["child_name", "dob", "mother_name", "mobile", "measurements", "assessments"],
+        detail={"mother_id": child.mother_id, "scope": "own_case_page"},
+    )
+    detail = _case_detail(db, child, mother, current_user, department=current_user.department)
+    # The summary block (adoption type, expected vs done, outcomes) for this
+    # one case, from the MASD rules — never the demo layer.
+    cases = _own_cases(db, current_user, child_id=child_id)
+    rows = _summary_rows(cases, _rules_context(db, cases), allow_mock=False)
+    detail["summary"] = rows[0] if rows else None
+    detail["who_case"] = cases[0] if cases else None
+    return detail
+
+
+def _own_cases(db: Session, user: models.User, child_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    """The learner's own cases, with their own department — never the demo
+    layer's fill-in (they see their own row)."""
+    cases = _build_cases(db, user_id=user.id, child_id=child_id)
+    for case in cases:
+        if case.get("learner"):
+            case["learner"]["department"] = user.department
+    return cases
+
+
+@router.get("/my-summary")
+def my_growth_summary(
+    current_user: models.User = Depends(get_verified_user),
+    db: Session = Depends(get_db),
+):
+    """All the learner's own cases in one table (review of 17 Oct 2026) — the
+    supervisors' Learner Activities summary, one row per baby, real values
+    only: forms done against due by the MASD rules, and the babies' z-scores
+    at the first, adoption and latest visits."""
+    cases = _own_cases(db, current_user)
+    rows = _summary_rows(cases, _rules_context(db, cases), allow_mock=False)
+    phi.log_list(
+        resource_type="growth_summary",
+        count=len(rows),
+        subject_type=phi.CHILD,
+        subject_ids=[c["child"]["id"] for c in cases if c.get("child")],
+        detail={"scope": "own_cases", "fields": ["mother_name", "mother_uid", "child_uid", "child_name",
+                                                 "case_village", "case_block", "case_district"]},
+    )
+    return {"rows": rows, "mock": False}
+
+
 def _parse_learner_ids(raw: str) -> Optional[List[int]]:
     """`learner_ids=3,7,12` -> [3, 7, 12]. Blank/garbage entries are dropped and
     an empty result becomes None, so a stray comma cannot silently filter the
@@ -1088,38 +1157,12 @@ def admin_growth_summary_export(
     )
 
 
-@admin_router.get("/cases/{child_id}/detail")
-def admin_growth_case_detail(
-    child_id: int,
-    admin: dict = Depends(get_current_admin),
-    db: Session = Depends(get_db),
-):
-    """Full drill-down for one learner-mother-child case: identity plus EVERY
-    submitted form — child-level responses grouped by visit date, and mother-level
-    forms (antenatal, protein intake) — each with its complete answer detail."""
-    child = db.query(models.Child).filter(models.Child.id == child_id).first()
-    if not child:
-        phi.log_denied(
-            resource_type="growth_case", resource_id=child_id,
-            subject_type=phi.CHILD, subject_id=child_id, reason="no_such_record",
-        )
-        raise HTTPException(status_code=404, detail="Child not found")
-    mother = db.query(models.Mother).filter(models.Mother.id == child.mother_id).first()
-    learner = None
-    if mother and mother.registered_by_user_id:
-        learner = db.query(models.User).filter(models.User.id == mother.registered_by_user_id).first()
-
-    # The drill-down is the most identifying view in the platform: one named
-    # child, her mother, their contact details and every assessment ever taken.
-    phi.log_read(
-        resource_type="growth_case",
-        resource_id=child_id,
-        subject_type=phi.CHILD,
-        subject_id=child_id,
-        fields=["child_name", "dob", "mother_name", "mobile", "measurements", "assessments"],
-        detail={"mother_id": child.mother_id, "scope": "supervisory_drilldown"},
-    )
-
+def _case_detail(db: Session, child: models.Child, mother: Optional[models.Mother],
+                 learner: Optional[models.User], *, department: Optional[str]) -> Dict[str, Any]:
+    """Everything on one case's page: identity, every submitted form (child
+    visits by date, mother-level forms) and the per-visit z-scores. Shared by
+    the supervisors' drill-down and the learner's own case page."""
+    child_id = child.id
     child_responses = (
         db.query(models.FormResponse)
         .filter(models.FormResponse.child_id == child_id, models.FormResponse.status == "submitted")
@@ -1203,12 +1246,48 @@ def admin_growth_case_detail(
             "id": learner.id,
             "name": learner.full_name or learner.email,
             "role": learner.role,
-            "department": gsm.resolved_department(learner.id, learner.department),  # MOCK: department fill
+            "department": department,
             "email": learner.email,
         } if learner else None,
         "visits": visits,
         "mother_forms": mother_forms,
     }
+
+
+@admin_router.get("/cases/{child_id}/detail")
+def admin_growth_case_detail(
+    child_id: int,
+    admin: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Full drill-down for one learner-mother-child case: identity plus EVERY
+    submitted form — child-level responses grouped by visit date, and mother-level
+    forms (antenatal, protein intake) — each with its complete answer detail."""
+    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+    if not child:
+        phi.log_denied(
+            resource_type="growth_case", resource_id=child_id,
+            subject_type=phi.CHILD, subject_id=child_id, reason="no_such_record",
+        )
+        raise HTTPException(status_code=404, detail="Child not found")
+    mother = db.query(models.Mother).filter(models.Mother.id == child.mother_id).first()
+    learner = None
+    if mother and mother.registered_by_user_id:
+        learner = db.query(models.User).filter(models.User.id == mother.registered_by_user_id).first()
+
+    # The drill-down is the most identifying view in the platform: one named
+    # child, her mother, their contact details and every assessment ever taken.
+    phi.log_read(
+        resource_type="growth_case",
+        resource_id=child_id,
+        subject_type=phi.CHILD,
+        subject_id=child_id,
+        fields=["child_name", "dob", "mother_name", "mobile", "measurements", "assessments"],
+        detail={"mother_id": child.mother_id, "scope": "supervisory_drilldown"},
+    )
+
+    return _case_detail(db, child, mother, learner,
+                        department=gsm.resolved_department(learner.id, learner.department) if learner else None)  # MOCK: department fill
 
 
 @admin_router.get("/responses/{response_id}")

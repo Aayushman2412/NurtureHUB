@@ -268,3 +268,18 @@ export interface GrowthCaseDetail {
 
 export const getGrowthCaseDetail = (childId: number): Promise<GrowthCaseDetail> =>
   client.get(`/api/admin/growth/cases/${childId}/detail`).then(r => r.data);
+
+/** The learner's own case page (review of 17 Oct 2026): the same drill-down
+ *  the supervisors see, plus this case's summary row and WHO-chart case. */
+export interface MyGrowthCaseDetail extends GrowthCaseDetail {
+  summary: GrowthSummaryRow | null;
+  who_case: GrowthCase | null;
+}
+
+export const getMyGrowthCaseDetail = (childId: number): Promise<MyGrowthCaseDetail> =>
+  client.get(`/api/growth/my-cases/${childId}/detail`).then(r => r.data);
+
+/** All the learner's own cases in one table — the supervisors' summary, one
+ *  row per baby, real values only (review of 17 Oct 2026). */
+export const getMyGrowthSummary = (): Promise<{ rows: GrowthSummaryRow[]; mock: boolean }> =>
+  client.get('/api/growth/my-summary').then(r => r.data);

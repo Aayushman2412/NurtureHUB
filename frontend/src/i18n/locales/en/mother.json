@@ -63,7 +63,8 @@
     "growthChart": "Chart",
     "growthChartTitle": "See this child's WHO growth charts",
     "ancVisits": "ANC Visits",
-    "proteinIntake": "Protein Intake"
+    "proteinIntake": "Protein Intake",
+    "openCasePage": "Open full case page →"
   },
   "form": {
     "title": "Register a Mother",

@@ -114,11 +114,15 @@ export const learnerSchema = z
 export type LearnerFormValues = z.input<typeof learnerSchema>;
 
 // Field keys per wizard step (for validating one step at a time).
+// The personal questions — marital status, children — come at the END of the
+// education & experience step, after the internet question (review of 17 Oct
+// 2026: "personal questions better to keep in the last").
 export const LR_STEP_FIELDS: readonly (readonly string[])[] = [
-  ['dob', 'age', 'gender', 'phone', 'alternatePhone', 'maritalStatus', 'hasChildren', 'numberChildren'],
+  ['dob', 'age', 'gender', 'phone', 'alternatePhone'],
   ['departmentId', 'departmentOther', 'designationId', 'designationOther', 'facilityTypeId', 'facilityTypeOther',
     'stateId', 'districtId', 'blockId', 'villageName', 'facilityId', 'facilityName', 'residenceDistance'],
-  ['qualificationId', 'qualificationOther', 'yearsService', 'yearsDesignation', 'yearsFacility', 'internetWorkplace'],
+  ['qualificationId', 'qualificationOther', 'yearsService', 'yearsDesignation', 'yearsFacility', 'internetWorkplace',
+    'maritalStatus', 'hasChildren', 'numberChildren'],
   ['trainings.nutrition_training', 'trainings.pregnancy_nutrition_training', 'trainings.breastfeeding_training',
     'trainings.complementary_feeding_training', 'trainings.growth_monitoring_training'],
 ];

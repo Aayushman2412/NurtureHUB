@@ -19,11 +19,13 @@ interface Props {
   results: RuleResult[];
   /** Show the passphrase tip (learner-facing screens). */
   showTip?: boolean;
+  /** Accepted but easy to guess (learners) — a gentle note, not a refusal. */
+  easy?: boolean;
   className?: string;
   id?: string;
 }
 
-const PasswordRules: React.FC<Props> = ({ password, policy, results, showTip = true, className, id }) => {
+const PasswordRules: React.FC<Props> = ({ password, policy, results, showTip = true, easy = false, className, id }) => {
   const { t } = useTranslation('auth');
   const kinds = characterKinds(password.normalize('NFKC'));
   const checkable = results.filter(r => r.id !== 'history');
@@ -39,7 +41,9 @@ const PasswordRules: React.FC<Props> = ({ password, policy, results, showTip = t
     repeat: policy.max_repeat + 1,
     distinct: policy.min_distinct_characters,
     n: policy.history_depth,
+    run: policy.number_run_length ?? 4,
   });
+  const simple = policy.style === 'simple';
 
   return (
     <div
@@ -53,7 +57,7 @@ const PasswordRules: React.FC<Props> = ({ password, policy, results, showTip = t
       <div className="mb-2.5 flex items-center justify-between gap-3">
         <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink">
           <ShieldCheck className={cn('size-4', allMet ? 'text-success-600' : 'text-primary-ink')} aria-hidden />
-          {allMet ? t('passwordRules.allMet') : t('passwordRules.title')}
+          {allMet ? t(simple ? 'passwordRules.accepted' : 'passwordRules.allMet') : t('passwordRules.title')}
         </span>
         <span className="text-xs tabular-nums text-ink-muted" aria-live="polite">
           {t('passwordRules.progress', { n: typed ? met : 0, total: checkable.length })}
@@ -121,7 +125,12 @@ const PasswordRules: React.FC<Props> = ({ password, policy, results, showTip = t
         ))}
       </ul>
 
-      {showTip && <p className="mt-3 text-xs leading-relaxed text-ink-muted">{t('passwordRules.tip')}</p>}
+      {allMet && easy && (
+        <p className="mt-3 rounded-lg bg-amber-50 px-2.5 py-2 text-xs leading-relaxed text-amber-800 dark:bg-amber-500/10 dark:text-amber-300" role="status">
+          {t('passwordRules.easy')}
+        </p>
+      )}
+      {showTip && <p className="mt-3 text-xs leading-relaxed text-ink-muted">{t(simple ? 'passwordRules.tipSimple' : 'passwordRules.tip')}</p>}
     </div>
   );
 };

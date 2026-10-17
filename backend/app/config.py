@@ -134,6 +134,17 @@ class Settings(BaseSettings):
     SMTP_FROM: str = Field(default="NurtureHUB <noreply@nurturehub.org>", validation_alias="SMTP_FROM")
     SMTP_TIMEOUT: int = Field(default=10, validation_alias="SMTP_TIMEOUT")  # seconds
 
+    # WhatsApp Cloud API — one-time codes for mobile sign-up / sign-in (review
+    # of 17 Oct 2026). Needs an approved AUTHENTICATION template whose body
+    # takes the code as {{1}} (and a copy-code button). Unset = mobile sign-up
+    # still works, and the number is confirmed once this is configured.
+    WHATSAPP_ACCESS_TOKEN: str = Field(default="", validation_alias="WHATSAPP_ACCESS_TOKEN")
+    WHATSAPP_PHONE_NUMBER_ID: str = Field(default="", validation_alias="WHATSAPP_PHONE_NUMBER_ID")
+    WHATSAPP_OTP_TEMPLATE: str = Field(default="", validation_alias="WHATSAPP_OTP_TEMPLATE")
+    WHATSAPP_TEMPLATE_LANG: str = Field(default="en", validation_alias="WHATSAPP_TEMPLATE_LANG")
+    WHATSAPP_API_VERSION: str = Field(default="v21.0", validation_alias="WHATSAPP_API_VERSION")
+    WHATSAPP_TIMEOUT: int = Field(default=10, validation_alias="WHATSAPP_TIMEOUT")  # seconds
+
     # OTP policy
     OTP_EXPIRE_MINUTES: int = Field(default=10, validation_alias="OTP_EXPIRE_MINUTES")
     OTP_MAX_ATTEMPTS: int = Field(default=5, validation_alias="OTP_MAX_ATTEMPTS")

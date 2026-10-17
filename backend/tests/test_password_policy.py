@@ -13,8 +13,10 @@ import pytest
 
 from app.security import passwords
 
-# (password, email, full name, accepted?) — also used by hand to check that the
-# browser's live checklist agrees with the server, case for case.
+# The ADMINISTRATORS' rule (learners have the minimal one since the review of
+# 17 Oct 2026 — tests/test_review_2026_10_17.py). (password, email, full
+# name, accepted?) — also used by hand to check that the browser's live
+# checklist agrees with the server, case for case.
 CASES = [
     ("Sunrise#2026", "", "", True),
     ("correct horse battery staple", "", "", True),      # passphrase: length instead of variety
@@ -35,10 +37,10 @@ CASES = [
 @pytest.mark.parametrize("password,email,name,ok", CASES, ids=[c[0] for c in CASES])
 def test_validate(password, email, name, ok):
     if ok:
-        passwords.validate(password, email=email or None, full_name=name or None)
+        passwords.validate(password, is_admin=True, email=email or None, full_name=name or None)
     else:
         with pytest.raises(passwords.PasswordPolicyError):
-            passwords.validate(password, email=email or None, full_name=name or None)
+            passwords.validate(password, is_admin=True, email=email or None, full_name=name or None)
 
 
 def test_description_uses_the_enforced_numbers():
@@ -48,12 +50,13 @@ def test_description_uses_the_enforced_numbers():
     assert admin["min_length"] == passwords.MIN_LENGTH_ADMIN
     assert learner["max_length"] == passwords.MAX_LENGTH
     assert learner["history_depth"] == passwords.PASSWORD_HISTORY_DEPTH
-    assert learner["min_character_kinds"] == passwords.MIN_CHARACTER_KINDS
-    assert learner["passphrase_length"] == passwords.PASSPHRASE_LENGTH
-    assert learner["min_distinct_characters"] == passwords.MIN_DISTINCT_CHARACTERS
-    assert learner["max_repeat"] == passwords.MAX_REPEAT
-    assert learner["keyboard_run_length"] == passwords.KEYBOARD_RUN_LENGTH
-    assert learner["personal_token_length"] == passwords.PERSONAL_TOKEN_LENGTH
+    assert admin["min_character_kinds"] == passwords.MIN_CHARACTER_KINDS
+    assert admin["passphrase_length"] == passwords.PASSPHRASE_LENGTH
+    assert admin["min_distinct_characters"] == passwords.MIN_DISTINCT_CHARACTERS
+    assert admin["max_repeat"] == passwords.MAX_REPEAT
+    assert admin["keyboard_run_length"] == passwords.KEYBOARD_RUN_LENGTH
+    assert admin["personal_token_length"] == passwords.PERSONAL_TOKEN_LENGTH
+    assert learner["number_run_length"] == passwords.NUMBER_RUN_LENGTH
 
 
 def test_every_listed_common_password_is_refused():

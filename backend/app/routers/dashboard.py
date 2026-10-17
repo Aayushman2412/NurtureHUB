@@ -5,7 +5,7 @@ from app import projects
 from app.database import get_db
 from app.models import Stage, Tutorial, UserTutorialProgress, Test, TestAttempt, UserAchievement, Achievement
 from app.schemas import DashboardData, DashboardActivity, AchievementOut
-from app.dependencies import get_verified_user
+from app.dependencies import get_verified_user, require_phi_access
 from app.flow import is_awaiting_results
 from app.models import User
 from app.routers.tutorials import get_stages
@@ -157,3 +157,113 @@ def get_dashboard_data(current_user: User = Depends(get_verified_user), db: Sess
         activities=activities,
         stages=stages_out
     )
+
+
+# ── My work (review of 17 Oct 2026) ───────────────────────────────────────
+#
+# Sir: "for the user it must be as easy as possible, and it must be easy for
+# them to track their own activities and adoptions — clues must be there to
+# indicate what percentage of work is done, or what is expected of them in
+# the next few days." The learner's own numbers from the MASD rules, the same
+# ones the supervisors' dashboard shows for them: never anyone else's.
+
+def _masd_project(db: Session, user: User):
+    """The project whose MASD calendar and targets apply to this learner: their
+    own, or — for a district inside a state that holds the settings — the state."""
+    from app.models import MasdProjectSettings, ProgramDistrict
+
+    if not user.program_district_id:
+        return None
+    project = db.get(ProgramDistrict, user.program_district_id)
+    if project is None:
+        return None
+    if db.get(MasdProjectSettings, project.id) is None and project.parent_id:
+        parent = db.get(ProgramDistrict, project.parent_id)
+        if parent is not None and db.get(MasdProjectSettings, parent.id) is not None:
+            return parent
+    return project
+
+
+@router.get("/my-work", dependencies=[Depends(require_phi_access)])
+def my_work(due_days: int = 7, current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
+    from datetime import date
+    from app.masd import data as D, engine as E
+    from app.models import Child, Mother
+    from app.security import phi
+
+    due_days = max(1, min(int(due_days), 30))
+    project = _masd_project(db, current_user)
+    if project is None:
+        return {"available": False, "reason": "no_project"}
+    data = D.load(db, project, only_learners=[current_user.id], with_growth=False)
+    view = E.learner_view(data, date.today(), current_user.id, due_days=due_days)
+    if view is None:
+        return {"available": False, "reason": "not_in_project"}
+
+    # Name the learner's own mothers and babies on her own list — she
+    # registered them. Recorded like any other listing of patient records.
+    mother_ids = [c["mother_id"] for c in view["cases"]]
+    names = {mid: (name, uid) for mid, name, uid in db.query(Mother.id, Mother.mother_name, Mother.mother_uid)
+             .filter(Mother.id.in_(mother_ids), Mother.registered_by_user_id == current_user.id)} if mother_ids else {}
+    kids = {}
+    for cid, mid, cname in (db.query(Child.id, Child.mother_id, Child.child_name)
+                            .filter(Child.mother_id.in_(list(names))) if names else []):
+        kids.setdefault(mid, []).append({"id": cid, "name": cname})
+    # A baby whose latest measurement is moderately or severely low is
+    # flagged so the dashboard can make it stand out ("blink, like a flash" —
+    # review of 17 Oct 2026). Real z-scores only; never the demo layer.
+    from app.routers.growth import Z_CATEGORY_NAMES, _build_cases, _rules_context, _summary_rows
+
+    alerts = {}
+    gcases = _build_cases(db, user_id=current_user.id)
+    for row in _summary_rows(gcases, _rules_context(db, gcases), allow_mock=False):
+        found = []
+        for metric, labels in Z_CATEGORY_NAMES.items():
+            latest = (row.get("categories") or {}).get(metric, {}).get("lv")
+            if latest in (labels[2], labels[3]):
+                found.append({"metric": metric, "label": latest, "severe": latest == labels[3]})
+        if found:
+            alerts[row["case_id"]] = found
+
+    cases = []
+    for c in view["cases"]:
+        if c["mother_id"] not in names:
+            continue
+        name, uid = names[c["mother_id"]]
+        children = [{**k, "alerts": alerts.get(k["id"], [])} for k in kids.get(c["mother_id"], [])]
+        severe = any(a["severe"] for k in children for a in k["alerts"])
+        growth_alert = any(k["alerts"] for k in children)
+        cases.append({**c, "mother_name": name, "mother_uid": uid, "children": children,
+                      "severe": severe, "growth_alert": growth_alert,
+                      # Faltering: anything a supervisor would call about.
+                      "faltering": bool(severe or growth_alert or c["warnings"] or c["behind_total"])})
+    cases.sort(key=lambda c: (not c["severe"], not c["growth_alert"], -len(c["warnings"]),
+                              -c["behind_total"], -c["upcoming_total"]))
+    view["faltering_total"] = sum(1 for c in cases if c["faltering"])
+    view["cases"] = cases
+    if cases:
+        phi.log_list(
+            resource_type="mother", count=len(cases), subject_type=phi.MOTHER,
+            subject_ids=[c["mother_id"] for c in cases],
+            detail={"scope": "own_cases", "view": "my_work", "fields": ["mother_name", "mother_uid", "child_name"]},
+        )
+    return {"available": True, "project": {"name": project.name, "slug": project.slug}, **view}
+
+
+@router.get("/my-team")
+def my_team(current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
+    """A batch monitor's learners and how each is doing (review of 6 Oct and
+    17 Oct 2026). Only the learners given to this monitor; counts only."""
+    from datetime import date
+    from app.masd import data as D, engine as E
+
+    if not current_user.is_batch_monitor:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only batch monitors have a team.")
+    ids = [uid for (uid,) in db.query(User.id).filter(User.batch_monitor_id == current_user.id)]
+    project = _masd_project(db, current_user)
+    if not ids or project is None:
+        return {"learners": []}
+    data = D.load(db, project, only_learners=ids, with_growth=False)
+    rows = E.team_view(data, date.today(), ids)
+    rows.sort(key=lambda r: (r["forms_pct"] if r["forms_pct"] is not None else -1, r["name"] or ""))
+    return {"learners": rows}

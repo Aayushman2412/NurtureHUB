@@ -13,6 +13,7 @@ import {
 } from '../../api/projects';
 import { PROJECT_EVENT, type AdminProject } from '../../lib/adminProject';
 import ProjectSetupWizard from './ProjectSetupWizard';
+import ProjectRegistrationPanel from '../../components/admin/ProjectRegistrationPanel';
 import { cn } from '../../utils/cn';
 
 type AddMode = { level: 'state' } | { level: 'district'; parentId: number | null; parentName?: string };
@@ -188,6 +189,7 @@ const AdminProjectsPage: React.FC = () => {
                   </span>
                 )}
               </div>
+              {project.level === 'district' && <ProjectRegistrationPanel project={project} onSaved={announce} />}
             </>
           )}
         </div>

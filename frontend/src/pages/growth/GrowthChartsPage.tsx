@@ -1,14 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router-dom';
-import { Activity, AlertTriangle } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Activity, AlertTriangle, ChevronRight, LineChart, Table2 } from 'lucide-react';
 import { getResponse } from '../../api/forms';
 import {
   getGrowthStandards,
   getMyGrowthCases,
+  getMyGrowthSummary,
   type GrowthCase,
   type GrowthStandards,
+  type GrowthSummaryRow,
 } from '../../api/growth';
+import GrowthSummaryTable from '../../components/growth/GrowthSummaryTable';
 import GrowthChartGrid, { GrowthLegend } from '../../components/growth/GrowthChartGrid';
 import VisitDetailModal from '../../components/growth/VisitDetailModal';
 import { Button, buttonClasses, Chip, EmptyState, PageHeader, PageLoader, Tabs } from '../../components/ui';
@@ -29,20 +32,26 @@ const GrowthChartsPage: React.FC = () => {
 
   const [standards, setStandards] = useState<GrowthStandards | null>(null);
   const [cases, setCases] = useState<GrowthCase[]>([]);
+  const [rows, setRows] = useState<GrowthSummaryRow[]>([]);
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [sexTab, setSexTab] = useState<'boys' | 'girls'>('boys');
   const [detailPoint, setDetailPoint] = useState<GrowthPoint | null>(null);
 
   const selectedChildId = searchParams.get('child'); // null = all cases
+  // "My cases" (review of 17 Oct 2026): every case in one table, as the
+  // supervisors see it — the first view; the WHO charts are the second.
+  const view: 'table' | 'charts' = searchParams.get('view') === 'charts' || selectedChildId ? 'charts' : 'table';
 
   const load = useCallback(() => {
     setLoading(true);
     setLoadError(false);
-    Promise.all([getGrowthStandards(), getMyGrowthCases()])
-      .then(([std, mine]) => {
+    Promise.all([getGrowthStandards(), getMyGrowthCases(), getMyGrowthSummary().catch(() => ({ rows: [], mock: false }))])
+      .then(([std, mine, summary]) => {
         setStandards(std);
         setCases(mine.cases);
+        setRows(summary.rows);
         const genders = new Set(mine.cases.map(c => sexKeyForGender(c.child.gender)));
         if (!genders.has('boys') && genders.has('girls')) setSexTab('girls');
       })
@@ -55,7 +64,7 @@ const GrowthChartsPage: React.FC = () => {
   }, [load]);
 
   const selectCase = (childId: number | null) => {
-    if (childId == null) setSearchParams({});
+    if (childId == null) setSearchParams({ view: 'charts' });
     else setSearchParams({ child: String(childId) });
   };
 
@@ -127,6 +136,28 @@ const GrowthChartsPage: React.FC = () => {
     <>
       <PageHeader title={t('learner.title')} description={t('learner.description')} />
 
+      <div className="mb-4">
+        <Tabs
+          value={view}
+          onChange={v => setSearchParams(v === 'table' ? {} : { view: 'charts' })}
+          items={[
+            { value: 'table', label: t('learner.tabTable'), icon: <Table2 className="size-4" /> },
+            { value: 'charts', label: t('learner.tabCharts'), icon: <LineChart className="size-4" /> },
+          ]}
+        />
+      </div>
+
+      {view === 'table' ? (
+        <>
+          <p className="mb-3 text-sm text-ink-muted">{t('learner.tableHint')}</p>
+          <GrowthSummaryTable
+            rows={rows}
+            mock={false}
+            onRowClick={row => navigate(`/growth/cases/${row.case_id}?from=growth`)}
+          />
+        </>
+      ) : (
+      <>
       {/* case selector — one scrollable row on phones, wrapping grid from sm */}
       <div className="-mx-5 mb-4 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0 [&>button]:shrink-0">
         <Chip selected={selectedCase == null} onClick={() => selectCase(null)}>
@@ -147,6 +178,20 @@ const GrowthChartsPage: React.FC = () => {
       <div className="mb-4">
         <GrowthLegend />
       </div>
+
+      {/* The whole case — every form visit by visit — on its own page (review of 17 Oct 2026). */}
+      {selectedCase && (
+        <Link
+          to={`/growth/cases/${selectedCase.child.id}`}
+          className="flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm transition-colors hover:bg-primary/10"
+        >
+          <span>
+            <span className="block font-semibold text-ink">{t('learner.openCase')}</span>
+            <span className="text-ink-muted">{t('learner.openCaseHint')}</span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-primary-ink" />
+        </Link>
+      )}
 
       {selectedCase ? (
         selectedSex == null ? (
@@ -195,6 +240,9 @@ const GrowthChartsPage: React.FC = () => {
             />
           )}
         </div>
+      )}
+
+      </>
       )}
 
       <VisitDetailModal

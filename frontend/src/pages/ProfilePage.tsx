@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { User, Briefcase } from 'lucide-react';
+import { User, Briefcase, GraduationCap, KeyRound } from 'lucide-react';
 import { Avatar, Button, Card, Tabs } from '../components/ui';
 import InstallAppButton from '../components/layout/InstallAppButton';
 import { useLearnerMetadata } from '../hooks/useLearnerMetadata';
@@ -11,6 +12,13 @@ import { validateLearner, LR_STEP_FIELDS, type LearnerFormValues } from '../lib/
 import type { FieldErrors } from '../lib/validation';
 import PersonalInfoTab, { type PersonalInfoValues } from './profile/PersonalInfoTab';
 import WorkDetailsTab, { type WorkDetailsValues } from './profile/WorkDetailsTab';
+import AccountTab from './profile/AccountTab';
+
+type TabKey = 'personal' | 'work' | 'education' | 'account';
+const TAB_KEYS: TabKey[] = ['personal', 'work', 'education', 'account'];
+// Which tab holds a field — so a save with errors opens the right one.
+const PERSONAL_KEYS = new Set([...LR_STEP_FIELDS[0]!, 'maritalStatus', 'hasChildren', 'numberChildren']);
+const WORK_KEYS = new Set(LR_STEP_FIELDS[1]);
 
 const emptyPersonal: PersonalInfoValues = {
   fullName: '', dob: '', gender: '', phone: '', alternatePhone: '',
@@ -20,7 +28,8 @@ const emptyPersonal: PersonalInfoValues = {
 const emptyWork: WorkDetailsValues = {
   departmentId: '', departmentOther: '', designationId: '', designationOther: '',
   facilityTypeId: '', facilityTypeOther: '',
-  stateId: '', districtId: '', blockId: '', villageId: '', villageName: '', facilityId: '', facilityName: '',
+  stateId: '', districtId: '', blockId: '', villageId: '', villageName: '', gpId: '', gpName: '',
+  facilityId: '', facilityName: '',
   residenceDistance: '', qualificationId: '', qualificationOther: '',
   yearsService: '', yearsDesignation: '', yearsFacility: '', internetWorkplace: '',
   trainings: {},
@@ -31,7 +40,11 @@ const ProfilePage: React.FC = () => {
   const { user, updateProfile } = useAuth();
   const { showToast, updateToast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'personal' | 'professional'>('personal');
+  // Four tabs (review of 17 Oct 2026): one "Professional info" tab hid the
+  // education and training sections below a long scroll.
+  const [params] = useSearchParams();
+  const initialTab = TAB_KEYS.find(k => k === params.get('tab')) ?? 'personal';
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
   const [loading, setLoading] = useState(false);
   const [personal, setPersonal] = useState<PersonalInfoValues>(emptyPersonal);
   const [work, setWork] = useState<WorkDetailsValues>(emptyWork);
@@ -71,6 +84,8 @@ const ProfilePage: React.FC = () => {
       blockId: user.block_id ?? '',
       villageId: user.village_id ?? '',
       villageName: user.village_name || '',
+      gpId: user.gram_panchayat_id ?? '',
+      gpName: user.gram_panchayat?.name || user.gram_panchayat_name || '',
       facilityId: user.facility_id ?? '',
       facilityName: user.work_center_name || '',
       residenceDistance: user.residence_distance_km ?? '',
@@ -149,7 +164,10 @@ const ProfilePage: React.FC = () => {
     setWork(w => ({ ...w, districtId: numOr(v), blockId: '', villageId: '', villageName: '', facilityId: '', facilityName: '' }));
     clearError('districtId');
   };
-  const onBlock = (v: string) => { setWork(w => ({ ...w, blockId: numOr(v), villageId: '', villageName: '', facilityId: '', facilityName: '' })); clearError('blockId'); };
+  const onBlock = (v: string) => {
+    setWork(w => ({ ...w, blockId: numOr(v), villageId: '', villageName: '', gpId: '', gpName: '', facilityId: '', facilityName: '' }));
+    clearError('blockId');
+  };
 
   const selectedDept = meta.departments.find(d => d.id === Number(work.departmentId));
   const isOtherDept = selectedDept?.code === 'OTHER';
@@ -182,9 +200,8 @@ const ProfilePage: React.FC = () => {
     const errs = validateLearner(values);
     if (Object.keys(errs).length) {
       setErrors(errs);
-      const personalKeys = new Set(LR_STEP_FIELDS[0]);
-      const hasPersonalError = Object.keys(errs).some(k => personalKeys.has(k));
-      setActiveTab(hasPersonalError ? 'personal' : 'professional');
+      const keys = Object.keys(errs);
+      setActiveTab(keys.some(k => PERSONAL_KEYS.has(k)) ? 'personal' : keys.some(k => WORK_KEYS.has(k)) ? 'work' : 'education');
       showToast(t('profile.toastFixFields'), 'warning');
       return;
     }
@@ -226,6 +243,8 @@ const ProfilePage: React.FC = () => {
         block_id: Number(work.blockId),
         village_id: work.villageId ? Number(work.villageId) : null,
         village_name: work.villageId ? null : (work.villageName || null),
+        gram_panchayat_id: work.gpId ? Number(work.gpId) : null,
+        gram_panchayat_name: work.gpId ? null : (work.gpName.trim() || null),
         facility_id: work.facilityId ? Number(work.facilityId) : null,
         district: districtName,
         work_center_name: work.facilityName.trim() || null,
@@ -265,8 +284,15 @@ const ProfilePage: React.FC = () => {
             {user?.role || t('profile.roleFallback')} • {user?.work_center_name || t('profile.centerFallback')}
           </p>
           <div className="flex flex-wrap gap-x-6 gap-y-1 text-[13px] text-ink-faint">
+            {/* The mobile number is how a learner signs in now (review of 17 Oct 2026). */}
             <span>
-              {t('profile.emailLabel')} <strong className="text-ink-muted">{user?.email}</strong>
+              {t('profile.mobileLabel')} <strong className="text-ink-muted">{user?.phone ? `+91 ${user.phone}` : t('profile.na')}</strong>
+            </span>
+            <span>
+              {t('profile.emailLabel')}{' '}
+              <strong className="text-ink-muted">
+                {user?.email_is_placeholder ? (user.contact_email || t('profile.emailNotAdded')) : user?.email}
+              </strong>
             </span>
             <span>
               {t('profile.joinedLabel')}{' '}
@@ -288,16 +314,22 @@ const ProfilePage: React.FC = () => {
             onChange={v => setActiveTab(v)}
             items={[
               { value: 'personal', label: t('profile.tabPersonal'), icon: <User className="size-4" /> },
-              { value: 'professional', label: t('profile.tabProfessional'), icon: <Briefcase className="size-4" /> },
+              { value: 'work', label: t('profile.tabWork'), icon: <Briefcase className="size-4" /> },
+              { value: 'education', label: t('profile.tabEducation'), icon: <GraduationCap className="size-4" /> },
+              { value: 'account', label: t('profile.tabAccount'), icon: <KeyRound className="size-4" /> },
             ]}
           />
         </div>
 
+        {activeTab === 'account' ? (
+          <div className="p-5 sm:p-8"><AccountTab /></div>
+        ) : (
         <form onSubmit={handleSubmit} className="p-5 sm:p-8">
           {activeTab === 'personal' ? (
             <PersonalInfoTab {...personal} errors={errors} onChange={onPersonal} />
           ) : (
             <WorkDetailsTab
+              section={activeTab === 'work' ? 'work' : 'education'}
               values={work}
               meta={meta}
               errors={errors}
@@ -321,6 +353,7 @@ const ProfilePage: React.FC = () => {
             </Button>
           </div>
         </form>
+        )}
       </Card>
     </div>
   );

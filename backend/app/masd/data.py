@@ -60,7 +60,11 @@ def benchmarks_for(project: models.ProgramDistrict,
     return R.DEFAULT_BENCHMARKS.get(project.slug)
 
 
-def load(db: Session, project: models.ProgramDistrict) -> MasdData:
+def load(db: Session, project: models.ProgramDistrict, *,
+         only_learners: Optional[List[int]] = None, with_growth: bool = True) -> MasdData:
+    """The project's records. `only_learners` narrows it to those learners'
+    own cases and forms (a learner's own dashboard — review of 17 Oct 2026)
+    while the project calendar is still the whole project's."""
     from app.routers.growth import GROWTH_FORM_KEY, growth_metrics
 
     member_ids = projects.member_project_ids(db, project)
@@ -83,6 +87,7 @@ def load(db: Session, project: models.ProgramDistrict) -> MasdData:
         .outerjoin(models.Department, models.User.department_id == models.Department.id)
         .filter(models.User.program_district_id.in_(member_ids))
         .filter(models.User.is_admin.is_(False))
+        .filter(models.User.id.in_(only_learners) if only_learners is not None else True)
         .all()
     )
     learner_ids = [r[0] for r in rows]
@@ -174,11 +179,25 @@ def load(db: Session, project: models.ProgramDistrict) -> MasdData:
                 growth_rows[rid] = (cid, on)
 
     growth: List[GrowthIn] = []
-    for rid, metrics in growth_metrics(db, growth_ids).items():
+    for rid, metrics in (growth_metrics(db, growth_ids) if with_growth else {}).items():
         cid, on = growth_rows[rid]
         growth.append(GrowthIn(child_id=cid, on=on, weight=metrics["weight"], length=metrics["length"]))
 
     saved = settings_for(db, project)
+    training_date = saved.training_date if saved else None
+    if only_learners is not None and training_date is None:
+        # The engine infers an unsaved training date from the first adoption
+        # of ANY F2F learner in the project; narrowed data cannot see those,
+        # so infer it here the same way.
+        all_ids = [uid for (uid,) in db.query(models.User.id)
+                   .filter(models.User.program_district_id.in_(member_ids), models.User.is_admin.is_(False))]
+        f2f_ids = [uid for (uid,) in db.query(models.FaceToFaceSelection.user_id)
+                   .filter(models.FaceToFaceSelection.user_id.in_(all_ids))] if all_ids else []
+        firsts = [ad or (ca.date() if ca else None) for ad, ca in db.query(
+            models.Mother.adoption_date, models.Mother.created_at,
+        ).filter(models.Mother.registered_by_user_id.in_(f2f_ids))] if f2f_ids else []
+        firsts = [d for d in firsts if d]
+        training_date = min(firsts) if firsts else None
     table, table_default = expected_forms_for(db)
     return MasdData(
         project={"id": project.id, "slug": project.slug, "name": project.name,
@@ -188,7 +207,7 @@ def load(db: Session, project: models.ProgramDistrict) -> MasdData:
         children=children,
         activities=activities,
         growth=growth,
-        training_date=saved.training_date if saved else None,
+        training_date=training_date,
         tranche2_start=saved.tranche2_start if saved else None,
         benchmarks=benchmarks_for(project, saved),
         calendar_saved=bool(saved and (saved.training_date or saved.tranche2_start)),
