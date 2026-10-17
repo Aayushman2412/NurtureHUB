@@ -270,7 +270,7 @@
         },
         "monitor": {
           "term": "Batch monitor",
-          "meaning": "Split or filter by batch monitor to see each monitor's learners together (set on the MASD dashboard → Learners)."
+          "meaning": "Split or filter by batch monitor to see each monitor's learners together (set in Programme Progress → Learners)."
         }
       }
     },
@@ -325,7 +325,7 @@
       }
     },
     "masd": {
-      "name": "MASD dashboard",
+      "name": "Programme Progress",
       "intro": "Member Activity Summary: are learners adopting mothers and doing the expected activities, and how are the children growing?",
       "terms": {
         "masd": {
