@@ -199,6 +199,12 @@ def test_faltering_filters_and_a_sheet_per_batch_monitor():
     assert wb["All faltering cases"]["A5"].value == "Severe underweight (SUW)"
 
 
+def test_a_batch_monitors_own_cases_are_under_her_name():
+    assert faltering.monitor_for(5, 9, False) == 9        # a learner: her monitor
+    assert faltering.monitor_for(9, None, True) == 9      # the monitor herself
+    assert faltering.monitor_for(7, None, False) is None  # no monitor at all
+
+
 def test_demo_topics_from_question_text():
     from scripts.demo_accounts import topic_for
 

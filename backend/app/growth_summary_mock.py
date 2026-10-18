@@ -1,4 +1,4 @@
-"""MOCK / DEMO data for the growth-monitoring learner summary table.
+r"""MOCK / DEMO data for the growth-monitoring learner summary table.
 
 ⚠️  REMOVABLE IN ONE STEP.  Everything *synthetic* in the summary table lives in
 this file and nowhere else:

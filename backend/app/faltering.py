@@ -62,6 +62,15 @@ def _flags(row: Dict[str, Any], case: Dict[str, Any]) -> tuple[List[str], Option
     return flags, change
 
 
+def monitor_for(user_id: int, batch_monitor_id: Optional[int], is_batch_monitor: bool) -> Optional[int]:
+    """Whose list a learner's cases fall under: her batch monitor's — and a
+    batch monitor's own cases under her own name, since she is one of the
+    batch she follows up ("the faltering cases under batch monitor 1")."""
+    if batch_monitor_id:
+        return batch_monitor_id
+    return user_id if is_batch_monitor else None
+
+
 def build(db: Session, district_slug: Optional[str]) -> Dict[str, Any]:
     """Every case in the project with at least one condition, plus who looks
     after it (learner, F2F batch, batch monitor) for the filters and sheets."""
@@ -74,10 +83,11 @@ def build(db: Session, district_slug: Optional[str]) -> Dict[str, Any]:
     learner_ids = sorted({r["learner_id"] for r in rows if r.get("learner_id")})
     monitor_of: Dict[int, Optional[int]] = {}
     names: Dict[int, str] = {}
-    for uid, name, email, monitor_id in (db.query(models.User.id, models.User.full_name, models.User.email,
-                                                  models.User.batch_monitor_id)
-                                         .filter(models.User.id.in_(learner_ids)) if learner_ids else []):
-        monitor_of[uid] = monitor_id
+    for uid, name, email, monitor_id, is_monitor in (
+            db.query(models.User.id, models.User.full_name, models.User.email,
+                     models.User.batch_monitor_id, models.User.is_batch_monitor)
+            .filter(models.User.id.in_(learner_ids)) if learner_ids else []):
+        monitor_of[uid] = monitor_for(uid, monitor_id, bool(is_monitor))
         names[uid] = name or email
     monitor_ids = sorted({m for m in monitor_of.values() if m})
     for uid, name, email in (db.query(models.User.id, models.User.full_name, models.User.email)
