@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SlidersHorizontal, RotateCcw, Info, Download } from 'lucide-react';
+import { SlidersHorizontal, RotateCcw, Info, Download, ArrowLeftRight } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import type { ActivityBlock, GrowthSummaryRow, ZTriplet } from '../../api/growth';
 import { caseCategory, monthsDays, pctCellFill, zCellFill } from '../../lib/growthDisplay';
@@ -87,13 +87,30 @@ interface Props {
   onRowClick?: (row: GrowthSummaryRow) => void;
   /** Download the (filtered) table as .xlsx. */
   onDownloadXlsx?: () => Promise<void> | void;
+  /** Offer "cases as columns" — the learner's view (review of 18 Oct 2026:
+   *  "transpose the rows and columns … adoptions will be in the columns,
+   *  whatever other variables come in the rows"). The supervisors' table
+   *  stays horizontal. Starts transposed on a phone. */
+  allowTranspose?: boolean;
 }
 
 /** Rows drawn at first, and added each time the reader nears the bottom. */
 const ROW_BATCH = 100;
 
-const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloadXlsx }) => {
+const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloadXlsx, allowTranspose = false }) => {
   const { t } = useTranslation('growth');
+  const [transposed, setTransposed] = useState<boolean>(() => {
+    if (!allowTranspose) return false;
+    try {
+      const saved = localStorage.getItem(`${PREFS_KEY}.transposed`);
+      if (saved != null) return saved === '1';
+    } catch { /* no storage */ }
+    return typeof window !== 'undefined' && window.matchMedia?.('(max-width: 639px)').matches;
+  });
+  const flip = () => setTransposed(v => {
+    try { localStorage.setItem(`${PREFS_KEY}.transposed`, v ? '0' : '1'); } catch { /* no storage */ }
+    return !v;
+  });
 
   // A project can hold ~1,000 cases of ~35 filled cells each; drawing them all
   // at once froze the page for seconds. Draw a batch, then the next as the
@@ -451,6 +468,20 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
             <SlidersHorizontal className="size-4" />
             {t('summary.layout')}
           </button>
+          {allowTranspose && (
+            <button
+              type="button"
+              onClick={flip}
+              aria-pressed={transposed}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors',
+                transposed ? 'border-primary/40 bg-primary/10 text-primary-ink' : 'border-border bg-surface text-ink-muted hover:bg-surface-sunken',
+              )}
+            >
+              <ArrowLeftRight className="size-4" />
+              {transposed ? t('summary.casesAsRows') : t('summary.casesAsColumns')}
+            </button>
+          )}
           {onDownloadXlsx && (
             <button
               type="button"
@@ -528,8 +559,62 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
         </div>
       )}
 
+      {/* cases as columns: one column per case, the measures down the side */}
+      {transposed && (
+        <div className="max-h-[75vh] overflow-auto rounded-xl border border-border bg-surface">
+          <table className="border-collapse text-sm" style={{ width: 'max-content' }}>
+            <thead className="sticky top-0 z-30">
+              <tr>
+                <th className="sticky left-0 z-10 min-w-36 max-w-44 border-b border-r border-border-strong bg-surface-sunken px-2 py-1.5 text-left text-[12px] font-bold uppercase tracking-wide text-ink-muted">
+                  {t('summary.measure')}
+                </th>
+                {rows.slice(0, shown).map((r, i) => (
+                  <th
+                    key={r.case_id}
+                    onClick={() => onRowClick?.(r)}
+                    title={onRowClick ? t('summary.clickHint') : undefined}
+                    className={cn('min-w-28 max-w-40 border-b border-r border-border-strong bg-surface-sunken px-2 py-1.5 text-left text-[12px] font-semibold text-ink',
+                      onRowClick && 'cursor-pointer hover:bg-surface')}
+                  >
+                    <span className="block text-ink-faint">#{i + 1}</span>
+                    <span className="block truncate">{r.identity.mother_name}</span>
+                    {r.ids?.child_name && <span className="block truncate font-normal text-ink-muted">{r.ids.child_name}</span>}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {visibleGroups.filter(g => g.id !== 'identity').map(g => (
+                <React.Fragment key={g.id}>
+                  <tr>
+                    <td colSpan={1 + Math.min(shown, rows.length)} className="border-b border-border-strong bg-surface-sunken/70 px-2 py-1 text-[12px] font-bold uppercase tracking-wide text-ink-muted">
+                      <span className="sticky left-2">{g.title}</span>
+                    </td>
+                  </tr>
+                  {g.cols.map(c => (
+                    <tr key={c.key} className="border-b border-border">
+                      <th title={c.title} className="sticky left-0 z-20 max-w-44 border-r border-border-strong bg-surface px-2 py-1.5 text-left text-[12px] font-semibold text-ink">
+                        <span className="block truncate">{c.code}{c.sub ? <span className="font-normal text-ink-faint"> {c.sub}</span> : null}</span>
+                        {c.title !== c.code && <span className="block truncate text-[11px] font-normal text-ink-muted">{c.title}</span>}
+                      </th>
+                      {rows.slice(0, shown).map((r, i) => (
+                        <td key={r.case_id} style={c.fill ? { backgroundColor: c.fill(r) } : undefined}
+                          className={cn(pad, 'max-w-40 truncate border-r border-border-strong text-center')}>
+                          {c.render(r, i)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+          {rows.length === 0 && <div className="px-4 py-10 text-center text-sm text-ink-muted">{t('admin.noCases')}</div>}
+        </div>
+      )}
+
       {/* table */}
-      <div onScroll={onTableScroll} className="max-h-[70vh] overflow-auto rounded-xl border border-border bg-surface">
+      <div onScroll={onTableScroll} className={cn('max-h-[70vh] overflow-auto rounded-xl border border-border bg-surface', transposed && 'hidden')}>
         <table className="border-collapse text-sm" style={{ tableLayout: 'fixed', width: 'max-content' }}>
           <colgroup>
             {flatCols.map(c => (

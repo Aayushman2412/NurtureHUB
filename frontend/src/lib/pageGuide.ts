@@ -9,6 +9,7 @@ const ROUTES: [RegExp, string][] = [
   [/^\/admin\/results/, 'results'],
   [/^\/admin\/growth/, 'growth'],
   [/^\/admin\/masd/, 'masd'],
+  [/^\/admin\/faltering/, 'faltering'],
   [/^\/admin\/form-builder/, 'formBuilder'],
   [/^\/admin\/learners/, 'learners'],
   [/^\/admin\/(projects|districts)/, 'projects'],

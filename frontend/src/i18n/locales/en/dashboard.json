@@ -12,12 +12,12 @@
     "progress": "Progress"
   },
   "awaiting": {
-    "title": "All done — please wait for your results!",
-    "body": "You have completed every tutorial and submitted all your tests. Results are being reviewed — you will receive a notification as soon as they are announced."
+    "title": "All done — please wait for the selection result",
+    "body": "You finished every video and submitted all your tests. The selection for face-to-face training is being made — you will get a notification when it is announced."
   },
   "stats": {
     "tutorials": "Completed Tutorials",
-    "assessments": "Assessments Passed",
+    "assessments": "Tests passed",
     "achievements": "Achievements Earned"
   },
   "timeline": "Training Progression Timeline",
@@ -57,7 +57,7 @@
   },
   "badges": {
     "title": "Earned Badges",
-    "empty": "Complete courses & assessments to unlock achievements."
+    "empty": "Complete videos & tests to unlock achievements."
   },
   "activity": {
     "title": "Recent Activity",
@@ -89,7 +89,7 @@
     "watchedHint": "Of all the video time — skipping does not count",
     "quizzes": "Quizzes",
     "quizzesHint": "Short quizzes after the videos",
-    "tests": "Assessments passed",
+    "tests": "Tests passed",
     "testsHint": "Formative and screening tests"
   },
   "work": {
@@ -106,30 +106,30 @@
     "noTarget": "Your adoption target appears after your face-to-face training.",
     "forms": {
       "title": "Visits & forms done",
-      "gm_one": "{{count}} growth check",
-      "gm_other": "{{count}} growth checks",
-      "bf_one": "{{count}} breastfeeding",
-      "bf_other": "{{count}} breastfeeding",
-      "cf_one": "{{count}} complementary feeding",
-      "cf_other": "{{count}} complementary feeding",
-      "anc_one": "{{count}} antenatal",
-      "anc_other": "{{count}} antenatal",
+      "gm_one": "{{count}} growth check form",
+      "gm_other": "{{count}} growth check forms",
+      "bf_one": "{{count}} breastfeeding form",
+      "bf_other": "{{count}} breastfeeding forms",
+      "cf_one": "{{count}} complementary feeding form",
+      "cf_other": "{{count}} complementary feeding forms",
+      "anc_one": "{{count}} antenatal check",
+      "anc_other": "{{count}} antenatal checks",
       "protein_one": "{{count}} protein count",
       "protein_other": "{{count}} protein counts"
     },
     "formsPct": "{{pct}}% of the forms your mothers and babies were due by today",
     "noFormsDue": "No forms are due yet for the mothers you adopted.",
     "quiet": "No forms filled for {{days}} days",
-    "nextDays": "What needs you now (next {{days}} days)",
-    "behind": "Behind:",
-    "dueSoon": "Due in {{days}} days:",
+    "nextDays": "Coming up (next {{days}} days, as per schedule)",
+    "behind": "Missed:",
+    "dueSoon": "Fill in the next {{days}} days:",
     "growthAlert": "Latest growth check: {{label}}",
     "baby": "baby",
     "allCaughtUp": "You are up to date — nothing is behind and nothing falls due in these days.",
-    "noCases": "No mothers adopted yet. Register a mother from My Mothers to start.",
-    "more": "and {{n}} more — see My Mothers",
-    "faltering_one": "{{count}} case needs you",
-    "faltering_other": "{{count}} cases need you",
+    "noCases": "No mothers adopted yet. Register a mother from Adoptions to start.",
+    "more": "and {{n}} more — see Adoptions",
+    "faltering_one": "{{count}} case needs your attention",
+    "faltering_other": "{{count}} cases need your attention",
     "noneFaltering": "No case is behind or flagged — well done.",
     "showAll": "Show all {{n}}",
     "showFewer": "Show fewer",
@@ -137,9 +137,15 @@
       "edd_passed": "Due date passed {{days}} days ago — record the birth",
       "anc_behind": "Antenatal checks behind ({{done}} of {{expected}} done)",
       "no_lmp": "No LMP — add it so the due date can be tracked",
-      "visits_missed": "{{n}} growth checks missed",
+      "visits_missed": "{{n}} growth check forms missed",
       "no_recent_visit": "No visit for {{days}} days",
-      "type_mismatch": "You chose {{declared}}, the dates say {{computed}}"
+      "type_mismatch": "Check the details: registered as \"{{declared}}\", but the baby's date of birth shows \"{{computed}}\""
+    },
+    "eq": {
+      "adopted": "Adopted",
+      "target": "Target",
+      "filled": "Forms filled",
+      "due": "Forms due till today"
     }
   },
   "progress": {
@@ -168,5 +174,27 @@
     "never": "Not yet",
     "daysAgo_one": "{{count}} day ago",
     "daysAgo_other": "{{count}} days ago"
+  },
+  "modes": {
+    "training": "Training",
+    "trainingHint": "Videos and tests",
+    "adoptions": "Adoptions",
+    "adoptionsHint": "Your mothers and babies",
+    "adoptionsLocked": "Opens after selection",
+    "noWork": "Your adoption work appears here once your project's programme calendar is set."
+  },
+  "status": {
+    "liveTest": "A test is open now: {{test}}. Take it from Tutorials & Tests.",
+    "awaiting": "Training done. Wait for the selection result for face-to-face training.",
+    "videosLeft_one": "{{count}} video left to finish.",
+    "videosLeft_other": "{{count}} videos left to finish.",
+    "quizzesLeft_one": "Videos done. {{count}} short quiz left.",
+    "quizzesLeft_other": "Videos done. {{count}} short quizzes left.",
+    "nextTest": "Videos done. Next: {{test}} ({{date}}).",
+    "allDone": "Well done — your training is complete."
+  },
+  "topics": {
+    "title": "Your tests by topic",
+    "subtitle": "What you knew well, and what to watch again."
   }
 }

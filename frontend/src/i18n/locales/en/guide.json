@@ -473,6 +473,32 @@
           "meaning": "The MASD CSVs per district that the run reads."
         }
       }
+    },
+    "faltering": {
+      "name": "Faltering Cases",
+      "intro": "Every baby who needs a follow-up call: faltering, or moderately or severely underweight, wasted or stunted at the latest measurement. One or two clicks narrow it; the download splits it by batch monitor.",
+      "terms": {
+        "faltering": {
+          "term": "Faltering",
+          "meaning": "The baby weighed less at the latest visit than at the visit before."
+        },
+        "muw": {
+          "term": "Underweight (SUW / MUW)",
+          "meaning": "Weight for age below −3 SD (severe) or −2 SD (moderate) of the WHO standard."
+        },
+        "sam": {
+          "term": "Wasting (SAM / MAM)",
+          "meaning": "Weight for length below −3 SD (severe acute malnutrition) or −2 SD (moderate)."
+        },
+        "stunting": {
+          "term": "Stunting",
+          "meaning": "Length for age below −3 SD (severe) or −2 SD (moderate)."
+        },
+        "monitor": {
+          "term": "Batch monitor",
+          "meaning": "The learner who follows up a group of learners — set in Programme Progress › Learners. The Excel has one sheet for each."
+        }
+      }
     }
   }
 }

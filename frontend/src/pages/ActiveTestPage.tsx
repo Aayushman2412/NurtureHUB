@@ -66,7 +66,7 @@ const ActiveTestPage: React.FC = () => {
   if (!stateData) {
     useEffect(() => {
       showToast(t('active.toastNoSession'), 'warning');
-      navigate('/tests');
+      navigate('/tutorials');
     }, []);
     return null;
   }

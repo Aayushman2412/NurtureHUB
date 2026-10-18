@@ -35,9 +35,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     const path = location.pathname;
     if (path === '/dashboard') return t('headerTitle.dashboard');
     if (path.startsWith('/tutorials')) return t('headerTitle.tutorials');
-    if (path.startsWith('/tests')) return t('headerTitle.tests');
+    if (path.startsWith('/tests')) return t('headerTitle.tutorials');
     if (path.startsWith('/results')) return t('headerTitle.results');
     if (path === '/profile') return t('headerTitle.profile');
+    if (path.startsWith('/mothers') || path.startsWith('/assessments')) return t('headerTitle.mothers');
+    if (path.startsWith('/growth')) return t('headerTitle.growth');
     return t('headerTitle.default');
   };
 
@@ -56,7 +58,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
         <PushPromptBanner />
 
-        <main className="flex-1 animate-fade-in overflow-x-hidden p-5 sm:p-6">{children}</main>
+        {/* overflow-x-CLIP, not hidden: hidden makes <main> a scroll container,
+            and then nothing inside it can stick to the top of the screen. */}
+        <main className="flex-1 animate-fade-in overflow-x-clip p-5 sm:p-6">{children}</main>
       </div>
 
       <NotificationPanel

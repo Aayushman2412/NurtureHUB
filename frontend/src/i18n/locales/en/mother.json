@@ -1,7 +1,7 @@
 {
   "list": {
-    "title": "My Mothers",
-    "description": "Mothers you have registered into the program.",
+    "title": "Adoptions",
+    "description": "The mothers you adopted — register a mother, and fill and edit her and her baby's forms here.",
     "register": "Register mother",
     "loading": "Loading mothers",
     "loadFailed": "Failed to load mothers",

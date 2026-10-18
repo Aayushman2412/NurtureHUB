@@ -145,6 +145,14 @@ def get_dashboard_data(current_user: User = Depends(get_verified_user), db: Sess
     
     # 4. Get stages and tutorials using our existing endpoint logic (already district-filtered)
     stages_out = get_stages(current_user=current_user, db=db)
+
+    # 5. Which view the dashboard opens on: training until the learner is
+    # selected for face-to-face training, adoptions from then on. A learner
+    # who has already registered mothers keeps the Adoptions view either way.
+    from app.models import FaceToFaceSelection, Mother
+
+    selected = db.query(FaceToFaceSelection.id).filter(FaceToFaceSelection.user_id == current_user.id).first() is not None
+    has_mothers = db.query(Mother.id).filter(Mother.registered_by_user_id == current_user.id).first() is not None
     
     return DashboardData(
         progress_percentage=progress_pct,
@@ -152,7 +160,9 @@ def get_dashboard_data(current_user: User = Depends(get_verified_user), db: Sess
         total_tutorials=total_tutorials,
         tests_passed=passed_tests,
         total_tests=total_tests,
-        awaiting_results=is_awaiting_results(db, current_user),
+        awaiting_results=is_awaiting_results(db, current_user) and not selected,
+        selected_for_f2f=selected,
+        adoptions_open=selected or has_mothers,
         achievements=achievements_out,
         activities=activities,
         stages=stages_out

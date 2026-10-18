@@ -50,7 +50,7 @@ const TestInstructionsPage: React.FC = () => {
         setTest(data);
       } catch {
         showToast(t('instructions.toastLoadFailed'), 'error');
-        navigate('/tests');
+        navigate('/tutorials');
       } finally {
         setLoading(false);
       }
@@ -91,7 +91,7 @@ const TestInstructionsPage: React.FC = () => {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => navigate('/tests')}
+          onClick={() => navigate('/tutorials')}
           iconLeft={<ChevronLeft className="size-4" />}
         >
           {t('common.backToAssessments')}
@@ -171,7 +171,7 @@ const TestInstructionsPage: React.FC = () => {
 
         {/* Actions */}
         <div className="flex justify-end gap-4">
-          <Button variant="outline" size="lg" onClick={() => navigate('/tests')} disabled={starting}>
+          <Button variant="outline" size="lg" onClick={() => navigate('/tutorials')} disabled={starting}>
             {t('instructions.cancel')}
           </Button>
           <Button

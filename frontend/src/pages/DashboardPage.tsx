@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useAuth } from '../context/AuthContext';
@@ -16,6 +16,10 @@ import {
   Hourglass,
   KeyRound,
   MapPinOff,
+  GraduationCap,
+  HeartHandshake,
+  Lightbulb,
+  BarChart3,
 } from 'lucide-react';
 import { Badge, Button, Card, PageLoader, ProgressBar, ProgressRing, WelcomeBanner } from '../components/ui';
 import SupportTeamCard from '../components/SupportTeamCard';
@@ -24,6 +28,9 @@ import MyWorkCard from '../components/dashboard/MyWorkCard';
 import MyProgressChart from '../components/dashboard/MyProgressChart';
 import MyTeamCard from '../components/dashboard/MyTeamCard';
 import { getMyWork, type MyWork } from '../api/myWork';
+import { getTopicReport, type TestTopicReport } from '../api/results';
+import TestTopicsCard from '../components/tests/TestTopicsCard';
+import { cn } from '../utils/cn';
 
 interface Achievement {
   id: number;
@@ -84,6 +91,8 @@ interface DashboardData {
   tests_passed: number;
   total_tests: number;
   awaiting_results: boolean;
+  selected_for_f2f?: boolean;
+  adoptions_open?: boolean;
   achievements: Achievement[];
   activities: Activity[];
   stages: Stage[];
@@ -123,12 +132,33 @@ const testPhaseMessage = (stg: Stage, t: TFunction): string => {
   return t('test.message.default');
 };
 
+/** One line saying where the learner stands and what to do next — the
+ *  "inference" for the four circles (review of 18 Oct 2026). */
+const trainingStatus = (data: DashboardData, t: TFunction): string => {
+  const tutorials = data.stages.flatMap(s => s.tutorials);
+  const videosLeft = data.total_tutorials - data.tutorials_completed;
+  const quizzesLeft = tutorials.filter(x => x.quiz_available && x.quiz_status === 'pending').length;
+  const tests = data.stages.map(s => s.test).filter((x): x is StageTest => !!x);
+  const live = tests.find(x => x.status === 'active' && !x.is_locked && !x.is_submitted);
+  const next = tests.find(x => !x.is_submitted && x.status !== 'ended');
+  if (live) return t('status.liveTest', { test: live.title });
+  if (data.awaiting_results) return t('status.awaiting');
+  if (videosLeft > 0) return t('status.videosLeft', { count: videosLeft });
+  if (quizzesLeft > 0) return t('status.quizzesLeft', { count: quizzesLeft });
+  if (next) return t('status.nextTest', { test: next.title, date: formatScheduled(next.scheduled_at, t) });
+  return t('status.allDone');
+};
+
+type DashView = 'training' | 'adoptions';
+
 const DashboardPage: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   // The learner's own adoptions and forms (review of 17 Oct 2026); optional —
   // the dashboard renders without it.
   const [work, setWork] = useState<MyWork | null>(null);
+  const [reports, setReports] = useState<TestTopicReport[]>([]);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { t } = useTranslation('dashboard');
   const { user } = useAuth();
@@ -149,10 +179,20 @@ const DashboardPage: React.FC = () => {
   useEffect(() => {
     loadDashboard();
     getMyWork().then(setWork).catch(() => { /* optional card */ });
+    getTopicReport().then(setReports).catch(() => { /* optional card */ });
   }, []);
 
   if (loading) return <PageLoader label={t('loading')} />;
   if (!data) return null;
+
+  // Two modes (review of 18 Oct 2026): until the screening test the project is
+  // about training; "the moment adoption starts the project is in a very
+  // different mode". Adoptions opens once the learner is selected for
+  // face-to-face training (or already has mothers), and is then the first view.
+  const adoptionsOpen = !!data.adoptions_open;
+  const asked = searchParams.get('view');
+  const view: DashView = adoptionsOpen && asked !== 'training' ? 'adoptions' : 'training';
+  const setView = (v: DashView) => setSearchParams(v === (adoptionsOpen ? 'adoptions' : 'training') ? {} : { view: v }, { replace: true });
 
   return (
     <div className="flex flex-col gap-6">
@@ -181,19 +221,6 @@ const DashboardPage: React.FC = () => {
         </span>
       </WelcomeBanner>
 
-      {/* Awaiting results banner — everything is done */}
-      {data.awaiting_results && (
-        <Card accent="amber" className="flex items-center gap-4 p-6">
-          <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600">
-            <Hourglass className="size-6" />
-          </div>
-          <div>
-            <h4 className="mb-1 font-display font-bold text-ink">{t('awaiting.title')}</h4>
-            <p className="text-sm leading-snug text-ink-muted">{t('awaiting.body')}</p>
-          </div>
-        </Card>
-      )}
-
       {/* An easy password is allowed, never forced — but asked about (review of 17 Oct 2026). */}
       {user?.password_weak && (
         <Card accent="amber" className="flex flex-wrap items-center gap-3 p-4">
@@ -216,21 +243,92 @@ const DashboardPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Training at a glance: four circles, two by two on a phone. */}
-      {data.total_tutorials + data.total_tests > 0 && (
-        <TrainingRings
-          tutorials={data.stages.flatMap(s => s.tutorials)}
-          testsPassed={data.tests_passed}
-          totalTests={data.total_tests}
-        />
+      {/* Training | Adoptions — the two modes of the project. */}
+      {user?.program_district_id && (
+        <div role="tablist" className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-surface p-1.5">
+          {([
+            { v: 'training' as const, icon: <GraduationCap className="size-5" />, label: t('modes.training'), hint: t('modes.trainingHint') },
+            { v: 'adoptions' as const, icon: <HeartHandshake className="size-5" />, label: t('modes.adoptions'),
+              hint: adoptionsOpen ? t('modes.adoptionsHint') : t('modes.adoptionsLocked') },
+          ]).map(m => {
+            const locked = m.v === 'adoptions' && !adoptionsOpen;
+            const active = view === m.v;
+            return (
+              <button
+                key={m.v}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                disabled={locked}
+                onClick={() => setView(m.v)}
+                className={cn(
+                  'flex min-w-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors',
+                  active ? 'bg-primary text-white shadow-sm' : 'text-ink hover:bg-surface-sunken',
+                  locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
+                )}
+              >
+                <span className="shrink-0">{locked ? <Lock className="size-5" /> : m.icon}</span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-bold sm:text-base">{m.label}</span>
+                  <span className={cn('block truncate text-xs', active ? 'text-white/85' : 'text-ink-muted')}>{m.hint}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
       )}
 
-      {/* My mothers and babies: adoptions, forms, what is due next. */}
-      {work?.available && <MyWorkCard work={work} />}
-      {work?.available && work.cumulative && <MyProgressChart series={work.cumulative} />}
-      {user?.is_batch_monitor && <MyTeamCard />}
+      {view === 'adoptions' ? (
+        <>
+          {/* My mothers and babies: adoptions, forms, what is due next. */}
+          {work?.available ? <MyWorkCard work={work} /> : (
+            <Card className="p-4 text-sm text-ink-muted sm:p-6">{t('modes.noWork')}</Card>
+          )}
+          {work?.available && work.cumulative && <MyProgressChart series={work.cumulative} />}
+          {user?.is_batch_monitor && <MyTeamCard />}
+        </>
+      ) : (
+      <>
+      {/* Awaiting the selection for face-to-face training — everything is done */}
+      {data.awaiting_results && (
+        <Card accent="amber" className="flex items-center gap-4 p-4 sm:p-6">
+          <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600">
+            <Hourglass className="size-6" />
+          </div>
+          <div>
+            <h4 className="mb-1 font-display font-bold text-ink">{t('awaiting.title')}</h4>
+            <p className="text-sm leading-snug text-ink-muted">{t('awaiting.body')}</p>
+          </div>
+        </Card>
+      )}
 
-      <SupportTeamCard />
+      {/* Training at a glance: four circles, two by two on a phone, and what they mean. */}
+      {data.total_tutorials + data.total_tests > 0 && (
+        <div className="flex flex-col gap-3">
+          <TrainingRings
+            tutorials={data.stages.flatMap(s => s.tutorials)}
+            testsPassed={data.tests_passed}
+            totalTests={data.total_tests}
+          />
+          <p className="flex items-start gap-2 rounded-xl bg-surface-sunken/70 px-4 py-3 text-sm font-semibold text-ink">
+            <Lightbulb className="mt-0.5 size-4 shrink-0 text-amber-600" />
+            <span>{trainingStatus(data, t)}</span>
+          </p>
+        </div>
+      )}
+
+      {/* The tests, topic by topic, with what to watch again. */}
+      {reports.length > 0 && (
+        <Card className="p-4 sm:p-6">
+          <h3 className="mb-1 flex items-center gap-2 font-display text-lg font-bold text-ink">
+            <BarChart3 className="size-5 text-primary-ink" />{t('topics.title')}
+          </h3>
+          <p className="mb-4 text-sm text-ink-muted">{t('topics.subtitle')}</p>
+          <div className="flex flex-col gap-6">
+            {reports.map(r => <TestTopicsCard key={r.test_id} report={r} />)}
+          </div>
+        </Card>
+      )}
 
       {/* Main grid */}
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
@@ -287,7 +385,7 @@ const DashboardPage: React.FC = () => {
                       {canTake ? (
                         <Button
                           size="sm"
-                          onClick={() => navigate('/tests')}
+                          onClick={() => navigate('/tutorials')}
                           iconRight={<ChevronRight className="size-3.5" />}
                         >
                           {t('test.takeTest')}
@@ -419,6 +517,10 @@ const DashboardPage: React.FC = () => {
           </Card>
         </div>
       </div>
+      </>
+      )}
+
+      <SupportTeamCard />
     </div>
   );
 };

@@ -1,19 +1,21 @@
 {
   "nav": {
     "dashboard": "Dashboard",
-    "tutorials": "Tutorials",
-    "assessments": "Assessments",
-    "mothers": "Mothers",
-    "growth": "My Cases & Growth",
+    "tutorials": "Tutorials & Tests",
+    "assessments": "Tests",
+    "mothers": "Adoptions",
+    "growth": "Growth Monitor",
     "profile": "Profile"
   },
   "headerTitle": {
     "dashboard": "Dashboard",
-    "tutorials": "Training Modules",
-    "tests": "Assessments & Quizzes",
-    "results": "Assessment Performance",
+    "tutorials": "Tutorials & Tests",
+    "tests": "Tests",
+    "results": "Test result",
     "profile": "Profile Settings",
-    "default": "NurtureHUB"
+    "default": "NurtureHUB",
+    "mothers": "Adoptions",
+    "growth": "Growth Monitor"
   },
   "header": {
     "toggleMenu": "Toggle menu",
@@ -30,7 +32,7 @@
     "readAll": "Read All",
     "close": "Close",
     "emptyTitle": "No notifications yet",
-    "emptyBody": "Updates about your training and assessments will appear here."
+    "emptyBody": "Updates about your training and tests will appear here."
   },
   "install": {
     "button": "Download the app",

@@ -11,6 +11,33 @@ const TYPES = ['anc', 'pnc_lt5', 'pnc_ge5'] as const;
 
 const pctOf = (n: number, d: number) => (d > 0 ? Math.min(100, Math.round((n / d) * 100)) : 0);
 
+/**
+ * Two numbers and the sum between them, instead of a sentence (review of 18
+ * Oct 2026, Sir: "don't expect learners to understand English sentences …
+ * think how a layman would think — just give a mathematical equation";
+ * "48 of 35 due" read as "48 forms are due").
+ */
+const Equation: React.FC<{ a: number; aLabel: string; b: number; bLabel: string }> = ({ a, aLabel, b, bLabel }) => {
+  const exact = b > 0 ? Math.round((a / b) * 100) : null;
+  return (
+    <div className="mt-1">
+      <div className="grid grid-cols-2 gap-2">
+        {[{ n: a, label: aLabel }, { n: b, label: bLabel }].map(x => (
+          <div key={x.label} className="rounded-lg bg-surface px-2 py-1.5 text-center ring-1 ring-border">
+            <span className="block font-display text-xl font-extrabold tabular-nums text-ink">{x.n}</span>
+            <span className="block text-xs leading-tight text-ink-muted">{x.label}</span>
+          </div>
+        ))}
+      </div>
+      {exact != null && (
+        <p className="mt-2 text-center text-sm tabular-nums text-ink">
+          {a} ÷ {b} = <b>{exact}%</b>
+        </p>
+      )}
+    </div>
+  );
+};
+
 /** "2 growth checks, 1 breastfeeding" — the forms in a count map. */
 const FormList: React.FC<{ counts: FormCounts; tone: 'behind' | 'due' }> = ({ counts, tone }) => {
   const { t } = useTranslation('dashboard');
@@ -79,11 +106,12 @@ const MyWorkCard: React.FC<{ work: MyWork }> = ({ work }) => {
         <div className="rounded-xl bg-surface-sunken/60 p-3">
           <div className="mb-1.5 flex items-baseline justify-between gap-2">
             <span className="flex items-center gap-1.5 text-sm font-semibold text-ink"><Baby className="size-4" />{t('work.adoptions')}</span>
-            <span className="text-sm font-bold tabular-nums text-ink">
-              {targets.total ? t('work.ofTarget', { n: adoptions.total, of: targets.total }) : adoptions.total}
-            </span>
+            {!targets.total && <span className="text-sm font-bold tabular-nums text-ink">{adoptions.total}</span>}
           </div>
           {targets.total > 0 && <ProgressBar value={pctOf(adoptions.total, targets.total)} tone="sage" />}
+          {targets.total > 0 && (
+            <Equation a={adoptions.total} aLabel={t('work.eq.adopted')} b={targets.total} bLabel={t('work.eq.target')} />
+          )}
           <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
             {TYPES.map(k => (
               <span key={k} className="rounded-full bg-surface px-2 py-0.5 text-ink-muted ring-1 ring-border">
@@ -97,14 +125,14 @@ const MyWorkCard: React.FC<{ work: MyWork }> = ({ work }) => {
         <div className="rounded-xl bg-surface-sunken/60 p-3">
           <div className="mb-1.5 flex items-baseline justify-between gap-2">
             <span className="flex items-center gap-1.5 text-sm font-semibold text-ink"><ClipboardList className="size-4" />{t('work.forms.title')}</span>
-            <span className="text-sm font-bold tabular-nums text-ink">
-              {own.expected.total ? t('work.ofDue', { n: own.actual.total, of: own.expected.total }) : own.actual.total}
-            </span>
+            {!own.expected.total && <span className="text-sm font-bold tabular-nums text-ink">{own.actual.total}</span>}
           </div>
           {own.expected.total > 0 && <ProgressBar value={formsPct ?? 0} tone={(formsPct ?? 0) >= 80 ? 'sage' : (formsPct ?? 0) >= 50 ? 'amber' : 'coral'} />}
-          <p className="mt-2 text-xs text-ink-muted">
-            {own.expected.total ? t('work.formsPct', { pct: formsPct ?? 0 }) : t('work.noFormsDue')}
-          </p>
+          {own.expected.total > 0 ? (
+            <Equation a={own.actual.total} aLabel={t('work.eq.filled')} b={own.expected.total} bLabel={t('work.eq.due')} />
+          ) : (
+            <p className="mt-2 text-xs text-ink-muted">{t('work.noFormsDue')}</p>
+          )}
           {work.nil_days != null && work.nil_days > 7 && (
             <p className="mt-1.5 flex items-center gap-1 text-xs font-semibold text-error-600 dark:text-error-300">
               <AlertTriangle className="size-3.5" />{t('work.quiet', { days: work.nil_days })}

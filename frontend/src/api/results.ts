@@ -11,6 +11,41 @@ export const getDetailedResult = async (attemptId: number) => {
   return response.data;
 };
 
+/** One topic of a test the learner took: right answers out of its questions.
+ *  `topic` null = questions not given a topic yet. */
+export interface TopicScore {
+  topic: string | null;
+  correct: number;
+  total: number;
+  pct: number | null;
+}
+
+/** A test the learner has submitted, topic by topic, from the latest attempt
+ *  (review of 18 Oct 2026) — backend app/learner_tests.py. */
+export interface TestTopicReport {
+  test_id: number;
+  title: string;
+  test_type: 'formative' | 'screening' | null;
+  status: string;
+  stage_id: number;
+  attempt_id: number;
+  attempt_number: number;
+  score: number | null;
+  is_passed: boolean;
+  passing_score_pct: number;
+  correct: number;
+  total: number;
+  topics: TopicScore[];
+  strong: string[];
+  weak: string[];
+  videos: { topic: string; videos: { id: number; title: string; module_number: string | null }[] }[];
+}
+
+export const getTopicReport = async (): Promise<TestTopicReport[]> => {
+  const response = await client.get('/api/results/topics');
+  return response.data.tests;
+};
+
 /**
  * The raw test data of a project as Excel (admin): learners × questions with
  * the answer each picked on their first attempt, the same grid scored 1/0, and

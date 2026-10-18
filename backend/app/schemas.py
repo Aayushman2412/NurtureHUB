@@ -806,6 +806,8 @@ class TestSubmitResponse(BaseModel):
 class DetailedAnswerOut(BaseModel):
     question_id: int
     question_text: str
+    # The syllabus topic, so the learner can filter the review by it.
+    topic: Optional[str] = None
     selected_option_id: Optional[int]
     correct_option_id: int
     is_correct: bool
@@ -846,6 +848,12 @@ class DashboardData(BaseModel):
     # True once every tutorial is completed and every test has been submitted —
     # the user is done and waiting for the admin to publish results.
     awaiting_results: bool = False
+    # Selected for face-to-face training (or already adopting): the dashboard
+    # opens on the Adoptions view instead of the training one (review of 18
+    # Oct 2026 — "the moment adoption starts the project is in a very
+    # different mode").
+    selected_for_f2f: bool = False
+    adoptions_open: bool = False
     achievements: List[AchievementOut]
     activities: List[DashboardActivity]
     stages: List[StageOut]

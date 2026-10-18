@@ -17,6 +17,15 @@ def get_results_list(current_user: User = Depends(get_verified_user), db: Sessio
     ).order_by(TestAttempt.submitted_at.desc()).all()
     return attempts
 
+@router.get("/topics")
+def get_topic_report(current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
+    """The learner's own tests topic by topic, with what to watch again
+    (review of 18 Oct 2026) — see app/learner_tests.py."""
+    from app.learner_tests import topic_report
+
+    return {"tests": topic_report(db, current_user)}
+
+
 @router.get("/{attempt_id}", response_model=DetailedResultResponse)
 def get_detailed_result(attempt_id: int, current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
     attempt = db.query(TestAttempt).filter(
@@ -61,6 +70,7 @@ def get_detailed_result(attempt_id: int, current_user: User = Depends(get_verifi
             DetailedAnswerOut(
                 question_id=q.id,
                 question_text=q.text,
+                topic=(q.topic or "").strip() or None,
                 selected_option_id=selected_opt_id,
                 correct_option_id=correct_option_id,
                 is_correct=is_correct,

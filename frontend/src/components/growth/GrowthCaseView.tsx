@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AlertTriangle, Baby, BarChart3, ChevronDown, ChevronRight, ClipboardList, LineChart, Stethoscope, User,
@@ -17,6 +17,7 @@ import VisitDetailModal from './VisitDetailModal';
 import VisitSummaryTable from './VisitSummaryTable';
 import VisitMatrix from './VisitMatrix';
 import { ChartCard, ActivityComparisonChart, OutcomeDivergingChart } from './CaseCharts';
+import { RotateHint, TablePictureButton } from './TableTools';
 import { Badge, Button, EmptyState, PageHeader, PageLoader } from '../ui';
 
 /** Forms scored against the LAP. */
@@ -90,6 +91,7 @@ const GrowthCaseView: React.FC<{ childId: number; mode: 'admin' | 'learner'; bac
   const [data, setData] = useState<Loaded | null>(null);
   const [state, setState] = useState<'loading' | 'error' | 'ready'>('loading');
   const [detailPoint, setDetailPoint] = useState<GrowthPoint | null>(null);
+  const summaryRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!Number.isFinite(childId)) { setState('error'); return; }
@@ -215,6 +217,7 @@ const GrowthCaseView: React.FC<{ childId: number; mode: 'admin' | 'learner'; bac
           <div className="grid gap-2 lg:grid-cols-2">
             <ChartCard
               title={t('caseDetail.activityChart')}
+              description={t('casePage.explain.activity')}
               render={ref => (
                 <ActivityComparisonChart
                   svgRef={ref}
@@ -230,6 +233,7 @@ const GrowthCaseView: React.FC<{ childId: number; mode: 'admin' | 'learner'; bac
             />
             <ChartCard
               title={t('caseDetail.outcomesChart')}
+              description={t('casePage.explain.outcomes')}
               render={ref => (
                 <OutcomeDivergingChart
                   svgRef={ref}
@@ -249,6 +253,7 @@ const GrowthCaseView: React.FC<{ childId: number; mode: 'admin' | 'learner'; bac
         <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-muted">
           <LineChart className="size-3.5" />{t('casePage.whoCharts')}
         </div>
+        <p className="mb-2 text-xs leading-snug text-ink-muted">{t('casePage.explain.who')}</p>
         {whoCase && sex ? (
           <div className="space-y-4">
             <GrowthLegend />
@@ -263,13 +268,19 @@ const GrowthCaseView: React.FC<{ childId: number; mode: 'admin' | 'learner'; bac
 
       {/* ── per-visit summary table ──────────────────────────────────────── */}
       <section>
-        <div className="mb-2 flex items-center gap-1.5 text-sm font-bold text-ink">
-          <Baby className="size-4 text-ink-muted" />{t('casePage.visitSummary')} ({detail.visits.length})
+        <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <span className="flex items-center gap-1.5 text-sm font-bold text-ink">
+            <Baby className="size-4 text-ink-muted" />{t('casePage.visitSummary')} ({detail.visits.length})
+          </span>
+          <RotateHint />
+          {detail.visits.length > 0 && (
+            <span className="ml-auto"><TablePictureButton target={summaryRef} title={t('casePage.visitSummary')} /></span>
+          )}
         </div>
         {detail.visits.length === 0 ? (
           <p className="rounded-lg border border-border px-3 py-4 text-sm text-ink-muted">{t('caseDetail.noVisits')}</p>
         ) : (
-          <VisitSummaryTable visits={detail.visits} />
+          <div ref={summaryRef}><VisitSummaryTable visits={detail.visits} /></div>
         )}
       </section>
 
@@ -291,7 +302,7 @@ const GrowthCaseView: React.FC<{ childId: number; mode: 'admin' | 'learner'; bac
               title={t(`forms.${key}`, { defaultValue: key })}
               badge={<Badge variant="neutral">{t('casePage.matrixCount', { count: visitCount(responses) })}</Badge>}
             >
-              <VisitMatrix responses={responses} />
+              <VisitMatrix responses={responses} title={t(`forms.${key}`, { defaultValue: key })} />
             </Expandable>
           ))}
           {lapTables.length === 0 && (
@@ -312,7 +323,10 @@ const GrowthCaseView: React.FC<{ childId: number; mode: 'admin' | 'learner'; bac
               title={<>{t(`forms.${key}`, { defaultValue: key })} <span className="ml-1 font-normal text-ink-muted">({FORM_CODES[key] ?? key})</span></>}
               badge={<Badge variant="neutral">{t('casePage.matrixCount', { count: visitCount(responses) })}</Badge>}
             >
-              <VisitMatrix responses={responses} kind="values" />
+              <VisitMatrix
+                responses={responses} kind="values" title={t(`forms.${key}`, { defaultValue: key })}
+                growth={key === 'growth_monitoring' ? detail.visits : undefined}
+              />
             </Expandable>
           ))}
           {infoTables.length === 0 && (

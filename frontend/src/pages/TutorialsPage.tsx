@@ -2,9 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getStages } from '../api/tutorials';
+import { getTests } from '../api/tests';
+import { getResultsList, getTopicReport, type TestTopicReport } from '../api/results';
 import { useToast } from '../context/ToastContext';
 import { Play, CheckCircle, Clock, Lock } from 'lucide-react';
 import { Badge, Card, Chip, EmptyState, PageLoader } from '../components/ui';
+import TestPhaseCard, { type PhaseAttempt, type PhaseTest } from '../components/tests/TestPhaseCard';
 import { cn } from '../utils/cn';
 
 interface Tutorial {
@@ -25,10 +28,12 @@ interface Stage {
   title: string;
   description: string;
   order_index: number;
+  stage_type?: 'tutorials' | 'test';
   is_locked: boolean;
   tutorials_completed: number;
   total_tutorials: number;
   tutorials: Tutorial[];
+  test: { id: number } | null;
 }
 
 const filters = [
@@ -39,8 +44,18 @@ const filters = [
 
 type FilterKey = (typeof filters)[number]['key'];
 
+/**
+ * Tutorials & Tests — the whole training in one place (review of 18 Oct
+ * 2026: "videos and tests are alternating in the project flow … combine both
+ * of them in a single section"). Video phases list their videos; test phases
+ * show the test, its attempts with their reviews and the learner's
+ * topic-wise score, where the old separate Assessments page used to.
+ */
 const TutorialsPage: React.FC = () => {
   const [stages, setStages] = useState<Stage[]>([]);
+  const [tests, setTests] = useState<PhaseTest[]>([]);
+  const [attempts, setAttempts] = useState<PhaseAttempt[]>([]);
+  const [reports, setReports] = useState<TestTopicReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterKey>('all');
 
@@ -50,8 +65,13 @@ const TutorialsPage: React.FC = () => {
 
   const loadStages = async () => {
     try {
-      const data = await getStages();
+      const [data, testList, attemptList] = await Promise.all([
+        getStages(), getTests().catch(() => []), getResultsList().catch(() => []),
+      ]);
       setStages(data);
+      setTests(testList);
+      setAttempts(attemptList);
+      getTopicReport().then(setReports).catch(() => { /* optional */ });
     } catch {
       showToast(t('toast.loadStagesFailed'), 'error');
     } finally {
@@ -74,6 +94,9 @@ const TutorialsPage: React.FC = () => {
   if (loading) return <PageLoader label={t('loading')} />;
 
   const totalModules = stages.reduce((acc, s) => acc + s.tutorials.length, 0);
+  const testById = new Map(tests.map(x => [x.id, x]));
+  const isTestPhase = (s: Stage) => !!s.test && (s.stage_type === 'test' || s.tutorials.length === 0);
+  const totalTests = stages.filter(isTestPhase).length;
   const visibleStages = stages
     .map(stage => ({
       stage,
@@ -83,7 +106,8 @@ const TutorialsPage: React.FC = () => {
         return true;
       }),
     }))
-    .filter(({ filtered }) => filter === 'all' || filtered.length > 0);
+    // The filter is about videos: test phases always stay in the flow.
+    .filter(({ stage, filtered }) => filter === 'all' || isTestPhase(stage) || filtered.length > 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -96,7 +120,7 @@ const TutorialsPage: React.FC = () => {
             </Chip>
           ))}
         </div>
-        <p className="text-[13px] text-ink-faint">{t('curriculumCount', { total: totalModules })}</p>
+        <p className="text-[13px] text-ink-faint">{t('curriculumCount', { total: totalModules, tests: totalTests })}</p>
       </div>
 
       {visibleStages.length === 0 ? (
@@ -114,7 +138,7 @@ const TutorialsPage: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-display text-xl font-extrabold text-ink">{stage.title}</h3>
-                    {stage.is_locked && (
+                    {stage.is_locked && !isTestPhase(stage) && (
                       <Badge variant="error">
                         <Lock className="size-2.5" /> {t('locked')}
                       </Badge>
@@ -122,7 +146,7 @@ const TutorialsPage: React.FC = () => {
                   </div>
                   <p className="mt-1 max-w-3xl text-sm leading-snug text-ink-muted">{stage.description}</p>
                 </div>
-                {!stage.is_locked && (
+                {!stage.is_locked && !isTestPhase(stage) && (
                   <span className="whitespace-nowrap text-[13px] font-semibold text-primary-ink">
                     {t('stageProgress', {
                       completed: stage.tutorials_completed,
@@ -132,8 +156,20 @@ const TutorialsPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Tutorials grid */}
-              {filtered.length === 0 ? (
+              {/* A test phase: the test itself, its attempts and the topic-wise score */}
+              {isTestPhase(stage) ? (
+                testById.get(stage.test!.id) ? (
+                  <TestPhaseCard
+                    test={testById.get(stage.test!.id)!}
+                    attempts={attempts.filter(a => a.test_id === stage.test!.id)}
+                    report={reports.find(r => r.test_id === stage.test!.id)}
+                  />
+                ) : (
+                  <div className="rounded-xl border border-dashed border-border-strong/60 p-8 text-center text-sm text-ink-faint">
+                    {t('testNotReady')}
+                  </div>
+                )
+              ) : filtered.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border-strong/60 p-8 text-center text-sm text-ink-faint">
                   {t('empty.description')}
                 </div>

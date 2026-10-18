@@ -24,7 +24,8 @@
       "masdPipeline": "MASD Pipeline",
       "rawData": "Raw Data",
       "learners": "Learners",
-      "dataProtection": "Data Protection"
+      "dataProtection": "Data Protection",
+      "faltering": "Faltering Cases"
     },
     "selectProject": "Select project",
     "stateBadge": "State",
@@ -284,5 +285,52 @@
     "later": "Do this later",
     "loadFailed": "Could not load the setup options.",
     "failed": "Setup failed."
+  },
+  "faltering": {
+    "title": "Faltering cases",
+    "description": "Every baby whose latest measurement is faltering, or moderately or severely low — in the project chosen on the left. Click a row for the full case.",
+    "download": "Download Excel (a sheet per batch monitor)",
+    "downloading": "Preparing…",
+    "downloadFailed": "Could not download the list.",
+    "loadFailed": "Could not load the faltering cases.",
+    "loading": "Finding faltering cases…",
+    "all": "All",
+    "cond": {
+      "suw": "Severe underweight",
+      "muw": "Moderate underweight",
+      "sam": "Severe wasting (SAM)",
+      "mam": "Moderate wasting (MAM)",
+      "sst": "Severe stunting",
+      "mst": "Moderate stunting",
+      "faltering": "Faltering (weight fell)"
+    },
+    "monitor": "Batch monitor",
+    "batch": "F2F batch",
+    "block": "Block",
+    "cadre": "Cadre",
+    "learner": "Learner",
+    "any": "Any",
+    "noMonitor": "No batch monitor",
+    "count_one": "{{count}} case",
+    "count_other": "{{count}} cases",
+    "rule": "latest measurement; moderate below −2 SD, severe below −3 SD; faltering = weight lower than at the visit before",
+    "reset": "Clear filters",
+    "emptyTitle": "No faltering cases",
+    "emptyBody": "No baby in this selection is faltering or moderately or severely low at the latest measurement.",
+    "openCase": "Open the full case in a new tab",
+    "boy": "Boy",
+    "girl": "Girl",
+    "months": "{{n}} mo",
+    "daysAgo_one": "{{count}} day ago",
+    "daysAgo_other": "{{count}} days ago",
+    "col": {
+      "why": "Why listed",
+      "monitor": "Batch monitor",
+      "learner": "Learner",
+      "mother": "Mother",
+      "baby": "Baby",
+      "last": "Last measured",
+      "weight": "Weight"
+    }
   }
 }

@@ -4,7 +4,7 @@
     "completed": "Completed",
     "uncompleted": "In Progress"
   },
-  "curriculumCount": "{{total}} modules in curriculum",
+  "curriculumCount": "{{total}} videos · {{tests}} tests",
   "loading": "Loading training modules…",
   "empty": {
     "title": "Nothing here yet",
@@ -16,7 +16,7 @@
   "durationMinutes": "{{minutes}} Minutes duration",
   "toast": {
     "loadStagesFailed": "Failed to load training stages",
-    "phaseLocked": "This training phase is currently locked. Complete previous assessments first."
+    "phaseLocked": "This training phase is currently locked. Complete the previous tests first."
   },
   "player": {
     "loading": "Loading player panel…",
@@ -48,5 +48,6 @@
     "submittedBody": "You answered <strong>{{correct}} of {{total}}</strong> questions correctly ({{pct}}%).",
     "intro": "A few questions about “{{title}}”. Answering helps us confirm your learning — you may skip, but skips are recorded.",
     "toastSubmitFailed": "Failed to submit quiz answers"
-  }
+  },
+  "testNotReady": "This test is not set up yet."
 }

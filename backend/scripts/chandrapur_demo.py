@@ -29,6 +29,13 @@ irrespective of whatever district, and show it as Chandrapur."
     python -m scripts.chandrapur_demo add-new [--count 260]
     python -m scripts.chandrapur_demo remove-new      # deletes exactly those
 
+    # 5. Batch monitors for the faltering-cases list (review of 18 Oct 2026:
+    #    "give me the faltering cases under me in a break-up of batch
+    #    monitors"): in each F2F batch the first synthetic learner becomes the
+    #    batch monitor of the batch's other synthetic learners.
+    python -m scripts.chandrapur_demo monitors
+    python -m scripts.chandrapur_demo undo-monitors   # exactly those, back
+
     python -m scripts.chandrapur_demo status
 
 What was moved, and where from, is kept in masd_rule_tables under
@@ -312,6 +319,59 @@ def remove_new(db) -> None:
     print(f"removed {len(ids)} new Chandrapur learners, {len(mothers)} mothers, {len(kids)} children")
 
 
+MONITORS_KEY = "demo.chandrapur.monitors"
+
+
+def set_monitors(db) -> None:
+    if db.get(models.MasdRuleTable, MONITORS_KEY) is not None:
+        print("batch monitors already set — run undo-monitors first")
+        return
+    project = _project(db, SLUG)
+    if project is None:
+        sys.exit("Run `setup` first.")
+    rows = (db.query(models.FaceToFaceSelection.batch_id, models.User)
+            .join(models.User, models.User.id == models.FaceToFaceSelection.user_id)
+            .filter(models.User.program_district_id == project.id, models.User.email.like(f"%{MOCK_DOMAIN}"),
+                    models.FaceToFaceSelection.batch_id.isnot(None))
+            .order_by(models.FaceToFaceSelection.batch_id, models.User.id).all())
+    by_batch: Dict[int, List[models.User]] = {}
+    for batch_id, user in rows:
+        by_batch.setdefault(batch_id, []).append(user)
+    undo = {"monitors": [], "assigned": {}}
+    for batch_id, users in by_batch.items():
+        free = [u for u in users if not u.is_batch_monitor and u.batch_monitor_id is None]
+        if len(free) < 2:
+            continue
+        monitor, team = free[0], free[1:]
+        monitor.is_batch_monitor = True
+        undo["monitors"].append(monitor.id)
+        for u in team:
+            u.batch_monitor_id = monitor.id
+            undo["assigned"][str(u.id)] = monitor.id
+    db.add(models.MasdRuleTable(key=MONITORS_KEY, value_json=undo, updated_by="scripts.chandrapur_demo"))
+    db.commit()
+    print(f"{len(undo['monitors'])} batch monitors set, {len(undo['assigned'])} learners given to them")
+
+
+def undo_monitors(db) -> None:
+    row = db.get(models.MasdRuleTable, MONITORS_KEY)
+    if row is None:
+        print("no demo batch monitors to undo")
+        return
+    info = row.value_json or {}
+    ids = [int(k) for k in (info.get("assigned") or {})]
+    if ids:
+        db.query(models.User).filter(models.User.id.in_(ids), models.User.email.like(f"%{MOCK_DOMAIN}")).update(
+            {models.User.batch_monitor_id: None}, synchronize_session=False)
+    if info.get("monitors"):
+        db.query(models.User).filter(models.User.id.in_(info["monitors"]),
+                                     models.User.email.like(f"%{MOCK_DOMAIN}")).update(
+            {models.User.is_batch_monitor: False}, synchronize_session=False)
+    db.delete(row)
+    db.commit()
+    print(f"undid {len(info.get('monitors') or [])} batch monitors and {len(ids)} assignments")
+
+
 def status(db) -> None:
     project = _project(db, SLUG)
     if project is None:
@@ -327,7 +387,8 @@ def status(db) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("action", choices=["setup", "move-mock", "undo-mock", "add-new", "remove-new", "status"])
+    ap.add_argument("action", choices=["setup", "move-mock", "undo-mock", "add-new", "remove-new",
+                                       "monitors", "undo-monitors", "status"])
     ap.add_argument("--source", default="jalna", help="project to copy content / take synthetic learners from")
     ap.add_argument("--count", type=int, default=None, help="synthetic learners to move (40) or add (260)")
     a = ap.parse_args()
@@ -343,6 +404,10 @@ def main() -> None:
             add_new(db, a.count or 260)
         elif a.action == "remove-new":
             remove_new(db)
+        elif a.action == "monitors":
+            set_monitors(db)
+        elif a.action == "undo-monitors":
+            undo_monitors(db)
         status(db)
     finally:
         db.close()

@@ -26,7 +26,7 @@ const TestSubmittedPage: React.FC = () => {
   if (!stateData) {
     useEffect(() => {
       showToast(t('submitted.toastNoDetails'), 'warning');
-      navigate('/tests');
+      navigate('/tutorials');
     }, []);
     return null;
   }
@@ -116,7 +116,7 @@ const TestSubmittedPage: React.FC = () => {
 
         {/* Actions */}
         <div className="mt-3 flex w-full gap-4">
-          <Button variant="outline" size="lg" fullWidth onClick={() => navigate('/tests')}>
+          <Button variant="outline" size="lg" fullWidth onClick={() => navigate('/tutorials')}>
             {t('submitted.assessmentsList')}
           </Button>
           <Button

@@ -106,6 +106,115 @@ function downloadCanvas(canvas: HTMLCanvasElement, filename: string): void {
   }, 'image/png');
 }
 
+/**
+ * A table as a picture the learner can open and zoom (review of 18 Oct 2026:
+ * "make those tables into a downloadable image so that they can open and
+ * zoom"). Drawn cell by cell onto a canvas from the table on screen — its
+ * text, fills, weight and spans — so no screenshot library is needed. Long
+ * text wraps at MAX_COL px; the picture is drawn at 2x for sharp zooming.
+ */
+export function downloadTablePng(table: HTMLTableElement, filename: string, title?: string): void {
+  const SCALE = 2, PAD_X = 8, PAD_Y = 6, LINE = 17, MAX_COL = 260, MIN_COL = 36;
+  const dark = document.documentElement.classList.contains('dark');
+  const pageBg = dark ? '#211D1A' : '#ffffff';
+  const ink = dark ? '#F5EFE8' : '#2B2420';
+  const grid = dark ? '#5A5048' : '#CFC4B8';
+  const measure = document.createElement('canvas').getContext('2d');
+  if (!measure) return;
+  const fontFor = (weight: string) => `${Number(weight) >= 600 ? 'bold ' : ''}13px system-ui, -apple-system, "Segoe UI", sans-serif`;
+
+  type Cell = { r: number; c: number; rs: number; cs: number; lines: string[]; bg: string; color: string; weight: string; align: string };
+  const cells: Cell[] = [];
+  const taken: boolean[][] = [];
+  const rows = Array.from(table.rows);
+  rows.forEach((tr, r) => {
+    let c = 0;
+    for (const td of Array.from(tr.cells)) {
+      while (taken[r]?.[c]) c++;
+      const st = getComputedStyle(td);
+      const bg = st.backgroundColor && !/rgba\(0, 0, 0, 0\)|transparent/.test(st.backgroundColor) ? st.backgroundColor : '';
+      const text = (td.innerText || '').replace(/\u00a0/g, ' ').trim();
+      const cell: Cell = {
+        r, c, rs: Math.max(1, td.rowSpan || 1), cs: Math.max(1, td.colSpan || 1),
+        lines: [], bg, color: st.color || ink, weight: st.fontWeight || '400',
+        align: td.tagName === 'TH' && (td.colSpan || 1) > 1 ? 'center' : (st.textAlign === 'right' ? 'right' : st.textAlign === 'center' ? 'center' : 'left'),
+      };
+      measure.font = fontFor(cell.weight);
+      for (const raw of (text || '').split(/\r?\n/)) {
+        let line = '';
+        for (const word of raw.split(/\s+/).filter(Boolean)) {
+          const next = line ? `${line} ${word}` : word;
+          if (line && measure.measureText(next).width > MAX_COL - 2 * PAD_X) { cell.lines.push(line); line = word; } else line = next;
+        }
+        cell.lines.push(line);
+      }
+      if (!cell.lines.length) cell.lines.push('');
+      for (let i = 0; i < cell.rs; i++) for (let j = 0; j < cell.cs; j++) {
+        (taken[r + i] ??= [])[c + j] = true;
+      }
+      cells.push(cell);
+      c += cell.cs;
+    }
+  });
+  const nCols = Math.max(0, ...cells.map(x => x.c + x.cs));
+  const nRows = rows.length;
+  const width = (x: Cell) => {
+    measure.font = fontFor(x.weight);
+    return Math.min(MAX_COL, Math.max(...x.lines.map(l => measure.measureText(l).width)) + 2 * PAD_X);
+  };
+  const colW = Array<number>(nCols).fill(MIN_COL);
+  for (const x of cells) if (x.cs === 1) colW[x.c] = Math.max(colW[x.c], width(x));
+  for (const x of cells) if (x.cs > 1) {
+    const have = colW.slice(x.c, x.c + x.cs).reduce((a, b) => a + b, 0);
+    const need = width(x);
+    if (need > have) for (let j = 0; j < x.cs; j++) colW[x.c + j] += (need - have) / x.cs;
+  }
+  const rowH = Array<number>(nRows).fill(LINE + 2 * PAD_Y);
+  for (const x of cells) if (x.rs === 1) rowH[x.r] = Math.max(rowH[x.r], x.lines.length * LINE + 2 * PAD_Y);
+  const colX = colW.map((_, i) => colW.slice(0, i).reduce((a, b) => a + b, 0));
+  const rowY = rowH.map((_, i) => rowH.slice(0, i).reduce((a, b) => a + b, 0));
+  const head = title ? 34 : 0;
+  const margin = 12;
+  const totalW = colW.reduce((a, b) => a + b, 0);
+  const totalH = rowH.reduce((a, b) => a + b, 0);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.ceil((totalW + 2 * margin) * SCALE);
+  canvas.height = Math.ceil((totalH + head + 2 * margin) * SCALE);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.scale(SCALE, SCALE);
+  ctx.fillStyle = pageBg;
+  ctx.fillRect(0, 0, totalW + 2 * margin, totalH + head + 2 * margin);
+  if (title) {
+    ctx.fillStyle = ink;
+    ctx.font = 'bold 15px system-ui, -apple-system, "Segoe UI", sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(title, margin, margin + 12);
+  }
+  const ox = margin, oy = margin + head;
+  ctx.textBaseline = 'top';
+  for (const x of cells) {
+    const left = ox + colX[x.c];
+    const top = oy + rowY[x.r];
+    const w = colW.slice(x.c, x.c + x.cs).reduce((a, b) => a + b, 0);
+    const h = rowH.slice(x.r, x.r + x.rs).reduce((a, b) => a + b, 0);
+    ctx.fillStyle = x.bg || pageBg;
+    ctx.fillRect(left, top, w, h);
+    ctx.strokeStyle = grid;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(left + 0.5, top + 0.5, w, h);
+    ctx.fillStyle = x.color;
+    ctx.font = fontFor(x.weight);
+    x.lines.forEach((line, i) => {
+      const tw = ctx.measureText(line).width;
+      const tx = x.align === 'center' ? left + (w - tw) / 2 : x.align === 'right' ? left + w - PAD_X - tw : left + PAD_X;
+      ctx.fillText(line, tx, top + PAD_Y + i * LINE, w - 2 * PAD_X);
+    });
+  }
+  downloadCanvas(canvas, filename);
+}
+
 export const slugify = (s: string): string =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'chart';
 

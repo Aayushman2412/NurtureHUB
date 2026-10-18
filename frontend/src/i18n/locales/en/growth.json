@@ -163,7 +163,10 @@
       "wfaz": "Weight-for-age category — {{visit}}",
       "hfaz": "Height-for-age category — {{visit}}",
       "wfhz": "Weight-for-height category — {{visit}}"
-    }
+    },
+    "casesAsColumns": "Cases as columns",
+    "casesAsRows": "Cases as rows",
+    "measure": "Measure"
   },
   "caseDetail": {
     "metrics": "Activity & outcome summary",
@@ -265,7 +268,23 @@
     "pointsCorrect": "Points correct (as per LAP)",
     "protein24": "Protein in the last 24 hours",
     "proteinAvg": "{{g}} g/day usual",
-    "legendNotYet": "Visit not done yet"
+    "legendNotYet": "Visit not done yet",
+    "savePicture": "Save as picture",
+    "rotateHint": "Turn your phone sideways to see more",
+    "derived": {
+      "age": "Baby's age at this visit",
+      "weightChange": "Weight change since the last visit",
+      "gainPerDay": "Average weight gain per day",
+      "day": "day",
+      "overDays_one": "over {{count}} day",
+      "overDays_other": "over {{count}} days",
+      "lengthChange": "Length change since the last visit"
+    },
+    "explain": {
+      "activity": "For each form: how many were due till today (EC), how many were filled (AC) and how many were left incomplete (IC). A green bar as long as the grey one means all due forms were filled.",
+      "outcomes": "The baby's growth against the WHO standard at the first (BV), middle (AV) and latest (LV) visit. Bars to the left of 0 are below the standard; below −2 needs attention.",
+      "who": "Each dot is one measurement. The coloured lines are the WHO standards: staying between them, and rising along them, is healthy growth."
+    }
   },
   "admin": {
     "title": "Learner Activities",
@@ -283,14 +302,14 @@
     "proteinAlertsSub": "A recorded 24-hour total above 100g is almost always a portion-size slip. The learner has been notified too."
   },
   "learner": {
-    "title": "My cases & growth",
+    "title": "Growth Monitor",
     "description": "Every mother and baby you adopted — forms done against what was due, and the babies' growth against the WHO standards.",
     "loading": "Loading your growth charts…",
     "allCases": "All my cases",
     "caseLabel": "{{child}} ({{mother}})",
     "noCases": "No registered children yet",
     "noCasesHint": "Register a mother and her child, then record Check Growth visits to see the charts.",
-    "registerCta": "Go to My Mothers",
+    "registerCta": "Go to Adoptions",
     "noGender": "Add this child's gender in the child record to plot the WHO charts.",
     "noVisits": "No growth visits recorded for this child yet.",
     "noCasesForSex": "No cases here",
@@ -299,6 +318,9 @@
     "openCaseHint": "Every form, visit by visit, with the growth charts",
     "tabTable": "My cases",
     "tabCharts": "Growth charts",
-    "tableHint": "One row per baby, as your supervisors see it. Tap a row for the full case: every form, visit by visit."
+    "tableHint": "One row per baby, as your supervisors see it. Tap a row for the full case: every form, visit by visit.",
+    "pickCase": "Choose a case",
+    "visitCount_one": "{{count}} visit",
+    "visitCount_other": "{{count}} visits"
   }
 }

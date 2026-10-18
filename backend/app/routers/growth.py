@@ -200,6 +200,7 @@ def _build_cases(
             models.User.role, models.User.department,
             models.ProgramDistrict.name,
             models.Mother.adoption_date, models.Mother.lmp, models.User.program_district_id,
+            models.Mother.created_at,
         )
         .join(models.Mother, models.Child.mother_id == models.Mother.id)
         .outerjoin(models.User, models.Mother.registered_by_user_id == models.User.id)
@@ -238,7 +239,7 @@ def _build_cases(
     for (child_id, child_uid, child_name, gender, dob, birth_weight, birth_length, adoption_date,
          mother_id, mother_uid, mother_name,
          l_user_id, learner_name, learner_email, learner_role, learner_department,
-         district_name, mother_adopted, mother_lmp, project_id) in rows:
+         district_name, mother_adopted, mother_lmp, project_id, mother_created) in rows:
         cases[child_id] = {
             "child": {
                 "id": child_id,
@@ -252,6 +253,9 @@ def _build_cases(
             },
             "mother": {"id": mother_id, "uid": mother_uid, "name": mother_name,
                        "adoption_date": mother_adopted.isoformat() if mother_adopted else None,
+                       # The day she was registered: the adoption date when none
+                       # was entered, as the MASD rules take it (engine.classify).
+                       "created_on": mother_created.date().isoformat() if mother_created else None,
                        "lmp": mother_lmp.isoformat() if mother_lmp else None},
             "project_id": project_id,
             "learner": (
@@ -503,13 +507,17 @@ def _adoption(case: Dict[str, Any], tranche_starts: Optional[List[date]], today:
     """
     child, mother, learner = case["child"], case["mother"], case["learner"]
     d = lambda iso: date.fromisoformat(iso) if iso else None  # noqa: E731
+    # No adoption date entered: the day the mother was registered, exactly as the
+    # MASD dashboard and the learner's My work take it — otherwise the case page
+    # shows no expected counts for a case the dashboard counts (review of 18
+    # Oct 2026: "why is expected count nil?").
     m_in = MotherIn(id=mother["id"], learner_id=learner.get("id"),
                     adoption_date=d(mother.get("adoption_date")) or d(child["adoption_date"]),
-                    lmp=d(mother.get("lmp")))
+                    lmp=d(mother.get("lmp")), created_on=d(mother.get("created_on")))
     c_in = ChildIn(id=child["id"], mother_id=mother["id"], dob=d(child["dob"]),
                    adoption_date=d(child["adoption_date"]))
     atype, _ = classify(m_in, [c_in])
-    anchor = m_in.adoption_date
+    anchor = m_in.adoption_date or m_in.created_on
     if atype == masd_rules.UNKNOWN or anchor is None:
         return {"type": None, "tranche": None, "expected": None, "anchor": anchor, "segments": {}}
     tranche = max(1, sum(1 for d in tranche_starts or [] if d <= anchor))
@@ -562,6 +570,8 @@ def _summary_rows(cases: List[Dict[str, Any]], context: Optional[Dict[str, Any]]
         adopted = date.fromisoformat(child["adoption_date"]) if child["adoption_date"] else None
         if adoption["type"] == masd_rules.ANC and dob and adoption["anchor"]:
             adopted = adoption["anchor"]
+        elif adopted is None:
+            adopted = adoption["anchor"]   # the mother's adoption (or registration) day
         age_at_adoption = (adopted - dob).days if (dob and adopted) else None
         duration_days = (today - adopted).days if adopted else None
         timing_is_mock = False
@@ -1154,6 +1164,108 @@ def admin_growth_summary_export(
         buffer,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": 'attachment; filename="growth-summary.xlsx"'},
+    )
+
+
+# ── Faltering cases (review of 18 Oct 2026) ─────────────────────────────────
+
+def _faltering_rows(db: Session, district: str, conditions: str, monitor: str, batch: str,
+                    block: str, cadre: str, learner_id: Optional[int]) -> Tuple[Dict[str, Any], List[Dict[str, Any]], List[str]]:
+    from app import faltering
+
+    chosen = [c for c in (conditions or "").split(",") if c in faltering.CONDITION_KEYS] or faltering.CONDITION_KEYS
+    built = faltering.build(db, district or None)
+    rows = faltering.apply_filters(
+        built["rows"], conditions=chosen,
+        monitor_id=int(monitor) if monitor.isdigit() else None, no_monitor=monitor == "none",
+        batch=batch or None, block=block or None, cadre=cadre or None, learner_id=learner_id)
+    return built, rows, chosen
+
+
+_FALTER_FIELDS = ["mother_name", "mother_uid", "child_name", "child_uid", "case_village", "learner_mobile"]
+
+
+@admin_router.get("/faltering")
+def admin_faltering_cases(
+    district: str = Query(""),
+    conditions: str = Query("", description="Comma-separated condition keys; empty = all"),
+    monitor: str = Query("", description="Batch monitor's user id, or 'none'"),
+    batch: str = Query(""),
+    block: str = Query(""),
+    cadre: str = Query(""),
+    learner_id: Optional[int] = Query(None),
+    admin: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Every case whose baby's latest measurement is faltering, moderately or
+    severely low — see app/faltering.py. The filter options come from the
+    whole project's list, so they never offer a value that returns nothing."""
+    built, rows, chosen = _faltering_rows(db, district, conditions, monitor, batch, block, cadre, learner_id)
+    every = built["rows"]
+    monitors = {}
+    for r in every:
+        if r["monitor"]:
+            monitors[r["monitor"]["id"]] = r["monitor"]["name"]
+    counts = {k: sum(1 for r in every if k in r["flags"]) for k in [c["key"] for c in built["conditions"]]}
+    phi.log_list(
+        resource_type="faltering_cases", count=len(rows), subject_type=phi.CHILD,
+        subject_ids=[r["case_id"] for r in rows],
+        detail={"scope": "supervisory_faltering", "district": district or None, "conditions": chosen,
+                "fields": _FALTER_FIELDS},
+    )
+    return {
+        "rows": rows,
+        "total": len(every),
+        "conditions": built["conditions"],
+        "counts": counts,
+        "options": {
+            "monitors": [{"id": k, "name": v} for k, v in sorted(monitors.items(), key=lambda kv: (kv[1] or ""))],
+            "no_monitor": any(not r["monitor"] for r in every),
+            "batches": sorted({r["batch"] for r in every if r["batch"]}),
+            "blocks": sorted({r["learner"]["block"] for r in every if r["learner"]["block"]}),
+            "cadres": sorted({r["learner"]["cadre"] for r in every if r["learner"]["cadre"]}),
+            "learners": sorted({(r["learner"]["id"], r["learner"]["name"]) for r in every if r["learner"]["id"]},
+                               key=lambda x: (x[1] or "")),
+        },
+    }
+
+
+@admin_router.get("/faltering/export")
+@limiter.limit(lambda: settings.RATE_LIMIT_EXPORT, key_func=principal_key)
+def admin_faltering_export(
+    request: Request,
+    district: str = Query(""),
+    conditions: str = Query(""),
+    monitor: str = Query(""),
+    batch: str = Query(""),
+    block: str = Query(""),
+    cadre: str = Query(""),
+    learner_id: Optional[int] = Query(None),
+    admin: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """The filtered faltering list as .xlsx: every case, then one sheet per
+    batch monitor (a trainer's "break-up by batch monitor")."""
+    from app import faltering
+
+    _built, rows, chosen = _faltering_rows(db, district, conditions, monitor, batch, block, cadre, learner_id)
+    project = db.query(models.ProgramDistrict.name).filter(models.ProgramDistrict.slug == district).scalar() if district else None
+    buffer = faltering.xlsx(rows, project=project, conditions=chosen)
+    # Synchronous, committed with the action: the file leaves our custody now.
+    phi.log_export(
+        resource_type="faltering_cases", record_count=len(rows), fmt="xlsx", subject_type=phi.CHILD, db=db,
+        detail={"filters": {"district": district or None, "conditions": chosen, "monitor": monitor or None,
+                            "batch": batch or None, "block": block or None, "cadre": cadre or None,
+                            "learner_id": learner_id},
+                "custody_note": "the exported file is in the custody of whoever holds it",
+                "fields": _FALTER_FIELDS},
+    )
+    db.commit()
+    name = f"faltering-cases-{district or 'all'}.xlsx"
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
     )
 
 

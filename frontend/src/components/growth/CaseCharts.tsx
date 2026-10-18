@@ -4,6 +4,7 @@ import { Download, Maximize2 } from 'lucide-react';
 import { Modal } from '../ui';
 import { cn } from '../../utils/cn';
 import { downloadChartPng, slugify } from '../../lib/chartExport';
+import { RotateHint } from './TableTools';
 import type { ActivityBlock, ZTriplet, GrowthVisitDetail } from '../../api/growth';
 
 /**
@@ -28,6 +29,9 @@ const zTone = (z: number | null) =>
 interface ChartCardProps {
   title: string;
   subtitle?: string;
+  /** One plain sentence on how to read the chart (review of 18 Oct 2026:
+   *  "none of the graphs are explained — they will not understand this"). */
+  description?: string;
   /** Extra header content (e.g. the latest-z badge). */
   badge?: React.ReactNode;
   /** Disable download/expand (e.g. the plot has no data, so no SVG mounts). */
@@ -36,7 +40,7 @@ interface ChartCardProps {
   render: (ref: React.RefObject<SVGSVGElement | null>) => React.ReactNode;
 }
 
-export const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, badge, exportDisabled, render }) => {
+export const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, description, badge, exportDisabled, render }) => {
   const { t } = useTranslation('growth');
   const smallRef = useRef<SVGSVGElement | null>(null);
   const largeRef = useRef<SVGSVGElement | null>(null);
@@ -80,6 +84,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, badge, ex
           </button>
         </span>
       </div>
+      {description && <p className="mb-1.5 text-xs leading-snug text-ink-muted">{description}</p>}
       {render(smallRef)}
 
       {expanded && (
@@ -102,6 +107,10 @@ export const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, badge, ex
             </span>
           }
         >
+          <div className="mb-2 space-y-1">
+            <RotateHint />
+            {description && <p className="text-sm leading-snug text-ink-muted">{description}</p>}
+          </div>
           {render(largeRef)}
         </Modal>
       )}

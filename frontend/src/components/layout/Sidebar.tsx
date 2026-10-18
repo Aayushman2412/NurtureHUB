@@ -1,8 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Video, Award, User, LogOut, Sprout, Users, Activity } from 'lucide-react';
+import { LayoutDashboard, Video, User, LogOut, Sprout, Users, Activity } from 'lucide-react';
 import { Avatar } from '../ui';
 import { cn } from '../../utils/cn';
 
@@ -11,11 +11,14 @@ interface SidebarProps {
   onClose: () => void;
 }
 
+// Review of 18 Oct 2026: tutorials and tests are one item (they alternate in
+// the training flow, and "assessment" already names the breastfeeding and
+// complementary-feeding forms); Mothers is "Adoptions" — where mothers are
+// registered and their forms filled — and My Cases & Growth is "Growth Monitor".
 const navItems = [
   { to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
-  { to: '/tutorials', labelKey: 'nav.tutorials', icon: Video },
-  { to: '/tests', labelKey: 'nav.assessments', icon: Award },
-  { to: '/mothers', labelKey: 'nav.mothers', icon: Users },
+  { to: '/tutorials', labelKey: 'nav.tutorials', icon: Video, also: ['/tests', '/results'] },
+  { to: '/mothers', labelKey: 'nav.mothers', icon: Users, also: ['/assessments'] },
   { to: '/growth', labelKey: 'nav.growth', icon: Activity },
   { to: '/profile', labelKey: 'nav.profile', icon: User },
 ];
@@ -23,6 +26,7 @@ const navItems = [
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { t } = useTranslation(['app', 'common']);
   const { user, logout } = useAuth();
+  const { pathname } = useLocation();
 
   return (
     <>
@@ -62,7 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 className={({ isActive }) =>
                   cn(
                     'flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold transition-colors',
-                    isActive
+                    isActive || item.also?.some(p => pathname.startsWith(p))
                       ? 'bg-coral-50 text-primary-ink dark:bg-coral-500/10'
                       : 'text-ink-muted hover:bg-surface-sunken hover:text-ink',
                   )

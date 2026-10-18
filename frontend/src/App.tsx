@@ -21,7 +21,6 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const TutorialsPage = lazy(() => import('./pages/TutorialsPage'));
 const TutorialPlayerPage = lazy(() => import('./pages/TutorialPlayerPage'));
-const TestsPage = lazy(() => import('./pages/TestsPage'));
 const TestInstructionsPage = lazy(() => import('./pages/TestInstructionsPage'));
 const ActiveTestPage = lazy(() => import('./pages/ActiveTestPage'));
 const TestSubmittedPage = lazy(() => import('./pages/TestSubmittedPage'));
@@ -53,6 +52,7 @@ const AdminTutorialsPage = lazy(() => import('./pages/admin/AdminTutorialsPage')
 const AdminTutorialTrackingPage = lazy(() => import('./pages/admin/AdminTutorialTrackingPage'));
 const AdminResultsPage = lazy(() => import('./pages/admin/AdminResultsPage'));
 const AdminTestsPage = lazy(() => import('./pages/admin/AdminTestsPage'));
+const AdminFalteringPage = lazy(() => import('./pages/admin/AdminFalteringPage'));
 const AdminProjectsPage = lazy(() => import('./pages/admin/AdminProjectsPage'));
 const AdminLearnersPage = lazy(() => import('./pages/admin/AdminLearnersPage'));
 const AdminLiveMonitorPage = lazy(() => import('./pages/admin/AdminLiveMonitorPage'));
@@ -172,7 +172,8 @@ const AppRoutes: React.FC = () => {
         <Route path="/notifications" element={<Navigate to="/dashboard?notifications=1" replace />} />
         <Route path="/tutorials" element={<CompleteRoute><TutorialsPage /></CompleteRoute>} />
         <Route path="/tutorials/:id" element={<CompleteRoute><TutorialPlayerPage /></CompleteRoute>} />
-        <Route path="/tests" element={<CompleteRoute><TestsPage /></CompleteRoute>} />
+        {/* Tests live inside Tutorials & Tests now (review of 18 Oct 2026). */}
+        <Route path="/tests" element={<Navigate to="/tutorials" replace />} />
         <Route path="/tests/:id/instructions" element={<CompleteRoute><TestInstructionsPage /></CompleteRoute>} />
         <Route path="/tests/:id/take" element={<CompleteRoute><ActiveTestPage /></CompleteRoute>} />
         <Route path="/tests/:id/submitted" element={<CompleteRoute><TestSubmittedPage /></CompleteRoute>} />
@@ -218,6 +219,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/admin/tests/:testId/monitor" element={<AdminRoute><AdminLiveMonitorPage /></AdminRoute>} />
         <Route path="/admin/growth" element={<AdminRoute><AdminGrowthMonitorPage /></AdminRoute>} />
         <Route path="/admin/masd" element={<AdminRoute><AdminMasdPage /></AdminRoute>} />
+        <Route path="/admin/faltering" element={<AdminRoute><AdminFalteringPage /></AdminRoute>} />
         <Route path="/admin/growth/cases/:childId" element={<AdminRoute><AdminGrowthCasePage /></AdminRoute>} />
         <Route path="/admin/data-protection" element={<AdminRoute><AdminDataProtectionPage /></AdminRoute>} />
         <Route path="/admin/database/rawdata" element={<AdminRoute><AdminRawDataPage /></AdminRoute>} />

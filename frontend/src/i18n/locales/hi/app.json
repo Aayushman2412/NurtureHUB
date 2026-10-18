@@ -1,19 +1,21 @@
 {
   "nav": {
     "dashboard": "डैशबोर्ड",
-    "tutorials": "ट्यूटोरियल",
-    "assessments": "जाँच",
-    "mothers": "माताएँ",
-    "growth": "मेरे केस और वृद्धि",
+    "tutorials": "ट्यूटोरियल और टेस्ट",
+    "assessments": "टेस्ट",
+    "mothers": "गोद लिए केस",
+    "growth": "वृद्धि निगरानी",
     "profile": "प्रोफ़ाइल"
   },
   "headerTitle": {
     "dashboard": "डैशबोर्ड",
-    "tutorials": "प्रशिक्षण पाठ",
-    "tests": "जाँच और प्रश्नोत्तरी",
-    "results": "जाँच का प्रदर्शन",
+    "tutorials": "ट्यूटोरियल और टेस्ट",
+    "tests": "टेस्ट",
+    "results": "टेस्ट का परिणाम",
     "profile": "प्रोफ़ाइल सेटिंग्स",
-    "default": "NurtureHUB"
+    "default": "NurtureHUB",
+    "mothers": "गोद लिए केस",
+    "growth": "वृद्धि निगरानी"
   },
   "header": {
     "toggleMenu": "मेनू टॉगल करें",
@@ -30,7 +32,7 @@
     "readAll": "सभी पढ़ें",
     "close": "बंद करें",
     "emptyTitle": "अभी तक कोई सूचना नहीं",
-    "emptyBody": "आपके प्रशिक्षण और जाँच के बारे में अपडेट यहाँ दिखाई देंगे।"
+    "emptyBody": "आपके प्रशिक्षण और टेस्ट के बारे में अपडेट यहाँ दिखाई देंगे।"
   },
   "install": {
     "button": "ऐप डाउनलोड करें",

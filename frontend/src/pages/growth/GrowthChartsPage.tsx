@@ -14,7 +14,8 @@ import {
 import GrowthSummaryTable from '../../components/growth/GrowthSummaryTable';
 import GrowthChartGrid, { GrowthLegend } from '../../components/growth/GrowthChartGrid';
 import VisitDetailModal from '../../components/growth/VisitDetailModal';
-import { Button, buttonClasses, Chip, EmptyState, PageHeader, PageLoader, Tabs } from '../../components/ui';
+import { Button, buttonClasses, EmptyState, PageHeader, PageLoader, Select, Tabs } from '../../components/ui';
+import { cn } from '../../utils/cn';
 import {
   caseHasCohortData,
   sexKeyForGender,
@@ -153,26 +154,50 @@ const GrowthChartsPage: React.FC = () => {
           <GrowthSummaryTable
             rows={rows}
             mock={false}
+            allowTranspose
             onRowClick={row => navigate(`/growth/cases/${row.case_id}?from=growth`)}
           />
         </>
       ) : (
       <>
-      {/* case selector — one scrollable row on phones, wrapping grid from sm */}
-      <div className="-mx-5 mb-4 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0 [&>button]:shrink-0">
-        <Chip selected={selectedCase == null} onClick={() => selectCase(null)}>
-          {t('learner.allCases')}
-        </Chip>
-        {cases.map(c => (
-          <Chip
-            key={c.child.id}
-            selected={selectedCase?.child.id === c.child.id}
-            count={c.visits.filter(v => v.weight != null || v.length != null).length}
-            onClick={() => selectCase(c.child.id)}
-          >
-            {t('learner.caseLabel', { child: c.child.name, mother: c.mother.name })}
-          </Chip>
-        ))}
+      {/* Which case, and boys or girls — frozen at the top so the learner never
+          scrolls back up to change them (review of 18 Oct 2026). */}
+      <div className="sticky top-[3.75rem] z-20 -mx-5 mb-4 flex flex-wrap items-center gap-2 border-b border-border bg-background/95 px-5 py-2 backdrop-blur-md sm:-mx-6 sm:px-6">
+        <Select
+          aria-label={t('learner.pickCase')}
+          value={selectedCase ? String(selectedCase.child.id) : ''}
+          onChange={e => selectCase(e.target.value ? Number(e.target.value) : null)}
+          className="min-w-0 flex-1 sm:max-w-md"
+        >
+          <option value="">{t('learner.allCases')} ({cases.length})</option>
+          {cases.map(c => (
+            <option key={c.child.id} value={c.child.id}>
+              {t('learner.caseLabel', { child: c.child.name, mother: c.mother.name })}
+              {' · '}{t('learner.visitCount', { count: c.visits.filter(v => v.weight != null || v.length != null).length })}
+            </option>
+          ))}
+        </Select>
+        {selectedCase == null ? (
+          <div role="tablist" className="flex shrink-0 rounded-lg border border-border bg-surface p-0.5">
+            {(['boys', 'girls'] as const).map(s => (
+              <button
+                key={s}
+                type="button"
+                role="tab"
+                aria-selected={sexTab === s}
+                onClick={() => setSexTab(s)}
+                className={cn('cursor-pointer rounded-md px-3 py-1.5 text-sm font-semibold transition-colors',
+                  sexTab === s ? 'bg-primary text-white' : 'text-ink-muted hover:text-ink')}
+              >
+                {t(`sexTabs.${s}`)} ({counts[s]})
+              </button>
+            ))}
+          </div>
+        ) : selectedSex && (
+          <span className="shrink-0 rounded-lg bg-surface px-3 py-1.5 text-sm font-semibold text-ink-muted ring-1 ring-border">
+            {t(`sexTabs.${selectedSex}`)}
+          </span>
+        )}
       </div>
 
       <div className="mb-4">
@@ -217,14 +242,6 @@ const GrowthChartsPage: React.FC = () => {
         )
       ) : (
         <div className="space-y-4">
-          <Tabs
-            value={sexTab}
-            onChange={setSexTab}
-            items={[
-              { value: 'boys' as const, label: `${t('sexTabs.boys')} (${counts.boys})` },
-              { value: 'girls' as const, label: `${t('sexTabs.girls')} (${counts.girls})` },
-            ]}
-          />
           {allCasesForTab.length === 0 ? (
             <EmptyState
               icon={<Activity className="size-8" />}
