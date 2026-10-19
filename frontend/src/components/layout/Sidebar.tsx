@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Video, User, LogOut, Sprout, Users, Activity } from 'lucide-react';
+import { LayoutDashboard, Video, User, LogOut, Sprout, Users, Activity, Lock } from 'lucide-react';
 import { Avatar } from '../ui';
 import { cn } from '../../utils/cn';
 
@@ -18,8 +18,8 @@ interface SidebarProps {
 const navItems = [
   { to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
   { to: '/tutorials', labelKey: 'nav.tutorials', icon: Video, also: ['/tests', '/results'] },
-  { to: '/mothers', labelKey: 'nav.mothers', icon: Users, also: ['/assessments'] },
-  { to: '/growth', labelKey: 'nav.growth', icon: Activity },
+  { to: '/mothers', labelKey: 'nav.mothers', icon: Users, also: ['/assessments'], needsSelection: true },
+  { to: '/growth', labelKey: 'nav.growth', icon: Activity, needsSelection: true },
   { to: '/profile', labelKey: 'nav.profile', icon: User },
 ];
 
@@ -58,7 +58,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
           {/* Nav */}
           <nav className="flex flex-col gap-1 p-3">
-            {navItems.map(item => (
+            {navItems.map(item => item.needsSelection && !user?.adoptions_open ? (
+              // Locked until she is selected for face-to-face training.
+              <div
+                key={item.to}
+                aria-disabled="true"
+                title={t('nav.lockedHint')}
+                className="flex cursor-not-allowed items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold text-ink-faint"
+              >
+                <item.icon className="size-[18px]" />
+                <span className="flex-1">{t(item.labelKey)}</span>
+                <Lock className="size-3.5" aria-label={t('nav.lockedHint')} />
+              </div>
+            ) : (
               <NavLink
                 key={item.to}
                 to={item.to}

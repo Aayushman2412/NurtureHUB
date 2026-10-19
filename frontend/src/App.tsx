@@ -11,6 +11,7 @@ import LoginPage from './pages/LoginPage';
 
 // Public & Auth pages (lazy)
 const SignupPage = lazy(() => import('./pages/SignupPage'));
+const SectionLocked = lazy(() => import('./pages/SectionLockedPage'));
 const JoinPage = lazy(() => import('./pages/JoinPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const OTPPage = lazy(() => import('./pages/OTPPage'));
@@ -108,6 +109,17 @@ const CompleteRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   return <AppLayout>{children}</AppLayout>;
 };
 
+// Adoptions and the Growth Monitor: open only once the learner is selected
+// for face-to-face training (review of 19 Oct 2026). Before that the page says
+// why, instead of a list she cannot use yet.
+const AdoptionsRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  if (user && !user.adoptions_open) {
+    return <CompleteRoute><SectionLocked /></CompleteRoute>;
+  }
+  return <CompleteRoute>{children}</CompleteRoute>;
+};
+
 // Admin Route: Check localStorage or user for admin access
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -181,25 +193,25 @@ const AppRoutes: React.FC = () => {
         <Route path="/profile" element={<CompleteRoute><ProfilePage /></CompleteRoute>} />
 
         {/* Mother Registration */}
-        <Route path="/mothers" element={<CompleteRoute><MothersListPage /></CompleteRoute>} />
-        <Route path="/mothers/new" element={<CompleteRoute><MotherFormPage /></CompleteRoute>} />
-        <Route path="/mothers/:id" element={<CompleteRoute><MotherDetailPage /></CompleteRoute>} />
+        <Route path="/mothers" element={<AdoptionsRoute><MothersListPage /></AdoptionsRoute>} />
+        <Route path="/mothers/new" element={<AdoptionsRoute><MotherFormPage /></AdoptionsRoute>} />
+        <Route path="/mothers/:id" element={<AdoptionsRoute><MotherDetailPage /></AdoptionsRoute>} />
 
         {/* Child Registration (nested under a mother) */}
-        <Route path="/mothers/:motherId/children/new" element={<CompleteRoute><ChildFormPage /></CompleteRoute>} />
-        <Route path="/mothers/:motherId/children/:childId" element={<CompleteRoute><ChildFormPage /></CompleteRoute>} />
+        <Route path="/mothers/:motherId/children/new" element={<AdoptionsRoute><ChildFormPage /></AdoptionsRoute>} />
+        <Route path="/mothers/:motherId/children/:childId" element={<AdoptionsRoute><ChildFormPage /></AdoptionsRoute>} />
 
         {/* Per-child assessments: BF/CF (flow) + Check Growth (flat) */}
-        <Route path="/mothers/:motherId/children/:childId/assessments/:formKey" element={<CompleteRoute><AssessmentHistoryPage /></CompleteRoute>} />
-        <Route path="/mothers/:motherId/children/:childId/assessments/:formKey/run" element={<CompleteRoute><AssessmentRunnerRoute /></CompleteRoute>} />
+        <Route path="/mothers/:motherId/children/:childId/assessments/:formKey" element={<AdoptionsRoute><AssessmentHistoryPage /></AdoptionsRoute>} />
+        <Route path="/mothers/:motherId/children/:childId/assessments/:formKey/run" element={<AdoptionsRoute><AssessmentRunnerRoute /></AdoptionsRoute>} />
         {/* Per-mother assessments (protein intake — flow only) */}
-        <Route path="/mothers/:motherId/assessments/:formKey" element={<CompleteRoute><AssessmentHistoryPage /></CompleteRoute>} />
-        <Route path="/mothers/:motherId/assessments/:formKey/run" element={<CompleteRoute><AssessmentRunnerRoute /></CompleteRoute>} />
-        <Route path="/assessments/:responseId/plan" element={<CompleteRoute><AssessmentPlanPage /></CompleteRoute>} />
+        <Route path="/mothers/:motherId/assessments/:formKey" element={<AdoptionsRoute><AssessmentHistoryPage /></AdoptionsRoute>} />
+        <Route path="/mothers/:motherId/assessments/:formKey/run" element={<AdoptionsRoute><AssessmentRunnerRoute /></AdoptionsRoute>} />
+        <Route path="/assessments/:responseId/plan" element={<AdoptionsRoute><AssessmentPlanPage /></AdoptionsRoute>} />
 
         {/* Growth charts (LAP monitoring) — case-wise WHO percentile charts */}
-        <Route path="/growth" element={<CompleteRoute><GrowthChartsPage /></CompleteRoute>} />
-        <Route path="/growth/cases/:childId" element={<CompleteRoute><MyCasePage /></CompleteRoute>} />
+        <Route path="/growth" element={<AdoptionsRoute><GrowthChartsPage /></AdoptionsRoute>} />
+        <Route path="/growth/cases/:childId" element={<AdoptionsRoute><MyCasePage /></AdoptionsRoute>} />
 
         {/* Admin Panel Routes */}
         <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />

@@ -215,6 +215,19 @@ class User(Base):
         from app.identity import is_placeholder
         return is_placeholder(self.email)
 
+    @property
+    def adoptions_open(self) -> bool:
+        """Selected for face-to-face training: only then are Adoptions and the
+        Growth Monitor open to her (review of 19 Oct 2026 — locked while the
+        training is under way, while the result is awaited, and when not
+        selected)."""
+        from sqlalchemy.orm import object_session
+
+        session = object_session(self)
+        if session is None or self.id is None:
+            return False
+        return session.query(FaceToFaceSelection.id).filter(FaceToFaceSelection.user_id == self.id).first() is not None
+
     def sync_lookups(self) -> None:
         """Recompute the blind index from the current phone — after any write
         to it. Sign-in by mobile number finds the account through this index

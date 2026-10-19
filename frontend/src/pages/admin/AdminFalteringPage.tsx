@@ -188,6 +188,10 @@ const AdminFalteringPage: React.FC = () => {
                   <td className="whitespace-nowrap">{r.monitor?.name ?? <span className="text-ink-faint">{t('faltering.noMonitor')}</span>}
                     {r.batch && <span className="block text-xs text-ink-muted">{r.batch}</span>}</td>
                   <td className="whitespace-nowrap"><span className="font-semibold text-ink">{r.learner.name}</span>
+                    {/* ID and mobile: synthetic and real learners share names, so tell namesakes apart */}
+                    <span className="block text-xs text-ink-muted">
+                      {[r.learner.id != null ? t('faltering.learnerId', { id: r.learner.id }) : null, r.learner.mobile].filter(Boolean).join(' · ')}
+                    </span>
                     <span className="block text-xs text-ink-muted">{[r.learner.cadre, r.learner.block].filter(Boolean).join(' · ')}</span></td>
                   <td className="whitespace-nowrap">{r.mother.name}
                     <span className="block font-mono text-xs text-ink-muted">{r.mother.uid}{r.mother.village ? ` · ${r.mother.village}` : ''}</span></td>

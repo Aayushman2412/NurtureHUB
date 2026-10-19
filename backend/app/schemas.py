@@ -576,6 +576,9 @@ class UserOut(BaseModel):
     contact_email_verified: bool = False
     password_weak: bool = False
     is_batch_monitor: bool = False
+    # Adoptions and the Growth Monitor open only once she is selected for
+    # face-to-face training (review of 19 Oct 2026).
+    adoptions_open: bool = False
 
     # ── Learner Registration: professional-axis FKs + extension fields ──
     department_id: Optional[int] = None

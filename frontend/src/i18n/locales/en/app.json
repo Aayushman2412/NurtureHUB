@@ -5,7 +5,8 @@
     "assessments": "Tests",
     "mothers": "Adoptions",
     "growth": "Growth Monitor",
-    "profile": "Profile"
+    "profile": "Profile",
+    "lockedHint": "Opens once you are selected for face-to-face training"
   },
   "headerTitle": {
     "dashboard": "Dashboard",
@@ -46,5 +47,10 @@
     "otherStep3": "Confirm — NurtureHUB opens in its own window.",
     "benefits": "Installed, NurtureHUB opens instantly, works without internet, and can send you notifications.",
     "gotIt": "Got it"
+  },
+  "locked": {
+    "title": "Opens after your selection",
+    "body": "Adoptions and the Growth Monitor open once you are selected for face-to-face training. Until then, finish your videos and tests on the Dashboard.",
+    "back": "Back to my training"
   }
 }

@@ -130,3 +130,14 @@ def test_admin_announces_and_takes_it_back(db, world):
                                            db=db, admin_email="a@x")
     assert out["announced_at"] is None
     assert selection_state(db, world["learner"]) == "awaiting"
+
+
+def test_adoptions_and_growth_monitor_open_only_on_selection(db, world):
+    from app.schemas import UserOut
+
+    learner = world["learner"]
+    _finish(db, world)                                   # finished, waiting
+    assert UserOut.model_validate(learner).adoptions_open is False
+    db.add(models.FaceToFaceSelection(user_id=learner.id, program_district_id=world["project"].id))
+    db.commit()
+    assert UserOut.model_validate(learner).adoptions_open is True

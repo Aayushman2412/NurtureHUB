@@ -51,6 +51,8 @@ export interface User {
   contact_email_verified?: boolean;
   password_weak?: boolean;
   is_batch_monitor?: boolean;
+  /** Selected for face-to-face training: Adoptions and Growth Monitor open. */
+  adoptions_open?: boolean;
 
   // ── Learner Registration: professional-axis FKs + extension fields ──
   department_id: number | null;
