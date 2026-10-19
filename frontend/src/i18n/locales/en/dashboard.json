@@ -44,7 +44,9 @@
       "submitted": "You have submitted this test. Results will be announced by the admin — please wait for further updates.",
       "formative": "Complete all required videos in Phase 1 before this test goes live. If you wish, you can also go ahead and watch the Phase 3 add-on videos in advance.",
       "screening": "Complete all add-on videos to become eligible for this test. While you wait, feel free to go back and revise the previous videos.",
-      "default": "Complete all required videos to become eligible for this test."
+      "default": "Complete all required videos to become eligible for this test.",
+      "selected": "Done — you passed and were selected for face-to-face training.",
+      "announced": "Done — the selection results have been announced."
     }
   },
   "videos": {
@@ -181,7 +183,8 @@
     "adoptions": "Adoptions",
     "adoptionsHint": "Your mothers and babies",
     "adoptionsLocked": "Opens after selection",
-    "noWork": "Your adoption work appears here once your project's programme calendar is set."
+    "noWork": "Your adoption work appears here once your project's programme calendar is set.",
+    "adoptionsNotSelected": "Not selected this time"
   },
   "status": {
     "liveTest": "A test is open now: {{test}}. Take it from Tutorials & Tests.",
@@ -191,10 +194,19 @@
     "quizzesLeft_one": "Videos done. {{count}} short quiz left.",
     "quizzesLeft_other": "Videos done. {{count}} short quizzes left.",
     "nextTest": "Videos done. Next: {{test}} ({{date}}).",
-    "allDone": "Well done — your training is complete."
+    "allDone": "Well done — your training is complete.",
+    "selected": "Training complete — you are selected for face-to-face training. Your work is now in Adoptions.",
+    "notSelected": "Training complete. The selection results are out — you were not selected this time."
   },
   "topics": {
     "title": "Your tests by topic",
     "subtitle": "What you knew well, and what to watch again."
+  },
+  "selection": {
+    "selectedTitle": "Congratulations — you are selected for face-to-face training!",
+    "selectedBody": "You finished every video and passed your tests. Adoptions is now open: register your mothers and fill their forms there.",
+    "openAdoptions": "Open Adoptions",
+    "notSelectedTitle": "The selection results are out",
+    "notSelectedBody": "Thank you for completing every video and test. You were not selected for the face-to-face training this time. The videos stay open for you to revise."
   }
 }

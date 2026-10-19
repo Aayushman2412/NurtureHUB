@@ -23,7 +23,8 @@
       "ended": "Ended",
       "locked": "Locked",
       "notStarted": "Not Started",
-      "awaitingStart": "Awaiting Start"
+      "awaitingStart": "Awaiting Start",
+      "submitted": "Submitted"
     },
     "questionsCount": "{{total}} Questions",
     "minutesLimit": "{{minutes}} Minutes limit",

@@ -848,12 +848,15 @@ class DashboardData(BaseModel):
     # True once every tutorial is completed and every test has been submitted —
     # the user is done and waiting for the admin to publish results.
     awaiting_results: bool = False
-    # Selected for face-to-face training (or already adopting): the dashboard
-    # opens on the Adoptions view instead of the training one (review of 18
-    # Oct 2026 — "the moment adoption starts the project is in a very
-    # different mode").
+    # Selected for face-to-face training: the dashboard opens on the
+    # Adoptions view instead of the training one (review of 18 Oct 2026 —
+    # "the moment adoption starts the project is in a very different mode").
+    # Adoptions opens ONLY on selection (19 Oct: "if the adoptions dashboard
+    # is unlocked it means the user is selected for F2F training").
     selected_for_f2f: bool = False
     adoptions_open: bool = False
+    # in_progress | awaiting | not_selected | selected — see app/flow.py.
+    selection_state: str = "in_progress"
     achievements: List[AchievementOut]
     activities: List[DashboardActivity]
     stages: List[StageOut]

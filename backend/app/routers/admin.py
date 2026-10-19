@@ -3693,6 +3693,12 @@ class FaceToFaceUploadRequest(BaseModel):
 
 
 FACE_TO_FACE_NOTIFICATION_TITLE = "Selected for Face-to-Face Training"
+NOT_SELECTED_NOTIFICATION_TITLE = "Selection result"
+
+
+class SelectionAnnouncementRequest(BaseModel):
+    announce: bool = True
+    notify: bool = True
 
 
 _CADRE_SHORT = {
@@ -4258,6 +4264,61 @@ def upload_face_to_face_selection(
         "already_selected": already_selected,
         "notified_count": len(matched) if payload.notify else 0,
     }
+
+
+def _finished_not_selected(db: Session, pd) -> List[User]:
+    """Learners of the project who finished every video and test and are not
+    on the face-to-face selection list."""
+    from app.flow import is_awaiting_results
+
+    selected = {uid for (uid,) in db.query(FaceToFaceSelection.user_id)}
+    learners = db.query(User).filter(User.program_district_id.in_(projects.member_project_ids(db, pd))).all()
+    return [u for u in learners if u.id not in selected and is_awaiting_results(db, u)]
+
+
+@router.get("/results/face-to-face/announcement")
+def get_selection_announcement(
+    district: str = Query(..., description="Project slug"),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Whether the project's face-to-face selection has been announced
+    (review of 19 Oct 2026), and how many learners finished but are not on
+    the list — they wait for the result until it is, and are told they were
+    not selected once it is."""
+    pd = _get_district_or_404(db, district)
+    return {"announced_at": pd.selection_announced_at.isoformat() if pd.selection_announced_at else None,
+            "finished_not_selected": len(_finished_not_selected(db, pd))}
+
+
+@router.post("/results/face-to-face/announcement")
+def set_selection_announcement(
+    payload: SelectionAnnouncementRequest,
+    district: str = Query(..., description="Project slug"),
+    db: Session = Depends(get_db),
+    admin_email: str = Depends(get_admin_email),
+):
+    """Announce the selection to the whole project, or take it back. On
+    announcing, every learner who finished but is not selected is told (the
+    selected ones were told when their names were uploaded)."""
+    pd = _get_district_or_404(db, district)
+    told = 0
+    if payload.announce:
+        pd.selection_announced_at = datetime.now(dt_timezone.utc)
+        if payload.notify:
+            for user in _finished_not_selected(db, pd):
+                create_notification(
+                    db, user.id, NOT_SELECTED_NOTIFICATION_TITLE,
+                    ("Thank you for completing the training and the tests. You were not selected for the "
+                     "face-to-face training this time. The videos stay open for you to revise."),
+                    link="/dashboard",
+                )
+                told += 1
+    else:
+        pd.selection_announced_at = None
+    db.commit()
+    return {"announced_at": pd.selection_announced_at.isoformat() if pd.selection_announced_at else None,
+            "notified": told}
 
 
 @router.delete("/results/face-to-face/{user_id}")

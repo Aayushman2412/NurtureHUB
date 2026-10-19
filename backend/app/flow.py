@@ -137,6 +137,40 @@ def is_awaiting_results(db: Session, user: User) -> bool:
     return True
 
 
+# Where a learner is in the selection pipeline (review of 19 Oct 2026):
+#   in_progress  — videos or tests still to do
+#   awaiting     — all done; the project has not announced its selection yet
+#   not_selected — all done; the selection was announced and she is not on it
+#   selected     — on the face-to-face selection list: training is behind her
+#                  and the Adoptions dashboard is open
+SELECTION_STATES = ("in_progress", "awaiting", "not_selected", "selected")
+
+
+def selection_announced(db: Session, user: User) -> bool:
+    """The learner's project (or the state project it sits in) has announced
+    its face-to-face selection."""
+    from app.models import ProgramDistrict
+
+    if not user.program_district_id:
+        return False
+    project = db.get(ProgramDistrict, user.program_district_id)
+    while project is not None:
+        if project.selection_announced_at is not None:
+            return True
+        project = db.get(ProgramDistrict, project.parent_id) if project.parent_id else None
+    return False
+
+
+def selection_state(db: Session, user: User) -> str:
+    from app.models import FaceToFaceSelection
+
+    if db.query(FaceToFaceSelection.id).filter(FaceToFaceSelection.user_id == user.id).first() is not None:
+        return "selected"
+    if not is_awaiting_results(db, user):
+        return "in_progress"
+    return "not_selected" if selection_announced(db, user) else "awaiting"
+
+
 def ensure_awaiting_results_notification(db: Session, user: User) -> None:
     """Create the one-time 'wait for your results' notification when the flow is complete."""
     # The session runs with autoflush=False; flush so the in-flight attempt

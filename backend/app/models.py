@@ -65,6 +65,11 @@ class ProgramDistrict(Base):
         Integer, ForeignKey("districts.id", ondelete="SET NULL", name="program_districts_reg_district_id_fkey"),
         nullable=True,
     )
+    # When the face-to-face selection was announced to the whole project
+    # (review of 19 Oct 2026). Until then a learner who finished every video
+    # and test is "waiting for the result"; after it, one not on the selection
+    # list is told she was not selected this time. Null = not announced.
+    selection_announced_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     users = relationship("User", back_populates="program_district")

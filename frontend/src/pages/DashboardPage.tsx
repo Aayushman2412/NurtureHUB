@@ -20,6 +20,8 @@ import {
   HeartHandshake,
   Lightbulb,
   BarChart3,
+  PartyPopper,
+  Award,
 } from 'lucide-react';
 import { Badge, Button, Card, PageLoader, ProgressBar, ProgressRing, WelcomeBanner } from '../components/ui';
 import SupportTeamCard from '../components/SupportTeamCard';
@@ -93,6 +95,8 @@ interface DashboardData {
   awaiting_results: boolean;
   selected_for_f2f?: boolean;
   adoptions_open?: boolean;
+  /** Where the learner is in the selection pipeline (review of 19 Oct 2026). */
+  selection_state?: SelectionState;
   achievements: Achievement[];
   activities: Activity[];
   stages: Stage[];
@@ -123,10 +127,16 @@ const testStatusBadge = (status: StageTest['status'], t: TFunction) => {
   }
 };
 
-const testPhaseMessage = (stg: Stage, t: TFunction): string => {
+type SelectionState = 'in_progress' | 'awaiting' | 'not_selected' | 'selected';
+
+const testPhaseMessage = (stg: Stage, state: SelectionState, t: TFunction): string => {
   const test = stg.test;
   if (!test) return '';
-  if (test.is_submitted) return t('test.message.submitted');
+  if (test.is_submitted) {
+    if (state === 'selected') return t('test.message.selected');
+    if (state === 'not_selected') return t('test.message.announced');
+    return t('test.message.submitted');
+  }
   if (test.test_type === 'formative') return t('test.message.formative');
   if (test.test_type === 'screening') return t('test.message.screening');
   return t('test.message.default');
@@ -135,6 +145,8 @@ const testPhaseMessage = (stg: Stage, t: TFunction): string => {
 /** One line saying where the learner stands and what to do next — the
  *  "inference" for the four circles (review of 18 Oct 2026). */
 const trainingStatus = (data: DashboardData, t: TFunction): string => {
+  if (data.selection_state === 'selected') return t('status.selected');
+  if (data.selection_state === 'not_selected') return t('status.notSelected');
   const tutorials = data.stages.flatMap(s => s.tutorials);
   const videosLeft = data.total_tutorials - data.tutorials_completed;
   const quizzesLeft = tutorials.filter(x => x.quiz_available && x.quiz_status === 'pending').length;
@@ -187,9 +199,10 @@ const DashboardPage: React.FC = () => {
 
   // Two modes (review of 18 Oct 2026): until the screening test the project is
   // about training; "the moment adoption starts the project is in a very
-  // different mode". Adoptions opens once the learner is selected for
-  // face-to-face training (or already has mothers), and is then the first view.
+  // different mode". Adoptions opens only once the learner is selected for
+  // face-to-face training (19 Oct), and is then the first view.
   const adoptionsOpen = !!data.adoptions_open;
+  const state: SelectionState = data.selection_state ?? (data.awaiting_results ? 'awaiting' : 'in_progress');
   const asked = searchParams.get('view');
   const view: DashView = adoptionsOpen && asked !== 'training' ? 'adoptions' : 'training';
   const setView = (v: DashView) => setSearchParams(v === (adoptionsOpen ? 'adoptions' : 'training') ? {} : { view: v }, { replace: true });
@@ -249,7 +262,8 @@ const DashboardPage: React.FC = () => {
           {([
             { v: 'training' as const, icon: <GraduationCap className="size-5" />, label: t('modes.training'), hint: t('modes.trainingHint') },
             { v: 'adoptions' as const, icon: <HeartHandshake className="size-5" />, label: t('modes.adoptions'),
-              hint: adoptionsOpen ? t('modes.adoptionsHint') : t('modes.adoptionsLocked') },
+              hint: adoptionsOpen ? t('modes.adoptionsHint')
+                : state === 'not_selected' ? t('modes.adoptionsNotSelected') : t('modes.adoptionsLocked') },
           ]).map(m => {
             const locked = m.v === 'adoptions' && !adoptionsOpen;
             const active = view === m.v;
@@ -289,8 +303,37 @@ const DashboardPage: React.FC = () => {
         </>
       ) : (
       <>
+      {/* Selected: the training is behind her, and her work is in Adoptions. */}
+      {state === 'selected' && (
+        <Card accent="sage" className="flex flex-wrap items-center gap-4 p-4 sm:p-6">
+          <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-xl bg-sage-500/15 text-sage-600">
+            <PartyPopper className="size-6" />
+          </div>
+          <div className="min-w-0 flex-1 basis-60">
+            <h4 className="mb-1 font-display font-bold text-ink">{t('selection.selectedTitle')}</h4>
+            <p className="text-sm leading-snug text-ink-muted">{t('selection.selectedBody')}</p>
+          </div>
+          <Button size="sm" onClick={() => setView('adoptions')} iconRight={<ChevronRight className="size-3.5" />}>
+            {t('selection.openAdoptions')}
+          </Button>
+        </Card>
+      )}
+
+      {/* Finished, results announced, not on the list. */}
+      {state === 'not_selected' && (
+        <Card accent="amber" className="flex items-center gap-4 p-4 sm:p-6">
+          <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600">
+            <Award className="size-6" />
+          </div>
+          <div>
+            <h4 className="mb-1 font-display font-bold text-ink">{t('selection.notSelectedTitle')}</h4>
+            <p className="text-sm leading-snug text-ink-muted">{t('selection.notSelectedBody')}</p>
+          </div>
+        </Card>
+      )}
+
       {/* Awaiting the selection for face-to-face training — everything is done */}
-      {data.awaiting_results && (
+      {state === 'awaiting' && (
         <Card accent="amber" className="flex items-center gap-4 p-4 sm:p-6">
           <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600">
             <Hourglass className="size-6" />
@@ -365,7 +408,8 @@ const DashboardPage: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Scheduled date/time */}
+                    {/* Scheduled date/time — only while it is still to come */}
+                    {!test.is_submitted && (
                     <div className="mt-3.5 flex items-center gap-2.5 rounded-lg border border-dashed border-border bg-surface-sunken px-4 py-3">
                       <CalendarClock className="size-[18px] flex-shrink-0 text-amber-600" />
                       <div className="text-[13px]">
@@ -378,10 +422,11 @@ const DashboardPage: React.FC = () => {
                         <span className="text-ink-faint"> • {t('test.durationMins', { minutes: test.duration_minutes })}</span>
                       </div>
                     </div>
+                    )}
 
                     {/* Guidance + action */}
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-4">
-                      <span className="min-w-0 flex-1 basis-full sm:basis-52 text-[13px] text-ink-faint">{testPhaseMessage(stg, t)}</span>
+                      <span className="min-w-0 flex-1 basis-full sm:basis-52 text-[13px] text-ink-faint">{testPhaseMessage(stg, state, t)}</span>
                       {canTake ? (
                         <Button
                           size="sm"

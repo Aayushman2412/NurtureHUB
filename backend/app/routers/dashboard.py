@@ -6,7 +6,6 @@ from app.database import get_db
 from app.models import Stage, Tutorial, UserTutorialProgress, Test, TestAttempt, UserAchievement, Achievement
 from app.schemas import DashboardData, DashboardActivity, AchievementOut
 from app.dependencies import get_verified_user, require_phi_access
-from app.flow import is_awaiting_results
 from app.models import User
 from app.routers.tutorials import get_stages
 
@@ -146,13 +145,13 @@ def get_dashboard_data(current_user: User = Depends(get_verified_user), db: Sess
     # 4. Get stages and tutorials using our existing endpoint logic (already district-filtered)
     stages_out = get_stages(current_user=current_user, db=db)
 
-    # 5. Which view the dashboard opens on: training until the learner is
-    # selected for face-to-face training, adoptions from then on. A learner
-    # who has already registered mothers keeps the Adoptions view either way.
-    from app.models import FaceToFaceSelection, Mother
+    # 5. Where the learner is in the selection pipeline, and so which view
+    # the dashboard opens on: training until she is selected for
+    # face-to-face training, adoptions from then on.
+    from app.flow import selection_state
 
-    selected = db.query(FaceToFaceSelection.id).filter(FaceToFaceSelection.user_id == current_user.id).first() is not None
-    has_mothers = db.query(Mother.id).filter(Mother.registered_by_user_id == current_user.id).first() is not None
+    state = selection_state(db, current_user)
+    selected = state == "selected"
     
     return DashboardData(
         progress_percentage=progress_pct,
@@ -160,9 +159,10 @@ def get_dashboard_data(current_user: User = Depends(get_verified_user), db: Sess
         total_tutorials=total_tutorials,
         tests_passed=passed_tests,
         total_tests=total_tests,
-        awaiting_results=is_awaiting_results(db, current_user) and not selected,
+        awaiting_results=state == "awaiting",
         selected_for_f2f=selected,
-        adoptions_open=selected or has_mothers,
+        adoptions_open=selected,
+        selection_state=state,
         achievements=achievements_out,
         activities=activities,
         stages=stages_out

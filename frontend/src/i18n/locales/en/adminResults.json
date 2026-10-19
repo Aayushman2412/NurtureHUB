@@ -131,5 +131,18 @@
     "insights": "Insights",
     "learners": "All learners",
     "selection": "Face-to-face selection"
+  },
+  "announce": {
+    "notYet": "Selection results not announced yet",
+    "notYetBody": "{{count}} learner(s) finished every video and test and are not on the list — they see \"please wait for the selection result\" until you announce.",
+    "button": "Announce results to everyone",
+    "announcedOn": "Selection results announced on {{date}}",
+    "announcedBody": "Learners who finished but are not on the list see \"you were not selected this time\". Selected learners see Adoptions.",
+    "undo": "Take back the announcement",
+    "confirm": "Announce the selection to the whole project? {{count}} learner(s) who finished but are not selected will be told they were not selected this time.",
+    "confirmUndo": "Take back the announcement? Learners who finished but are not selected will again see \"please wait for the selection result\". Notifications already sent stay.",
+    "done": "Announced — {{count}} learner(s) told",
+    "undone": "Announcement taken back",
+    "failed": "Could not change the announcement."
   }
 }

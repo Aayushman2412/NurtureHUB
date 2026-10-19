@@ -77,6 +77,8 @@ const TestPhaseCard: React.FC<{
         </div>
         {test.is_passed ? (
           <Badge variant="success">{t('list.badge.passed')}</Badge>
+        ) : attempts.length > 0 ? (
+          <Badge variant="neutral">{t('list.badge.submitted')}</Badge>
         ) : test.status === 'active' && !test.is_locked ? (
           <Badge variant="success">● {t('list.badge.live')}</Badge>
         ) : test.status === 'ended' ? (
@@ -95,7 +97,7 @@ const TestPhaseCard: React.FC<{
         <Info icon={<RotateCcw className="size-4" />}>{t('list.attempts', { used: test.attempts_count, max: test.max_attempts })}</Info>
       </div>
 
-      {test.status !== 'active' && (
+      {test.status !== 'active' && attempts.length === 0 && (
         <div className="flex items-center gap-2 rounded-lg border border-dashed border-border bg-surface-sunken px-3 py-2.5 text-[13px] text-ink-muted">
           <CalendarClock className="size-4 shrink-0 text-primary-ink" />
           <span>

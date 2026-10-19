@@ -17,6 +17,7 @@ import { matchesLearner } from '../../lib/learnerSearch';
 import { guideTerms } from '../../lib/pageGuide';
 import { downloadTestAnswers } from '../../api/results';
 import ResultsInsights from '../../components/results/ResultsInsights';
+import SelectionAnnouncement from '../../components/results/SelectionAnnouncement';
 import type { LearnerProfile, ResultsData, TestMeta, UserResultRow } from '../../lib/resultsInsights';
 import { useToast } from '../../context/ToastContext';
 import { cn } from '../../utils/cn';
@@ -540,6 +541,8 @@ const AdminResultsPage: React.FC = () => {
           </>
         }
       />
+
+      <SelectionAnnouncement />
 
       {uploadSummary && (
         <Card className="mb-4 p-4">

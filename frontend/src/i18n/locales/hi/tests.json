@@ -23,7 +23,8 @@
       "ended": "समाप्त",
       "locked": "लॉक",
       "notStarted": "शुरू नहीं हुआ",
-      "awaitingStart": "शुरू होने की प्रतीक्षा"
+      "awaitingStart": "शुरू होने की प्रतीक्षा",
+      "submitted": "जमा किया"
     },
     "questionsCount": "{{total}} प्रश्न",
     "minutesLimit": "{{minutes}} मिनट सीमा",
