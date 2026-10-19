@@ -260,7 +260,7 @@
     "topTitle": "Top 10 scorers",
     "topSubtitle": "Highest score in the {{test}}; fewer attempts ranks higher.",
     "supportTitle": "Need support",
-    "supportSubtitle": "Wrote the {{test}} but have not passed — lowest score first.",
+    "supportSubtitle": "Wrote the {{test}} but have not passed — lowest score first. Equal scores: more attempts first, then by name.",
     "everyonePassed": "Everyone who wrote this test has passed.",
     "bestScore": "Best score",
     "firstScore": "First-attempt score",
@@ -282,7 +282,7 @@
     "bottomTitleN": "Lowest {{n}} scorers",
     "allScorers": "All scorers, highest first",
     "allScorersLow": "All scorers, lowest first",
-    "bottomSubtitle": "Lowest score in the {{test}} among everyone who wrote it."
+    "bottomSubtitle": "Lowest score in the {{test}} among everyone who wrote it, passed or not. Equal scores: more attempts first, then by name."
   },
   "questions": {
     "title": "Question by question",
@@ -328,11 +328,11 @@
     "wroteN": "Wrote",
     "nQuestions": "{{count}} questions",
     "nQuestions_one": "{{count}} question",
-    "levelCellTitle": "{{right}} right answers out of {{total}}"
+    "levelCellTitle": "{{right}} right answers out of {{total}}",
+    "allLevels": "All questions"
   },
   "cmp": {
     "eyebrow": "{{a}} vs {{b}}",
-    "sentence": "{{n}} learners wrote both tests. Their average score was {{avgA}}% in the {{a}} and {{avgB}}% in the {{b}} ({{change}} points).",
     "nobody": "No learner has written both the {{a}} and the {{b}} yet.",
     "differentPapers": "The two tests are different papers on different topics, so a lower score can mean a harder paper as well as less knowledge. Compare groups with each other rather than reading the change alone.",
     "pick": "Compare",
@@ -363,7 +363,9 @@
     "gridSubtitle": "Score in the {{a}} (across) against score in the {{b}} (up).",
     "scoreIn": "Score in the {{test}}",
     "cellTitle": "{{n}} learners scored {{ba}} in the {{a}} and {{bb}} in the {{b}}",
-    "gridHow": "Each box shows the share of learners (and how many) who scored that pair. Green boxes scored high on both tests, red boxes low on both. The outlined boxes are the same band in both tests; boxes above them did better in the second test, boxes below did worse."
+    "gridHow": "Each box shows the share of learners (and how many) who scored that pair. Green boxes scored high on both tests, red boxes low on both. The outlined boxes are the same band in both tests; boxes above them did better in the second test, boxes below did worse.",
+    "sentence_one": "Of {{total}} learners, only {{count}} wrote both the {{a}} and the {{b}}. That learner scored {{avgA}}% in the {{a}} and {{avgB}}% in the {{b}} ({{change}} points).",
+    "sentence_other": "Of {{total}} learners, {{count}} wrote both the {{a}} and the {{b}}. Comparing just these {{count}}: their average was {{avgA}}% in the {{a}} and {{avgB}}% in the {{b}} ({{change}} points)."
   },
   "pick": {
     "which": "From which end",

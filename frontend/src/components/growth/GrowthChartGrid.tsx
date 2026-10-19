@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { GrowthCase, GrowthIndicator, GrowthStandards } from '../../api/growth';
 import {
   ageTicks,
+  ageUnitFor,
   buildSeries,
   caseInCohort,
   cohortDomains,
@@ -36,12 +37,13 @@ export const GrowthLegend: React.FC = () => {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="font-bold text-ink">{t('legend.sources')}:</span>
         {SOURCE_COMBOS.map(combo => (
-          <span key={combo} className="flex items-center gap-1 text-ink-muted">
-            <span className="inline-block size-2.5 rounded-full" style={{ background: sourceComboColor(combo) }} />
+          <span key={combo} className="flex items-center gap-1.5 text-ink">
+            <span className="inline-block size-3 rounded-full ring-2 ring-white dark:ring-surface" style={{ background: sourceComboColor(combo) }} />
             {t(`sources.${combo}`)}
           </span>
         ))}
       </div>
+      <p className="w-full text-ink-muted">{t('legend.howToRead')}</p>
     </div>
   );
 };
@@ -95,9 +97,8 @@ const GrowthChartGrid: React.FC<GrowthChartGridProps> = ({
                     xLabel={
                       isWfl
                         ? t('axis.lengthCm')
-                        : cohort === 'young' && domains.ageDomain[1] <= 200
-                          ? t('axis.ageWeeks')
-                          : t('axis.ageMonths')
+                        : t({ days: 'axis.ageDays', weeks: 'axis.ageWeeks', months: 'axis.ageMonths' }[
+                          ageUnitFor(cohort, domains.ageDomain)])
                     }
                     yLabel={indicator === 'lfa' ? t('axis.lengthCm') : t('axis.weightKg')}
                     standards={standards[indicator][sex]}
@@ -107,6 +108,8 @@ const GrowthChartGrid: React.FC<GrowthChartGridProps> = ({
                       : ageTicks(cohort, domains.ageDomain)}
                     xKind={isWfl ? 'length' : 'age'}
                     series={series}
+                    // Several cases on one chart: name each line at its end.
+                    labelSeries={series.length > 1 && series.length <= 8}
                     onPointClick={onPointClick}
                   />
                 );

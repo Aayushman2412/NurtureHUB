@@ -289,7 +289,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         </div>
       </aside>
 
-      <main className="min-h-screen lg:pl-64">
+      <main className="min-h-screen lg:pl-64 print:pl-0">
         {/* Mobile top bar: hamburger + brand (the sidebar is a drawer here) */}
         <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-surface px-4 py-3 lg:hidden print:hidden">
           <button

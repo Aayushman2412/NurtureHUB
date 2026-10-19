@@ -47,7 +47,7 @@
   },
   "upload": {
     "button": "Upload Questions (Excel/CSV)",
-    "formatHint": "Sheet columns: Question Text | Option A | Option B | Option C | Option D | Option E | Option F | Correct Answer | Marks | Question Image URL. Only the question, two options and the correct answer are required — a blank Marks cell falls back to the test's default marks. Uploading REPLACES every question in this test.",
+    "formatHint": "Sheet columns: Question Text | Option A | Option B | Option C | Option D | Option E | Option F | Correct Answer | Marks | Question Image URL | Topic | Subtopic. Only the question, two options and the correct answer are required — a blank Marks cell falls back to the test's default marks. Uploading REPLACES every question in this test.",
     "template": "Download template",
     "emptySheet": "No question rows found in that sheet.",
     "parseError": "That file could not be read as an Excel/CSV sheet.",
@@ -133,7 +133,12 @@
     "moveDown": "Move down",
     "pictureOption": "(picture)",
     "lockedNote": "Learners have already submitted this test. You can reword questions and options, but an option someone already chose cannot be removed.",
-    "attemptsWarning": "This test has submitted attempts. Questions can be edited in place, but they can no longer be deleted or bulk-replaced — that would destroy the existing result history."
+    "attemptsWarning": "This test has submitted attempts. Questions can be edited in place, but they can no longer be deleted or bulk-replaced — that would destroy the existing result history.",
+    "topic": "Topic",
+    "subtopic": "Subtopic",
+    "topicPlaceholder": "e.g. Breastfeeding",
+    "subtopicPlaceholder": "e.g. Positioning and attachment",
+    "topicHint": "Optional. Results show where a group is weak by topic and subtopic, and each learner's feedback is grouped by topic."
   },
   "images": {
     "add": "Add image",
@@ -188,5 +193,12 @@
     "acrossHint": "May be deliberate (measuring change between formative and screening) or may leak the screening paper into practice.",
     "timesIn": "Appears {{count}} times in {{type}} tests",
     "none": "None found."
+  },
+  "answers": {
+    "heading": "Answer review",
+    "release": "Release the right answers to learners",
+    "hintClosed": "Closed: learners see their score and topic-wise result, but not the questions or right answers. Release once everyone — including any group re-sitting this paper — has taken it.",
+    "hintOpen": "Open: learners can review each question with the right answer.",
+    "confirmEarly": "This test has not ended. Anyone still to take it — or a group re-sitting the same paper — could read the answers first. Release them anyway?"
   }
 }

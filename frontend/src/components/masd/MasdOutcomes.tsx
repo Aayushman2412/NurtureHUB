@@ -62,7 +62,7 @@ const PrevTable: React.FC<{ p: Prevalence; rows: Indicator[]; bench: Benchmarks 
   const nfhsCols = (showLatest ? 1 : 0) + (showPrev ? 1 : 0) + (showChange ? 1 : 0) + showBands.length;
   const projCols = (showBv ? 1 : 0) + 4;
   return (
-    <DataTable>
+    <DataTable compact>
       <thead>
         <tr>
           <Th className="text-left" />
@@ -128,7 +128,9 @@ const MasdOutcomes: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({
   const o = report.outcomes;
   const ex = o.exclusions;
   const [who, setWho] = useState<Who>('overall');
-  const [showBv, setShowBv] = useState(false);
+  // Birth visit shown by default (review of 19 Oct 2026: "add a toggle where I
+  // can add BV also") — the toggle hides it.
+  const [showBv, setShowBv] = useState(true);
   const prev = o.prevalence[who];
   const bench = o.benchmarks;
   const funnelLabel: Record<string, string> = {
@@ -301,8 +303,12 @@ const MasdOutcomes: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({
         {!bench && <p className="mt-4 text-xs text-ink-muted">{t('outcomes.noBenchmark')}</p>}
       </Section>
 
+      {/* The age bands one above the other, each with its main and severe
+          tables side by side: the whole table in view, no sideways scroll
+          (review of 19 Oct 2026: "switch the up and bottom ... instead of
+          scrolling I must be able to see in one window"). */}
       <Section icon={<Baby />} title={t('outcomes.bandsTitle')} subtitle={t('outcomes.bandsSub')} actions={bvToggle}>
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 [&>*]:min-w-0">
+        <div className="grid grid-cols-1 gap-6 [&>*]:min-w-0">
           {BANDS.map(band => {
             const b = o.prevalence.bands[band];
             const nfhs = bench?.age_bands?.[band];
@@ -310,7 +316,7 @@ const MasdOutcomes: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({
             const table = (inds: Indicator[]) => {
               const showNfhs = !!nfhs && inds.some(i => nfhs[i] != null);
               return (
-              <DataTable>
+              <DataTable compact>
                 <thead>
                   <tr>
                     <Th className="text-left" />
@@ -343,9 +349,13 @@ const MasdOutcomes: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({
                 <h4 className="font-display text-base font-bold text-ink">
                   {t(`bands.${band}`)} <span className="text-sm font-normal text-ink-muted">· {t('outcomes.typesOf', { types: band === 'lt6' ? t('bands.lt6Types') : t('bands.m6_11Types') })}</span>
                 </h4>
-                {table(MAIN_INDICATORS)}
-                <div className="text-xs font-semibold text-ink-muted">{t('outcomes.severeTitle')}</div>
-                {table(SEVERE_INDICATORS)}
+                <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2 [&>*]:min-w-0">
+                  <div>{table(MAIN_INDICATORS)}</div>
+                  <div>
+                    <div className="mb-1 text-xs font-semibold text-ink-muted 2xl:hidden">{t('outcomes.severeTitle')}</div>
+                    {table(SEVERE_INDICATORS)}
+                  </div>
+                </div>
               </div>
             );
           })}

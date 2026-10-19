@@ -14,7 +14,8 @@ export type { ColumnSeries, RefLine } from '../../lib/masdDisplay';
 
 
 export const GroupedColumns: React.FC<{
-  categories: { key: string; label: string; sub?: string; group?: string }[];
+  /** `shaded`: a greyed column — a day no work is expected (a Sunday). */
+  categories: { key: string; label: string; sub?: string; group?: string; shaded?: boolean }[];
   series: ColumnSeries[];
   reference?: { value: number; label: string };
   references?: RefLine[];
@@ -68,7 +69,8 @@ export const GroupedColumns: React.FC<{
                 style={{ bottom: `${(r.value / max) * 100}%`, borderColor: r.color ?? 'rgb(0 0 0 / 0.5)' }} />
             ))}
             {categories.map((c, ci) => (
-              <div key={c.key} className="flex h-full min-w-0 flex-1 items-end justify-center gap-0.5 sm:gap-1">
+              <div key={c.key} className={cn('flex h-full min-w-0 flex-1 items-end justify-center gap-0.5 sm:gap-1',
+                c.shaded && 'rounded-t bg-ink/[0.07]')}>
                 {series.map(s => {
                   const v = s.values[ci];
                   return (
@@ -92,8 +94,8 @@ export const GroupedColumns: React.FC<{
           <div className="mt-1.5 flex gap-2 sm:gap-3">
             {categories.map(c => (
               <div key={c.key} className="min-w-0 flex-1 text-center">
-                <div className="truncate text-xs font-medium text-ink" title={c.label}>{c.label}</div>
-                {c.sub && <div className="text-xs text-ink-faint">{c.sub}</div>}
+                <div className={cn('truncate text-xs font-medium', c.shaded ? 'text-ink-faint' : 'text-ink')} title={c.label}>{c.label}</div>
+                {c.sub && <div className={cn('text-xs', c.shaded ? 'font-bold text-ink-faint' : 'text-ink-faint')}>{c.sub}</div>}
               </div>
             ))}
           </div>
@@ -304,9 +306,13 @@ export const Th: React.FC<{ children?: React.ReactNode; className?: string; titl
   </th>
 );
 
-export const DataTable: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
+/** `compact`: headers wrap and cells pad less, so a wide table fits the
+ *  screen instead of scrolling sideways (review of 19 Oct 2026: "decrease this
+ *  width and make sure all of this is visible within the single view"). */
+export const DataTable: React.FC<{ children: React.ReactNode; className?: string; compact?: boolean }> = ({ children, className, compact }) => (
   <div className={cn('overflow-x-auto rounded-xl border border-border', className)}>
-    <table className="w-full text-sm [&_tbody_tr]:border-t [&_tbody_tr]:border-border [&_tbody_tr:hover]:bg-surface-sunken/60 [&_thead]:bg-surface-sunken">
+    <table className={cn('w-full text-sm [&_tbody_tr]:border-t [&_tbody_tr]:border-border [&_tbody_tr:hover]:bg-surface-sunken/60 [&_thead]:bg-surface-sunken',
+      compact && '[&_th]:whitespace-normal [&_th]:px-1.5 [&_th]:leading-tight [&_td]:px-1.5 [&_td_span]:min-w-0')}>
       {children}
     </table>
   </div>
@@ -334,7 +340,11 @@ const dashOf = (l: CumLine, legend = false) => (l.dotted ? (legend ? '2 3' : '2 
 
 /** Lines that only rise: where the project should be by each date (dashed)
  *  and where it is (solid), points labelled with their numbers. */
-export const CumulativeChart: React.FC<{ labels: string[]; lines: CumLine[]; height?: number }> = ({ labels, lines, height = 260 }) => {
+export const CumulativeChart: React.FC<{
+  labels: string[]; lines: CumLine[]; height?: number;
+  /** Points to grey out — days no work is expected (Sundays). */
+  shaded?: boolean[];
+}> = ({ labels, lines, height = 260, shaded }) => {
   const [hover, setHover] = useState<number | null>(null);
   if (labels.length < 2) return null;
   const W = 820, H = height, L = 56, R = 18, T = 24, B = 34;
@@ -374,6 +384,9 @@ export const CumulativeChart: React.FC<{ labels: string[]; lines: CumLine[]; hei
             <text x={L - 6} y={py(top * f) + 4} textAnchor="end" className="fill-ink-faint text-[13px]">{Math.round(top * f).toLocaleString()}</text>
           </g>
         ))}
+        {shaded?.map((on, i) => (on ? (
+          <rect key={`s${i}`} x={px(i) - step / 2} y={T} width={step} height={H - T - B} className="fill-ink/[0.07]" />
+        ) : null))}
         {labels.map((lab, i) => (xMarks.has(i) ? (
           <text key={`x${i}`} x={px(i)} y={H - B + 16} textAnchor="middle" className="fill-ink-faint text-[13px]">{lab}</text>
         ) : null))}

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  AlertTriangle, Baby, BarChart3, ChevronDown, ChevronRight, ClipboardList, LineChart, Stethoscope, User,
+  AlertTriangle, Baby, BarChart3, ChevronDown, ChevronRight, ClipboardList, Download, LineChart, Stethoscope, User,
 } from 'lucide-react';
 import {
   getAdminGrowthMonitor, getAdminGrowthResponse, getAdminGrowthSummary, getGrowthCaseDetail,
@@ -48,11 +48,15 @@ const IdentitySection: React.FC<{ icon: React.ReactNode; title: string; facts: {
   </div>
 );
 
-/** A collapsible section with a count badge. */
-const Expandable: React.FC<{ title: React.ReactNode; badge?: React.ReactNode; defaultOpen?: boolean; children: React.ReactNode }> = ({
-  title, badge, defaultOpen = false, children,
+/** A collapsible section with a count badge. `forceOpen` opens it for the
+ *  page download, so the PDF holds every table. */
+const Expandable: React.FC<{
+  title: React.ReactNode; badge?: React.ReactNode; defaultOpen?: boolean; forceOpen?: boolean; children: React.ReactNode;
+}> = ({
+  title, badge, defaultOpen = false, forceOpen = false, children,
 }) => {
-  const [open, setOpen] = useState(defaultOpen);
+  const [isOpen, setOpen] = useState(defaultOpen);
+  const open = isOpen || forceOpen;
   return (
     <div className="overflow-hidden rounded-lg border border-border">
       <button
@@ -92,6 +96,18 @@ const GrowthCaseView: React.FC<{ childId: number; mode: 'admin' | 'learner'; bac
   const [state, setState] = useState<'loading' | 'error' | 'ready'>('loading');
   const [detailPoint, setDetailPoint] = useState<GrowthPoint | null>(null);
   const summaryRef = useRef<HTMLDivElement>(null);
+  // The whole page as one document (review of 19 Oct 2026: "I would be happy
+  // if I get a download button for this whole page ... it shows the project's
+  // activities and the results both in a single document"). Every section is
+  // opened, then the browser's print dialog saves it as a PDF.
+  const [printing, setPrinting] = useState(false);
+  useEffect(() => {
+    if (!printing) return;
+    const done = () => setPrinting(false);
+    window.addEventListener('afterprint', done);
+    const id = window.setTimeout(() => window.print(), 300);
+    return () => { window.clearTimeout(id); window.removeEventListener('afterprint', done); };
+  }, [printing]);
 
   useEffect(() => {
     if (!Number.isFinite(childId)) { setState('error'); return; }
@@ -169,7 +185,17 @@ const GrowthCaseView: React.FC<{ childId: number; mode: 'admin' | 'learner'; bac
         description={mode === 'learner'
           ? `${detail.mother?.name ?? ''} · ${detail.child.name ?? ''}`
           : `${detail.mother?.name ?? ''} · ${detail.learner?.name ?? t('admin.orphanLearner')}`}
+        actions={
+          <span className="print-hidden flex flex-col items-end gap-1">
+            <Button variant="outline" size="sm" iconLeft={<Download className="size-4" />} onClick={() => setPrinting(true)}>
+              {t('casePage.downloadPage')}
+            </Button>
+            <span className="text-xs text-ink-faint">{t('casePage.downloadPageHint')}</span>
+          </span>
+        }
       />
+      {/* Wide visit tables need the width of a landscape page. */}
+      {printing && <style>{'@page { size: A4 landscape; margin: 10mm; }'}</style>}
 
       {/* ── identity ─────────────────────────────────────────────────────── */}
       <div className="grid gap-2 md:grid-cols-3">
@@ -298,7 +324,7 @@ const GrowthCaseView: React.FC<{ childId: number; mode: 'admin' | 'learner'; bac
         <div className="space-y-2">
           {lapTables.map(({ key, responses }) => (
             <Expandable
-              key={key} defaultOpen
+              key={key} defaultOpen forceOpen={printing}
               title={t(`forms.${key}`, { defaultValue: key })}
               badge={<Badge variant="neutral">{t('casePage.matrixCount', { count: visitCount(responses) })}</Badge>}
             >
@@ -319,7 +345,7 @@ const GrowthCaseView: React.FC<{ childId: number; mode: 'admin' | 'learner'; bac
         <div className="space-y-2">
           {infoTables.map(({ key, responses }) => (
             <Expandable
-              key={key} defaultOpen={key === 'growth_monitoring'}
+              key={key} defaultOpen={key === 'growth_monitoring'} forceOpen={printing}
               title={<>{t(`forms.${key}`, { defaultValue: key })} <span className="ml-1 font-normal text-ink-muted">({FORM_CODES[key] ?? key})</span></>}
               badge={<Badge variant="neutral">{t('casePage.matrixCount', { count: visitCount(responses) })}</Badge>}
             >

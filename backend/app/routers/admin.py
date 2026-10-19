@@ -7,11 +7,11 @@ All content endpoints are scoped per program district.
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func
 from pydantic import BaseModel, EmailStr, ValidationError
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import date, datetime
 import json
 import io
 import random
@@ -861,6 +861,14 @@ def _serialize_learner(db: Session, u: User) -> Dict[str, Any]:
         "created_at": iso_utc(u.created_at),
         "program_district_id": u.program_district_id,
         "program_district_name": u.program_district.name if u.program_district else None,
+        # Where they work and what they are (review of 19 Oct 2026: "district,
+        # block, cadre, department, mobile ... learner category MT/FL").
+        "district_name": u.district_rel.name if u.district_rel else None,
+        "block_name": u.block.name if u.block else None,
+        "cadre": (u.designation_rel.name if u.designation_rel else None) or u.role,
+        "department_name": (u.department_other or u.department_ref.name) if (
+            u.department_ref and u.department_ref.code == "OTHER") else (
+            u.department_ref.code if u.department_ref else (u.department_other or u.department)),
     }
 
 
@@ -927,13 +935,22 @@ def list_users_for_admin(
             query = query.filter(User.program_district_id == project_id)
 
     total = query.count()
-    users = query.order_by(User.id).offset(offset).limit(limit).all()
+    users = (query.options(selectinload(User.program_district), selectinload(User.district_rel),
+                           selectinload(User.block), selectinload(User.designation_rel),
+                           selectinload(User.department_ref))
+             .order_by(User.id).offset(offset).limit(limit).all())
     activity = _learner_activity(db, [u.id for u in users])
+    # MT / FL — the role given at the face-to-face selection (master trainer
+    # or facilitator), the "learner category" of the 19 Oct 2026 review.
+    roles = dict(db.query(FaceToFaceSelection.user_id, FaceToFaceSelection.trainer_role)
+                 .filter(FaceToFaceSelection.user_id.in_([u.id for u in users]))) if users else {}
+    short = {"master_trainer": "MT", "facilitator": "FL"}
     return {
         "total": total,
         "limit": limit,
         "offset": offset,
-        "users": [{**_serialize_learner(db, u), **activity.get(u.id, {})} for u in users],
+        "users": [{**_serialize_learner(db, u), **activity.get(u.id, {}),
+                   "trainer_role": short.get(roles.get(u.id) or "", None)} for u in users],
     }
 
 
@@ -1308,6 +1325,8 @@ def _serialize_admin_stage(db: Session, stage: Stage) -> Dict[str, Any]:
         "order_index": stage.order_index,
         "stage_type": stage.stage_type or "tutorials",
         "quiz_enabled": bool(stage.quiz_enabled),
+        "starts_on": stage.starts_on.isoformat() if stage.starts_on else None,
+        "finish_by": stage.finish_by.isoformat() if stage.finish_by else None,
         "test_count": db.query(Test).filter(Test.stage_id == stage.id).count(),
         "tutorials": [_serialize_admin_tutorial(db, t) for t in tutorials],
     }
@@ -1378,9 +1397,25 @@ def update_stage(stage_id: int, stage: Dict[str, Any], district: str = Query("ja
             setattr(db_stage, key, stage[key])
     if "quiz_enabled" in stage:
         db_stage.quiz_enabled = bool(stage["quiz_enabled"])
+    # The phase's window on the learner's timeline (review of 19 Oct 2026).
+    for key in ("starts_on", "finish_by"):
+        if key in stage:
+            setattr(db_stage, key, _parse_client_date(stage[key], key))
+    if db_stage.starts_on and db_stage.finish_by and db_stage.finish_by < db_stage.starts_on:
+        raise HTTPException(status_code=400, detail="The finish-by date is before the start date.")
     db.commit()
     db.refresh(db_stage)
     return _serialize_admin_stage(db, db_stage)
+
+
+def _parse_client_date(value: Any, field: str) -> Optional[date]:
+    """A YYYY-MM-DD date from the admin UI ('' or null -> None)."""
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(str(value)[:10])
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid date for {field}: {value!r}")
 
 
 @router.delete("/stages/{stage_id}")
@@ -2245,6 +2280,7 @@ def _serialize_admin_test(db: Session, test: Test, stage_position: int) -> Dict[
         "test_type": test.test_type,
         "shuffle_questions": bool(test.shuffle_questions),
         "shuffle_options": bool(test.shuffle_options),
+        "answers_released": bool(test.answers_released),
         "scheduled_at": iso_utc(test.scheduled_at),
         "started_at": iso_utc(test.started_at),
         "ended_at": iso_utc(test.ended_at),
@@ -2459,7 +2495,7 @@ def update_test(
     for key in ["title", "description", "duration_minutes", "passing_score_pct", "max_attempts", "test_type"]:
         if key in test:
             setattr(db_test, key, test[key])
-    for flag in ("shuffle_questions", "shuffle_options"):
+    for flag in ("shuffle_questions", "shuffle_options", "answers_released"):
         if flag in test:
             setattr(db_test, flag, bool(test[flag]))
     if "default_marks" in test:

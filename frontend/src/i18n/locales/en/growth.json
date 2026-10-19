@@ -8,10 +8,10 @@
   },
   "sources": {
     "birth": "Birth record",
-    "growth": "Check Growth only",
-    "growth_bf": "Growth + Breastfeeding",
-    "growth_cf": "Growth + Complementary feeding",
-    "growth_bf_cf": "Growth + BF + CF"
+    "growth": "Growth check only",
+    "growth_bf": "Growth check + Breastfeeding",
+    "growth_cf": "Growth check + Complementary feeding",
+    "growth_bf_cf": "Growth check + BF + CF"
   },
   "indicators": {
     "wfa": "Weight for age",
@@ -20,7 +20,7 @@
   },
   "cohorts": {
     "young": "Adopted before {{pncDays}} days (birth to {{pncM}} months)",
-    "old": "Adopted at {{pncDays}} days or later ({{pncM}} to 24 months)"
+    "old": "Adopted at {{pncDays}} days or later ({{pncM}} months or older)"
   },
   "sexTabs": {
     "boys": "Boys",
@@ -30,11 +30,13 @@
     "ageWeeks": "Age (completed weeks)",
     "ageMonths": "Age (completed months)",
     "lengthCm": "Length (cm)",
-    "weightKg": "Weight (kg)"
+    "weightKg": "Weight (kg)",
+    "ageDays": "Age (days)"
   },
   "legend": {
     "percentiles": "WHO percentiles",
-    "sources": "Visit data source"
+    "sources": "Dot colour = forms filled at that visit",
+    "howToRead": "Each dot is one visit, joined in order for each baby. The coloured curves are the WHO standards: staying between them, and rising along them, is healthy growth."
   },
   "chart": {
     "noData": "No visits plotted yet",
@@ -225,7 +227,7 @@
     "title": "Learner activity details",
     "loading": "Loading case…",
     "notFound": "Case not found",
-    "whoCharts": "WHO growth charts (this pair, all visits)",
+    "whoCharts": "WHO growth charts",
     "visitSummary": "Visit summary",
     "visitDate": "Visit date",
     "age": "Age",
@@ -284,7 +286,12 @@
       "activity": "For each form: how many were due till today (EC), how many were filled (AC) and how many were left incomplete (IC). A green bar as long as the grey one means all due forms were filled.",
       "outcomes": "The baby's growth against the WHO standard at the first (BV), middle (AV) and latest (LV) visit. Bars to the left of 0 are below the standard; below −2 needs attention.",
       "who": "Each dot is one measurement. The coloured lines are the WHO standards: staying between them, and rising along them, is healthy growth."
-    }
+    },
+    "visit": "Visit",
+    "visitsAsRows": "Visits as rows",
+    "visitsAsColumns": "Visits as columns",
+    "downloadPage": "Download this page",
+    "downloadPageHint": "Choose \"Save as PDF\" in the print window"
   },
   "admin": {
     "title": "Learner Activities",
@@ -321,6 +328,20 @@
     "tableHint": "One row per baby, as your supervisors see it. Tap a row for the full case: every form, visit by visit.",
     "pickCase": "Choose a case",
     "visitCount_one": "{{count}} visit",
-    "visitCount_other": "{{count}} visits"
+    "visitCount_other": "{{count}} visits",
+    "pickCases": "Cases on the charts",
+    "casesPicked_one": "{{count}} case picked",
+    "casesPicked_other": "{{count}} cases on the same charts",
+    "searchCases": "Search by baby or mother",
+    "pickAll": "Select all",
+    "clearPicked": "Clear",
+    "noCaseMatches": "No case matches",
+    "typeFilter": "Adoption type",
+    "types": {
+      "all": "All types",
+      "anc": "ANC",
+      "pnc_lt5": "PNC <5M",
+      "pnc_ge5": "PNC ≥5M"
+    }
   }
 }

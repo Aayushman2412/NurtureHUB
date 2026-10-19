@@ -49,7 +49,11 @@ def get_detailed_result(attempt_id: int, current_user: User = Depends(get_verifi
     
     correct_count = 0
     detailed_answers = []
-    
+    # Until the admin releases the answers (review of 19 Oct 2026) the review
+    # carries no question, option or right answer — only each question's
+    # topic and whether it was right, which the topic-wise score needs.
+    released = bool(test.answers_released)
+
     for q in questions:
         ans = answer_map.get(q.id)
         selected_opt_id = ans.selected_option_id if ans else None
@@ -69,12 +73,12 @@ def get_detailed_result(attempt_id: int, current_user: User = Depends(get_verifi
         detailed_answers.append(
             DetailedAnswerOut(
                 question_id=q.id,
-                question_text=q.text,
+                question_text=q.text if released else "",
                 topic=(q.topic or "").strip() or None,
-                selected_option_id=selected_opt_id,
-                correct_option_id=correct_option_id,
+                selected_option_id=selected_opt_id if released else None,
+                correct_option_id=correct_option_id if released else 0,
                 is_correct=is_correct,
-                options=options_out
+                options=options_out if released else []
             )
         )
         
@@ -94,5 +98,6 @@ def get_detailed_result(attempt_id: int, current_user: User = Depends(get_verifi
         passing_score_pct=test.passing_score_pct,
         correct_count=correct_count,
         total_questions=len(questions),
+        answers_released=released,
         answers=detailed_answers
     )

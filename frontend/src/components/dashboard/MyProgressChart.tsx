@@ -8,6 +8,10 @@ import { Card } from '../ui';
 
 const short = (iso: string) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString(undefined, { day: '2-digit', month: 'short', timeZone: 'UTC' });
+/** The weekday as one letter — M T W T F S S (review of 19 Oct 2026). */
+const weekday = (iso: string) =>
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString(undefined, { weekday: 'narrow', timeZone: 'UTC' });
+const isSunday = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCDay() === 0;
 const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 1000) / 10 : null);
 
 /** One point per bar: the last day of every `n`-day stretch, ending today. */
@@ -30,7 +34,11 @@ const MyProgressChart: React.FC<{ series: CumulativeSeries }> = ({ series }) => 
   const [perBar, setPerBar] = useState(7);
   const points = useMemo(() => everyN(series.days, perBar), [series.days, perBar]);
   if (series.days.length < 2) return null;
-  const labels = points.map(p => short(p.date));
+  const labels = points.map(p => `${short(p.date)} ${weekday(p.date)}`);
+  // Sundays are greyed (review of 19 Oct 2026: "every Sunday you make it into
+  // a grey area ... else it appears as though it is a poor activity") — only
+  // when each bar is one day; a wider bar spans working days too.
+  const shaded = points.map(p => perBar === 1 && isSunday(p.date));
   const hasCases = points.some(p => (p.expected_cases ?? 0) > 0);
 
   return (
@@ -48,10 +56,12 @@ const MyProgressChart: React.FC<{ series: CumulativeSeries }> = ({ series }) => 
         />
       </label>
 
+      <p className="mb-4 text-xs text-ink-muted">{t('progress.sundays')}</p>
+
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 [&>*]:min-w-0">
         <div>
           <h4 className="mb-1 text-sm font-bold text-ink">{t('progress.forms')}</h4>
-          <CumulativeChart labels={labels} height={220} lines={[
+          <CumulativeChart labels={labels} shaded={shaded} height={220} lines={[
             ...(hasCases ? [{ key: 'due', label: t('progress.formsDue'), color: '#7C5CBF', dotted: true, step: true,
               values: points.map(p => p.expected_cases ?? 0) }] : []),
             { key: 'done', label: t('progress.formsDone'), color: MASD_COLORS.activity, values: points.map(p => p.activities) },
@@ -59,7 +69,7 @@ const MyProgressChart: React.FC<{ series: CumulativeSeries }> = ({ series }) => 
         </div>
         <div>
           <h4 className="mb-1 text-sm font-bold text-ink">{t('progress.adoptions')}</h4>
-          <CumulativeChart labels={labels} height={220} lines={[
+          <CumulativeChart labels={labels} shaded={shaded} height={220} lines={[
             { key: 'asked', label: t('progress.adoptionsAsked'), color: MASD_COLORS.adoption, dashed: true, step: true,
               values: points.map(p => p.expected_adoptions) },
             { key: 'made', label: t('progress.adoptionsMade'), color: '#1F5560', values: points.map(p => p.adoptions) },
@@ -71,7 +81,7 @@ const MyProgressChart: React.FC<{ series: CumulativeSeries }> = ({ series }) => 
         <div className="mt-5">
           <h4 className="mb-1 text-sm font-bold text-ink">{t('progress.pctTitle')}</h4>
           <GroupedColumns
-            categories={points.map(p => ({ key: p.date, label: short(p.date) }))}
+            categories={points.map((p, i) => ({ key: p.date, label: short(p.date), sub: weekday(p.date), shaded: shaded[i] }))}
             series={[{ key: 'x', label: t('progress.pctForms'), color: MASD_COLORS.activity,
               values: points.map(p => pct(p.activities, p.expected_cases ?? 0)) }]}
             reference={{ value: 100, label: t('progress.target') }}

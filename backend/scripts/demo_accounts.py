@@ -14,7 +14,14 @@
 
     python -m scripts.demo_accounts pick       # who would be used (changes nothing)
     python -m scripts.demo_accounts prepare    # asks for a password, sets it on all four
+    python -m scripts.demo_accounts relabel    # ordinary-looking IDs on their mothers and babies
     python -m scripts.demo_accounts undo       # puts everything back
+
+`relabel` (review of 19 Oct 2026: "nowhere should it point that it is
+something used from MASD — at least for these login details"): the synthetic
+mothers and babies carry IDs like MASD-CHM00183; for the demo accounts' own
+cases they become IDs shaped like a real registration's (MR-…, CR-…).
+`prepare` does it too; `undo` puts the old IDs back (key "demo.accounts.ids").
 
 Run `prepare` WITHOUT `docker compose exec -T` so the password is not shown.
 `prepare` also gives the two projects' test questions a topic where they have
@@ -29,6 +36,7 @@ import argparse
 import getpass
 import re
 import sys
+import uuid
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
@@ -41,6 +49,8 @@ from app.flow import is_awaiting_results, selection_state
 
 MOCK_DOMAIN = "@nurturehub.mock"
 UNDO_KEY = "demo.accounts"
+IDS_KEY = "demo.accounts.ids"
+SYNTHETIC_PREFIX = "MASD-"
 TRAINING_PROJECT = "jalna"        # results not announced: accounts 2
 ADOPTION_PROJECT = "chandrapur"   # results announced: accounts 1, 3, 4
 
@@ -299,6 +309,61 @@ def _announce(db, undo: Dict[str, Any], slug: str, announced: bool) -> None:
     p.selection_announced_at = datetime.now(timezone.utc) if announced else None
 
 
+def relabel(db, users: Optional[List[models.User]] = None) -> None:
+    """Give the demo accounts' own mothers and babies IDs shaped like a real
+    registration's (MR-/CR- and ten hex digits, as app/routers/mothers.py
+    makes them), recording the old ones. Only synthetic IDs are touched."""
+    if users is None:
+        row = db.get(models.MasdRuleTable, UNDO_KEY)
+        if row is None:
+            sys.exit("The demo accounts are not prepared — run `prepare` first.")
+        users = [u for u in (db.get(models.User, int(uid)) for uid in (row.value_json or {}).get("users", {}))
+                 if u is not None]
+    users = [u for u in users if u.email.endswith(MOCK_DOMAIN)]
+    rec_row = db.get(models.MasdRuleTable, IDS_KEY)
+    record: Dict[str, Dict[str, str]] = dict(rec_row.value_json) if rec_row else {"mothers": {}, "children": {}}
+    record.setdefault("mothers", {}); record.setdefault("children", {})
+    mothers = db.query(models.Mother).filter(
+        models.Mother.registered_by_user_id.in_([u.id for u in users])).all() if users else []
+    n_m = n_c = 0
+    for m in mothers:
+        if m.mother_uid.startswith(SYNTHETIC_PREFIX):
+            record["mothers"].setdefault(str(m.id), m.mother_uid)
+            m.mother_uid = f"MR-{uuid.uuid4().hex[:10].upper()}"
+            n_m += 1
+        for c in m.children:
+            if c.child_uid.startswith(SYNTHETIC_PREFIX):
+                record["children"].setdefault(str(c.id), c.child_uid)
+                c.child_uid = f"CR-{uuid.uuid4().hex[:10].upper()}"
+                n_c += 1
+    if rec_row is None:
+        db.add(models.MasdRuleTable(key=IDS_KEY, value_json=record, updated_by="scripts.demo_accounts"))
+    else:
+        rec_row.value_json = record
+    db.commit()
+    print(f"Relabelled {n_m} mother ID(s) and {n_c} baby ID(s) of {len(users)} demo account(s).")
+
+
+def _restore_ids(db) -> int:
+    row = db.get(models.MasdRuleTable, IDS_KEY)
+    if row is None:
+        return 0
+    info = row.value_json or {}
+    n = 0
+    for mid, old in (info.get("mothers") or {}).items():
+        m = db.get(models.Mother, int(mid))
+        if m is not None:
+            m.mother_uid = old
+            n += 1
+    for cid, old in (info.get("children") or {}).items():
+        c = db.get(models.Child, int(cid))
+        if c is not None:
+            c.child_uid = old
+            n += 1
+    db.delete(row)
+    return n
+
+
 def prepare(db) -> None:
     if db.get(models.MasdRuleTable, UNDO_KEY) is not None:
         sys.exit("Already prepared — run `undo` first, then `prepare` again.")
@@ -350,12 +415,17 @@ def prepare(db) -> None:
             print(f"   {u.full_name:22} mobile {u.phone}  →  {selection_state(db, u)}")
     print(f"Password set on {len(users)} account(s); topics given to {len(undo['questions'])} question(s). "
           "Sign in on the learner page with a mobile number and that password.")
+    relabel(db, users)
 
 
 def undo(db) -> None:
+    ids = _restore_ids(db)
+    if ids:
+        db.commit()
+        print(f"Put back {ids} original mother/baby ID(s).")
     row = db.get(models.MasdRuleTable, UNDO_KEY)
     if row is None:
-        print("Nothing to undo.")
+        print("Nothing else to undo.")
         return
     info = row.value_json or {}
     if info.get("attempts_created"):
@@ -396,7 +466,7 @@ def undo(db) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("action", choices=["pick", "prepare", "undo"])
+    ap.add_argument("action", choices=["pick", "prepare", "relabel", "undo"])
     a = ap.parse_args()
     db = SessionLocal()
     try:
@@ -404,6 +474,8 @@ def main() -> None:
             show(db)
         elif a.action == "prepare":
             prepare(db)
+        elif a.action == "relabel":
+            relabel(db)
         else:
             undo(db)
     finally:

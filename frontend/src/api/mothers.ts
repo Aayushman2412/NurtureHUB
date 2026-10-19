@@ -57,6 +57,8 @@ export interface MotherListItem {
   edd_records: string | null;
   gestational_weeks: number | null;
   children_count: number;
+  /** anc | pnc_lt5 | pnc_ge5 | unknown — from the dates, as MASD types it. */
+  adoption_type?: 'anc' | 'pnc_lt5' | 'pnc_ge5' | 'unknown' | null;
   created_at: string;
 }
 

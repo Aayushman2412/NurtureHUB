@@ -90,7 +90,9 @@ interface Props {
   /** Offer "cases as columns" — the learner's view (review of 18 Oct 2026:
    *  "transpose the rows and columns … adoptions will be in the columns,
    *  whatever other variables come in the rows"). The supervisors' table
-   *  stays horizontal. Starts transposed on a phone. */
+   *  stays horizontal. Starts transposed — cases as columns — on every screen
+   *  (19 Oct 2026: "preferably let it be vertical; if they want they can
+   *  always switch"); the learner's own choice is remembered. */
   allowTranspose?: boolean;
 }
 
@@ -105,7 +107,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
       const saved = localStorage.getItem(`${PREFS_KEY}.transposed`);
       if (saved != null) return saved === '1';
     } catch { /* no storage */ }
-    return typeof window !== 'undefined' && window.matchMedia?.('(max-width: 639px)').matches;
+    return true;
   });
   const flip = () => setTransposed(v => {
     try { localStorage.setItem(`${PREFS_KEY}.transposed`, v ? '0' : '1'); } catch { /* no storage */ }

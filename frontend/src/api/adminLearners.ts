@@ -15,6 +15,13 @@ export interface AdminLearner {
   created_at: string | null;
   program_district_id: number | null;
   program_district_name: string | null;
+  /** Where they work and what they are (review of 19 Oct 2026). */
+  district_name?: string | null;
+  block_name?: string | null;
+  cadre?: string | null;
+  department_name?: string | null;
+  /** MT (master trainer) or FL (facilitator), from the F2F selection. */
+  trainer_role?: 'MT' | 'FL' | null;
   /** Submitted test attempts — shown before deleting so the loss is visible. */
   attempts: number;
   /** Mothers they registered; these survive the account (registrar is nulled). */
@@ -71,3 +78,27 @@ export const bulkAssignLearners = (
   client
     .post('/api/admin/users/bulk-assign', { user_ids: userIds, program_district_id: programDistrictId })
     .then(r => r.data);
+
+/** One thing a learner did, for the admin's recent-activity view (review of
+ *  19 Oct 2026) — backend GET /api/admin/growth/learners/{id}/activity. */
+export interface LearnerActivityEvent {
+  kind: 'form' | 'adoption' | 'video' | 'test';
+  at: string;
+  form_key?: string;
+  assessment_date?: string | null;
+  adoption_date?: string | null;
+  mother?: { id: number; name: string; uid: string } | null;
+  child?: { id: number; name: string; uid: string } | null;
+  title?: string;
+  score?: number | null;
+  passed?: boolean;
+}
+
+export interface LearnerActivity {
+  learner: { id: number; name: string };
+  last_active: string | null;
+  events: LearnerActivityEvent[];
+}
+
+export const getLearnerActivity = (id: number): Promise<LearnerActivity> =>
+  client.get(`/api/admin/growth/learners/${id}/activity`).then(r => r.data);

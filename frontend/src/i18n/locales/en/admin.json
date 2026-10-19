@@ -16,7 +16,7 @@
       "tutorialTracking": "Tutorial Tracking",
       "testManager": "Test Manager",
       "liveMonitor": "Live Monitor",
-      "results": "Results",
+      "results": "Test Results",
       "growthMonitor": "Learner Activities",
       "masd": "Programme Progress",
       "databaseSection": "Database",
@@ -114,20 +114,32 @@
       "sheet": "Tutorial Tracking",
       "userName": "User Name",
       "email": "Email",
-      "watchPct": "{{module}} - Watch %",
-      "watchTime": "{{module}} - Watch Time",
-      "quiz": "{{module}} - Quiz",
-      "tutorialsCompleted": "Tutorials Completed",
-      "avgWatch": "Avg Watch %",
-      "totalWatchTime": "Total Watch Time",
-      "quizzesAnswered": "Quizzes Answered",
-      "quizzesSkipped": "Quizzes Skipped",
-      "quizAccuracy": "Quiz Accuracy %",
+      "watchPct": "{{module}} - % of the video watched",
+      "watchTime": "{{module}} - Time spent watching",
+      "quiz": "{{module}} - Quiz: questions right / asked (or Skipped / Pending)",
+      "tutorialsCompleted": "Videos completed / total",
+      "avgWatch": "Average % of the videos watched",
+      "totalWatchTime": "Total time spent watching",
+      "quizzesAnswered": "Quizzes answered (count)",
+      "quizzesSkipped": "Quizzes skipped (count)",
+      "quizAccuracy": "Quiz accuracy % (right ÷ questions in the quizzes answered)",
       "performanceScore": "Video watching score (out of 100)",
       "userId": "User ID",
       "mobile": "Mobile",
       "cadre": "Cadre",
       "block": "Block"
+    },
+    "quizShort": "Quiz",
+    "legend": {
+      "videoTitle": "In each video column:",
+      "video": "the large % is how much of the video was watched (skipping ahead does not count); below it, the time spent watching. A ? beside a video's name means it has a quiz.",
+      "quizTitle": "Quiz 3/3:",
+      "quiz": "the short quiz after that video — questions answered right out of the questions asked. \"Skipped\": the quiz was skipped; \"Pending\": not reached yet.",
+      "quizzesTitle": "Quizzes column:",
+      "answered": "quizzes answered",
+      "skipped": "quizzes skipped",
+      "accuracyTitle": "Accuracy:",
+      "accuracy": "of the questions in the quizzes answered, the share answered right. A skipped quiz does not lower it; a wrong answer does."
     }
   },
   "projects": {
@@ -259,7 +271,17 @@
     "emailHint": "Any address works — it is never emailed, and the account is verified on creation.",
     "namePlaceholder": "Optional",
     "fieldPassword": "Password",
-    "deleteConfirm": "Delete account"
+    "deleteConfirm": "Delete account",
+    "colMobile": "Mobile",
+    "colDistrict": "District",
+    "colBlock": "Block",
+    "colCadre": "Cadre",
+    "colDepartment": "Department",
+    "colCategory": "MT / FL",
+    "trainerRole": {
+      "MT": "Master trainer (set at the face-to-face selection)",
+      "FL": "Facilitator (set at the face-to-face selection)"
+    }
   },
   "setup": {
     "buttonTitle": "Set up this project",
@@ -332,6 +354,23 @@
       "last": "Last measured",
       "weight": "Weight"
     },
-    "learnerId": "ID {{id}}"
+    "learnerId": "ID {{id}}",
+    "department": "Department"
+  },
+  "activity": {
+    "open": "Recent activity",
+    "title": "Recent activity — {{name}}",
+    "loading": "Loading activity…",
+    "loadFailed": "Could not load this learner's activity.",
+    "empty": "Nothing recorded yet: no forms, adoptions, videos or tests.",
+    "activeToday": "Active today.",
+    "lastActive_one": "Last active {{count}} day ago.",
+    "lastActive_other": "Last active {{count}} days ago.",
+    "form": "Filled {{form}}",
+    "adoption": "Adopted a mother",
+    "video": "Finished the video “{{title}}”",
+    "test": "Took {{title}} — {{score}}%",
+    "visitOn": "Visit date {{date}}",
+    "adoptedOn": "Adoption date {{date}}"
   }
 }

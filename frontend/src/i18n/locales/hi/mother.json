@@ -17,13 +17,20 @@
       "gestationalAge": "गर्भकालीन आयु",
       "edd": "ईडीडी",
       "status": "स्थिति",
-      "registered": "दर्ज"
+      "registered": "दर्ज",
+      "adoptionType": "गोद लेने का प्रकार"
     },
     "status": {
       "pregnant": "गर्भवती",
       "lactating": "स्तनपान कराने वाली"
     },
-    "weeks": "{{n}} सप्ताह"
+    "weeks": "{{n}} सप्ताह",
+    "type": {
+      "anc": "ANC",
+      "pnc_lt5": "PNC <5M",
+      "pnc_ge5": "PNC ≥5M",
+      "unknown": "अभी पता नहीं"
+    }
   },
   "card": {
     "learnerFallback": "स्वास्थ्य कार्यकर्ता",

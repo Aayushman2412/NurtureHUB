@@ -9,7 +9,7 @@ from app import projects
 from app.database import get_db
 from app.models import (
     Stage, Tutorial, TutorialQuestion, TutorialQuestionOption, TutorialQuizResponse,
-    UserTutorialProgress, Test, TestAttempt, Notification, User,
+    UserTutorialProgress, Test, TestAnswer, TestAttempt, Notification, User,
 )
 from app.schemas import (
     StageOut, StageTestInfo, TutorialOut, TutorialProgressUpdate,
@@ -172,6 +172,19 @@ def get_stages(current_user: User = Depends(get_verified_user), db: Session = De
         ).all():
             attempts_by_test.setdefault(a.test_id, []).append(a)
 
+    # The attempt the timeline reports: the best score, the latest of equals.
+    best_attempt: dict[int, TestAttempt] = {
+        tid: max(atts, key=lambda a: (a.score or 0, a.submitted_at))
+        for tid, atts in attempts_by_test.items()
+    }
+    correct_by_attempt: dict[int, int] = {}
+    if best_attempt:
+        for aid, cnt in db.query(TestAnswer.attempt_id, func.count(TestAnswer.id)).filter(
+            TestAnswer.attempt_id.in_([a.id for a in best_attempt.values()]),
+            TestAnswer.is_correct.is_(True),
+        ).group_by(TestAnswer.attempt_id).all():
+            correct_by_attempt[aid] = cnt
+
     # eligibility computed once from in-memory data: for a test in the stage at
     # order_index N, required = all tutorials in stages with order_index <= N.
     completed_ids = {tid for tid, p in progress_by_tutorial.items() if p.is_completed}
@@ -230,13 +243,23 @@ def get_stages(current_user: User = Depends(get_verified_user), db: Session = De
                 is_submitted=len(attempts) > 0,
                 is_locked=locked,
                 needs_videos=not eligible,
+                passing_score_pct=test.passing_score_pct,
+                answers_released=bool(test.answers_released),
             )
+            best = best_attempt.get(test.id)
+            if best is not None:
+                test_info.score = best.score
+                test_info.correct = correct_by_attempt.get(best.id, 0)
+                test_info.total_questions = test.total_questions or None
+                test_info.attempt_started_at = to_utc(best.started_at)
+                test_info.attempt_submitted_at = to_utc(best.submitted_at)
 
         response_stages.append(StageOut(
             id=stage.id, program_district_id=stage.program_district_id,
             title=stage.title, description=stage.description,
             order_index=stage.order_index, stage_type=stage.stage_type,
             quiz_enabled=stage.quiz_enabled, is_locked=is_locked,
+            starts_on=stage.starts_on, finish_by=stage.finish_by,
             tutorials_completed=tutorials_completed_count,
             total_tutorials=len(stage_tutorials), tutorials=stage_tutorials_out,
             test=test_info,

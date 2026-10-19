@@ -14,7 +14,8 @@ import {
 import GrowthSummaryTable from '../../components/growth/GrowthSummaryTable';
 import GrowthChartGrid, { GrowthLegend } from '../../components/growth/GrowthChartGrid';
 import VisitDetailModal from '../../components/growth/VisitDetailModal';
-import { Button, buttonClasses, EmptyState, PageHeader, PageLoader, Select, Tabs } from '../../components/ui';
+import { Button, buttonClasses, EmptyState, PageHeader, PageLoader, Tabs } from '../../components/ui';
+import MultiSelect from '../../components/ui/MultiSelect';
 import { cn } from '../../utils/cn';
 import {
   caseHasCohortData,
@@ -23,9 +24,15 @@ import {
   type GrowthPoint,
 } from '../../lib/growthChart';
 
+/** The adoption types the charts can be narrowed to (review of 19 Oct 2026:
+ *  "an ability to delineate ANC and PNC less than 5 in the filter"). */
+const TYPE_FILTERS = ['all', 'anc', 'pnc_lt5', 'pnc_ge5'] as const;
+type TypeFilter = (typeof TYPE_FILTERS)[number];
+
 /**
  * Learner growth view: WHO growth charts for the learner's own cases —
- * per case (child) with only the applicable charts, or all cases together.
+ * per case (child) with only the applicable charts, several hand-picked cases
+ * on the same charts, or all cases together; narrowed by adoption type.
  */
 const GrowthChartsPage: React.FC = () => {
   const { t } = useTranslation('growth');
@@ -40,10 +47,18 @@ const GrowthChartsPage: React.FC = () => {
   const [sexTab, setSexTab] = useState<'boys' | 'girls'>('boys');
   const [detailPoint, setDetailPoint] = useState<GrowthPoint | null>(null);
 
-  const selectedChildId = searchParams.get('child'); // null = all cases
+  // ?child=12 is one case; ?child=12,15 several on the same charts (review of
+  // 19 Oct 2026: "ability to select multiple cases is essential ... same
+  // graph"); none means all of them.
+  const childParam = searchParams.get('child') ?? '';
+  const pickedIds = useMemo(
+    () => childParam.split(',').map(Number).filter(n => Number.isInteger(n) && n > 0),
+    [childParam],
+  );
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   // "My cases" (review of 17 Oct 2026): every case in one table, as the
   // supervisors see it — the first view; the WHO charts are the second.
-  const view: 'table' | 'charts' = searchParams.get('view') === 'charts' || selectedChildId ? 'charts' : 'table';
+  const view: 'table' | 'charts' = searchParams.get('view') === 'charts' || pickedIds.length > 0 ? 'charts' : 'table';
 
   const load = useCallback(() => {
     setLoading(true);
@@ -64,28 +79,44 @@ const GrowthChartsPage: React.FC = () => {
     load();
   }, [load]);
 
-  const selectCase = (childId: number | null) => {
-    if (childId == null) setSearchParams({ view: 'charts' });
-    else setSearchParams({ child: String(childId) });
+  const selectCases = (ids: number[]) => {
+    if (ids.length === 0) setSearchParams({ view: 'charts' });
+    else setSearchParams({ child: ids.join(',') });
   };
 
+  // One picked case: its own charts, whatever the type filter says.
   const selectedCase = useMemo(
-    () => cases.find(c => String(c.child.id) === selectedChildId) ?? null,
-    [cases, selectedChildId],
+    () => (pickedIds.length === 1 ? cases.find(c => c.child.id === pickedIds[0]) ?? null : null),
+    [cases, pickedIds],
+  );
+  const typed = useMemo(
+    () => cases.filter(c => typeFilter === 'all' || c.adoption_type === typeFilter),
+    [cases, typeFilter],
+  );
+  // Several picked: those of them the type filter keeps; none picked: all.
+  const pool = useMemo(
+    () => (pickedIds.length > 1 ? typed.filter(c => pickedIds.includes(c.child.id)) : typed),
+    [typed, pickedIds],
   );
 
   const allCasesForTab = useMemo(
-    () => cases.filter(c => sexKeyForGender(c.child.gender) === sexTab),
-    [cases, sexTab],
+    () => pool.filter(c => sexKeyForGender(c.child.gender) === sexTab),
+    [pool, sexTab],
   );
 
   const counts = useMemo(
     () => ({
-      boys: cases.filter(c => sexKeyForGender(c.child.gender) === 'boys').length,
-      girls: cases.filter(c => sexKeyForGender(c.child.gender) === 'girls').length,
+      boys: pool.filter(c => sexKeyForGender(c.child.gender) === 'boys').length,
+      girls: pool.filter(c => sexKeyForGender(c.child.gender) === 'girls').length,
     }),
-    [cases],
+    [pool],
   );
+  // Follow the cases: picking only girls should not leave the boys' tab open.
+  useEffect(() => {
+    if (counts[sexTab] === 0 && counts[sexTab === 'boys' ? 'girls' : 'boys'] > 0) {
+      setSexTab(sexTab === 'boys' ? 'girls' : 'boys');
+    }
+  }, [counts, sexTab]);
 
   const fetchResponse = useCallback((id: number) => getResponse(id), []);
 
@@ -162,21 +193,40 @@ const GrowthChartsPage: React.FC = () => {
       <>
       {/* Which case, and boys or girls — frozen at the top so the learner never
           scrolls back up to change them (review of 18 Oct 2026). */}
-      <div className="sticky top-[3.75rem] z-20 -mx-5 mb-4 flex flex-wrap items-center gap-2 border-b border-border bg-background/95 px-5 py-2 backdrop-blur-md sm:-mx-6 sm:px-6">
-        <Select
-          aria-label={t('learner.pickCase')}
-          value={selectedCase ? String(selectedCase.child.id) : ''}
-          onChange={e => selectCase(e.target.value ? Number(e.target.value) : null)}
-          className="min-w-0 flex-1 sm:max-w-md"
-        >
-          <option value="">{t('learner.allCases')} ({cases.length})</option>
-          {cases.map(c => (
-            <option key={c.child.id} value={c.child.id}>
-              {t('learner.caseLabel', { child: c.child.name, mother: c.mother.name })}
-              {' · '}{t('learner.visitCount', { count: c.visits.filter(v => v.weight != null || v.length != null).length })}
-            </option>
-          ))}
-        </Select>
+      <div className="sticky top-[3.75rem] z-20 -mx-5 mb-4 flex flex-wrap items-end gap-x-3 gap-y-2 border-b border-border bg-background/95 px-5 py-2 backdrop-blur-md sm:-mx-6 sm:px-6">
+        <div className="min-w-0 flex-1 basis-64 sm:max-w-md">
+          <MultiSelect
+            label={t('learner.pickCases')}
+            value={pickedIds}
+            onChange={v => selectCases(v.map(Number))}
+            options={typed.map(c => ({
+              value: c.child.id,
+              label: `${t('learner.caseLabel', { child: c.child.name, mother: c.mother.name })} · ${t('learner.visitCount', { count: c.visits.filter(v => v.weight != null || v.length != null).length })}`,
+            }))}
+            placeholder={`${t('learner.allCases')} (${typed.length})`}
+            selectedLabel={n => t('learner.casesPicked', { count: n })}
+            searchPlaceholder={t('learner.searchCases')}
+            selectAllLabel={t('learner.pickAll')}
+            clearLabel={t('learner.clearPicked')}
+            emptyMessage={t('learner.noCaseMatches')}
+          />
+        </div>
+        {selectedCase == null && (
+          <div role="group" aria-label={t('learner.typeFilter')} className="flex shrink-0 flex-wrap rounded-lg border border-border bg-surface p-0.5">
+            {TYPE_FILTERS.map(f => (
+              <button
+                key={f}
+                type="button"
+                aria-pressed={typeFilter === f}
+                onClick={() => setTypeFilter(f)}
+                className={cn('cursor-pointer rounded-md px-2.5 py-1.5 text-sm font-semibold transition-colors',
+                  typeFilter === f ? 'bg-primary text-white' : 'text-ink-muted hover:text-ink')}
+              >
+                {t(`learner.types.${f}`)}
+              </button>
+            ))}
+          </div>
+        )}
         {selectedCase == null ? (
           <div role="tablist" className="flex shrink-0 rounded-lg border border-border bg-surface p-0.5">
             {(['boys', 'girls'] as const).map(s => (
@@ -250,6 +300,7 @@ const GrowthChartsPage: React.FC = () => {
             />
           ) : (
             <GrowthChartGrid
+              key={`${sexTab}-${pickedIds.join(',')}-${typeFilter}`}
               cases={allCasesForTab}
               sex={sexTab}
               standards={standards}

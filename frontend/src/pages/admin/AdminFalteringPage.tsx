@@ -31,6 +31,7 @@ const AdminFalteringPage: React.FC = () => {
   const [batch, setBatch] = useState('');
   const [block, setBlock] = useState('');
   const [cadre, setCadre] = useState('');
+  const [department, setDepartment] = useState('');
   const [learner, setLearner] = useState('');
   const [data, setData] = useState<FalterResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,7 +41,8 @@ const AdminFalteringPage: React.FC = () => {
 
   const filters: FalterFilters = {
     district: project || undefined, conditions, monitor: monitor || undefined, batch: batch || undefined,
-    block: block || undefined, cadre: cadre || undefined, learner_id: learner ? Number(learner) : undefined,
+    block: block || undefined, cadre: cadre || undefined, department: department || undefined,
+    learner_id: learner ? Number(learner) : undefined,
   };
   const key = JSON.stringify(filters);
 
@@ -60,8 +62,10 @@ const AdminFalteringPage: React.FC = () => {
 
   const toggle = (c: FalterCondition) =>
     setConditions(prev => (prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]));
-  const reset = () => { setConditions([]); setMonitor(''); setBatch(''); setBlock(''); setCadre(''); setLearner(''); };
-  const filtered = conditions.length > 0 || !!(monitor || batch || block || cadre || learner);
+  const reset = () => {
+    setConditions([]); setMonitor(''); setBatch(''); setBlock(''); setCadre(''); setDepartment(''); setLearner('');
+  };
+  const filtered = conditions.length > 0 || !!(monitor || batch || block || cadre || department || learner);
 
   const download = async () => {
     setDownloading(true);
@@ -117,7 +121,7 @@ const AdminFalteringPage: React.FC = () => {
 
       {/* Whose cases */}
       {data && (
-        <div className="grid grid-cols-1 gap-3 rounded-xl border border-border bg-surface p-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 rounded-xl border border-border bg-surface p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <SelectField label={t('faltering.monitor')} value={monitor} onChange={setMonitor} required={false}
             placeholder={t('faltering.any')}
             options={[...data.options.monitors.map(m => ({ value: String(m.id), label: m.name ?? `#${m.id}` })),
@@ -128,6 +132,9 @@ const AdminFalteringPage: React.FC = () => {
             placeholder={t('faltering.any')} options={data.options.blocks.map(b => ({ value: b, label: b }))} />
           <SelectField label={t('faltering.cadre')} value={cadre} onChange={setCadre} required={false}
             placeholder={t('faltering.any')} options={data.options.cadres.map(b => ({ value: b, label: b }))} />
+          {/* Department (review of 19 Oct 2026: "department is one thing we require"). */}
+          <SelectField label={t('faltering.department')} value={department} onChange={setDepartment} required={false}
+            placeholder={t('faltering.any')} options={(data.options.departments ?? []).map(b => ({ value: b, label: b }))} />
           <SelectField label={t('faltering.learner')} value={learner} onChange={setLearner} required={false}
             placeholder={t('faltering.any')} options={data.options.learners.map(([id, name]) => ({ value: String(id), label: `${name ?? ''} · ID ${id}` }))} />
         </div>
@@ -192,7 +199,7 @@ const AdminFalteringPage: React.FC = () => {
                     <span className="block text-xs text-ink-muted">
                       {[r.learner.id != null ? t('faltering.learnerId', { id: r.learner.id }) : null, r.learner.mobile].filter(Boolean).join(' · ')}
                     </span>
-                    <span className="block text-xs text-ink-muted">{[r.learner.cadre, r.learner.block].filter(Boolean).join(' · ')}</span></td>
+                    <span className="block text-xs text-ink-muted">{[r.learner.cadre, r.learner.department, r.learner.block].filter(Boolean).join(' · ')}</span></td>
                   <td className="whitespace-nowrap">{r.mother.name}
                     <span className="block font-mono text-xs text-ink-muted">{r.mother.uid}{r.mother.village ? ` · ${r.mother.village}` : ''}</span></td>
                   <td className="whitespace-nowrap">{r.child.name ?? '—'}

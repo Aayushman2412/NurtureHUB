@@ -83,12 +83,19 @@ def build(db: Session, district_slug: Optional[str]) -> Dict[str, Any]:
     learner_ids = sorted({r["learner_id"] for r in rows if r.get("learner_id")})
     monitor_of: Dict[int, Optional[int]] = {}
     names: Dict[int, str] = {}
-    for uid, name, email, monitor_id, is_monitor in (
+    # The learner's department, for the filter (review of 19 Oct 2026:
+    # "department is one thing we require"): the department code, the text an
+    # "Other" department was given, or the older free-text field.
+    dept_of: Dict[int, Optional[str]] = {}
+    for uid, name, email, monitor_id, is_monitor, code, other, legacy in (
             db.query(models.User.id, models.User.full_name, models.User.email,
-                     models.User.batch_monitor_id, models.User.is_batch_monitor)
+                     models.User.batch_monitor_id, models.User.is_batch_monitor,
+                     models.Department.code, models.User.department_other, models.User.department)
+            .outerjoin(models.Department, models.User.department_id == models.Department.id)
             .filter(models.User.id.in_(learner_ids)) if learner_ids else []):
         monitor_of[uid] = monitor_for(uid, monitor_id, bool(is_monitor))
         names[uid] = name or email
+        dept_of[uid] = (other or "Other") if code == "OTHER" else (code or other or legacy or None)
     monitor_ids = sorted({m for m in monitor_of.values() if m})
     for uid, name, email in (db.query(models.User.id, models.User.full_name, models.User.email)
                              .filter(models.User.id.in_(monitor_ids)) if monitor_ids else []):
@@ -121,7 +128,8 @@ def build(db: Session, district_slug: Optional[str]) -> Dict[str, Any]:
             "flags": flags,
             "learner": {"id": lid, "name": row["identity"]["learner_name"],
                         "cadre": ids.get("learner_cadre") or row["identity"].get("role_group"),
-                        "block": ids.get("learner_block"), "mobile": ids.get("learner_mobile")},
+                        "block": ids.get("learner_block"), "mobile": ids.get("learner_mobile"),
+                        "department": dept_of.get(lid) if lid else None},
             "batch": batch_of.get(lid) if lid else None,
             "monitor": {"id": mid, "name": names.get(mid)} if mid else None,
             "mother": {"name": row["identity"]["mother_name"], "uid": ids.get("mother_uid"),
@@ -147,6 +155,7 @@ def build(db: Session, district_slug: Optional[str]) -> Dict[str, Any]:
 def apply_filters(rows: Iterable[Dict[str, Any]], *, conditions: Optional[List[str]] = None,
                   monitor_id: Optional[int] = None, no_monitor: bool = False, batch: Optional[str] = None,
                   block: Optional[str] = None, cadre: Optional[str] = None,
+                  department: Optional[str] = None,
                   learner_id: Optional[int] = None) -> List[Dict[str, Any]]:
     keep = set(conditions or CONDITION_KEYS)
     out = []
@@ -163,6 +172,8 @@ def apply_filters(rows: Iterable[Dict[str, Any]], *, conditions: Optional[List[s
             continue
         if cadre and r["learner"]["cadre"] != cadre:
             continue
+        if department and r["learner"].get("department") != department:
+            continue
         if learner_id and r["learner"]["id"] != learner_id:
             continue
         out.append(r)
@@ -177,6 +188,7 @@ _COLUMNS = [
     ("Learner ID", lambda r: r["learner"]["id"]),
     ("Learner mobile", lambda r: r["learner"]["mobile"]),
     ("Cadre", lambda r: r["learner"]["cadre"]),
+    ("Department", lambda r: r["learner"].get("department")),
     ("Block", lambda r: r["learner"]["block"]),
     ("Mother", lambda r: r["mother"]["name"]),
     ("Mother ID", lambda r: r["mother"]["uid"]),

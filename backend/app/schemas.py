@@ -304,6 +304,8 @@ class MotherListItem(BaseModel):
     edd_records: Optional[date] = None
     gestational_weeks: Optional[int] = None
     children_count: int = 0
+    # anc | pnc_lt5 | pnc_ge5 | unknown — from the dates, as MASD types it.
+    adoption_type: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -668,6 +670,16 @@ class StageTestInfo(BaseModel):
     # True only when the lock is because required videos aren't done (vs. admin
     # simply not having started the test yet) — lets the dashboard show the right message.
     needs_videos: bool = False
+    # The learner's own result, for the timeline card (review of 19 Oct 2026:
+    # "test given on this date, from this time to this time ... your formative
+    # test score is this"). The best submitted attempt; null until one exists.
+    score: Optional[float] = None
+    correct: Optional[int] = None
+    total_questions: Optional[int] = None
+    attempt_started_at: Optional[datetime] = None
+    attempt_submitted_at: Optional[datetime] = None
+    passing_score_pct: Optional[int] = None
+    answers_released: bool = False
 
 class StageOut(BaseModel):
     id: int
@@ -677,6 +689,9 @@ class StageOut(BaseModel):
     order_index: int
     stage_type: str = "tutorials"
     quiz_enabled: bool = True
+    # The phase's window, set by the admin (review of 19 Oct 2026).
+    starts_on: Optional[date] = None
+    finish_by: Optional[date] = None
     is_locked: bool = True
     tutorials_completed: int = 0
     total_tutorials: int = 0
@@ -822,6 +837,9 @@ class DetailedResultResponse(BaseModel):
     passing_score_pct: int
     correct_count: int
     total_questions: int
+    # False while the admin holds the answers back: `answers` then carries
+    # only each question's topic and whether it was right.
+    answers_released: bool = True
     answers: List[DetailedAnswerOut]
 
 # Dashboard Schemas

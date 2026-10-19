@@ -638,8 +638,8 @@ def seed_project(db, slug: str, today: date, conf: Optional[dict] = None,
         busy = {uid for (uid,) in db.query(models.Mother.registered_by_user_id)
                 .filter(models.Mother.registered_by_user_id.in_([u.id for u in learners]))} if learners else set()
         learners = [u for u in learners if u.id not in busy]
-        ctx.seq = db.query(models.Mother).filter(
-            models.Mother.mother_uid.like(f"{MARK}{slug[:2].upper()}M%")).count()
+        prefix = f"{MARK}{slug[:2].upper()}M"
+        ctx.seq = db.query(models.Mother).filter(models.Mother.mother_uid.like(f"{prefix}%")).count()             + _relabelled(db, prefix)
     selections = {s.user_id: s for s in db.query(models.FaceToFaceSelection)
                   .filter(models.FaceToFaceSelection.user_id.in_([u.id for u in learners]))}
     f2f = [u for u in learners if u.id in selections]
@@ -712,7 +712,22 @@ def seed_project(db, slug: str, today: date, conf: Optional[dict] = None,
             "edges_left": len(edges)}
 
 
+def _relabelled(db, prefix: str) -> int:
+    """Synthetic mothers whose ID scripts/demo_accounts.py `relabel` changed
+    for a demo login (they no longer start with MARK, but their number is
+    taken)."""
+    row = db.get(models.MasdRuleTable, "demo.accounts.ids")
+    olds = ((row.value_json or {}).get("mothers") or {}).values() if row else []
+    return sum(1 for uid in olds if str(uid).startswith(prefix))
+
+
 def remove(db) -> None:
+    # Demo logins' cases relabelled away from MARK get their IDs back first,
+    # or they would escape the clean-up below.
+    from scripts.demo_accounts import _restore_ids
+
+    if _restore_ids(db):
+        db.commit()
     mothers = db.query(models.Mother.id).filter(models.Mother.mother_uid.like(f"{MARK}%"))
     mother_ids = [m for (m,) in mothers]
     child_ids = [c for (c,) in db.query(models.Child.id).filter(models.Child.mother_id.in_(mother_ids))] if mother_ids else []

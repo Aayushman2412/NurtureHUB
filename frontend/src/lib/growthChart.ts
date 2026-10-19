@@ -79,6 +79,21 @@ export const COHORT_SPECS: Record<GrowthCohort, CohortSpec> = {
 const MAX_STANDARD_AGE_DAYS = 730;
 const MAX_STANDARD_LENGTH_CM = 110;
 
+const DAYS_PER_MONTH = 30.4375;
+/** The longest age axis a chart opens with: 15 months (review of 19 Oct 2026 —
+ *  "24 months may not be of use to us ... reduce it to a maximum of 15
+ *  months"). A child followed beyond it still stretches the axis to fit. */
+export const MAX_AGE_AXIS_DAYS = Math.round(15 * DAYS_PER_MONTH);
+/** Under a month at the last visit, the age axis counts days ("within one
+ *  month we have 11 visits; on a monthly axis all the points are crowded"). */
+const DAYS_AXIS_LIMIT = 31;
+
+export type AgeUnit = 'days' | 'weeks' | 'months';
+
+/** The unit an age axis counts in, from how long it is. */
+export const ageUnitFor = (cohort: GrowthCohort, domain: [number, number]): AgeUnit =>
+  domain[1] <= DAYS_AXIS_LIMIT ? 'days' : cohort === 'young' && domain[1] <= 200 ? 'weeks' : 'months';
+
 /** Whole days between two ISO dates, or null when either is missing/invalid. */
 const daysBetween = (fromIso: string | null, toIso: string | null): number | null => {
   if (!fromIso || !toIso) return null;
@@ -115,43 +130,71 @@ export const caseInCohort = (c: GrowthCase, cohort: GrowthCohort): boolean =>
   adoptionCohort(c) === cohort;
 
 /**
- * Axis domains for a cohort's charts, widened to fit the plotted cases.
+ * Axis domains for a cohort's charts, fitted to the plotted cases (review of
+ * 19 Oct 2026: "can this x-axis get auto-adjusted based on the last visit?").
  *
- * A young-cohort child followed past six months must still be drawn on the
- * young chart, so the age axis grows to cover their latest visit (and the
- * length axis their largest measurement), capped at the WHO tables' extent.
+ * The age axis runs to just past the latest visit: in days while that is
+ * under a month (a staff nurse's cases span 10-15 days), in weeks up to about
+ * six months, in months beyond — and never past 15 months unless a child is
+ * followed longer. The length axis spans the measured lengths. Without
+ * visits, the cohort's standard window.
  */
 export const cohortDomains = (
   cohort: GrowthCohort,
   cases: GrowthCase[],
 ): { ageDomain: [number, number]; lengthDomain: [number, number] } => {
   const spec = COHORT_SPECS[cohort];
-  let maxAge = spec.ageDomain[1];
-  let maxLength = spec.lengthDomain[1];
-  let minLength = spec.lengthDomain[0];
+  let maxAge = -1;
+  let minAge = Infinity;
+  let maxLength = -Infinity;
+  let minLength = Infinity;
 
   for (const c of cases) {
     if (!caseInCohort(c, cohort)) continue;
     for (const v of c.visits) {
-      if (v.age_days != null && v.age_days > maxAge) maxAge = v.age_days;
+      if (v.age_days != null && v.age_days >= 0 && (v.weight != null || v.length != null)) {
+        maxAge = Math.max(maxAge, v.age_days);
+        minAge = Math.min(minAge, v.age_days);
+      }
       if (v.length != null) {
-        if (v.length > maxLength) maxLength = v.length;
-        if (v.length < minLength) minLength = v.length;
+        maxLength = Math.max(maxLength, v.length);
+        minLength = Math.min(minLength, v.length);
       }
     }
-    if (cohort === 'young' && c.child.birth_length != null && c.child.birth_length < minLength) {
-      minLength = c.child.birth_length;
+    if (cohort === 'young' && c.child.birth_length != null) {
+      maxLength = Math.max(maxLength, c.child.birth_length);
+      minLength = Math.min(minLength, c.child.birth_length);
+    }
+    if (cohort === 'young' && (c.child.birth_weight != null || c.child.birth_length != null)) {
+      maxAge = Math.max(maxAge, 0);
+      minAge = Math.min(minAge, 0);
     }
   }
 
-  // Round out to a tidy edge so the last point is never on the border.
-  const ageHi = Math.min(MAX_STANDARD_AGE_DAYS, Math.ceil((maxAge + 14) / 30.4375) * 30.4375);
-  const lenHi = Math.min(MAX_STANDARD_LENGTH_CM, Math.ceil((maxLength + 2) / 5) * 5);
-  const lenLo = Math.max(45, Math.floor((minLength - 2) / 5) * 5);
-  return {
-    ageDomain: [spec.ageDomain[0], Math.max(spec.ageDomain[1], ageHi)],
-    lengthDomain: [Math.min(spec.lengthDomain[0], lenLo), Math.max(spec.lengthDomain[1], lenHi)],
-  };
+  let ageDomain: [number, number] = [spec.ageDomain[0], Math.min(spec.ageDomain[1], MAX_AGE_AXIS_DAYS)];
+  if (maxAge >= 0) {
+    const cap = maxAge > MAX_AGE_AXIS_DAYS ? MAX_STANDARD_AGE_DAYS : MAX_AGE_AXIS_DAYS;
+    if (cohort === 'young') {
+      const hi = maxAge <= 30
+        ? Math.min(DAYS_AXIS_LIMIT, Math.max(10, Math.ceil((maxAge + 2) / 5) * 5))  // days
+        : maxAge < 180
+          ? Math.max(42, Math.ceil((maxAge + 7) / 14) * 14)              // weeks
+          : Math.ceil((maxAge + 14) / DAYS_PER_MONTH) * DAYS_PER_MONTH;  // months
+      ageDomain = [0, Math.min(cap, hi)];
+    } else {
+      const lo = Math.max(4 * DAYS_PER_MONTH, Math.floor((minAge - 14) / DAYS_PER_MONTH) * DAYS_PER_MONTH);
+      const hi = Math.max(lo + 2 * DAYS_PER_MONTH, Math.ceil((maxAge + 14) / DAYS_PER_MONTH) * DAYS_PER_MONTH);
+      ageDomain = [Math.min(lo, spec.ageDomain[0]), Math.min(cap, hi)];
+    }
+  }
+
+  let lengthDomain: [number, number] = spec.lengthDomain;
+  if (Number.isFinite(minLength)) {
+    const lo = Math.max(45, Math.floor((minLength - 2) / 5) * 5);
+    const hi = Math.min(MAX_STANDARD_LENGTH_CM, Math.max(lo + 15, Math.ceil((maxLength + 3) / 5) * 5));
+    lengthDomain = [lo, hi];
+  }
+  return { ageDomain, lengthDomain };
 };
 
 /**
@@ -218,22 +261,27 @@ export const sexKeyForGender = (gender: string | null): 'boys' | 'girls' | null 
   return null;
 };
 
-const DAYS_PER_MONTH = 30.4375;
-
 /**
- * X-axis ticks across the ACTUAL domain (which the young chart widens when a
- * child is followed past six months). Weeks while the span is short enough to
- * read, months once it is not — so an extended young chart switches to months
- * instead of printing 40 week ticks.
+ * X-axis ticks across the ACTUAL domain, in the unit ageUnitFor picks: days
+ * for a chart under a month long, weeks up to about six months, months after.
  */
 export const ageTicks = (
   cohort: GrowthCohort,
   domain?: [number, number],
 ): { value: number; label: string }[] => {
   const [lo, hi] = domain ?? COHORT_SPECS[cohort].ageDomain;
+  const unit = ageUnitFor(cohort, [lo, hi]);
   const ticks: { value: number; label: string }[] = [];
-  if (cohort === 'young' && hi <= 200) {
-    for (let w = 0; w * 7 <= hi; w += 2) ticks.push({ value: w * 7, label: `${w}` });
+  if (unit === 'days') {
+    const step = hi <= 15 ? 1 : 2;
+    for (let d = Math.ceil(lo / step) * step; d <= hi; d += step) ticks.push({ value: d, label: `${d}` });
+    return ticks;
+  }
+  if (unit === 'weeks') {
+    const every = hi / 7 > 16 ? 2 : 1;
+    for (let w = Math.ceil(lo / 7); w * 7 <= hi; w += 1) {
+      ticks.push({ value: w * 7, label: w % every === 0 ? `${w}` : '' });
+    }
     return ticks;
   }
   // Month ticks; label every other one when the span is long.

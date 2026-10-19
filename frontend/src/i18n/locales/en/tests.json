@@ -154,7 +154,8 @@
     "correct": "Correct",
     "incorrect": "Incorrect",
     "correctOption": "(Correct Option)",
-    "yourAnswer": "(Your Answer)"
+    "yourAnswer": "(Your Answer)",
+    "answersHeld": "The questions and right answers open here once the admin releases them — after everyone has taken this test. Your score and your result by topic are above."
   },
   "time": {
     "minsSecs": "{{mins}}m {{secs}}s"
@@ -175,6 +176,8 @@
     "allAnswers": "All",
     "onlyRight": "Right",
     "onlyWrong": "Wrong",
-    "noneMatch": "No question matches these filters."
+    "noneMatch": "No question matches these filters.",
+    "total": "Total score",
+    "rightOf": "{{correct}} of {{total}} right"
   }
 }

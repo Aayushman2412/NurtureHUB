@@ -31,15 +31,17 @@ export const PERCENTILE_COLORS = {
 
 /**
  * Growth-chart visit colors by data source: which forms were filled on the
- * visit that produced the measurement. Kept visually distinct from the
- * percentile hues above (points/lines render bolder than the thin curves).
+ * visit that produced the measurement. None of these hues is one of the
+ * percentile curves' (red, orange, green, sky, purple): with a teal dot near
+ * the green median, nobody could tell "growth check only" from P50 (review
+ * of 19 Oct 2026). Dark and saturated, so dots read against the thin curves.
  */
 export const GROWTH_SOURCE_COLORS = {
-  birth: '#64748B', // slate — birth record from child registration
-  growth: '#0F766E', // teal — Check Growth only
-  growth_bf: '#1D4ED8', // blue — Check Growth + Breastfeeding assessment
-  growth_cf: '#BE185D', // pink — Check Growth + Complementary feeding
-  growth_bf_cf: '#7C3AED', // violet — all three on one visit
+  birth: '#9CA3AF', // light grey — birth record from child registration
+  growth: '#111827', // black — Check Growth only
+  growth_bf: '#1E3A8A', // navy — Check Growth + Breastfeeding assessment
+  growth_cf: '#92400E', // brown — Check Growth + Complementary feeding
+  growth_bf_cf: '#DB2777', // pink — all three on one visit
 } as const;
 
 /**

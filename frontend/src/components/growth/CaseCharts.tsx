@@ -126,15 +126,17 @@ interface ActivityChartProps {
   svgRef: React.RefObject<SVGSVGElement | null>;
 }
 
-/** Horizontal grouped bars — y axis = form group, x axis = count. */
+/** Horizontal grouped bars — y axis = form group, x axis = count. Drawn
+ *  narrow with large type so it stays readable on a phone (review of 19 Oct
+ *  2026: "I will have to zoom in my eyes a lot to see what it is"). */
 export const ActivityComparisonChart: React.FC<ActivityChartProps> = ({ groups, legend, svgRef }) => {
-  const W = 480;
-  const LABEL_W = 56;
-  const VALUE_W = 46;
-  const BAR_H = 11;
-  const BAR_GAP = 2;
-  const GROUP_GAP = 12;
-  const TOP = 22; // legend band
+  const W = 360;
+  const LABEL_W = 46;
+  const VALUE_W = 66;
+  const BAR_H = 15;
+  const BAR_GAP = 3;
+  const GROUP_GAP = 14;
+  const TOP = 26; // legend band
   const x0 = LABEL_W + 6;
   const x1 = W - VALUE_W;
 
@@ -153,9 +155,9 @@ export const ActivityComparisonChart: React.FC<ActivityChartProps> = ({ groups, 
     <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full">
       {/* legend */}
       {series.map((s, i) => (
-        <g key={s.key} transform={`translate(${x0 + i * 64}, 4)`}>
-          <rect width={10} height={10} rx={2} className={s.cls} />
-          <text x={14} y={9} fontSize={12} className="fill-current text-ink-muted">
+        <g key={s.key} transform={`translate(${x0 + i * 70}, 4)`}>
+          <rect width={13} height={13} rx={2} className={s.cls} />
+          <text x={17} y={11.5} fontSize={14} className="fill-current text-ink-muted">
             {s.label}
           </text>
         </g>
@@ -169,8 +171,8 @@ export const ActivityComparisonChart: React.FC<ActivityChartProps> = ({ groups, 
           <g key={g.label}>
             <text
               x={LABEL_W}
-              y={gy + groupH / 2 + 3}
-              fontSize={10}
+              y={gy + groupH / 2 + 4.5}
+              fontSize={13}
               fontWeight={700}
               textAnchor="end"
               className="fill-current text-ink-muted"
@@ -188,8 +190,8 @@ export const ActivityComparisonChart: React.FC<ActivityChartProps> = ({ groups, 
                   )}
                   <text
                     x={(v != null && v > 0 ? sx(v) : x0) + 4}
-                    y={y + BAR_H - 2.5}
-                    fontSize={9}
+                    y={y + BAR_H - 3}
+                    fontSize={12.5}
                     className={cn('fill-current tabular-nums', v == null ? 'text-ink-faint' : 'text-ink-muted')}
                   >
                     {v == null ? '—' : pct != null ? `${v}|${pct}` : v}
@@ -218,12 +220,12 @@ interface OutcomeChartProps {
 
 /** Horizontal bars left/right of a central 0 line; one colour per metric. */
 export const OutcomeDivergingChart: React.FC<OutcomeChartProps> = ({ outcomes, legend, visitLabels, direction, svgRef }) => {
-  const W = 480;
-  const LABEL_W = 58;
-  const TOP = 34; // legend + axis labels
-  const BAR_H = 10;
+  const W = 380;
+  const LABEL_W = 62;
+  const TOP = 40; // legend + axis labels
+  const BAR_H = 14;
   const BAR_GAP = 3;
-  const GROUP_GAP = 10;
+  const GROUP_GAP = 12;
   const Z_MAX = 4;
   const x0 = LABEL_W + 6;
   const x1 = W - 10;
@@ -243,8 +245,8 @@ export const OutcomeDivergingChart: React.FC<OutcomeChartProps> = ({ outcomes, l
   const groupH = visits.length * (BAR_H + BAR_GAP) - BAR_GAP;
   // Reference lines stop with the bars; the direction key sits below them.
   const plotBottom = TOP + metrics.length * (groupH + GROUP_GAP) - GROUP_GAP + 4;
-  const AXIS_FOOT = 24;
-  const footY = plotBottom + 13;
+  const AXIS_FOOT = 28;
+  const footY = plotBottom + 15;
   const H = plotBottom + AXIS_FOOT;
 
   const refLines = [
@@ -259,10 +261,10 @@ export const OutcomeDivergingChart: React.FC<OutcomeChartProps> = ({ outcomes, l
     <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full">
       {/* legend */}
       {metrics.map((m, i) => (
-        <g key={m.key} transform={`translate(${x0 + i * 72}, 4)`}>
+        <g key={m.key} transform={`translate(${x0 + i * 82}, 4)`}>
           <title>{m.label}</title>
-          <rect width={10} height={10} rx={2} className={m.cls} />
-          <text x={14} y={9} fontSize={12} className="fill-current text-ink-muted">
+          <rect width={13} height={13} rx={2} className={m.cls} />
+          <text x={17} y={11.5} fontSize={14} className="fill-current text-ink-muted">
             {m.short}
           </text>
         </g>
@@ -271,7 +273,7 @@ export const OutcomeDivergingChart: React.FC<OutcomeChartProps> = ({ outcomes, l
       {refLines.map(l => (
         <g key={l.z}>
           <line x1={sx(l.z)} x2={sx(l.z)} y1={TOP - 4} y2={plotBottom} className={l.cls} strokeDasharray={l.dash} />
-          <text x={sx(l.z)} y={TOP - 8} fontSize={11} textAnchor="middle" className="fill-current text-ink-faint">
+          <text x={sx(l.z)} y={TOP - 8} fontSize={13} textAnchor="middle" className="fill-current text-ink-faint">
             {l.z > 0 ? `+${l.z}` : l.z}
           </text>
         </g>
@@ -288,8 +290,8 @@ export const OutcomeDivergingChart: React.FC<OutcomeChartProps> = ({ outcomes, l
                 <g key={v}>
                   <text
                     x={LABEL_W}
-                    y={y + BAR_H - 2}
-                    fontSize={9}
+                    y={y + BAR_H - 3}
+                    fontSize={12}
                     fontWeight={700}
                     textAnchor="end"
                     className="fill-current text-ink-muted"
@@ -310,8 +312,8 @@ export const OutcomeDivergingChart: React.FC<OutcomeChartProps> = ({ outcomes, l
                           at ±4) neither collides with row labels nor clips */}
                       <text
                         x={z < 0 ? Math.max(sx(z) - 4, x0 + 22) : Math.min(sx(z) + 4, x1 - 22)}
-                        y={y + BAR_H - 2}
-                        fontSize={9}
+                        y={y + BAR_H - 3}
+                        fontSize={12}
                         textAnchor={z < 0 ? 'end' : 'start'}
                         className="fill-current tabular-nums text-ink-muted"
                       >
@@ -320,7 +322,7 @@ export const OutcomeDivergingChart: React.FC<OutcomeChartProps> = ({ outcomes, l
                     </>
                   )}
                   {z == null && (
-                    <text x={cx + 4} y={y + BAR_H - 2} fontSize={12} className="fill-current text-ink-faint">
+                    <text x={cx + 4} y={y + BAR_H - 3} fontSize={13} className="fill-current text-ink-faint">
                       —
                     </text>
                   )}
@@ -339,12 +341,12 @@ export const OutcomeDivergingChart: React.FC<OutcomeChartProps> = ({ outcomes, l
         <line x1={cx} x2={cx} y1={footY - 3} y2={footY + 3} className="stroke-border" />
 
         <path d={`M ${x0} ${footY} l 6 -3.5 l 0 7 z`} className="fill-ink-faint" />
-        <text x={x0 + 11} y={footY + 3} fontSize={11} textAnchor="start" className="fill-current text-ink-faint">
+        <text x={x0 + 11} y={footY + 3} fontSize={12.5} textAnchor="start" className="fill-current text-ink-faint">
           {direction.negative}
         </text>
 
         <path d={`M ${x1} ${footY} l -6 -3.5 l 0 7 z`} className="fill-ink-faint" />
-        <text x={x1 - 11} y={footY + 3} fontSize={11} textAnchor="end" className="fill-current text-ink-faint">
+        <text x={x1 - 11} y={footY + 3} fontSize={12.5} textAnchor="end" className="fill-current text-ink-faint">
           {direction.positive}
         </text>
       </g>
@@ -402,7 +404,7 @@ const ZTrendSvg: React.FC<ZTrendProps & { svgRef: React.RefObject<SVGSVGElement 
       ].map(l => (
         <g key={l.z}>
           <line x1={PAD.l} x2={W - PAD.r} y1={sy(l.z)} y2={sy(l.z)} className={l.cls} strokeDasharray={l.dash} />
-          <text x={2} y={sy(l.z) + 3} className="fill-current text-ink-faint" fontSize={11}>
+          <text x={2} y={sy(l.z) + 4} className="fill-current text-ink-faint" fontSize={12}>
             {l.z > 0 ? `+${l.z}` : l.z}
           </text>
         </g>

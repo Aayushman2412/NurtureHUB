@@ -205,7 +205,7 @@
       }
     },
     "results": {
-      "name": "Results",
+      "name": "Test Results",
       "intro": "How learners did on the videos and tests, for the whole project or any group of it.",
       "terms": {
         "ft": {

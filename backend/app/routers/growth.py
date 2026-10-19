@@ -258,6 +258,12 @@ def _build_cases(
                        "created_on": mother_created.date().isoformat() if mother_created else None,
                        "lmp": mother_lmp.isoformat() if mother_lmp else None},
             "project_id": project_id,
+            # ANC / PNC <5M / PNC ≥5M by the MASD rule, for the learner's
+            # adoption-type filter on the charts (review of 19 Oct 2026).
+            "adoption_type": classify(
+                MotherIn(id=mother_id, learner_id=l_user_id, adoption_date=mother_adopted or adoption_date,
+                         lmp=mother_lmp, created_on=mother_created.date() if mother_created else None),
+                [ChildIn(id=child_id, mother_id=mother_id, dob=dob, adoption_date=adoption_date)])[0],
             "learner": (
                 {
                     "id": l_user_id,
@@ -1170,7 +1176,8 @@ def admin_growth_summary_export(
 # ── Faltering cases (review of 18 Oct 2026) ─────────────────────────────────
 
 def _faltering_rows(db: Session, district: str, conditions: str, monitor: str, batch: str,
-                    block: str, cadre: str, learner_id: Optional[int]) -> Tuple[Dict[str, Any], List[Dict[str, Any]], List[str]]:
+                    block: str, cadre: str, learner_id: Optional[int],
+                    department: str = "") -> Tuple[Dict[str, Any], List[Dict[str, Any]], List[str]]:
     from app import faltering
 
     chosen = [c for c in (conditions or "").split(",") if c in faltering.CONDITION_KEYS] or faltering.CONDITION_KEYS
@@ -1178,11 +1185,101 @@ def _faltering_rows(db: Session, district: str, conditions: str, monitor: str, b
     rows = faltering.apply_filters(
         built["rows"], conditions=chosen,
         monitor_id=int(monitor) if monitor.isdigit() else None, no_monitor=monitor == "none",
-        batch=batch or None, block=block or None, cadre=cadre or None, learner_id=learner_id)
+        batch=batch or None, block=block or None, cadre=cadre or None, department=department or None,
+        learner_id=learner_id)
     return built, rows, chosen
 
 
 _FALTER_FIELDS = ["mother_name", "mother_uid", "child_name", "child_uid", "case_village", "learner_mobile"]
+
+
+# ── One learner's recent activity (review of 19 Oct 2026) ──────────────────
+#
+# Sir: "whenever I go into a user monitoring page I want to see this ... in
+# the recent activity I will see date, time, what she did" — which forms, for
+# which mother, when; not just whether she was active. A batch monitor's
+# probing question ("you adopted but filled nothing — why?") starts here.
+
+def _iso_utc(dt) -> Optional[str]:
+    from app.timeutils import to_utc
+
+    v = to_utc(dt)
+    return v.isoformat() if v else None
+
+
+@admin_router.get("/learners/{user_id}/activity")
+def admin_learner_activity(
+    user_id: int,
+    limit: int = Query(60, ge=1, le=300),
+    admin: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """The learner's latest actions, newest first: forms filled (with the
+    mother and baby they were for), adoptions, videos finished, tests taken."""
+    user = db.get(models.User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="Learner not found")
+
+    events: List[Dict[str, Any]] = []
+    responses = (
+        db.query(models.FormResponse)
+        .filter(models.FormResponse.submitted_by_user_id == user_id,
+                models.FormResponse.status == "submitted")
+        .order_by(func.coalesce(models.FormResponse.updated_at, models.FormResponse.created_at).desc())
+        .limit(limit).all()
+    )
+    mother_ids = {r.mother_id for r in responses if r.mother_id}
+    child_ids = {r.child_id for r in responses if r.child_id}
+    children = {c.id: c for c in db.query(models.Child).filter(models.Child.id.in_(child_ids))} if child_ids else {}
+    mother_ids |= {c.mother_id for c in children.values()}
+    adopted = (db.query(models.Mother).filter(models.Mother.registered_by_user_id == user_id)
+               .order_by(models.Mother.created_at.desc()).limit(limit).all())
+    mother_ids |= {m.id for m in adopted}
+    mothers = {m.id: m for m in db.query(models.Mother).filter(models.Mother.id.in_(mother_ids))} if mother_ids else {}
+
+    def mother_of(mid):
+        m = mothers.get(mid)
+        return {"id": m.id, "name": m.mother_name, "uid": m.mother_uid} if m else None
+
+    for r in responses:
+        child = children.get(r.child_id) if r.child_id else None
+        events.append({
+            "kind": "form", "at": _iso_utc(r.updated_at or r.created_at),
+            "form_key": r.form_key, "assessment_date": r.assessment_date.isoformat() if r.assessment_date else None,
+            "mother": mother_of(r.mother_id or (child.mother_id if child else None)),
+            "child": {"id": child.id, "name": child.child_name, "uid": child.child_uid} if child else None,
+        })
+    for m in adopted:
+        events.append({"kind": "adoption", "at": _iso_utc(m.created_at), "mother": mother_of(m.id),
+                       "adoption_date": m.adoption_date.isoformat() if m.adoption_date else None})
+    for p, title in (db.query(models.UserTutorialProgress, models.Tutorial.title)
+                     .join(models.Tutorial, models.Tutorial.id == models.UserTutorialProgress.tutorial_id)
+                     .filter(models.UserTutorialProgress.user_id == user_id,
+                             models.UserTutorialProgress.completed_at.isnot(None))
+                     .order_by(models.UserTutorialProgress.completed_at.desc()).limit(limit)):
+        events.append({"kind": "video", "at": _iso_utc(p.completed_at), "title": title})
+    for a, title in (db.query(models.TestAttempt, models.Test.title)
+                     .join(models.Test, models.Test.id == models.TestAttempt.test_id)
+                     .filter(models.TestAttempt.user_id == user_id, models.TestAttempt.submitted_at.isnot(None))
+                     .order_by(models.TestAttempt.submitted_at.desc()).limit(limit)):
+        events.append({"kind": "test", "at": _iso_utc(a.submitted_at), "title": title,
+                       "score": a.score, "passed": bool(a.is_passed)})
+
+    events = [e for e in events if e["at"]]
+    events.sort(key=lambda e: e["at"], reverse=True)
+    events = events[:limit]
+    shown = sorted({e["mother"]["id"] for e in events if e.get("mother")})
+    if shown:
+        phi.log_list(
+            resource_type="learner_activity", count=len(shown), subject_type=phi.MOTHER, subject_ids=shown,
+            detail={"scope": "supervisory_activity", "learner_id": user_id,
+                    "fields": ["mother_name", "mother_uid", "child_name", "child_uid"]},
+        )
+    return {
+        "learner": {"id": user.id, "name": user.full_name or user.email},
+        "last_active": events[0]["at"] if events else None,
+        "events": events,
+    }
 
 
 @admin_router.get("/faltering")
@@ -1193,6 +1290,7 @@ def admin_faltering_cases(
     batch: str = Query(""),
     block: str = Query(""),
     cadre: str = Query(""),
+    department: str = Query(""),
     learner_id: Optional[int] = Query(None),
     admin: dict = Depends(get_current_admin),
     db: Session = Depends(get_db),
@@ -1200,7 +1298,7 @@ def admin_faltering_cases(
     """Every case whose baby's latest measurement is faltering, moderately or
     severely low — see app/faltering.py. The filter options come from the
     whole project's list, so they never offer a value that returns nothing."""
-    built, rows, chosen = _faltering_rows(db, district, conditions, monitor, batch, block, cadre, learner_id)
+    built, rows, chosen = _faltering_rows(db, district, conditions, monitor, batch, block, cadre, learner_id, department)
     every = built["rows"]
     monitors = {}
     for r in every:
@@ -1224,6 +1322,7 @@ def admin_faltering_cases(
             "batches": sorted({r["batch"] for r in every if r["batch"]}),
             "blocks": sorted({r["learner"]["block"] for r in every if r["learner"]["block"]}),
             "cadres": sorted({r["learner"]["cadre"] for r in every if r["learner"]["cadre"]}),
+            "departments": sorted({r["learner"].get("department") for r in every if r["learner"].get("department")}),
             "learners": sorted({(r["learner"]["id"], r["learner"]["name"]) for r in every if r["learner"]["id"]},
                                key=lambda x: (x[1] or "")),
         },
@@ -1240,6 +1339,7 @@ def admin_faltering_export(
     batch: str = Query(""),
     block: str = Query(""),
     cadre: str = Query(""),
+    department: str = Query(""),
     learner_id: Optional[int] = Query(None),
     admin: dict = Depends(get_current_admin),
     db: Session = Depends(get_db),
@@ -1248,7 +1348,7 @@ def admin_faltering_export(
     batch monitor (a trainer's "break-up by batch monitor")."""
     from app import faltering
 
-    _built, rows, chosen = _faltering_rows(db, district, conditions, monitor, batch, block, cadre, learner_id)
+    _built, rows, chosen = _faltering_rows(db, district, conditions, monitor, batch, block, cadre, learner_id, department)
     project = db.query(models.ProgramDistrict.name).filter(models.ProgramDistrict.slug == district).scalar() if district else None
     buffer = faltering.xlsx(rows, project=project, conditions=chosen)
     # Synchronous, committed with the action: the file leaves our custody now.

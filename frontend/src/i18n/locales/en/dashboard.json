@@ -12,8 +12,8 @@
     "progress": "Progress"
   },
   "awaiting": {
-    "title": "All done — please wait for the selection result",
-    "body": "You finished every video and submitted all your tests. The selection for face-to-face training is being made — you will get a notification when it is announced."
+    "title": "All done — waiting for the selection",
+    "body": "You have done everything from your side: every video and both tests. Once the selection process is finalised, you will be told if you are selected for face-to-face training."
   },
   "stats": {
     "tutorials": "Completed Tutorials",
@@ -41,13 +41,19 @@
     "finishVideos": "Finish required videos first",
     "waitingAdmin": "Waiting for admin to start",
     "message": {
-      "submitted": "You have submitted this test. Results will be announced by the admin — please wait for further updates.",
+      "submitted": "You have submitted this test.",
       "formative": "Complete all required videos in Phase 1 before this test goes live. If you wish, you can also go ahead and watch the Phase 3 add-on videos in advance.",
       "screening": "Complete all add-on videos to become eligible for this test. While you wait, feel free to go back and revise the previous videos.",
       "default": "Complete all required videos to become eligible for this test.",
-      "selected": "Done — you passed and were selected for face-to-face training.",
-      "announced": "Done — the selection results have been announced."
-    }
+      "selected": "You have been selected for face-to-face training.",
+      "announced": "Done — the selection results have been announced.",
+      "formativeDone": "This score is for your own reference — the formative test does not decide the selection. See above which topics to revise.",
+      "screeningDone": "You have submitted this test. Once the selection process is finalised, you will be told if you are selected for face-to-face training."
+    },
+    "yourScore": "Your score",
+    "rightOf": "({{correct}} of {{total}} right)",
+    "takenOn": "Taken on",
+    "bestOf": "Best of {{count}} attempts, taken on"
   },
   "videos": {
     "label": "Video Lessons",
@@ -87,19 +93,21 @@
   "rings": {
     "videos": "Videos completed",
     "videosHint": "Lessons you finished",
-    "watched": "Watched",
-    "watchedHint": "Of all the video time — skipping does not count",
+    "watched": "Watch duration",
+    "watchedHint": "Of the time of all {{count}} videos, the share you watched — skipping ahead does not count",
     "quizzes": "Quizzes",
     "quizzesHint": "Short quizzes after the videos",
-    "tests": "Tests passed",
-    "testsHint": "Formative and screening tests"
+    "tests": "Test scores",
+    "testsHint": "Formative test (FT) on top, screening test (ST) below",
+    "ft": "FT",
+    "st": "ST"
   },
   "work": {
     "title": "My mothers and babies",
     "subtitle": "Your own work in the {{project}} project — what is done and what is due next.",
     "adoptions": "Mothers adopted",
     "ofTarget": "{{n}} of {{of}}",
-    "ofDue": "{{n}} of {{of}} due",
+    "ofDue": "{{n}} of {{of}} expected",
     "types": {
       "anc": "Pregnant (ANC)",
       "pnc_lt5": "Baby under 5 months",
@@ -119,8 +127,8 @@
       "protein_one": "{{count}} protein count",
       "protein_other": "{{count}} protein counts"
     },
-    "formsPct": "{{pct}}% of the forms your mothers and babies were due by today",
-    "noFormsDue": "No forms are due yet for the mothers you adopted.",
+    "formsPct": "{{pct}}% of the forms expected for your mothers and babies by today",
+    "noFormsDue": "No forms are expected yet for the mothers you adopted.",
     "quiet": "No forms filled for {{days}} days",
     "nextDays": "Coming up (next {{days}} days, as per schedule)",
     "behind": "Missed:",
@@ -147,24 +155,25 @@
       "adopted": "Adopted",
       "target": "Target",
       "filled": "Forms filled",
-      "due": "Forms due till today"
+      "due": "Forms expected till today"
     }
   },
   "progress": {
     "title": "My progress over time",
-    "subtitle": "Forms filled against the forms your cases were due, and adoptions against what was asked of you — by date.",
+    "subtitle": "Forms filled against the forms expected for your cases, and adoptions against what was asked of you — by date.",
     "perBar_one": "{{count}} day per bar",
     "perBar_other": "{{count}} days per bar",
     "perBarLabel": "Days per bar",
     "forms": "Forms",
-    "formsDue": "Due for my cases",
+    "formsDue": "Expected for my cases",
     "formsDone": "I filled",
     "adoptions": "Adoptions",
     "adoptionsAsked": "Asked of me",
     "adoptionsMade": "I made",
-    "pctTitle": "% of the forms due that were filled",
+    "pctTitle": "% of the expected forms that were filled",
     "pctForms": "Forms filled",
-    "target": "100% — all due forms filled"
+    "target": "100% — all expected forms filled",
+    "sundays": "Each date shows its weekday (M T W T F S S). Sundays are greyed: no visits are expected on them, so a low bar there is not poor work."
   },
   "team": {
     "title": "My batch — who needs a call",
@@ -188,7 +197,7 @@
   },
   "status": {
     "liveTest": "A test is open now: {{test}}. Take it from Tutorials & Tests.",
-    "awaiting": "Training done. Wait for the selection result for face-to-face training.",
+    "awaiting": "Training done. Once the selection is finalised, you will be told if you are selected for face-to-face training.",
     "videosLeft_one": "{{count}} video left to finish.",
     "videosLeft_other": "{{count}} videos left to finish.",
     "quizzesLeft_one": "Videos done. {{count}} short quiz left.",
@@ -208,5 +217,10 @@
     "openAdoptions": "Open Adoptions",
     "notSelectedTitle": "The selection results are out",
     "notSelectedBody": "Thank you for completing every video and test. You were not selected for the face-to-face training this time. The videos stay open for you to revise."
+  },
+  "dates": {
+    "starts": "Starts {{date}}",
+    "finishBy": "Finish by {{date}}",
+    "wasDue": "Was due by {{date}}"
   }
 }

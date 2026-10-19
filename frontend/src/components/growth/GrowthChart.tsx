@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, Maximize2, X } from 'lucide-react';
 import type { GrowthStandardPoint } from '../../api/growth';
@@ -31,14 +31,32 @@ interface GrowthChartProps {
   /** 'age' formats hover x as an age; 'length' as centimetres. */
   xKind: 'age' | 'length';
   series: GrowthSeries[];
+  /** Name each case at the end of its line (several cases on one chart). */
+  labelSeries?: boolean;
   onPointClick?: (point: GrowthPoint) => void;
 }
 
-const VIEW_W = 760;
-const VIEW_H = 480;
-const M = { top: 18, right: 44, bottom: 42, left: 48 };
-const PLOT_W = VIEW_W - M.left - M.right;
-const PLOT_H = VIEW_H - M.top - M.bottom;
+interface Layout {
+  VIEW_W: number;
+  VIEW_H: number;
+  M: { top: number; right: number; bottom: number; left: number };
+  PLOT_W: number;
+  PLOT_H: number;
+}
+
+/**
+ * The drawing's size in SVG units for a chart shown `px` pixels wide: about
+ * 1.25 units per pixel, so the 15-unit labels show near 12px on a phone — a
+ * fixed 760-unit drawing shrank them to 5px there (review of 19 Oct 2026: "I
+ * am not able to read what it is"). Wide screens keep the 760-unit drawing.
+ */
+const layoutFor = (px: number): Layout => {
+  const VIEW_W = Math.round(Math.min(760, Math.max(360, px * 1.25)));
+  const VIEW_H = Math.round(VIEW_W * (VIEW_W < 560 ? 0.82 : 0.63));
+  const M = { top: 18, right: 46, bottom: 46, left: 52 };
+  return { VIEW_W, VIEW_H, M, PLOT_W: VIEW_W - M.left - M.right, PLOT_H: VIEW_H - M.top - M.bottom };
+};
+const WIDE = layoutFor(10_000);
 
 /** 1-2-5 nice ticks covering [min, max]. */
 const niceTicks = (min: number, max: number, target = 8): number[] => {
@@ -74,13 +92,29 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
   xTicks,
   xKind,
   series,
+  labelSeries = false,
   onPointClick,
 }) => {
   const { t } = useTranslation('growth');
   const clipId = useId();
   const [hover, setHover] = useState<Hover | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
+  const [boxWidth, setBoxWidth] = useState(608);
+
+  // Measured before the first paint, then kept up to date as the card resizes.
+  useLayoutEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const take = (w: number) => { if (w) setBoxWidth(prev => (Math.abs(prev - w) > 4 ? w : prev)); };
+    take(el.getBoundingClientRect().width);
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(entries => take(entries[0]?.contentRect.width ?? 0));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const small = useMemo(() => layoutFor(boxWidth), [boxWidth]);
 
   useEffect(() => {
     if (!expanded) return;
@@ -128,28 +162,28 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
     return [lo - pad, hi + pad];
   }, [clipped, visibleSeries]);
 
-  const sx = (x: number) => M.left + ((x - xDomain[0]) / (xDomain[1] - xDomain[0])) * PLOT_W;
-  const sy = (y: number) => M.top + PLOT_H - ((y - yDomain[0]) / (yDomain[1] - yDomain[0])) * PLOT_H;
-
   const yTicks = useMemo(() => niceTicks(yDomain[0], yDomain[1]), [yDomain]);
-
-  const percentilePaths = useMemo(
-    () =>
-      PERCENTILE_KEYS.map(key => {
-        const d = clipped
-          .map((row, i) => `${i === 0 ? 'M' : 'L'}${sx(row.x).toFixed(1)},${sy(row[key]).toFixed(1)}`)
-          .join(' ');
-        const last = clipped[clipped.length - 1];
-        return { key, d, labelY: last ? sy(last[key]) : 0 };
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [clipped, yDomain, xDomain],
-  );
 
   const hasData = visibleSeries.length > 0;
   const hoverVisit = hover?.point.visit ?? null;
 
-  const renderPlot = (ref?: React.Ref<SVGSVGElement>, idSuffix = '') => {
+  const renderPlot = (L: Layout, ref?: React.Ref<SVGSVGElement>, idSuffix = '') => {
+    const { VIEW_W, VIEW_H, M, PLOT_W, PLOT_H } = L;
+    const sx = (x: number) => M.left + ((x - xDomain[0]) / (xDomain[1] - xDomain[0])) * PLOT_W;
+    const sy = (y: number) => M.top + PLOT_H - ((y - yDomain[0]) / (yDomain[1] - yDomain[0])) * PLOT_H;
+    const percentilePaths = PERCENTILE_KEYS.map(key => {
+      const d = clipped
+        .map((row, i) => `${i === 0 ? 'M' : 'L'}${sx(row.x).toFixed(1)},${sy(row[key]).toFixed(1)}`)
+        .join(' ');
+      const last = clipped[clipped.length - 1];
+      return { key, d, labelY: last ? sy(last[key]) : 0 };
+    });
+    // Thin the x labels so neighbours never touch on a narrow drawing.
+    const shownTicks = xTicks.filter(tk => tk.value >= xDomain[0] && tk.value <= xDomain[1]);
+    const labelled = shownTicks.filter(tk => tk.label);
+    const gap = labelled.length > 1 ? PLOT_W / (labelled.length - 1) : PLOT_W;
+    const every = Math.max(1, Math.ceil(30 / gap));
+    const keep = new Set(labelled.filter((_, i) => i % every === 0).map(tk => tk.value));
     const cid = `${clipId}${idSuffix}`;
     return (
       <div className="relative">
@@ -180,8 +214,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
             height={PLOT_H}
             className="fill-transparent stroke-border"
           />
-          {xTicks
-            .filter(tk => tk.value >= xDomain[0] && tk.value <= xDomain[1])
+          {shownTicks
             .map(tk => (
               <g key={`x${tk.value}`}>
                 <line
@@ -192,12 +225,12 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
                   className="stroke-border"
                   strokeWidth={0.6}
                 />
-                {tk.label && (
+                {tk.label && keep.has(tk.value) && (
                   <text
                     x={sx(tk.value)}
-                    y={M.top + PLOT_H + 16}
+                    y={M.top + PLOT_H + 18}
                     textAnchor="middle"
-                    className="fill-ink-muted text-[14px]"
+                    className="fill-ink-muted text-[15px]"
                   >
                     {tk.label}
                   </text>
@@ -216,9 +249,9 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
               />
               <text
                 x={M.left - 7}
-                y={sy(tk) + 3.5}
+                y={sy(tk) + 4}
                 textAnchor="end"
-                className="fill-ink-muted text-[14px]"
+                className="fill-ink-muted text-[15px]"
               >
                 {tk}
               </text>
@@ -230,7 +263,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
             x={M.left + PLOT_W / 2}
             y={VIEW_H - 6}
             textAnchor="middle"
-            className="fill-ink-muted text-[15px] font-semibold"
+            className="fill-ink-muted text-[16px] font-semibold"
           >
             {xLabel}
           </text>
@@ -239,7 +272,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
             y={M.top + PLOT_H / 2}
             textAnchor="middle"
             transform={`rotate(-90 13 ${M.top + PLOT_H / 2})`}
-            className="fill-ink-muted text-[15px] font-semibold"
+            className="fill-ink-muted text-[16px] font-semibold"
           >
             {yLabel}
           </text>
@@ -263,14 +296,15 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
               key={`lbl-${p.key}`}
               x={M.left + PLOT_W + 5}
               y={Math.max(M.top + 8, Math.min(M.top + PLOT_H, p.labelY + 3.5))}
-              className="text-[12px] font-bold"
+              className="text-[13px] font-bold"
               fill={percentileColor(p.key)}
             >
               {t(`percentiles.${p.key}`)}
             </text>
           ))}
 
-          {/* visit series: segment color = the source combo of its later point */}
+          {/* visit series: a neutral line joins one case's visits; each dot is
+              coloured by the forms filled at that visit */}
           <g clipPath={`url(#${cid})`}>
             {visibleSeries.map(s => (
               <g key={s.caseId}>
@@ -281,9 +315,9 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
                     y1={sy(s.points[i].y)}
                     x2={sx(p.x)}
                     y2={sy(p.y)}
-                    stroke={sourceComboColor(p.combo)}
-                    strokeWidth={2}
-                    opacity={0.8}
+                    className="stroke-ink-muted"
+                    strokeWidth={1.8}
+                    opacity={0.7}
                   />
                 ))}
                 {s.points.map((p, i) => (
@@ -291,10 +325,10 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
                     key={`${s.caseId}-p${i}`}
                     cx={sx(p.x)}
                     cy={sy(p.y)}
-                    r={hover && hover.caseId === s.caseId && hover.x === p.x && hover.y === p.y ? 6.5 : 4.5}
+                    r={hover && hover.caseId === s.caseId && hover.x === p.x && hover.y === p.y ? 7 : 5.5}
                     fill={sourceComboColor(p.combo)}
                     stroke="white"
-                    strokeWidth={1.4}
+                    strokeWidth={1.6}
                     className={cn(p.visit && onPointClick && 'cursor-pointer')}
                     onMouseEnter={() =>
                       setHover({ caseId: s.caseId, x: p.x, y: p.y, cx: sx(p.x), cy: sy(p.y), point: p })
@@ -305,6 +339,26 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
               </g>
             ))}
           </g>
+
+          {/* each case named at its last point, when several share the chart */}
+          {labelSeries && visibleSeries.map(s => {
+            const last = s.points[s.points.length - 1];
+            const name = last.case.child.name;
+            const nearRight = sx(last.x) > M.left + PLOT_W * 0.75;
+            return (
+              <text
+                key={`name-${s.caseId}`}
+                x={sx(last.x) + (nearRight ? -8 : 8)}
+                y={sy(last.y) - 8}
+                textAnchor={nearRight ? 'end' : 'start'}
+                className="fill-ink stroke-surface text-[13px] font-semibold"
+                strokeWidth={3}
+                paintOrder="stroke"
+              >
+                {name.length > 18 ? `${name.slice(0, 17)}…` : name}
+              </text>
+            );
+          })}
 
           {!hasData && (
             <text
@@ -417,7 +471,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
         </div>
       </div>
 
-      {renderPlot(svgRef)}
+      <div ref={boxRef}>{renderPlot(small, svgRef)}</div>
 
       {expanded && (
         <div
@@ -457,7 +511,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
                 </button>
               </div>
             </div>
-            {renderPlot(undefined, '-modal')}
+            {renderPlot(WIDE, undefined, '-modal')}
           </div>
         </div>
       )}

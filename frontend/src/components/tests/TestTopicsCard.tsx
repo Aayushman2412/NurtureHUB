@@ -24,12 +24,17 @@ const TestTopicsCard: React.FC<{ report: TestTopicReport; showTitle?: boolean }>
 
   return (
     <div className="flex flex-col gap-3">
+      {/* The total first and in bold, then the topics (review of 19 Oct
+          2026: "if the total score is 100%, 5 out of 5 right, shouldn't that be
+          focused first?"). */}
       {showTitle && (
-        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <div className="flex flex-col gap-1.5">
           <h4 className="font-display text-base font-bold text-ink">{report.title}</h4>
-          <span className="text-sm text-ink-muted">
-            {t('topics.score', { pct: Math.round(report.score ?? 0), correct: report.correct, total: report.total })}
-          </span>
+          <div className="flex flex-wrap items-baseline gap-x-2 rounded-xl border border-border bg-surface-sunken/70 px-3 py-2">
+            <span className="text-sm font-semibold text-ink-muted">{t('topics.total')}</span>
+            <span className="font-display text-2xl font-extrabold tabular-nums text-ink">{Math.round(report.score ?? 0)}%</span>
+            <span className="text-sm font-semibold text-ink">{t('topics.rightOf', { correct: report.correct, total: report.total })}</span>
+          </div>
         </div>
       )}
 

@@ -553,6 +553,14 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
                   <tr>
                     <th className="px-3 py-2.5 text-left">{t(`dim.${dim}`)}</th>
                     <th className="px-3 py-2.5 text-center">{t('questions.wroteN')}</th>
+                    {/* All questions first: the benchmark each level is read
+                        against (review of 19 Oct 2026). */}
+                    <th className="border-x border-border px-3 py-2.5 text-center">
+                      {t('questions.allLevels')}
+                      <div className="text-[12px] font-medium normal-case text-ink-muted">
+                        {t('questions.nQuestions', { count: difficultyCount.easy + difficultyCount.medium + difficultyCount.difficult })}
+                      </div>
+                    </th>
                     {(['easy', 'medium', 'difficult'] as Difficulty[]).map(d => (
                       <th key={d} className="px-3 py-2.5 text-center">
                         {t(`questions.level.${d}`)}
@@ -566,6 +574,8 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
                     <tr key={r.key} className={cn('border-t border-border', r.key === '__all__' && 'bg-coral-50/60 font-semibold dark:bg-coral-500/10')}>
                       <td className="px-3 py-2 font-semibold text-ink">{r.key === '__all__' ? t('videos.everyone') : groupLabel(r.key)}</td>
                       <td className="px-3 py-2 text-center tabular-nums text-ink">{r.writers}</td>
+                      <HeatCell value={r.all.pct} className="border-x border-border"
+                        title={t('questions.levelCellTitle', { right: r.all.right, total: r.all.total })} />
                       {(['easy', 'medium', 'difficult'] as Difficulty[]).map(d => (
                         <HeatCell key={d} value={r.cells[d].pct}
                           title={t('questions.levelCellTitle', { right: r.cells[d].right, total: r.cells[d].total })} />

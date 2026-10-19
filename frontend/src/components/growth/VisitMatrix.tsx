@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MoveHorizontal } from 'lucide-react';
+import { ArrowLeftRight, MoveHorizontal } from 'lucide-react';
 import type { FormResponseDetail } from '../../lib/flowTypes';
 import { lapCellFill } from '../../lib/growthDisplay';
 import { formatAge } from '../../lib/growthChart';
@@ -35,6 +35,8 @@ const signed = (n: number, digits = 0) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${
  */
 
 const VISIBLE = 6;
+/** The reader's choice of layout, kept on this device. */
+const LAYOUT_KEY = 'nh.growth.visitMatrix.byVisit';
 
 type Kind = 'lap' | 'values';
 type Verdict = 'green' | 'red' | 'neutral' | null;
@@ -115,6 +117,15 @@ const VisitMatrix: React.FC<{
     ? 'w-40 min-w-40 max-w-40 sm:w-64 sm:min-w-64 sm:max-w-80 md:w-80 md:min-w-80'
     : 'w-36 min-w-36 max-w-36 sm:w-56 sm:min-w-56 sm:max-w-56';
   const [openQ, setOpenQ] = useState<string | null>(null);
+  // Visits as rows, questions as columns — the switch the summary table has
+  // (review of 19 Oct 2026: "there also you provide this feature").
+  const [byVisit, setByVisit] = useState<boolean>(() => {
+    try { return localStorage.getItem(LAYOUT_KEY) === '1'; } catch { return false; }
+  });
+  const flip = () => setByVisit(v => {
+    try { localStorage.setItem(LAYOUT_KEY, v ? '0' : '1'); } catch { /* no storage */ }
+    return !v;
+  });
 
   const score = (date: string) => {
     const s = byDate.get(date)?.summary_json;
@@ -170,12 +181,113 @@ const VisitMatrix: React.FC<{
     v === 'green' ? t('casePage.legendGreen') : v === 'red' ? t('casePage.legendRed')
       : v === 'neutral' ? t('casePage.legendNeutral') : t('casePage.legendNotAsked');
 
+  /** One answer cell — the same in both layouts. */
+  const answerCell = (row: Row, date: string) => {
+    const cell = row.cells[date];
+    const v = cell?.verdict ?? null;
+    if (kind === 'lap') {
+      return (
+        <td
+          key={`${row.key}-${date}`} title={cellTitle(v)}
+          className={cn('px-2 py-1.5 text-center text-base font-bold leading-none', v === 'green' && GREEN_INK, v === 'red' && RED_INK)}
+          style={{ backgroundColor: v === 'neutral' || v === null ? undefined : lapCellFill(v, true) }}
+        >
+          {v === 'green' ? '✓' : v === 'red' ? '✕' : v === 'neutral' ? (cell?.text ? <span className="text-xs font-normal text-ink">{cell.text}</span> : '•') : '—'}
+        </td>
+      );
+    }
+    return (
+      <td
+        key={`${row.key}-${date}`}
+        className={cn('px-2 py-1.5 align-top text-[13px] leading-snug text-ink', v === 'green' && GREEN_INK, v === 'red' && RED_INK)}
+        style={{ backgroundColor: v === 'green' || v === 'red' ? lapCellFill(v, true) : undefined }}
+      >
+        {cell?.text || <span className="text-ink-faint">—</span>}
+      </td>
+    );
+  };
+
+  /** Visits as rows: every visit, one under the other; questions across. */
+  const visitRows = (
+    <div className="max-h-[70vh] overflow-auto rounded-lg border border-border-strong">
+      <table
+        className="border-collapse text-sm [&_td]:border [&_td]:border-border-strong [&_th]:border [&_th]:border-border-strong"
+        style={{ width: 'max-content' }}
+      >
+        <thead className="sticky top-0 z-20">
+          <tr>
+            <th className="sticky left-0 z-10 w-28 min-w-28 bg-surface-sunken px-2 py-2 text-left text-[13px] font-bold uppercase tracking-wide text-ink-muted">
+              {t('casePage.visit')}
+            </th>
+            {kind === 'lap' && dates.some(d => score(d)) && (
+              <th className="w-24 min-w-24 bg-surface-sunken px-2 py-2 text-center text-[13px] font-bold text-ink">{t('casePage.pointsCorrect')}</th>
+            )}
+            {dates.some(d => protein(d)) && (
+              <th className="w-28 min-w-28 bg-surface-sunken px-2 py-2 text-center text-[13px] font-bold text-ink">{t('casePage.protein24')}</th>
+            )}
+            {derivedRows.map(dr => (
+              <th key={dr.key} className="w-28 min-w-28 bg-sage-50 px-2 py-2 text-center text-[13px] font-bold text-ink dark:bg-sage-900">{dr.label}</th>
+            ))}
+            {rows.map((row, index) => (
+              <th key={row.key} title={row.question}
+                className="w-36 min-w-36 max-w-36 bg-surface-sunken px-2 py-2 text-left align-top text-[12px] font-semibold leading-snug text-ink">
+                <span className="text-ink-faint">{index + 1}. </span><span className="line-clamp-4">{row.question}</span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {dates.map((date, i) => {
+            const sc = score(date);
+            const pr = protein(date);
+            return (
+              <tr key={date}>
+                <td className="sticky left-0 z-10 bg-surface px-2 py-1.5 text-[13px] font-semibold text-ink">
+                  <span className="block text-[11px] font-normal text-ink-faint">{t('casePage.visitN', { n: i + 1 })}</span>{date}
+                </td>
+                {kind === 'lap' && dates.some(d => score(d)) && (
+                  <td className="px-2 py-1.5 text-center text-sm font-bold tabular-nums text-ink">
+                    {sc ? <>{sc.n}/{sc.of}<span className="block text-xs font-semibold text-ink-muted">{sc.pct}%</span></> : '—'}
+                  </td>
+                )}
+                {dates.some(d => protein(d)) && (
+                  <td className="px-2 py-1.5 text-center text-sm font-bold tabular-nums text-ink">
+                    {pr ? <>{pr.total24} g<span className="block text-xs font-semibold text-ink-muted">{t('casePage.proteinAvg', { g: pr.dailyAvg })}</span></> : '—'}
+                  </td>
+                )}
+                {derivedRows.map(dr => (
+                  <td key={dr.key} className="bg-sage-50/60 px-2 py-1.5 text-center text-[13px] font-semibold tabular-nums text-ink dark:bg-sage-500/5">{dr.cell(date)}</td>
+                ))}
+                {rows.map(row => answerCell(row, date))}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+
   return (
     <div className="space-y-2" ref={boxRef}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <RotateHint />
-        <span className="ml-auto"><TablePictureButton target={boxRef} title={title ?? t('casePage.question')} /></span>
+        <span className="ml-auto flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={flip}
+            aria-pressed={byVisit}
+            className={cn(
+              'inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors',
+              byVisit ? 'border-primary/40 bg-primary/10 text-primary-ink' : 'border-border bg-surface text-ink-muted hover:bg-surface-sunken hover:text-ink',
+            )}
+          >
+            <ArrowLeftRight className="size-3.5" />
+            {byVisit ? t('casePage.visitsAsColumns') : t('casePage.visitsAsRows')}
+          </button>
+          <TablePictureButton target={boxRef} title={title ?? t('casePage.question')} />
+        </span>
       </div>
+      {byVisit ? visitRows : (<>
       {dates.length > VISIBLE && (
         <label className="flex flex-wrap items-center gap-3 text-sm text-ink-muted">
           <MoveHorizontal className="size-4" aria-hidden />
@@ -266,36 +378,14 @@ const VisitMatrix: React.FC<{
                 >
                   <span className={cn(openQ !== row.key && 'max-sm:line-clamp-3')}>{row.question}</span>
                 </td>
-                {shown.map(date => {
-                  const cell = row.cells[date];
-                  const v = cell?.verdict ?? null;
-                  if (kind === 'lap') {
-                    return (
-                      <td
-                        key={date} title={cellTitle(v)}
-                        className={cn('px-2 py-1.5 text-center text-base font-bold leading-none', v === 'green' && GREEN_INK, v === 'red' && RED_INK)}
-                        style={{ backgroundColor: v === 'neutral' || v === null ? undefined : lapCellFill(v, true) }}
-                      >
-                        {v === 'green' ? '✓' : v === 'red' ? '✕' : v === 'neutral' ? (cell?.text ? <span className="text-xs font-normal text-ink">{cell.text}</span> : '•') : '—'}
-                      </td>
-                    );
-                  }
-                  return (
-                    <td
-                      key={date}
-                      className={cn('px-2 py-1.5 align-top text-[13px] leading-snug text-ink', v === 'green' && GREEN_INK, v === 'red' && RED_INK)}
-                      style={{ backgroundColor: v === 'green' || v === 'red' ? lapCellFill(v, true) : undefined }}
-                    >
-                      {cell?.text || <span className="text-ink-faint">—</span>}
-                    </td>
-                  );
-                })}
+                {shown.map(date => answerCell(row, date))}
                 {Array.from({ length: placeholders }, (_, i) => <td key={`ph${i}`} className="bg-surface-sunken/60" />)}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      </>)}
     </div>
   );
 };

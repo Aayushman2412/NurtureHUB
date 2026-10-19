@@ -1,9 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Search, Users, Pencil, Trash2, Save, ShieldCheck, ShieldAlert, MoveRight, X,
-  Copy, RefreshCw, UserPlus,
-} from 'lucide-react';
+import { Search, Users, Pencil, Trash2, Save, ShieldCheck, ShieldAlert, MoveRight, X, Copy, RefreshCw, UserPlus, Activity } from 'lucide-react';
 import {
   Alert, Badge, Button, Card, Checkbox, EmptyState, FieldLabel, Input, Modal, PageHeader,
   PageLoader, Select, Table, TBody, Td, Th, THead, Tr,
@@ -17,6 +14,7 @@ import type { AdminProject } from '../../lib/adminProject';
 import { cn } from '../../utils/cn';
 import PasswordRules from '../../components/auth/PasswordRules';
 import { usePasswordCheck } from '../../hooks/usePasswordCheck';
+import LearnerActivityModal from '../../components/admin/LearnerActivityModal';
 
 const PAGE_SIZE = 100;
 
@@ -107,6 +105,8 @@ const AdminLearnersPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<AdminLearner | null>(null);
+  // Recent activity of one learner (review of 19 Oct 2026).
+  const [activityOf, setActivityOf] = useState<AdminLearner | null>(null);
 
   // Create-account flow. `created` holds the one-time password echo.
   const [showCreate, setShowCreate] = useState(false);
@@ -329,7 +329,7 @@ const AdminLearnersPage: React.FC = () => {
       ) : learners.length === 0 ? (
         <EmptyState icon={<Users />} title={t('learners.emptyTitle')} description={t('learners.emptyBody')} />
       ) : (
-        <Card className="overflow-hidden">
+        <Card className="overflow-x-auto">
           <Table density="compact">
             <THead>
               <Tr>
@@ -344,11 +344,17 @@ const AdminLearnersPage: React.FC = () => {
                   />
                 </Th>
                 <Th>{t('learners.colName')}</Th>
-                <Th>{t('learners.colEmail')}</Th>
+                <Th>{t('learners.colMobile')}</Th>
                 <Th>{t('learners.colProject')}</Th>
+                <Th>{t('learners.colDistrict')}</Th>
+                <Th>{t('learners.colBlock')}</Th>
+                <Th>{t('learners.colCadre')}</Th>
+                <Th>{t('learners.colDepartment')}</Th>
+                <Th>{t('learners.colCategory')}</Th>
                 <Th className="text-center">{t('learners.colVerified')}</Th>
                 <Th className="text-center">{t('learners.colAttempts')}</Th>
-                <Th className="w-20" />
+                <Th>{t('learners.colEmail')}</Th>
+                <Th className="w-28" />
               </Tr>
             </THead>
             <TBody>
@@ -366,13 +372,20 @@ const AdminLearnersPage: React.FC = () => {
                   <Td className="font-semibold text-ink">
                     {learner.full_name || <span className="text-ink-faint">{t('learners.noName')}</span>}
                     {learner.is_admin && <Badge variant="coral" className="ml-2">{t('learners.adminBadge')}</Badge>}
-                    {learner.role && <span className="block text-[12px] text-ink-faint">{learner.role}</span>}
+                    <span className="block text-[12px] font-normal text-ink-faint">ID {learner.id}</span>
                   </Td>
-                  <Td className="text-ink-muted">{learner.email}</Td>
+                  <Td className="whitespace-nowrap tabular-nums text-ink">{learner.phone || <span className="text-ink-faint">—</span>}</Td>
                   <Td>
                     <span className={cn(!learner.program_district_id && 'text-ink-faint')}>
                       {learner.program_district_name || t('learners.unassigned')}
                     </span>
+                  </Td>
+                  <Td className="text-ink-muted">{learner.district_name || '—'}</Td>
+                  <Td className="text-ink-muted">{learner.block_name || '—'}</Td>
+                  <Td className="text-ink-muted">{learner.cadre || '—'}</Td>
+                  <Td className="text-ink-muted">{learner.department_name || '—'}</Td>
+                  <Td title={learner.trainer_role ? t(`learners.trainerRole.${learner.trainer_role}`) : undefined}>
+                    {learner.trainer_role ? <Badge variant="info">{learner.trainer_role}</Badge> : <span className="text-ink-faint">—</span>}
                   </Td>
                   <Td className="text-center">
                     {learner.is_verified
@@ -380,8 +393,16 @@ const AdminLearnersPage: React.FC = () => {
                       : <ShieldAlert className="mx-auto size-4 text-ink-faint" />}
                   </Td>
                   <Td className="text-center text-ink-muted">{learner.attempts}</Td>
+                  <Td className="max-w-56 truncate text-xs text-ink-faint" title={learner.email}>{learner.email}</Td>
                   <Td>
                     <div className="flex justify-end gap-1">
+                      <button
+                        title={t('activity.open')}
+                        onClick={() => setActivityOf(learner)}
+                        className="flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer"
+                      >
+                        <Activity className="size-3.5" />
+                      </button>
                       <button
                         title={t('learners.edit')}
                         onClick={() => openEdit(learner)}
@@ -424,6 +445,12 @@ const AdminLearnersPage: React.FC = () => {
           </div>
         </Card>
       )}
+
+      <LearnerActivityModal
+        learnerId={activityOf?.id ?? null}
+        name={activityOf?.full_name || activityOf?.email}
+        onClose={() => setActivityOf(null)}
+      />
 
       {/* Edit learner */}
       <Modal

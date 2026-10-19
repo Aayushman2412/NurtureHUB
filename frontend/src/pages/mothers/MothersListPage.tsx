@@ -96,6 +96,7 @@ const MothersListPage: React.FC = () => {
               </div>
               <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                 {([
+                  ['adoptionType', t(`list.type.${m.adoption_type ?? 'unknown'}`)],
                   ['age', m.mother_age != null ? String(m.mother_age) : '—'],
                   ['mobile', m.mobile || '—'],
                   ['village', m.village || '—'],
@@ -115,7 +116,7 @@ const MothersListPage: React.FC = () => {
           <Table>
             <THead>
               <Tr>
-                <Th>{t('list.table.motherId')}</Th><Th>{t('list.table.name')}</Th><Th>{t('list.table.age')}</Th><Th>{t('list.table.mobile')}</Th><Th>{t('list.table.village')}</Th><Th>{t('list.table.hwc')}</Th><Th>{t('list.table.gestationalAge')}</Th><Th>{t('list.table.edd')}</Th><Th>{t('list.table.status')}</Th><Th>{t('list.table.registered')}</Th>
+                <Th>{t('list.table.motherId')}</Th><Th>{t('list.table.name')}</Th><Th>{t('list.table.adoptionType')}</Th><Th>{t('list.table.age')}</Th><Th>{t('list.table.mobile')}</Th><Th>{t('list.table.village')}</Th><Th>{t('list.table.hwc')}</Th><Th>{t('list.table.gestationalAge')}</Th><Th>{t('list.table.edd')}</Th><Th>{t('list.table.status')}</Th><Th>{t('list.table.registered')}</Th>
               </Tr>
             </THead>
             <TBody>
@@ -123,6 +124,12 @@ const MothersListPage: React.FC = () => {
                 <Tr key={m.id} className="cursor-pointer hover:bg-surface-sunken/50" onClick={() => navigate(`/mothers/${m.id}`)}>
                   <Td className="font-mono text-xs text-ink-muted">{m.mother_uid}</Td>
                   <Td className="font-semibold text-ink">{m.mother_name}</Td>
+                  {/* The type of adoption (review of 19 Oct 2026). */}
+                  <Td className="whitespace-nowrap">
+                    {m.adoption_type && m.adoption_type !== 'unknown'
+                      ? <Badge variant={m.adoption_type === 'anc' ? 'coral' : m.adoption_type === 'pnc_lt5' ? 'info' : 'success'}>{t(`list.type.${m.adoption_type}`)}</Badge>
+                      : <span className="text-ink-faint">{t('list.type.unknown')}</span>}
+                  </Td>
                   <Td>{m.mother_age != null ? m.mother_age : '—'}</Td>
                   <Td>{m.mobile || '—'}</Td>
                   <Td>{m.village || '—'}</Td>

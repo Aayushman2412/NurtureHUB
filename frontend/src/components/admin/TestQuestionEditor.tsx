@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ImagePlus, Loader2, Save, X } from 'lucide-react';
 import { Button, FieldLabel, Input } from '../ui';
@@ -92,17 +92,22 @@ interface Props {
   /** The test already has submitted attempts — clearing an option is refused. */
   locked: boolean;
   error?: string;
+  /** Topics and subtopics already used in this test, offered as suggestions. */
+  topics?: string[];
+  subtopics?: string[];
 }
 
 /**
  * Write or correct one question by hand: wording, an optional picture, up to
- * six options (each of which may itself be a picture), the correct answer and
- * the marks it carries.
+ * six options (each of which may itself be a picture), the correct answer, the
+ * marks it carries, and its topic and subtopic — until 19 Oct 2026 those two
+ * could only come from the upload sheet ("subtopic is needed to add").
  */
 const TestQuestionEditor: React.FC<Props> = ({
-  value, onChange, onSave, onCancel, saving, defaultMarks, locked, error,
+  value, onChange, onSave, onCancel, saving, defaultMarks, locked, error, topics = [], subtopics = [],
 }) => {
   const { t } = useTranslation('adminTests');
+  const listId = useId();
   const set = (patch: Partial<AdminQuestion>) => onChange({ ...value, ...patch });
 
   const filled = OPTION_LABELS.filter(label => {
@@ -177,6 +182,32 @@ const TestQuestionEditor: React.FC<Props> = ({
           })}
         </div>
       </div>
+
+      {/* Topic and subtopic: where the results say a group is weak, and what
+          the learner's topic-wise feedback is grouped by. */}
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div>
+          <FieldLabel size="sm">{t('editor.topic')}</FieldLabel>
+          <Input
+            value={value.topic ?? ''}
+            list={`${listId}-topics`}
+            placeholder={t('editor.topicPlaceholder')}
+            onChange={e => set({ topic: e.target.value })}
+          />
+          <datalist id={`${listId}-topics`}>{topics.map(x => <option key={x} value={x} />)}</datalist>
+        </div>
+        <div>
+          <FieldLabel size="sm">{t('editor.subtopic')}</FieldLabel>
+          <Input
+            value={value.subtopic ?? ''}
+            list={`${listId}-subtopics`}
+            placeholder={t('editor.subtopicPlaceholder')}
+            onChange={e => set({ subtopic: e.target.value })}
+          />
+          <datalist id={`${listId}-subtopics`}>{subtopics.map(x => <option key={x} value={x} />)}</datalist>
+        </div>
+      </div>
+      <p className="mt-1 text-[12px] text-ink-faint">{t('editor.topicHint')}</p>
 
       <div className="mt-3 max-w-[220px]">
         <FieldLabel size="sm">{t('editor.marks')}</FieldLabel>

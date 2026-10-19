@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getDetailedResult, type TestTopicReport } from '../api/results';
 import { useToast } from '../context/ToastContext';
-import { CheckCircle, XCircle, Clock, Award, ChevronLeft, HelpCircle } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Award, ChevronLeft, HelpCircle, Lock } from 'lucide-react';
 import { Badge, Button, Card, Chip, PageLoader, Select } from '../components/ui';
 import TestTopicsCard from '../components/tests/TestTopicsCard';
 import { cn } from '../utils/cn';
@@ -42,6 +42,8 @@ interface DetailedResult {
   passing_score_pct: number;
   correct_count: number;
   total_questions: number;
+  /** False while the admin holds the answers back (review of 19 Oct 2026). */
+  answers_released?: boolean;
   answers: DetailedAnswer[];
 }
 
@@ -200,11 +202,23 @@ const ResultsPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Answer review */}
+      {/* Answer review — closed until the admin releases the answers, so a
+          group that sits the same paper again later cannot read them first
+          (review of 19 Oct 2026). */}
+      {result.answers_released === false ? (
+        <Card className="flex items-start gap-3 p-4 sm:p-6">
+          <Lock className="mt-0.5 size-5 shrink-0 text-ink-muted" />
+          <div>
+            <h3 className="font-display text-lg font-bold text-ink">{t('results.answerReview')}</h3>
+            <p className="mt-1 text-sm text-ink-muted">{t('results.answersHeld')}</p>
+          </div>
+        </Card>
+      ) : (
       <div className="flex flex-col gap-6">
         <h3 className="font-display text-xl font-bold text-ink">{t('results.answerReview')}</h3>
 
-        <div className="flex flex-wrap items-center gap-3 print-hidden">
+        {/* The filters stay in view while scrolling the questions (19 Oct 2026). */}
+        <div className="sticky top-[3.75rem] z-20 -mx-5 flex flex-wrap items-center gap-3 border-b border-border bg-background/95 px-5 py-2 backdrop-blur-md sm:-mx-6 sm:px-6 print-hidden">
           {topicNames.length > 0 && (
             <label className="flex items-center gap-2 text-sm text-ink-muted">
               {t('topics.filterTopic')}
@@ -306,6 +320,7 @@ const ResultsPage: React.FC = () => {
           </Card>
         ))}
       </div>
+      )}
     </div>
   );
 };

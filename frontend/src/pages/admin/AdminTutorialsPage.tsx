@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { ArrowDown, ArrowUp, Copy } from 'lucide-react';
 import {
-  Alert, Button, Card, Checkbox, FieldLabel, Input, Modal, PageHeader, PageLoader, Select,
+  Alert, Button, Card, Checkbox, DateInput, FieldLabel, Input, Modal, PageHeader, PageLoader, Select,
 } from '../../components/ui';
 import { getProjectSlug, PROJECT_EVENT } from '../../lib/adminProject';
 import { listProjects } from '../../api/projects';
@@ -55,9 +55,18 @@ interface Stage {
   order_index: number;
   stage_type: 'tutorials' | 'test';
   quiz_enabled: boolean;
+  /** The phase's window on the learner's timeline, YYYY-MM-DD (19 Oct 2026). */
+  starts_on: string | null;
+  finish_by: string | null;
   test_count: number;
   tutorials: Tutorial[];
 }
+
+/** "1 Nov 2026" for a YYYY-MM-DD date, read as a calendar day. */
+const dayLabel = (ymd: string) => {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+};
 
 interface QuizQuestionForm {
   text: string;
@@ -155,7 +164,8 @@ const AdminTutorialsPage: React.FC = () => {
 
   // Phase editing / copying
   const [editingStage, setEditingStage] = useState<number | null>(null);
-  const [stageEdit, setStageEdit] = useState({ title: '', description: '' });
+  const [stageEdit, setStageEdit] = useState({ title: '', description: '', starts_on: '', finish_by: '' });
+  const [stageEditError, setStageEditError] = useState('');
   const [copyStage, setCopyStage] = useState<Stage | null>(null);
   const [projects, setProjects] = useState<AdminProject[]>([]);
   const [copyTargets, setCopyTargets] = useState<number[]>([]);
@@ -234,15 +244,19 @@ const AdminTutorialsPage: React.FC = () => {
 
   const saveStageEdit = (id: number) => {
     if (!stageEdit.title.trim()) return;
+    setStageEditError('');
     client
       .put(`/api/admin/stages/${id}?district=${(getProjectSlug() ?? '')}`, {
         title: stageEdit.title.trim(),
         description: stageEdit.description,
+        starts_on: stageEdit.starts_on || null,
+        finish_by: stageEdit.finish_by || null,
       })
       .then(() => {
         setEditingStage(null);
         fetchStages();
-      });
+      })
+      .catch(err => setStageEditError(err?.response?.data?.detail || t('stage.saveFailed')));
   };
 
   /** Swap a phase with its neighbour. Order decides what a learner must finish
@@ -644,6 +658,21 @@ const AdminTutorialsPage: React.FC = () => {
                       value={stageEdit.description}
                       onChange={e => setStageEdit({ ...stageEdit, description: e.target.value })}
                     />
+                    {/* The phase's dates, shown on every learner's timeline
+                        (review of 19 Oct 2026). Both optional. */}
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="flex flex-col gap-1">
+                        <FieldLabel size="sm">{t('stage.startsOn')}</FieldLabel>
+                        <DateInput value={stageEdit.starts_on} onChange={iso => setStageEdit({ ...stageEdit, starts_on: iso })} />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <FieldLabel size="sm">{t('stage.finishBy')}</FieldLabel>
+                        <DateInput value={stageEdit.finish_by} min={stageEdit.starts_on || undefined}
+                          onChange={iso => setStageEdit({ ...stageEdit, finish_by: iso })} />
+                      </div>
+                    </div>
+                    <p className="text-xs text-ink-faint">{t('stage.datesHint')}</p>
+                    {stageEditError && <p className="text-sm text-error-600">{stageEditError}</p>}
                     <div className="flex gap-2">
                       <Button size="sm" iconLeft={<Save className="size-3.5" />}
                         onClick={() => saveStageEdit(stage.id)} disabled={!stageEdit.title.trim()}>
@@ -658,6 +687,14 @@ const AdminTutorialsPage: React.FC = () => {
                   <>
                     <h3 className="mt-0.5 font-display text-lg font-bold text-ink">{stage.title}</h3>
                     <p className="text-sm text-ink-muted">{stage.description}</p>
+                    {(stage.starts_on || stage.finish_by) && (
+                      <p className="text-xs font-semibold text-ink">
+                        {[
+                          stage.starts_on && t('stage.startsOnValue', { date: dayLabel(stage.starts_on) }),
+                          stage.finish_by && t('stage.finishByValue', { date: dayLabel(stage.finish_by) }),
+                        ].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
                     <span className="text-xs text-ink-faint">
                       {stage.stage_type === 'test'
                         ? t('stage.testSummaryN', { n: stage.test_count })
@@ -691,7 +728,11 @@ const AdminTutorialsPage: React.FC = () => {
                   onClick={e => {
                     e.stopPropagation();
                     setEditingStage(stage.id);
-                    setStageEdit({ title: stage.title, description: stage.description || '' });
+                    setStageEdit({
+                      title: stage.title, description: stage.description || '',
+                      starts_on: stage.starts_on ?? '', finish_by: stage.finish_by ?? '',
+                    });
+                    setStageEditError('');
                   }}
                 >
                   <Edit3 className="size-4" />

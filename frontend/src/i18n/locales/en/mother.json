@@ -17,13 +17,20 @@
       "gestationalAge": "Gestational age",
       "edd": "EDD",
       "status": "Status",
-      "registered": "Registered"
+      "registered": "Registered",
+      "adoptionType": "Adoption type"
     },
     "status": {
       "pregnant": "Pregnant",
       "lactating": "Lactating"
     },
-    "weeks": "{{n}} weeks"
+    "weeks": "{{n}} weeks",
+    "type": {
+      "anc": "ANC",
+      "pnc_lt5": "PNC <5M",
+      "pnc_ge5": "PNC ≥5M",
+      "unknown": "Not known yet"
+    }
   },
   "card": {
     "learnerFallback": "Health worker",

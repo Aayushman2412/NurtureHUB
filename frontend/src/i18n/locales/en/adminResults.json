@@ -2,7 +2,7 @@
   "loading": "Loading results…",
   "searchPlaceholder": "Search by user ID, mobile, name, cadre or block…",
   "header": {
-    "title": "Results",
+    "title": "Test Results",
     "description": "Combined tutorial + test performance for {{district}}, including anti-cheat summaries. Upload the final selection list to notify users about face-to-face training.",
     "thisDistrict": "this district",
     "refresh": "Refresh",

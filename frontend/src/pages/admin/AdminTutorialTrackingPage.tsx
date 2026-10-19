@@ -234,6 +234,18 @@ const AdminTutorialTrackingPage: React.FC = () => {
         />
       ) : (
         <div className="space-y-3">
+          {/* What each number means (review of 19 Oct 2026: "this is the only
+              thing which is not self-explanatory ... remember that"). */}
+          <div className="grid gap-x-6 gap-y-1.5 rounded-xl border border-border bg-surface-sunken/60 px-4 py-3 text-[13px] text-ink-muted md:grid-cols-2">
+            <p><span className="font-bold text-ink">{t('tracking.legend.videoTitle')}</span> {t('tracking.legend.video')}</p>
+            <p><span className="font-bold text-ink">{t('tracking.legend.quizTitle')}</span> {t('tracking.legend.quiz')}</p>
+            <p>
+              <span className="font-bold text-ink">{t('tracking.legend.quizzesTitle')}</span>{' '}
+              <CheckCircle2 className="mb-0.5 inline size-3 text-success-600" /> {t('tracking.legend.answered')}{' · '}
+              <SkipForward className="mb-0.5 inline size-3 text-error-600" /> {t('tracking.legend.skipped')}
+            </p>
+            <p><span className="font-bold text-ink">{t('tracking.legend.accuracyTitle')}</span> {t('tracking.legend.accuracy')}</p>
+          </div>
           <Table
             density="compact"
             className="min-w-max"
@@ -268,7 +280,7 @@ const AdminTutorialTrackingPage: React.FC = () => {
                         <div className={`font-bold ${pctColorClass(pct)}`}>{Math.round(pct)}%</div>
                         <div className="text-xs text-ink-faint">
                           {fmtWatchTime(p?.watch_time_seconds || 0)}
-                          {tut.has_quiz && <> • {p ? quizCell(p, tut, t) : t('tracking.pending')}</>}
+                          {tut.has_quiz && <> • {t('tracking.quizShort')} {p ? quizCell(p, tut, t) : t('tracking.pending')}</>}
                         </div>
                       </Td>
                     );

@@ -22,6 +22,7 @@ import {
   BarChart3,
   PartyPopper,
   Award,
+  CalendarRange,
 } from 'lucide-react';
 import { Badge, Button, Card, PageLoader, ProgressBar, ProgressRing, WelcomeBanner } from '../components/ui';
 import SupportTeamCard from '../components/SupportTeamCard';
@@ -72,6 +73,12 @@ interface StageTest {
   is_submitted: boolean;
   is_locked: boolean;
   needs_videos: boolean;
+  /** The learner's best attempt (review of 19 Oct 2026); null until submitted. */
+  score?: number | null;
+  correct?: number | null;
+  total_questions?: number | null;
+  attempt_started_at?: string | null;
+  attempt_submitted_at?: string | null;
 }
 
 interface Stage {
@@ -79,6 +86,9 @@ interface Stage {
   title: string;
   description: string;
   stage_type: 'tutorials' | 'test';
+  /** The phase's window set by the admin, YYYY-MM-DD (review of 19 Oct 2026). */
+  starts_on?: string | null;
+  finish_by?: string | null;
   is_locked: boolean;
   tutorials_completed: number;
   total_tutorials: number;
@@ -133,8 +143,13 @@ const testPhaseMessage = (stg: Stage, state: SelectionState, t: TFunction): stri
   const test = stg.test;
   if (!test) return '';
   if (test.is_submitted) {
+    // The formative test is the learner's own reference; only the selection
+    // after the screening test is "a result" (review of 19 Oct 2026: "results
+    // in a test section means scores").
+    if (test.test_type === 'formative') return t('test.message.formativeDone');
     if (state === 'selected') return t('test.message.selected');
     if (state === 'not_selected') return t('test.message.announced');
+    if (test.test_type === 'screening') return t('test.message.screeningDone');
     return t('test.message.submitted');
   }
   if (test.test_type === 'formative') return t('test.message.formative');
@@ -160,6 +175,63 @@ const trainingStatus = (data: DashboardData, t: TFunction): string => {
   if (next) return t('status.nextTest', { test: next.title, date: formatScheduled(next.scheduled_at, t) });
   return t('status.allDone');
 };
+
+/** A YYYY-MM-DD date as the learner's own calendar day. */
+const localDate = (ymd: string) => {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
+const formatDay = (ymd: string) =>
+  localDate(ymd).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+
+/** When the test was taken: "Mon 22 Sep 2026, 10:05 – 10:20". */
+const formatTaken = (test: StageTest): string => {
+  if (!test.attempt_submitted_at) return '';
+  const end = new Date(test.attempt_submitted_at);
+  const start = test.attempt_started_at ? new Date(test.attempt_started_at) : null;
+  const time = (d: Date) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const day = end.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  return start && time(start) !== time(end) ? `${day}, ${time(start)} – ${time(end)}` : `${day}, ${time(end)}`;
+};
+
+/** The phase's window, when the admin set one: "Starts Sat 1 Nov · Finish by Thu 20 Nov". */
+const PhaseDates: React.FC<{ stg: Stage; done: boolean; t: TFunction }> = ({ stg, done, t }) => {
+  if (!stg.starts_on && !stg.finish_by) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const late = !done && !!stg.finish_by && localDate(stg.finish_by) < today;
+  return (
+    <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-muted">
+      <CalendarRange className="size-4 shrink-0 text-primary-ink" />
+      {stg.starts_on && <span>{t('dates.starts', { date: formatDay(stg.starts_on) })}</span>}
+      {stg.finish_by && (
+        <span className={cn('font-semibold', late ? 'text-error-600' : 'text-ink')}>
+          {t(late ? 'dates.wasDue' : 'dates.finishBy', { date: formatDay(stg.finish_by) })}
+        </span>
+      )}
+    </p>
+  );
+};
+
+/** The top of a timeline card. The badge sits on the eyebrow line so the title
+ *  and description use the card's full width — on a phone they were squeezed
+ *  into half of it (review of 19 Oct 2026). */
+const PhaseHeader: React.FC<{
+  eyebrow: React.ReactNode;
+  badge: React.ReactNode;
+  title: string;
+  description?: string;
+}> = ({ eyebrow, badge, title, description }) => (
+  <>
+    <div className="flex items-center justify-between gap-3">
+      <span className="min-w-0">{eyebrow}</span>
+      <span className="shrink-0">{badge}</span>
+    </div>
+    <h4 className="mt-1 font-display text-lg font-bold leading-snug text-ink">{title}</h4>
+    {description && <p className="mt-1 text-sm leading-snug text-ink-muted">{description}</p>}
+  </>
+);
 
 type DashView = 'training' | 'adoptions';
 
@@ -350,8 +422,10 @@ const DashboardPage: React.FC = () => {
         <div className="flex flex-col gap-3">
           <TrainingRings
             tutorials={data.stages.flatMap(s => s.tutorials)}
-            testsPassed={data.tests_passed}
-            totalTests={data.total_tests}
+            scores={{
+              formative: data.stages.find(s => s.test?.test_type === 'formative')?.test?.score ?? null,
+              screening: data.stages.find(s => s.test?.test_type === 'screening')?.test?.score ?? null,
+            }}
           />
           <p className="flex items-start gap-2 rounded-xl bg-surface-sunken/70 px-4 py-3 text-sm font-semibold text-ink">
             <Lightbulb className="mt-0.5 size-4 shrink-0 text-amber-600" />
@@ -367,8 +441,15 @@ const DashboardPage: React.FC = () => {
             <BarChart3 className="size-5 text-primary-ink" />{t('topics.title')}
           </h3>
           <p className="mb-4 text-sm text-ink-muted">{t('topics.subtitle')}</p>
-          <div className="flex flex-col gap-6">
-            {reports.map(r => <TestTopicsCard key={r.test_id} report={r} />)}
+          {/* Formative on the left, screening on the right on a wide screen so
+              the two read side by side; one under the other on a phone
+              (review of 19 Oct 2026). */}
+          <div className={cn('grid grid-cols-1 gap-6', reports.length > 1 && 'lg:grid-cols-2 lg:gap-0 lg:divide-x lg:divide-border')}>
+            {reports.map((r, i) => (
+              <div key={r.test_id} className={cn(reports.length > 1 && (i % 2 === 0 ? 'lg:pr-6' : 'lg:pl-6'))}>
+                <TestTopicsCard report={r} />
+              </div>
+            ))}
           </div>
         </Card>
       )}
@@ -379,7 +460,7 @@ const DashboardPage: React.FC = () => {
         <div className="flex flex-col gap-4 lg:col-span-2">
           <h3 className="font-display text-xl font-bold text-ink">{t('timeline')}</h3>
 
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-3">
             {data.stages.map((stg, i) => {
               const isTestPhase = stg.stage_type === 'test' || (!!stg.test && stg.tutorials.length === 0);
 
@@ -388,29 +469,51 @@ const DashboardPage: React.FC = () => {
                 const test = stg.test;
                 const canTake = test.status === 'active' && !stg.is_locked && !test.is_submitted;
                 const accent = test.is_submitted || canTake ? 'sage' : 'amber';
+                const taken = test.is_submitted && test.score != null;
                 return (
-                  <Card key={stg.id} accent={accent} className="p-4 sm:p-6">
-                    <div className="mb-2 flex items-start justify-between gap-4">
-                      <div>
+                  <Card key={stg.id} accent={accent} className="p-4 sm:p-5">
+                    <PhaseHeader
+                      eyebrow={
                         <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-600">
                           <FileText className="size-3" /> {t('phase', { n: i + 1 })} •{' '}
                           {test.test_type === 'screening' ? t('test.screeningLabel') : t('test.formativeLabel')}
                         </span>
-                        <h4 className="mt-0.5 mb-1.5 font-display text-lg font-bold text-ink">{test.title}</h4>
-                        <p className="text-sm leading-snug text-ink-muted">{stg.description}</p>
-                      </div>
-                      {test.is_submitted ? (
+                      }
+                      badge={test.is_submitted ? (
                         <Badge variant="success">
                           <CheckCircle2 className="size-3" /> {t('test.submitted')}
                         </Badge>
-                      ) : (
-                        testStatusBadge(test.status, t)
-                      )}
-                    </div>
+                      ) : testStatusBadge(test.status, t)}
+                      title={test.title}
+                      description={stg.description}
+                    />
+                    <PhaseDates stg={stg} done={test.is_submitted} t={t} />
+
+                    {/* Taken: the score and when (review of 19 Oct 2026: "test
+                        given on this date, from this time to this time"). */}
+                    {taken && (
+                      <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-border bg-surface-sunken px-4 py-2.5">
+                        <div>
+                          <span className="block text-xs text-ink-faint">{t('test.yourScore')}</span>
+                          <strong className="font-display text-2xl font-extrabold leading-tight text-ink">{Math.round(test.score ?? 0)}%</strong>
+                          {test.correct != null && !!test.total_questions && (
+                            <span className="ml-1.5 text-sm text-ink-muted">{t('test.rightOf', { correct: test.correct, total: test.total_questions })}</span>
+                          )}
+                        </div>
+                        {test.attempt_submitted_at && (
+                          <div className="text-[13px]">
+                            <span className="block text-ink-faint">
+                              {test.attempts_count > 1 ? t('test.bestOf', { count: test.attempts_count }) : t('test.takenOn')}
+                            </span>
+                            <strong className="text-ink">{formatTaken(test)}</strong>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Scheduled date/time — only while it is still to come */}
                     {!test.is_submitted && (
-                    <div className="mt-3.5 flex items-center gap-2.5 rounded-lg border border-dashed border-border bg-surface-sunken px-4 py-3">
+                    <div className="mt-3 flex items-center gap-2.5 rounded-lg border border-dashed border-border bg-surface-sunken px-4 py-2.5">
                       <CalendarClock className="size-[18px] flex-shrink-0 text-amber-600" />
                       <div className="text-[13px]">
                         <span className="block text-ink-faint">
@@ -425,8 +528,8 @@ const DashboardPage: React.FC = () => {
                     )}
 
                     {/* Guidance + action */}
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-4">
-                      <span className="min-w-0 flex-1 basis-full sm:basis-52 text-[13px] text-ink-faint">{testPhaseMessage(stg, state, t)}</span>
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                      <span className="min-w-0 flex-1 basis-full text-[13px] text-ink-muted sm:basis-52">{testPhaseMessage(stg, state, t)}</span>
                       {canTake ? (
                         <Button
                           size="sm"
@@ -452,42 +555,45 @@ const DashboardPage: React.FC = () => {
                 : 0;
               const completed = stg.total_tutorials > 0 && stg.tutorials_completed >= stg.total_tutorials;
               return (
-                <Card key={stg.id} accent="coral" className="p-4 sm:p-6">
-                  <div className="mb-2 flex items-start justify-between gap-4">
-                    <div>
+                <Card key={stg.id} accent="coral" className="p-4 sm:p-5">
+                  <PhaseHeader
+                    eyebrow={
                       <span className="text-xs font-bold uppercase tracking-wider text-primary-ink">
                         {t('phase', { n: i + 1 })} • {t('videos.label')}
                       </span>
-                      <h4 className="mt-0.5 mb-1.5 font-display text-lg font-bold text-ink">{stg.title}</h4>
-                      <p className="text-sm leading-snug text-ink-muted">{stg.description}</p>
-                    </div>
-                    {completed ? (
+                    }
+                    badge={completed ? (
                       <Badge variant="success">
                         <CheckCircle2 className="size-3" /> {t('videos.completed')}
                       </Badge>
                     ) : (
                       <Badge variant="coral">{t('videos.inProgress')}</Badge>
                     )}
-                  </div>
+                    title={stg.title}
+                    description={stg.description}
+                  />
+                  <PhaseDates stg={stg} done={completed} t={t} />
 
-                  {stg.total_tutorials > 0 && (
-                    <div className="mt-5">
-                      <div className="mb-1.5 flex justify-between text-xs font-semibold text-ink-muted">
-                        <span>
-                          {t('videos.tutorialsCompleted', {
-                            completed: stg.tutorials_completed,
-                            total: stg.total_tutorials,
-                          })}
-                        </span>
-                        <span>{pct}%</span>
+                  {/* Progress and the button on one line: a compact card, so
+                      more of the timeline fits on one screen (19 Oct 2026). */}
+                  <div className="mt-3 flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
+                    {stg.total_tutorials > 0 && (
+                      <div className="min-w-0 flex-1 basis-52">
+                        <div className="mb-1.5 flex justify-between text-xs font-semibold text-ink-muted">
+                          <span>
+                            {t('videos.tutorialsCompleted', {
+                              completed: stg.tutorials_completed,
+                              total: stg.total_tutorials,
+                            })}
+                          </span>
+                          <span>{pct}%</span>
+                        </div>
+                        <ProgressBar value={pct} tone="coral" />
                       </div>
-                      <ProgressBar value={pct} tone="coral" />
-                    </div>
-                  )}
-
-                  <div className="mt-4 flex justify-end border-t border-border pt-4">
+                    )}
                     <Button
                       size="sm"
+                      className="ml-auto"
                       onClick={() => navigate('/tutorials')}
                       iconLeft={<PlayCircle className="size-4" />}
                       iconRight={<ChevronRight className="size-3.5" />}

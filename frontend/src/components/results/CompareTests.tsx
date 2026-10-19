@@ -102,7 +102,12 @@ const CompareTests: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
               </div>
               <h2 className="font-display text-xl font-extrabold text-ink sm:text-2xl">
                 {s.n > 0
-                  ? t('cmp.sentence', { n: s.n, a: a.label, b: b.label, avgA: Math.round(s.avgA), avgB: Math.round(s.avgB), change: signed(s.change) })
+                  // Who is compared comes first (review of 19 Oct 2026: "two
+                  // learners wrote both tests — what does that sentence mean?").
+                  ? t('cmp.sentence', {
+                    count: s.n, total: users.length, a: a.label, b: b.label,
+                    avgA: Math.round(s.avgA), avgB: Math.round(s.avgB), change: signed(s.change),
+                  })
                   : t('cmp.nobody', { a: a.label, b: b.label })}
               </h2>
               <p className="mt-2 flex items-start gap-1.5 text-sm text-ink-muted">

@@ -251,6 +251,11 @@ class Stage(Base):
     stage_type = Column(String, nullable=False, default="tutorials")
     # Phase-level master switch for post-tutorial quiz popups in this stage
     quiz_enabled = Column(Boolean, default=True, nullable=False)
+    # The window the project gives this phase (review of 19 Oct 2026: "basic
+    # content starts on this date and is to be finished by the 30th"), shown
+    # on the learner's timeline. Both optional; set by the admin.
+    starts_on = Column(Date, nullable=True)
+    finish_by = Column(Date, nullable=True)
 
     # Relationships
     program_district = relationship("ProgramDistrict", back_populates="stages")
@@ -387,6 +392,11 @@ class Test(Base):
     # shows the same paper rather than reshuffling under the candidate.
     shuffle_questions = Column(Boolean, nullable=False, default=False)
     shuffle_options = Column(Boolean, nullable=False, default=False)
+    # Learners see the right answers only once the admin releases them
+    # (review of 19 Oct 2026): a department that scored low may sit the same
+    # paper again, and the answers must not be out while it does. Scores and
+    # topic-wise feedback show regardless.
+    answers_released = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     scheduled_at = Column(DateTime(timezone=True), nullable=True)  # tentative go-live shown to users
     started_at = Column(DateTime(timezone=True), nullable=True)
     ended_at = Column(DateTime(timezone=True), nullable=True)

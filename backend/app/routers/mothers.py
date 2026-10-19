@@ -70,6 +70,18 @@ def _get_owned(mother_id: int, current_user: models.User, db: Session) -> models
     return mother
 
 
+def _adoption_type(m: models.Mother) -> str:
+    """ANC / PNC <5M / PNC ≥5M, worked out from the dates exactly as the MASD
+    dashboard does (app/masd/engine.classify); "unknown" when the dates cannot
+    say. Shown as a column on the learner's list (review of 19 Oct 2026)."""
+    from app.masd import engine as E
+
+    mother = E.MotherIn(id=m.id, learner_id=m.registered_by_user_id, adoption_date=m.adoption_date,
+                        lmp=m.lmp, created_on=m.created_at.date() if m.created_at else None)
+    kids = [E.ChildIn(id=c.id, mother_id=m.id, dob=c.dob, adoption_date=c.adoption_date) for c in m.children]
+    return E.classify(mother, kids)[0]
+
+
 def _list_item(m: models.Mother) -> schemas.MotherListItem:
     return schemas.MotherListItem(
         id=m.id,
@@ -83,6 +95,7 @@ def _list_item(m: models.Mother) -> schemas.MotherListItem:
         edd_records=m.edd_records,
         gestational_weeks=m.gestational_weeks,
         children_count=len(m.children),
+        adoption_type=_adoption_type(m),
         created_at=m.created_at,
     )
 

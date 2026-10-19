@@ -27,7 +27,13 @@
     "moveDown": "Move this phase later",
     "editPhase": "Rename / edit this phase",
     "saveEdit": "Save phase",
-    "deleteFailed": "This phase could not be deleted."
+    "deleteFailed": "This phase could not be deleted.",
+    "startsOn": "Starts on",
+    "finishBy": "Finish by",
+    "datesHint": "Shown on every learner's timeline for this phase. Leave empty for no dates.",
+    "startsOnValue": "Starts {{date}}",
+    "finishByValue": "Finish by {{date}}",
+    "saveFailed": "Could not save the phase."
   },
   "tutorial": {
     "meta": "{{module}} • {{minutes}}min",

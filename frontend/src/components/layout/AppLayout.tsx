@@ -48,7 +48,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main column — offset by sidebar width on desktop */}
-      <div className="flex min-h-screen flex-col lg:pl-64">
+      <div className="flex min-h-screen flex-col lg:pl-64 print:pl-0">
         <MainHeader
           title={getHeaderTitle()}
           onToggleSidebar={() => setSidebarOpen(prev => !prev)}

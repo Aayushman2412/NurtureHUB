@@ -44,6 +44,8 @@ export interface GrowthCase {
   /** learner is null for an orphaned case (registering account removed). */
   learner: { id: number | null; name: string | null; email: string | null; district: string | null };
   visits: GrowthVisit[];
+  /** anc | pnc_lt5 | pnc_ge5 | unknown — by the MASD rule (review of 19 Oct 2026). */
+  adoption_type?: string | null;
 }
 
 // ── Learner-level summary table ───────────────────────────────────────────────

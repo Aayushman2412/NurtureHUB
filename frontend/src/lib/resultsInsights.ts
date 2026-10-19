@@ -577,6 +577,9 @@ export interface DifficultyRow {
   key: string;
   writers: number;
   cells: Record<Difficulty, DifficultyCell>;
+  /** Every question together — the benchmark the three levels are read
+   *  against (review of 19 Oct 2026). */
+  all: DifficultyCell;
 }
 
 /**
@@ -608,7 +611,9 @@ export function difficultyByGroup(
       }
     }
     for (const c of Object.values(cells)) c.pct = c.total ? (c.right / c.total) * 100 : null;
-    return { key: g.key, writers, cells };
+    const right = cells.easy.right + cells.medium.right + cells.difficult.right;
+    const total = cells.easy.total + cells.medium.total + cells.difficult.total;
+    return { key: g.key, writers, cells, all: { right, total, pct: total ? (right / total) * 100 : null } };
   });
 }
 
@@ -676,17 +681,25 @@ const bestOf = (u: UserResultRow, test: ActiveTest) => u.tests[String(test.id)]?
 export function lowestScorers(users: UserResultRow[], test: ActiveTest, limit = 10): UserResultRow[] {
   return users
     .filter(u => wroteIt(u, test) && !u.tests[String(test.id)].is_passed)
-    .sort((a, b) => bestOf(a, test) - bestOf(b, test) || a.name.localeCompare(b.name))
+    .sort(lowFirst(test))
     .slice(0, limit);
 }
+
+/** The one order for "lowest first" lists: score, then more attempts, then
+ *  name, then user ID — so learners with the same score sit in the same order
+ *  in "Bottom" and in "Need support" (review of 19 Oct 2026: "where is she on
+ *  this side?"). */
+const lowFirst = (test: ActiveTest) => (a: UserResultRow, b: UserResultRow) =>
+  bestOf(a, test) - bestOf(b, test)
+  || b.tests[String(test.id)].attempts_count - a.tests[String(test.id)].attempts_count
+  || a.name.localeCompare(b.name)
+  || a.user_id - b.user_id;
 
 /** Lowest score first, among everyone who wrote (passed or not). */
 export function bottomScorers(users: UserResultRow[], test: ActiveTest, limit = 10): UserResultRow[] {
   return users
     .filter(u => wroteIt(u, test))
-    .sort((a, b) => bestOf(a, test) - bestOf(b, test)
-      || b.tests[String(test.id)].attempts_count - a.tests[String(test.id)].attempts_count
-      || a.name.localeCompare(b.name))
+    .sort(lowFirst(test))
     .slice(0, limit);
 }
 
@@ -696,7 +709,8 @@ export function topScorers(users: UserResultRow[], test: ActiveTest, limit = 10)
     .filter(u => wroteIt(u, test))
     .sort((a, b) => bestOf(b, test) - bestOf(a, test)
       || a.tests[String(test.id)].attempts_count - b.tests[String(test.id)].attempts_count
-      || a.name.localeCompare(b.name))
+      || a.name.localeCompare(b.name)
+      || a.user_id - b.user_id)
     .slice(0, limit);
 }
 

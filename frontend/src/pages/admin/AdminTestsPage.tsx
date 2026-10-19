@@ -38,6 +38,8 @@ interface Test {
   test_type: TestType | null;
   shuffle_questions: boolean;
   shuffle_options: boolean;
+  /** Learners may see the right answers (review of 19 Oct 2026). */
+  answers_released: boolean;
   scheduled_at: string | null;
   started_at: string | null;
   ended_at: string | null;
@@ -104,6 +106,10 @@ const QUESTION_SHEET_HEADERS = [
   'Question Text', 'Option A', 'Option B', 'Option C', 'Option D', 'Option E', 'Option F',
   'Correct Answer', 'Marks', 'Question Image URL', 'Topic', 'Subtopic',
 ] as const;
+
+/** The distinct non-empty values, sorted — topic suggestions for the editor. */
+const distinct = (xs: (string | null | undefined)[]) =>
+  [...new Set(xs.map(x => (x ?? '').trim()).filter(Boolean))].sort();
 
 /** Header cells are matched ignoring case, spaces and punctuation. */
 const normalizeHeader = (h: string) => h.toLowerCase().replace(/[^a-z]/g, '');
@@ -232,9 +238,10 @@ const AdminTestsPage: React.FC = () => {
   const downloadQuestionTemplate = () => {
     const ws = XLSX.utils.aoa_to_sheet([
       [...QUESTION_SHEET_HEADERS],
-      ['Which of these is a complex carbohydrate?', 'Cellulose', 'Glucose', 'Maltose', 'Sucrose', '', '', 'A', '2', ''],
+      ['Which of these is a complex carbohydrate?', 'Cellulose', 'Glucose', 'Maltose', 'Sucrose', '', '', 'A', '2', '',
+        'Nutrition', 'Carbohydrates'],
       ['Identify the growth pattern shown in the chart', 'Normal', 'Faltering', 'Catch-up', '', '', '', 'B', '3',
-        'https://…/chart.png'],
+        'https://…/chart.png', 'Growth monitoring', 'Reading the growth chart'],
     ]);
     ws['!cols'] = QUESTION_SHEET_HEADERS.map(h => ({ wch: Math.max(h.length + 4, 16) }));
     const wb = XLSX.utils.book_new();
@@ -750,6 +757,27 @@ const AdminTestsPage: React.FC = () => {
                   <span className="text-[12px] text-ink-faint">{t('shuffle.hint')}</span>
                 </div>
 
+                {/* The answer review opens only when released: a group may sit
+                    the same paper again later (review of 19 Oct 2026). Scores
+                    and topic-wise feedback show either way. */}
+                <div className={cn('mt-2 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border px-4 py-3',
+                  test.answers_released ? 'border-success-500/40 bg-success-50 dark:bg-success-500/10' : 'border-border bg-surface-sunken')}>
+                  <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">
+                    {t('answers.heading')}
+                  </span>
+                  <Checkbox
+                    label={t('answers.release')}
+                    checked={test.answers_released}
+                    onChange={e => {
+                      if (e.target.checked && test.status !== 'ended' && !confirm(t('answers.confirmEarly'))) return;
+                      updateTest(test.id, { answers_released: e.target.checked });
+                    }}
+                  />
+                  <span className="text-[12px] text-ink-faint">
+                    {test.answers_released ? t('answers.hintOpen') : t('answers.hintClosed')}
+                  </span>
+                </div>
+
                 {/* Question toolbar */}
                 <div className="my-4 flex flex-wrap items-center gap-2">
                   <Button
@@ -809,6 +837,8 @@ const AdminTestsPage: React.FC = () => {
                       defaultMarks={test.default_marks}
                       locked={test.has_submitted_attempts}
                       error={questionError}
+                      topics={distinct(test.questions.map(x => x.topic))}
+                      subtopics={distinct(test.questions.map(x => x.subtopic))}
                     />
                   </div>
                 )}
@@ -913,6 +943,8 @@ const AdminTestsPage: React.FC = () => {
                           defaultMarks={test.default_marks}
                           locked={test.has_submitted_attempts}
                           error={questionError}
+                          topics={distinct(test.questions.map(x => x.topic))}
+                          subtopics={distinct(test.questions.map(x => x.subtopic))}
                         />
                       ) : (
                         <div key={q.id} className="rounded-xl border border-border p-3">

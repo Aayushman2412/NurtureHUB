@@ -9,7 +9,10 @@ export interface FalterRow {
   case_id: number;
   mother_id: number;
   flags: FalterCondition[];
-  learner: { id: number | null; name: string | null; cadre: string | null; block: string | null; mobile: string | null };
+  learner: {
+    id: number | null; name: string | null; cadre: string | null; block: string | null; mobile: string | null;
+    department?: string | null;
+  };
   batch: string | null;
   monitor: { id: number; name: string | null } | null;
   mother: { name: string | null; uid: string | null; village: string | null };
@@ -30,6 +33,7 @@ export interface FalterFilters {
   batch?: string;
   block?: string;
   cadre?: string;
+  department?: string;
   learner_id?: number;
 }
 
@@ -44,6 +48,7 @@ export interface FalterResponse {
     batches: string[];
     blocks: string[];
     cadres: string[];
+    departments?: string[];
     learners: [number, string | null][];
   };
 }
@@ -55,6 +60,7 @@ const params = (f: FalterFilters) => ({
   ...(f.batch ? { batch: f.batch } : {}),
   ...(f.block ? { block: f.block } : {}),
   ...(f.cadre ? { cadre: f.cadre } : {}),
+  ...(f.department ? { department: f.department } : {}),
   ...(f.learner_id ? { learner_id: f.learner_id } : {}),
 });
 
