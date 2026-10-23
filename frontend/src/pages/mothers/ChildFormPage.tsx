@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../context/ToastContext';
 import {
@@ -14,6 +14,8 @@ import { validateChild, validateChildStep, CR_STEP_FIELDS, type ChildFormValues 
 import type { FieldErrors } from '../../lib/validation';
 import { getChild, updateChild, type ChildPayload } from '../../api/children';
 import { createChildResilient, isQueuedResult } from '../../offline/submit';
+import { formRunUrl } from '../../api/today';
+import { babyVisitForms, flowString, parseFlow } from '../../lib/careFlow';
 import { getMother } from '../../api/mothers';
 import { apiErrorMessage } from '../../components/assessments/flowRunner';
 import { MAX_ADOPTION_AGE_DAYS, isoDaysAgo, todayIso } from '../../lib/motherFields';
@@ -51,6 +53,11 @@ const ChildFormPage: React.FC = () => {
   const childId = childIdParam ? Number(childIdParam) : null;
   const isEdit = childId != null;
   const navigate = useNavigate();
+  // Registering the baby in a guided run (lib/careFlow): her first visit's
+  // forms follow — a growth check, then breastfeeding or complementary feeding
+  // by age (launch review of 19 Oct 2026).
+  const [searchParams] = useSearchParams();
+  const flow = parseFlow(searchParams.get('flow'));
   const { t } = useTranslation('mother');
   const { showToast, updateToast } = useToast();
   const steps = STEP_KEYS.map(k => t(`child.steps.${k}`));
@@ -203,6 +210,11 @@ const ChildFormPage: React.FC = () => {
             : t('child.toastSuccessRegistered', { name: saved.child_name, uid: saved.child_uid }),
           'success',
         );
+        if (flow && !isQueuedResult(saved)) {
+          const [first, ...rest] = babyVisitForms(childAge(dob)?.days ?? null);
+          navigate(formRunUrl(first, motherId, saved.id, flowString(flow.kind, [...rest, ...flow.rest])), { replace: true });
+          return;
+        }
       }
       navigate(backTo);
     } catch (err) {

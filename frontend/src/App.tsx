@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
@@ -36,6 +36,7 @@ const AssessmentRunnerRoute = lazy(() => import('./pages/assessments/AssessmentR
 const AssessmentPlanPage = lazy(() => import('./pages/assessments/AssessmentPlanPage'));
 const GrowthChartsPage = lazy(() => import('./pages/growth/GrowthChartsPage'));
 const MyCasePage = lazy(() => import('./pages/growth/MyCasePage'));
+const BabyPage = lazy(() => import('./pages/field/BabyPage'));
 
 // Layout
 import { PageLoader } from './components/ui';
@@ -118,6 +119,19 @@ const AdoptionsRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return <CompleteRoute><SectionLocked /></CompleteRoute>;
   }
   return <CompleteRoute>{children}</CompleteRoute>;
+};
+
+// The all-cases Growth Monitor is a monitor's view (launch review of 19 Oct
+// 2026); a health worker's old link lands on the one baby it named, or on her
+// list of mothers.
+const GrowthMonitorRoute: React.FC = () => {
+  const { user } = useAuth();
+  const [params] = useSearchParams();
+  if (user && !user.is_batch_monitor) {
+    const child = params.get('child');
+    return <Navigate to={child ? `/babies/${child}` : '/mothers'} replace />;
+  }
+  return <AdoptionsRoute><GrowthChartsPage /></AdoptionsRoute>;
 };
 
 // Admin Route: Check localStorage or user for admin access
@@ -210,8 +224,10 @@ const AppRoutes: React.FC = () => {
         <Route path="/assessments/:responseId/plan" element={<AdoptionsRoute><AssessmentPlanPage /></AdoptionsRoute>} />
 
         {/* Growth charts (LAP monitoring) — case-wise WHO percentile charts */}
-        <Route path="/growth" element={<AdoptionsRoute><GrowthChartsPage /></AdoptionsRoute>} />
+        <Route path="/growth" element={<GrowthMonitorRoute />} />
         <Route path="/growth/cases/:childId" element={<AdoptionsRoute><MyCasePage /></AdoptionsRoute>} />
+        {/* One baby, for the health worker: status in words, the charts, the next visit. */}
+        <Route path="/babies/:childId" element={<AdoptionsRoute><BabyPage /></AdoptionsRoute>} />
 
         {/* Admin Panel Routes */}
         <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />

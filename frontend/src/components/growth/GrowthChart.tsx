@@ -33,6 +33,10 @@ interface GrowthChartProps {
   series: GrowthSeries[];
   /** Name each case at the end of its line (several cases on one chart). */
   labelSeries?: boolean;
+  /** Text under each dot, and the dot's colour — the health worker's chart
+   *  shows the percentile in the traffic-light colour (launch review of 19 Oct
+   *  2026: "the percentile written below each dot"). */
+  pointLabel?: (point: GrowthPoint) => { text: string; color: string } | null;
   onPointClick?: (point: GrowthPoint) => void;
 }
 
@@ -93,6 +97,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
   xKind,
   series,
   labelSeries = false,
+  pointLabel,
   onPointClick,
 }) => {
   const { t } = useTranslation('growth');
@@ -320,13 +325,15 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
                     opacity={0.7}
                   />
                 ))}
-                {s.points.map((p, i) => (
+                {s.points.map((p, i) => {
+                  const label = pointLabel?.(p) ?? null;
+                  return (
+                  <g key={`${s.caseId}-p${i}`}>
                   <circle
-                    key={`${s.caseId}-p${i}`}
                     cx={sx(p.x)}
                     cy={sy(p.y)}
-                    r={hover && hover.caseId === s.caseId && hover.x === p.x && hover.y === p.y ? 7 : 5.5}
-                    fill={sourceComboColor(p.combo)}
+                    r={hover && hover.caseId === s.caseId && hover.x === p.x && hover.y === p.y ? 7 : label ? 6.5 : 5.5}
+                    fill={label?.color ?? sourceComboColor(p.combo)}
                     stroke="white"
                     strokeWidth={1.6}
                     className={cn(p.visit && onPointClick && 'cursor-pointer')}
@@ -335,7 +342,22 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
                     }
                     onClick={() => p.visit && onPointClick?.(p)}
                   />
-                ))}
+                  {label && (
+                    <text
+                      x={sx(p.x)}
+                      y={sy(p.y) + 22}
+                      textAnchor="middle"
+                      className="stroke-surface text-[14px] font-bold"
+                      fill={label.color}
+                      strokeWidth={3.5}
+                      paintOrder="stroke"
+                    >
+                      {label.text}
+                    </text>
+                  )}
+                  </g>
+                  );
+                })}
               </g>
             ))}
           </g>

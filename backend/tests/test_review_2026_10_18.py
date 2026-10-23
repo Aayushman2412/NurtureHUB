@@ -161,15 +161,24 @@ def _row(cats=None):
     return {"categories": {m: {"lv": (cats or {}).get(m, names[m][0])} for m in names}}
 
 
+def _case(visits):
+    return {"child": {"id": 1, "uid": "C", "name": "B", "gender": "Female"}, "visits": visits}
+
+
 def test_faltering_flags_grades_and_weight_loss():
     names = growth.Z_CATEGORY_NAMES
-    visits = [{"date": "2026-09-01", "weight": 6.2}, {"date": "2026-09-20", "weight": 6.05}]
-    flags, change = faltering._flags(_row({"wfaz": names["wfaz"][3], "hfaz": names["hfaz"][2]}), {"visits": visits})
+    visits = [{"date": "2026-09-01", "age_days": 120, "weight": 6.2, "length": 62.0},
+              {"date": "2026-09-20", "age_days": 139, "weight": 6.05, "length": 63.0}]
+    flags, change, _pct = faltering._flags(_row({"wfaz": names["wfaz"][3], "hfaz": names["hfaz"][2]}), _case(visits))
     assert flags == ["suw", "mst", "faltering"]
     assert change == -150
 
-    gained = [{"date": "2026-09-01", "weight": 6.0}, {"date": "2026-09-20", "weight": 6.3}]
-    assert faltering._flags(_row({"wfhz": names["wfhz"][1]}), {"visits": gained}) == ([], 300)  # mild: not listed
+    # Mild wasting is not listed (mild UNDERWEIGHT is, since the launch review),
+    # and a baby gaining along the curve is not faltering.
+    gained = [{"date": "2026-09-01", "age_days": 120, "weight": 6.0, "length": 62.0},
+              {"date": "2026-09-20", "age_days": 139, "weight": 6.5, "length": 63.0}]
+    flags, change, _pct = faltering._flags(_row({"wfhz": names["wfhz"][1]}), _case(gained))
+    assert (flags, change) == ([], 500)
 
 
 def _falter(case_id, flags, monitor=None, batch=None):

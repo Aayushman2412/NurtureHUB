@@ -511,6 +511,26 @@ class Notification(Base):
     user = relationship("User", back_populates="notifications")
 
 
+class CareAlert(Base):
+    """A care prompt sent about a learner's case (launch review of 19 Oct 2026):
+    a baby faltering after a growth check, a day's visits, an escalation to the
+    batch monitor. Kept so the same prompt is never sent twice — `dedupe_key`
+    names the prompt and is unique. Carries no names; the notification it
+    produced is the message."""
+    __tablename__ = "care_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    kind = Column(String(32), nullable=False)        # falter | reminder_am | reminder_pm | escalation
+    dedupe_key = Column(String(160), nullable=False, unique=True)
+    learner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE", name="care_alerts_learner_id_fkey"),
+                        nullable=False, index=True)
+    recipient_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE", name="care_alerts_recipient_id_fkey"),
+                          nullable=False)
+    child_id = Column(Integer, ForeignKey("children.id", ondelete="CASCADE", name="care_alerts_child_id_fkey"),
+                      nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class Achievement(Base):
     __tablename__ = "achievements"
 

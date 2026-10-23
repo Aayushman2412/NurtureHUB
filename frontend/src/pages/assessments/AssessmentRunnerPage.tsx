@@ -21,6 +21,7 @@ import {
   findQueuedResponseCreate, findQueuedResponseUpdate, isQueuedResult, persistResponseResilient,
 } from '../../offline/submit';
 import { vaultClear, vaultKey, vaultLoad, vaultSave } from '../../offline/answerVault';
+import { flowString, nextInFlow, parseFlow } from '../../lib/careFlow';
 import type { FlowSchema, FormDefinition, FormKey, MatrixAnswer } from '../../lib/flowTypes';
 import {
   CF_MIN_AGE_DAYS,
@@ -77,6 +78,8 @@ const AssessmentRunnerPage: React.FC = () => {
   const isMother = isMotherFormKey(formKey);
   const resumeIdParam = searchParams.get('responseId');
   const resumeId = resumeIdParam ? Number(resumeIdParam) : null;
+  /** A guided run of forms (lib/careFlow): what comes after this one. */
+  const flow = parseFlow(searchParams.get('flow'));
 
   const historyUrl = isMother
     ? `/mothers/${motherId}/assessments/${formKey}`
@@ -407,9 +410,12 @@ const AssessmentRunnerPage: React.FC = () => {
         // No server id yet, so the plan page can't open — back to history with
         // a clear "will sync automatically" message instead.
         showToast(t('runner.submittedOffline', { ns: 'offline' }), 'success');
-        navigate(historyUrl, { replace: true });
+        navigate(flow?.rest.length ? nextInFlow(flow, motherId, isMother ? null : childId) : historyUrl,
+          { replace: true });
       } else {
-        navigate(`/assessments/${saved.id}/plan`, { replace: true });
+        // The plan carries the flow on, so its "Continue" opens the next step.
+        navigate(`/assessments/${saved.id}/plan${flow ? `?flow=${flowString(flow.kind, flow.rest)}` : ''}`,
+          { replace: true });
       }
     } catch (err) {
       showToast(apiErrorMessage(err) ?? t('runner.submitFailed'), 'error');

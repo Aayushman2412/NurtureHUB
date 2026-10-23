@@ -1,6 +1,6 @@
 {
   "nav": {
-    "dashboard": "Dashboard",
+    "dashboard": "Home",
     "tutorials": "Tutorials & Tests",
     "assessments": "Tests",
     "mothers": "Adoptions",
@@ -9,14 +9,15 @@
     "lockedHint": "Opens once you are selected for face-to-face training"
   },
   "headerTitle": {
-    "dashboard": "Dashboard",
+    "dashboard": "Home",
     "tutorials": "Tutorials & Tests",
     "tests": "Tests",
     "results": "Test result",
     "profile": "Profile Settings",
     "default": "NurtureHUB",
     "mothers": "Adoptions",
-    "growth": "Growth Monitor"
+    "growth": "Growth Monitor",
+    "baby": "Baby"
   },
   "header": {
     "toggleMenu": "Toggle menu",
@@ -52,5 +53,12 @@
     "title": "Opens after your selection",
     "body": "Adoptions and the Growth Monitor open once you are selected for face-to-face training. Until then, finish your videos and tests on the Dashboard.",
     "back": "Back to my training"
+  },
+  "bottomNav": {
+    "label": "Main menu",
+    "home": "Home",
+    "mothers": "Adoptions",
+    "training": "Training",
+    "profile": "Profile"
   }
 }

@@ -144,5 +144,16 @@
     "otherOption": "Other",
     "otherSpecify": "{{label}} — other, please specify",
     "otherPlaceholder": "Type your answer"
+  },
+  "flow": {
+    "next": {
+      "gm": "Next: Growth check",
+      "bf": "Next: Breastfeeding",
+      "cf": "Next: Complementary feeding",
+      "anc": "Next: Pregnancy check",
+      "protein": "Next: Protein form",
+      "baby": "Next: Register the baby",
+      "done": "Finish"
+    }
   }
 }

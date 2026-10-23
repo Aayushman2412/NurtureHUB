@@ -1,11 +1,11 @@
 {
-  "app:nav.dashboard": "डॅशबोर्ड",
+  "app:nav.dashboard": "मुख्यपृष्ठ",
   "app:nav.tutorials": "ट्यूटोरियल आणि चाचण्या",
   "app:nav.assessments": "चाचण्या",
   "app:nav.mothers": "दत्तक केसेस",
   "app:nav.growth": "वाढ निरीक्षण",
   "app:nav.profile": "प्रोफाइल",
-  "app:headerTitle.dashboard": "डॅशबोर्ड",
+  "app:headerTitle.dashboard": "मुख्यपृष्ठ",
   "app:headerTitle.tutorials": "प्रशिक्षण मॉड्यूल",
   "app:headerTitle.tests": "मूल्यांकने आणि प्रश्नमंजुषा",
   "app:headerTitle.results": "मूल्यांकनातील कामगिरी",

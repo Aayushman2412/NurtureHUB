@@ -222,5 +222,189 @@
     "starts": "Starts {{date}}",
     "finishBy": "Finish by {{date}}",
     "wasDue": "Was due by {{date}}"
+  },
+  "field": {
+    "hello": "Namaste, {{name}}",
+    "helloNoName": "Namaste",
+    "register": "Register a mother",
+    "loadFailed": "Could not load today's work. Check the internet and open this page again.",
+    "baby": {
+      "loading": "Opening the baby's page…",
+      "loadFailed": "Could not open this baby's page",
+      "seeWithin_one": "See this baby again within {{count}} day.",
+      "seeWithin_other": "See this baby again within {{count}} days.",
+      "wfa": "Weight for age",
+      "lfa": "Length for age",
+      "wfl": "Weight for length",
+      "lastCheck": "Last check {{date}}: {{weight}}, {{length}}",
+      "whatIsP": "P{{pct}} means {{pct}} of 100 healthy babies of the same age weigh less.",
+      "nextVisit": "Next visit",
+      "noneThisWeek": "Nothing due this week.",
+      "startVisit": "Start a visit now",
+      "visitIs": "A visit is: {{forms}}",
+      "fillOnly": "Fill: {{form}}",
+      "allDetails": "See all details",
+      "openMother": "Open {{mother}}'s page",
+      "edit": "Change the baby's details",
+      "savedTitle": "Growth check saved",
+      "ok": "OK",
+      "visitDone": "Visit done. Thank you!"
+    },
+    "mother": {
+      "doNow": "Do now",
+      "babies": "Babies",
+      "forms": "Her forms",
+      "pastProtein": "Past protein forms",
+      "pastAnc": "Past pregnancy checks",
+      "moreDetails": "Show her details",
+      "lessDetails": "Hide her details"
+    },
+    "boy": "Boy",
+    "girl": "Girl",
+    "back": "Back",
+    "backHome": "Go to Home",
+    "start": "Start",
+    "late": "Late",
+    "lateBy_one": "Late by {{count}} day",
+    "lateBy_other": "Late by {{count}} days",
+    "dueToday": "Due today",
+    "form": {
+      "gm": "Growth check",
+      "bf": "Breastfeeding",
+      "cf": "Complementary feeding",
+      "anc": "Pregnancy check",
+      "protein": "Protein form"
+    },
+    "urgent": {
+      "title": "See these babies soon",
+      "see_one": "See {{name}} within {{count}} day",
+      "see_other": "See {{name}} within {{count}} days",
+      "open": "Open",
+      "start": "Start visit"
+    },
+    "reason": {
+      "weight_fell": "Weight went down since the last visit",
+      "not_gaining": "Not gaining enough weight",
+      "low_wfa": "Weight is low for age",
+      "low_lfa": "Length is low for age",
+      "low_wfl": "Weight is low for length",
+      "no_growth_check": "No growth check yet",
+      "all_done": "All visits done",
+      "late": "A visit is late",
+      "due_today": "A visit is due today",
+      "finish_registration": "Registration not finished",
+      "edd_passed": "Due date has passed: record the birth",
+      "low": "Growth is low"
+    },
+    "visits": {
+      "title": "Visits for today",
+      "none": "No other visits due today.",
+      "allDone": "Nothing is due today. Well done!",
+      "more_one": "Show {{count}} more visit",
+      "more_other": "Show {{count}} more visits",
+      "fewer": "Show fewer"
+    },
+    "finish": {
+      "title": "Finish registration",
+      "protein": "Fill her protein form",
+      "baby": "Register her baby",
+      "more_one": "Show {{count}} more",
+      "more_other": "Show {{count}} more"
+    },
+    "adopt": {
+      "title": "Mothers to adopt",
+      "anc": "Pregnant mothers",
+      "pnc_lt5": "Mothers with a baby under {{pncM}} months",
+      "pnc_ge5": "Mothers with a baby {{pncM}} months or older",
+      "ofTarget": "{{adopted}} of {{target}} adopted",
+      "more_one": "Adopt {{count}} more",
+      "more_other": "Adopt {{count}} more",
+      "done": "Done"
+    },
+    "week": {
+      "title": "Coming this week"
+    },
+    "doneThisWeek_one": "{{count}} form filled this week. Keep going!",
+    "doneThisWeek_other": "{{count}} forms filled this week. Keep going!",
+    "quiet_one": "No form filled for {{count}} day.",
+    "quiet_other": "No form filled for {{count}} days.",
+    "allMothers": "All my adoptions",
+    "training": "My training and test results",
+    "noSex": "Add whether the baby is a boy or a girl to see the growth chart.",
+    "status": {
+      "green": "Growing well",
+      "yellow": "Watch closely",
+      "red": "Needs care now",
+      "none": "No growth check yet"
+    },
+    "rowStatus": {
+      "green": "On track",
+      "yellow": "Needs attention",
+      "red": "Act now",
+      "none": "Not checked yet"
+    },
+    "tone": {
+      "green": "Good",
+      "yellow": "Watch",
+      "red": "Low",
+      "none": "Not checked"
+    },
+    "wfl": {
+      "normal": "Normal",
+      "mild": "Mildly thin",
+      "moderate": "Thin",
+      "severe": "Very thin"
+    },
+    "age": {
+      "days_one": "{{count}} day",
+      "days_other": "{{count}} days",
+      "weeks_one": "{{count}} week",
+      "weeks_other": "{{count}} weeks",
+      "months_one": "{{count}} month",
+      "months_other": "{{count}} months"
+    },
+    "type": {
+      "anc": "Pregnant",
+      "pnc_lt5": "Baby under {{pncM}} months",
+      "pnc_ge5": "Baby {{pncM}} months or older",
+      "sn": "Newborn",
+      "unknown": ""
+    },
+    "list": {
+      "title": "My adoptions",
+      "count_one": "{{count}} mother",
+      "count_other": "{{count}} mothers",
+      "next": "Next: {{date}}, {{forms}}",
+      "search": "Search by name",
+      "emptyTitle": "No mothers yet",
+      "emptyBody": "Register the first mother you adopt.",
+      "noMatch": "No mother with that name.",
+      "nextNow": "Visit now: {{forms}}"
+    },
+    "team": {
+      "title": "Learners to call today",
+      "urgent_one": "{{count}} baby to see",
+      "urgent_other": "{{count}} babies to see",
+      "late_one": "{{count}} late visit",
+      "late_other": "{{count}} late visits",
+      "never": "Has not started",
+      "quiet_one": "No form for {{count}} day",
+      "quiet_other": "No form for {{count}} days",
+      "onTrack": "On track",
+      "allFine_one": "Your {{count}} learner is on track.",
+      "allFine_other": "All {{count}} learners are on track.",
+      "call": "Call {{name}}",
+      "callShort": "Call",
+      "fewer": "Show fewer",
+      "showAll": "See all {{count}} learners"
+    },
+    "motherIs": "Mother: {{mother}}",
+    "motherWord": "Mother",
+    "short": {
+      "green": "Fine",
+      "yellow": "Watch",
+      "red": "Needs care",
+      "none": "Not checked"
+    }
   }
 }

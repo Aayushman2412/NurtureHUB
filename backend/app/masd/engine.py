@@ -1161,6 +1161,71 @@ def learner_view(data: MasdData, as_of: date, learner_id: int, due_days: int = 7
     }
 
 
+def _first_due(a: Adoption, table: Dict[str, Any], is_nurse: bool, key: str,
+               lo: date, hi: date, have: int) -> Optional[date]:
+    """The first day in [lo, hi] on which the case is expected to have more
+    than `have` forms of `key`. Expected counts only ever rise with the date,
+    so a binary search finds it in a handful of evaluations."""
+    if lo > hi or case_expected_for(a, table, hi, is_nurse)[key] <= have:
+        return None
+    a_ord, b_ord = lo.toordinal(), hi.toordinal()
+    while a_ord < b_ord:
+        mid = (a_ord + b_ord) // 2
+        if case_expected_for(a, table, date.fromordinal(mid), is_nurse)[key] > have:
+            b_ord = mid
+        else:
+            a_ord = mid + 1
+    return date.fromordinal(a_ord)
+
+
+def field_plan(data: MasdData, as_of: date, learner_id: int, horizon_days: int = 7) -> Dict[int, List[Dict[str, Any]]]:
+    """What each of a learner's cases needs, with dates (launch review of 19
+    Oct 2026: "as soon as I open my app I need to know which baby — like a
+    calendar — this is pending for this baby, I need to visit this mother").
+
+    Per mother: one item per form that is overdue (with the day it fell due
+    and how many are missing) or falls due within `horizon_days`, from the
+    same expected-forms rules the MASD dashboard reads her work against."""
+    cal = calendar(data)
+    steps = target_steps(data, cal)
+    table = data.expected_forms
+    adoptions = adoptions_of(data, steps, as_of)
+    learner = next((l for l in data.learners if l.id == learner_id), None)
+    if learner is None:
+        return {}
+    is_nurse = R.role_group(learner.role) == R.NURSING_STAFF
+    idx = _index(adoptions)
+    done: Dict[int, Counter] = defaultdict(Counter)
+    for act in data.activities:
+        key = R.FORM_TO_ACTIVITY.get(act.form_key)
+        a = idx.adoption_of(act)
+        if key and a is not None and a.mother.learner_id == learner_id and act.on <= as_of:
+            done[a.mother.id][key] += 1
+    until = as_of + timedelta(days=horizon_days)
+    out: Dict[int, List[Dict[str, Any]]] = {}
+    for a in adoptions:
+        if a.mother.learner_id != learner_id or a.anchor is None:
+            continue
+        now = case_expected_for(a, table, as_of, is_nurse)
+        items: List[Dict[str, Any]] = []
+        for key in R.ACTIVITY_KEYS:
+            have = done[a.mother.id][key]
+            if now[key] > have:
+                # Late since the form LAST fell due: a visit missed in July
+                # cannot be made up, the one due now can ("do it today", not
+                # "eight checks, 114 days late"). The count missed is kept for
+                # the monitors.
+                since = _first_due(a, table, is_nurse, key, a.anchor, as_of, now[key] - 1) or as_of
+                items.append({"key": key, "due_on": since.isoformat(), "late_days": (as_of - since).days,
+                              "missing": now[key] - have})
+            else:
+                nxt = _first_due(a, table, is_nurse, key, as_of + timedelta(days=1), until, max(now[key], have))
+                if nxt is not None:
+                    items.append({"key": key, "due_on": nxt.isoformat(), "late_days": 0, "missing": 0})
+        out[a.mother.id] = sorted(items, key=lambda i: i["due_on"])
+    return out
+
+
 def team_view(data: MasdData, as_of: date, learner_ids: Iterable[int]) -> List[Dict[str, Any]]:
     """A batch monitor's learners at a glance: adoptions against target,
     forms done against due (level 3) and days since they last did anything.

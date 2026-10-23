@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   AlertCircle,
   ArrowLeft,
+  ArrowRight,
   Check,
   CheckCircle2,
   ListChecks,
@@ -25,12 +26,15 @@ import {
 } from '../../lib/flowTypes';
 import ActionCard from '../../components/assessments/ActionCard';
 import ConfettiBurst from '../../components/assessments/ConfettiBurst';
+import { nextInFlow, parseFlow } from '../../lib/careFlow';
 import { formatDisplayDate } from '../../components/assessments/flowRunner';
 
 const AssessmentPlanPage: React.FC = () => {
   const { responseId } = useParams();
   const id = Number(responseId);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const flow = parseFlow(searchParams.get('flow'));
   const { t, i18n } = useTranslation('assessments');
 
   const [resp, setResp] = useState<FormResponseDetail | null>(null);
@@ -140,6 +144,9 @@ const AssessmentPlanPage: React.FC = () => {
     ? `/mothers/${resp.mother_id}/children/${resp.child_id}/assessments/${resp.form_key}`
     : `/mothers/${resp.mother_id}/assessments/${resp.form_key}`;
   const runUrl = `${historyUrl}/run`;
+  // In a guided run (lib/careFlow) the plan's one button goes on to the next
+  // form of the visit — the worker does not go back to look for it.
+  const nextStep = flow ? (flow.rest[0] ?? 'done') : null;
   const formTitle = t(`common.formTitle.${resp.form_key}`, { defaultValue: resp.form_key });
 
   return (
@@ -339,6 +346,14 @@ const AssessmentPlanPage: React.FC = () => {
       )}
 
       {/* Footer navigation */}
+      {nextStep ? (
+        <div className="sticky bottom-0 z-10 -mx-5 border-t border-border bg-surface/95 px-5 py-3 backdrop-blur sm:mx-0 sm:rounded-xl sm:border">
+          <Button size="lg" fullWidth onClick={() => navigate(nextInFlow(flow, resp.mother_id ?? 0, resp.child_id ?? null), { replace: true })}
+            iconRight={<ArrowRight className="size-5" />}>
+            {t(`flow.next.${nextStep}`)}
+          </Button>
+        </div>
+      ) : (
       <div className="flex flex-col gap-3 sm:flex-row">
         <Button
           variant="outline"
@@ -351,6 +366,7 @@ const AssessmentPlanPage: React.FC = () => {
           {t('plan.newAssessment')}
         </Button>
       </div>
+      )}
     </div>
   );
 };

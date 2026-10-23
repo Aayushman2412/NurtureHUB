@@ -29,6 +29,7 @@ import {
   findQueuedResponseCreate, findQueuedResponseUpdate, isQueuedResult, persistResponseResilient,
 } from '../../offline/submit';
 import { vaultClear, vaultKey, vaultLoad, vaultSave } from '../../offline/answerVault';
+import { afterGrowthCheck, nextInFlow, parseFlow } from '../../lib/careFlow';
 import type { FlatField, FlatSchema, FormDefinition, FormKey } from '../../lib/flowTypes';
 import { isMotherFormKey, OTHER_OPTION_VALUE } from '../../lib/flowTypes';
 import {
@@ -76,6 +77,8 @@ const FlatAssessmentRunnerPage: React.FC = () => {
 
   const resumeIdParam = searchParams.get('responseId');
   const resumeId = resumeIdParam ? Number(resumeIdParam) : null;
+  /** A guided run of forms (lib/careFlow): what comes after this one. */
+  const flow = parseFlow(searchParams.get('flow'));
 
   const historyUrl = motherLevel
     ? `/mothers/${motherId}/assessments/${formKey}`
@@ -369,11 +372,18 @@ const FlatAssessmentRunnerPage: React.FC = () => {
     setSubmitting(true);
     try {
       const saved = await persist('submitted');
-      showToast(
-        isQueuedResult(saved) ? t('runner.submittedOffline', { ns: 'offline' }) : t('growth.submitted'),
-        'success',
+      const queued = isQueuedResult(saved);
+      showToast(queued ? t('runner.submittedOffline', { ns: 'offline' }) : t('growth.submitted'), 'success');
+      // A growth check opens the baby's chart at once (launch review of 19 Oct
+      // 2026); offline there is no new point to show, so the next form of the
+      // visit follows instead. Any other form goes on with the visit.
+      const kid = motherLevel ? null : childId;
+      navigate(
+        formKey === 'growth_monitoring' && !queued ? afterGrowthCheck(childId, flow)
+          : flow && (!queued || flow.rest.length) ? nextInFlow(flow, motherId, kid)
+          : historyUrl,
+        { replace: true },
       );
-      navigate(historyUrl, { replace: true });
     } catch (err) {
       showToast(apiErrorMessage(err) ?? t('growth.saveFailed'), 'error');
     } finally {

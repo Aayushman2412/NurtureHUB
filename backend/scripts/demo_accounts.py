@@ -15,7 +15,15 @@
     python -m scripts.demo_accounts pick       # who would be used (changes nothing)
     python -m scripts.demo_accounts prepare    # asks for a password, sets it on all four
     python -m scripts.demo_accounts relabel    # ordinary-looking IDs on their mothers and babies
+    python -m scripts.demo_accounts monitor    # a batch monitor to sign in as (asks for a password)
     python -m scripts.demo_accounts undo       # puts everything back
+
+`monitor` (launch review of 19 Oct 2026: the monitors' view of whom to call):
+a synthetic Chandrapur batch monitor — the selected account's own monitor
+when she has one, else the one with the biggest team — gets a password, so
+the monitor's first screen can be shown. The monitors themselves come from
+`python -m scripts.chandrapur_demo monitors`. `undo` puts the old password
+back (key "demo.accounts.monitor").
 
 `relabel` (review of 19 Oct 2026: "nowhere should it point that it is
 something used from MASD — at least for these login details"): the synthetic
@@ -50,6 +58,7 @@ from app.flow import is_awaiting_results, selection_state
 MOCK_DOMAIN = "@nurturehub.mock"
 UNDO_KEY = "demo.accounts"
 IDS_KEY = "demo.accounts.ids"
+MONITOR_KEY = "demo.accounts.monitor"
 SYNTHETIC_PREFIX = "MASD-"
 TRAINING_PROJECT = "jalna"        # results not announced: accounts 2
 ADOPTION_PROJECT = "chandrapur"   # results announced: accounts 1, 3, 4
@@ -418,11 +427,73 @@ def prepare(db) -> None:
     relabel(db, users)
 
 
+def _team(db, monitor: models.User) -> List[models.User]:
+    return db.query(models.User).filter(models.User.batch_monitor_id == monitor.id).order_by(models.User.id).all()
+
+
+def pick_monitor(db) -> Optional[models.User]:
+    """The demo batch monitor: the selected demo account's own monitor if she
+    has one, else the synthetic Chandrapur monitor with the biggest team."""
+    from sqlalchemy.orm import aliased
+
+    row = db.get(models.MasdRuleTable, UNDO_KEY)
+    prepared = [db.get(models.User, int(uid)) for uid in ((row.value_json or {}).get("users") or {})] if row else []
+    for u in prepared:
+        if u is not None and u.batch_monitor_id and selection_state(db, u) == "selected":
+            m = db.get(models.User, u.batch_monitor_id)
+            if m is not None and m.email.endswith(MOCK_DOMAIN) and m.phone:
+                return m
+    p = _project(db, ADOPTION_PROJECT)
+    team = aliased(models.User)
+    best = (db.query(models.User, func.count(team.id))
+            .join(team, team.batch_monitor_id == models.User.id)
+            .filter(models.User.is_batch_monitor.is_(True), models.User.program_district_id == p.id,
+                    models.User.email.like(f"%{MOCK_DOMAIN}"), models.User.phone.isnot(None))
+            .group_by(models.User.id).order_by(func.count(team.id).desc(), models.User.id).first())
+    return best[0] if best else None
+
+
+def prepare_monitor(db) -> None:
+    if db.get(models.MasdRuleTable, MONITOR_KEY) is not None:
+        sys.exit("A demo monitor is already set — run `undo` first, then `monitor` again.")
+    m = pick_monitor(db)
+    if m is None:
+        sys.exit("No synthetic batch monitor in Chandrapur — run `python -m scripts.chandrapur_demo monitors` first.")
+    if not m.email.endswith(MOCK_DOMAIN):
+        sys.exit("Refusing: only synthetic (@nurturehub.mock) learners are used.")
+    team = _team(db, m)
+    print(f"Batch monitor: {m.full_name} · mobile {m.phone} · {len(team)} learner(s) in the team")
+    pw = getpass.getpass("Password for the demo monitor (not shown): ")
+    if len(pw) < 8 or pw != getpass.getpass("Again: "):
+        sys.exit("Passwords did not match (or under 8 characters); nothing changed.")
+    db.add(models.MasdRuleTable(key=MONITOR_KEY, value_json={"users": {str(m.id): m.password_hash}},
+                                updated_by="scripts.demo_accounts"))
+    m.password_hash = get_password_hash(pw)
+    db.commit()
+    print(f"Password set. Sign in on the learner page with mobile {m.phone}; the first screen lists whom to call.")
+    relabel(db, [m])
+
+
+def _undo_monitor(db) -> int:
+    row = db.get(models.MasdRuleTable, MONITOR_KEY)
+    if row is None:
+        return 0
+    n = 0
+    for uid, old in ((row.value_json or {}).get("users") or {}).items():
+        u = db.get(models.User, int(uid))
+        if u is not None and u.email.endswith(MOCK_DOMAIN):
+            u.password_hash = old
+            n += 1
+    db.delete(row)
+    return n
+
+
 def undo(db) -> None:
     ids = _restore_ids(db)
-    if ids:
+    monitors = _undo_monitor(db)
+    if ids or monitors:
         db.commit()
-        print(f"Put back {ids} original mother/baby ID(s).")
+        print(f"Put back {ids} original mother/baby ID(s) and {monitors} monitor password(s).")
     row = db.get(models.MasdRuleTable, UNDO_KEY)
     if row is None:
         print("Nothing else to undo.")
@@ -466,7 +537,7 @@ def undo(db) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("action", choices=["pick", "prepare", "relabel", "undo"])
+    ap.add_argument("action", choices=["pick", "prepare", "relabel", "monitor", "undo"])
     a = ap.parse_args()
     db = SessionLocal()
     try:
@@ -476,6 +547,8 @@ def main() -> None:
             prepare(db)
         elif a.action == "relabel":
             relabel(db)
+        elif a.action == "monitor":
+            prepare_monitor(db)
         else:
             undo(db)
     finally:

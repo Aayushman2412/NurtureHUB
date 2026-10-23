@@ -5,6 +5,9 @@ import Sidebar from './Sidebar';
 import MainHeader from './MainHeader';
 import NotificationPanel from './NotificationPanel';
 import PushPromptBanner from './PushPromptBanner';
+import BottomNav from './BottomNav';
+import { hasBottomNav } from '../../lib/bottomNav';
+import { cn } from '../../utils/cn';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -34,6 +37,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const getHeaderTitle = () => {
     const path = location.pathname;
     if (path === '/dashboard') return t('headerTitle.dashboard');
+    if (path.startsWith('/babies')) return t('headerTitle.baby');
     if (path.startsWith('/tutorials')) return t('headerTitle.tutorials');
     if (path.startsWith('/tests')) return t('headerTitle.tutorials');
     if (path.startsWith('/results')) return t('headerTitle.results');
@@ -60,8 +64,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
         {/* overflow-x-CLIP, not hidden: hidden makes <main> a scroll container,
             and then nothing inside it can stick to the top of the screen. */}
-        <main className="flex-1 animate-fade-in overflow-x-clip p-5 sm:p-6">{children}</main>
+        <main className={cn('flex-1 animate-fade-in overflow-x-clip p-5 sm:p-6', hasBottomNav(location.pathname) && 'pb-28 lg:pb-6')}>{children}</main>
       </div>
+
+      <BottomNav />
 
       <NotificationPanel
         isOpen={notifOpen}

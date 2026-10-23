@@ -146,6 +146,35 @@ async def _attempt_finalizer():
             print(f"[attempt_finalizer] error: {exc}")
 
 
+async def _care_sweeper():
+    """Scheduled care reminders (app/care_alerts.py): every 15 minutes on one
+    worker; does nothing unless CARE_REMINDERS_ENABLED and inside a window."""
+    while True:
+        try:
+            await asyncio.sleep(900)
+            if not settings.CARE_REMINDERS_ENABLED:
+                continue
+            if not await manager.try_lead("care_sweeper", ttl_seconds=1800):
+                continue
+            await asyncio.to_thread(_run_care_reminders)
+        except asyncio.CancelledError:
+            break
+        except Exception as exc:  # never let the loop die
+            print(f"[care_sweeper] error: {exc}")
+
+
+def _run_care_reminders() -> None:
+    from app.care_alerts import run_reminders
+
+    db = SessionLocal()
+    try:
+        sent = run_reminders(db)
+        if sent:
+            print(f"[care_sweeper] sent {sent} reminder(s)")
+    finally:
+        db.close()
+
+
 def run_migrations() -> None:
     """Bring the database schema up to date by applying all Alembic migrations.
 
@@ -302,10 +331,13 @@ async def lifespan(app: FastAPI):
     # 5. Score attempts whose time ran out but whose browser never submitted.
     finalizer_task = asyncio.create_task(_attempt_finalizer())
 
+    # 6. Scheduled care reminders — off unless CARE_REMINDERS_ENABLED.
+    care_task = asyncio.create_task(_care_sweeper())
+
     yield
 
     # Cleanup on shutdown
-    for task in (sweeper_task, security_task, finalizer_task):
+    for task in (sweeper_task, security_task, finalizer_task, care_task):
         task.cancel()
         try:
             await task

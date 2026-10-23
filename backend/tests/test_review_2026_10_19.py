@@ -250,7 +250,8 @@ def test_admin_sees_a_learners_recent_activity(db, world):
     kinds = [e["kind"] for e in out["events"]]
     assert sorted(kinds) == ["adoption", "form"]                 # the draft is not activity
     form = next(e for e in out["events"] if e["kind"] == "form")
-    assert form["form_key"] == "breastfeeding" and form["mother"]["name"] == "Pallavi"
+    # Admins see the record ID, not the name (launch review of 19 Oct 2026).
+    assert form["form_key"] == "breastfeeding" and form["mother"]["name"] == "MR-X"
     assert form["child"]["uid"] == "CR-X" and form["assessment_date"] == "2026-10-18"
     assert out["last_active"]
 

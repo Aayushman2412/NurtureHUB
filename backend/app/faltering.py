@@ -10,8 +10,14 @@ for batch monitor 2's." A separate page, one or two clicks to the whole list.
 
 A case is listed when its baby's LATEST measured visit meets any of the
 chosen conditions. The z-score grades are the analysts' (growth.Z_CATEGORY_NAMES:
-moderate below −2, severe below −3); "faltering" is the raw-data files' rule
-(rawdata/gen_masd.py) — the latest weight is lower than the one before it.
+mild below −1, moderate below −2, severe below −3). "Faltering" is relative to
+the VISIT BEFORE (launch review of 19 Oct 2026, Dr Rupal: "catch the faltering
+as it is happening ... from the previous visit to this visit, percentile
+faltering — even 60 to 59 means the baby has not gained"): the weight went
+down, or the weight-for-age percentile fell. One rule, shared with the
+worker's "see within 2 days" prompt (app/fieldplan.baby_status). A single fall
+can be a measurement error — the list shows both percentiles so the monitor
+can look at the visits before acting.
 Real measurements only: the demo layer never reaches this list.
 """
 from __future__ import annotations
@@ -33,7 +39,11 @@ CONDITIONS = [
     ("mam", "Moderate wasting (MAM)", "wfhz", 2),
     ("sst", "Severe stunting", "hfaz", 3),
     ("mst", "Moderate stunting", "hfaz", 2),
-    ("faltering", "Faltering (weight fell since the last visit)", None, None),
+    # Most of the babies sit between −1 and −2 SD; WHO calls it normal, the
+    # programme wants it seen ("it's still mild underweight — bring the baby
+    # as close to the median as possible", 19 Oct 2026).
+    ("mild", "Mild underweight", "wfaz", 1),
+    ("faltering", "Faltering (weight or weight-for-age percentile fell since the last visit)", None, None),
 ]
 CONDITION_KEYS = [c[0] for c in CONDITIONS]
 LABELS = {c[0]: c[1] for c in CONDITIONS}
@@ -43,7 +53,8 @@ def _measured(visits: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return [v for v in visits if v.get("weight")]
 
 
-def _flags(row: Dict[str, Any], case: Dict[str, Any]) -> tuple[List[str], Optional[float]]:
+def _flags(row: Dict[str, Any], case: Dict[str, Any]) -> tuple[List[str], Optional[float], Dict[str, Any]]:
+    from app.fieldplan import baby_status
     from app.routers.growth import Z_CATEGORY_NAMES
 
     flags: List[str] = []
@@ -57,9 +68,12 @@ def _flags(row: Dict[str, Any], case: Dict[str, Any]) -> tuple[List[str], Option
     change = None
     if len(weighed) >= 2:
         change = round((weighed[-1]["weight"] - weighed[-2]["weight"]) * 1000)   # grams
-        if change < 0:
-            flags.append("faltering")
-    return flags, change
+    st = baby_status(case)
+    if {"weight_fell", "not_gaining"} & set(st["reasons"]):
+        flags.append("faltering")
+    pct = {"now": ((st.get("latest") or {}).get("wfa") or {}).get("pct"),
+           "before": (st.get("previous") or {}).get("wfa_pct")}
+    return flags, change, pct
 
 
 def monitor_for(user_id: int, batch_monitor_id: Optional[int], is_batch_monitor: bool) -> Optional[int]:
@@ -113,7 +127,7 @@ def build(db: Session, district_slug: Optional[str]) -> Dict[str, Any]:
         case = by_id.get(row["case_id"])
         if case is None:
             continue
-        flags, change = _flags(row, case)
+        flags, change, pct = _flags(row, case)
         if not flags:
             continue
         ids = row.get("ids") or {}
@@ -142,6 +156,7 @@ def build(db: Session, district_slug: Optional[str]) -> Dict[str, Any]:
             "weight": last["weight"] if last else None,
             "length": last.get("length") if last else None,
             "weight_change_g": change,
+            "wfa_pct": pct["now"], "wfa_pct_before": pct["before"],
             "z": {m: (row["outcomes"].get(m) or {}).get("lv") for m in ("wfaz", "hfaz", "wfhz")},
             "categories": {m: (row["categories"].get(m) or {}).get("lv") for m in ("wfaz", "hfaz", "wfhz")},
         })
@@ -201,6 +216,8 @@ _COLUMNS = [
     ("Days since", lambda r: r["days_since_visit"]),
     ("Weight (kg)", lambda r: r["weight"]),
     ("Weight change (g)", lambda r: r["weight_change_g"]),
+    ("Weight-for-age percentile, visit before", lambda r: r.get("wfa_pct_before")),
+    ("Weight-for-age percentile, last visit", lambda r: r.get("wfa_pct")),
     ("Length (cm)", lambda r: r["length"]),
     ("WAZ", lambda r: r["z"]["wfaz"]),
     ("HAZ", lambda r: r["z"]["hfaz"]),

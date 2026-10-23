@@ -12,7 +12,10 @@ const MyCasePage: React.FC = () => {
   const { childId } = useParams<{ childId: string }>();
   const [params] = useSearchParams();
   const from = params.get('from');
-  const backTo = from === 'dashboard' ? '/dashboard' : from?.startsWith('mother-') ? `/mothers/${from.slice(7)}` : '/growth';
+  const backTo = from === 'dashboard' ? '/dashboard'
+    : from?.startsWith('mother-') ? `/mothers/${from.slice(7)}`
+    : from?.startsWith('baby-') ? `/babies/${from.slice(5)}`
+    : '/growth';
   return <GrowthCaseView childId={Number(childId)} mode="learner" backTo={backTo} />;
 };
 

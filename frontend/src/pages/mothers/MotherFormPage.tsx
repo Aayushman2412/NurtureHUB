@@ -1,10 +1,15 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../context/ToastContext';
+import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import {
-  Button, Card, ComboBox, DateInput, Field, Input, PageHeader, Radio, RatingGrid, SearchableSelect, SelectField, Stepper,
+  Button, Card, ComboBox, DateInput, Field, Input, Radio, RatingGrid, SearchableSelect, SelectField,
 } from '../../components/ui';
+import { useAuth } from '../../context/AuthContext';
+import { formRunUrl } from '../../api/today';
+import { flowString } from '../../lib/careFlow';
+import { cn } from '../../utils/cn';
 import { useMotherMetadata } from '../../hooks/useMotherMetadata';
 import { ageFromDob } from '../../lib/learnerFields';
 import {
@@ -13,12 +18,30 @@ import {
   occupationOptions, rationCardOptions, socialCategoryOptions, videoFrequencyOptions,
   likertQuestions, sourceRows,
 } from '../../lib/motherFields';
-import { validateMother, validateMotherStep, MR_STEP_FIELDS, type MotherFormValues } from '../../lib/motherSchema';
-import type { FieldErrors } from '../../lib/validation';
+import { validateMother, type MotherFormValues } from '../../lib/motherSchema';
+import { pickErrors, type FieldErrors } from '../../lib/validation';
 import { type MotherPayload } from '../../api/mothers';
 import { createMotherResilient, isQueuedResult } from '../../offline/submit';
 
-const STEP_KEYS = ['identity', 'location', 'knowledge'] as const;
+/**
+ * Small pages, one topic each, with "Continue" (launch review of 19 Oct 2026:
+ * "it should be small pages and continue, continue"; no section names, as
+ * little to read as possible). The fields each page validates — together
+ * every field of the registration (lib/motherSchema MR_STEP_FIELDS).
+ */
+const PAGES: readonly (readonly string[])[] = [
+  ['declared_adoption_type'],
+  ['mother_name', 'mobile', 'alternate_mobile', 'email'],
+  ['mother_dob', 'mother_age', 'adoption_date'],
+  ['weight', 'height'],
+  ['lmp', 'edd_records'],
+  ['state_id', 'district_id', 'taluk_id', 'village', 'hwc_id', 'hwc_other', 'phc_id'],
+  ['education_id', 'education_field_id', 'education_degree_id', 'occupation', 'occupation_other'],
+  ['ration_card', 'ration_card_other', 'social_category'],
+  ['nutrition_course', 'nutrition_course_name', 'video_frequency'],
+  ['implement_video', 'confidence_video', 'willingness_hcw', 'information_seeking'],
+  ['source_ratings'],
+];
 
 const ReadOnly: React.FC<{ label: string; value: string; hint: string; error?: string }> = ({ label, value, hint, error }) => (
   <Field label={label} error={error}>
@@ -28,16 +51,11 @@ const ReadOnly: React.FC<{ label: string; value: string; hint: string; error?: s
   </Field>
 );
 
-const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="mb-4 border-b-2 border-coral-100 pb-2 text-[13px] font-bold uppercase tracking-wider
-                  text-primary-ink dark:border-coral-950">{children}</div>
-);
-
 const MotherFormPage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation('mother');
   const { showToast, updateToast } = useToast();
-  const steps = STEP_KEYS.map(k => t(`form.steps.${k}`));
+  const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -56,11 +74,13 @@ const MotherFormPage: React.FC = () => {
   const [alternateMobile, setAlternateMobile] = useState('');
   const [email, setEmail] = useState('');
 
-  // Step 2 — location & background
-  const [stateId, setStateId] = useState<number | ''>('');
-  const [districtId, setDistrictId] = useState<number | ''>('');
-  const [talukId, setTalukId] = useState<number | ''>('');
-  const [village, setVillage] = useState('');
+  // Location & background. The place starts as the worker's own (her
+  // profile): the mothers she adopts live where she works — one less page to
+  // fill, and she can still change it.
+  const [stateId, setStateId] = useState<number | ''>(user?.state_id ?? '');
+  const [districtId, setDistrictId] = useState<number | ''>(user?.district_id ?? '');
+  const [talukId, setTalukId] = useState<number | ''>(user?.block_id ?? '');
+  const [village, setVillage] = useState(user?.village?.name ?? user?.village_name ?? '');
   const [hwcId, setHwcId] = useState<number | ''>('');
   const [hwcOther, setHwcOther] = useState('');
   const [educationId, setEducationId] = useState<number | ''>('');
@@ -167,10 +187,13 @@ const MotherFormPage: React.FC = () => {
   const liveErrors = useMemo(() => validateMother(values), [values]);
   const shown = (k: string): string | undefined => (touched[k] || errors[k] ? liveErrors[k] : undefined);
 
+  // Each page opens at the top of the screen.
+  useEffect(() => { window.scrollTo({ top: 0 }); }, [step]);
+
   const next = () => {
-    const stepErrs = validateMotherStep(values, step);
+    const stepErrs = pickErrors(validateMother(values), PAGES[step]);
     setErrors(stepErrs);
-    if (!Object.keys(stepErrs).length) setStep(s => Math.min(s + 1, STEP_KEYS.length - 1));
+    if (!Object.keys(stepErrs).length) setStep(s => Math.min(s + 1, PAGES.length - 1));
   };
   const back = () => { setErrors({}); setStep(s => Math.max(s - 1, 0)); };
 
@@ -206,7 +229,7 @@ const MotherFormPage: React.FC = () => {
     const allErrs = validateMother(values);
     if (Object.keys(allErrs).length) {
       setErrors(allErrs);
-      const firstStep = MR_STEP_FIELDS.findIndex(keys => keys.some(k => allErrs[k]));
+      const firstStep = PAGES.findIndex(keys => keys.some(k => allErrs[k]));
       if (firstStep >= 0) setStep(firstStep);
       return;
     }
@@ -218,10 +241,16 @@ const MotherFormPage: React.FC = () => {
       if (isQueuedResult(created)) {
         // Captured offline — it will register itself when connectivity returns.
         updateToast(toastId, t('registrationQueued', { ns: 'offline' }), 'success');
+        navigate('/mothers');
       } else {
         updateToast(toastId, t('form.toastSuccess', { name: created.mother_name, uid: created.mother_uid }), 'success');
+        // Registration is not complete without the protein-intake form, and a
+        // delivered mother's baby comes next (launch review of 19 Oct 2026:
+        // "once they register the mother the protein form will come
+        // automatically").
+        const delivered = declaredType === 'pnc_lt5' || declaredType === 'pnc_ge5';
+        navigate(formRunUrl('protein', created.id, null, flowString('reg', delivered ? ['baby'] : [])), { replace: true });
       }
-      navigate('/mothers');
     } catch {
       updateToast(toastId, t('form.toastFail'), 'error');
     } finally {
@@ -229,224 +258,270 @@ const MotherFormPage: React.FC = () => {
     }
   };
 
-  const isLast = step === STEP_KEYS.length - 1;
+  const isLast = step === PAGES.length - 1;
   const today = todayIso();
+  const delivered = declaredType === 'pnc_lt5' || declaredType === 'pnc_ge5';
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <PageHeader title={t('form.title')} description={t('form.description')} />
-      <Card className="p-5 sm:p-8">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-7" noValidate>
-          <Stepper steps={steps} current={step} />
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
+      {/* Where she is: a thin bar and "3 of 11" — no section names. */}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => (step > 0 ? back() : navigate(-1))}
+          disabled={loading}
+          aria-label={t('form.back')}
+          className="flex size-11 shrink-0 items-center justify-center rounded-full text-ink-muted hover:bg-surface-sunken hover:text-ink"
+        >
+          <ArrowLeft className="size-5" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-lg font-bold text-ink">{t('form.title')}</p>
+          <div className="mt-1 flex items-center gap-2">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-sunken">
+              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${((step + 1) / PAGES.length) * 100}%` }} />
+            </div>
+            <span className="shrink-0 text-xs font-semibold tabular-nums text-ink-muted">{t('form.pageOf', { n: step + 1, of: PAGES.length })}</span>
+          </div>
+        </div>
+      </div>
 
+      <Card className="p-5 sm:p-7">
+        <form onSubmit={e => { if (isLast) void handleSubmit(e); else { e.preventDefault(); next(); } }} className="flex flex-col gap-6" noValidate>
           {step === 0 && (
-            <div>
-              <SectionTitle>{t('form.sectionIdentity')}</SectionTitle>
-              <div className="flex flex-col gap-4">
-                <Field label={t('form.adoptionType')} error={shown('declared_adoption_type')}>
-                  <div role="radiogroup" className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    {ADOPTION_TYPES.map(k => (
-                      <Radio key={k} name="declared_adoption_type" value={k} checked={declaredType === k}
-                        label={t(`form.adoptionTypes.${k}`)}
-                        onChange={() => { setDeclaredType(k); touch('declared_adoption_type'); }} />
-                    ))}
-                  </div>
-                  <p className="mt-1.5 text-xs text-ink-muted">{t('form.adoptionTypeHint')}</p>
-                </Field>
-                <Field label={t('form.motherName')} error={shown('mother_name')}>
-                  <Input value={motherName} error={!!shown('mother_name')}
-                    onBlur={() => touch('mother_name')}
-                    onChange={e => setMotherName(e.target.value)} />
-                </Field>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <Field label={t('form.dob')} error={shown('mother_dob')}>
-                    <DateInput value={motherDob} max={isoYearsAgo(10)}
-                      error={!!shown('mother_dob')} onBlur={() => touch('mother_dob')}
-                      onChange={v => setMotherDob(v)} />
-                  </Field>
-                  <Field label={t('form.adoptionDate')} error={shown('adoption_date')}>
-                    <DateInput value={adoptionDate} min={isoDaysAgo(MAX_ADOPTION_AGE_DAYS)} max={today}
-                      error={!!shown('adoption_date')} onBlur={() => touch('adoption_date')}
-                      onChange={v => setAdoptionDate(v)} />
-                  </Field>
-                  <ReadOnly label={t('form.age')} value={motherAge === '' ? '' : t('form.ageValue', { n: motherAge })} hint={t('form.ageHint')} />
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label={t('form.weight')} error={shown('weight')}>
-                    <Input type="number" step={0.1} value={weight} error={!!shown('weight')}
-                      onBlur={() => touch('weight')}
-                      onChange={e => setWeight(e.target.value ? Number(e.target.value) : '')} />
-                  </Field>
-                  <Field label={t('form.height')} error={shown('height')}>
-                    <Input type="number" step={0.1} value={height} error={!!shown('height')}
-                      onBlur={() => touch('height')}
-                      onChange={e => setHeight(e.target.value ? Number(e.target.value) : '')} />
-                  </Field>
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label={declaredType && declaredType !== 'anc' ? t('form.lmpOptional') : t('form.lmp')} error={shown('lmp')}>
-                    <DateInput value={lmp} min={motherDob || undefined} max={adoptionDate || today}
-                      error={!!shown('lmp')} onBlur={() => touch('lmp')}
-                      onChange={v => setLmp(v)} />
-                  </Field>
+            <Field label={t('form.adoptionType')} error={shown('declared_adoption_type')}>
+              <div role="radiogroup" className="mt-1 flex flex-col gap-2.5">
+                {ADOPTION_TYPES.map(k => (
+                  <label
+                    key={k}
+                    className={cn(
+                      'flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 px-4 py-3 text-base font-semibold transition-colors',
+                      declaredType === k ? 'border-primary bg-coral-50 text-ink dark:bg-coral-500/10' : 'border-border text-ink hover:border-border-strong',
+                    )}
+                  >
+                    <input type="radio" name="declared_adoption_type" value={k} checked={declaredType === k} className="sr-only"
+                      onChange={() => { setDeclaredType(k); touch('declared_adoption_type'); }} />
+                    <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-full border-2',
+                      declaredType === k ? 'border-primary bg-primary text-white' : 'border-ink-faint')}>
+                      {declaredType === k && <Check className="size-4" />}
+                    </span>
+                    {t(`form.adoptionTypes.${k}`)}
+                  </label>
+                ))}
+              </div>
+            </Field>
+          )}
+
+          {step === 1 && (
+            <>
+              <Field label={t('form.motherName')} error={shown('mother_name')}>
+                <Input value={motherName} error={!!shown('mother_name')}
+                  onBlur={() => touch('mother_name')}
+                  onChange={e => setMotherName(e.target.value)} />
+              </Field>
+              <Field label={t('form.mobile')} error={shown('mobile')}>
+                <Input type="tel" inputMode="numeric" placeholder={t('form.mobilePlaceholder')} value={mobile} error={!!shown('mobile')}
+                  onBlur={() => touch('mobile')}
+                  onChange={e => setMobile(e.target.value)} />
+              </Field>
+              <Field label={t('form.alternateMobile')} error={shown('alternate_mobile')}>
+                <Input type="tel" inputMode="numeric" value={alternateMobile} error={!!shown('alternate_mobile')}
+                  onBlur={() => touch('alternate_mobile')}
+                  onChange={e => setAlternateMobile(e.target.value)} />
+              </Field>
+              <Field label={t('form.email')} error={shown('email')}>
+                <Input type="email" value={email} error={!!shown('email')}
+                  onBlur={() => touch('email')}
+                  onChange={e => setEmail(e.target.value)} />
+              </Field>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <Field label={t('form.dob')} error={shown('mother_dob')}>
+                <DateInput value={motherDob} max={isoYearsAgo(10)}
+                  error={!!shown('mother_dob')} onBlur={() => touch('mother_dob')}
+                  onChange={v => setMotherDob(v)} />
+              </Field>
+              <ReadOnly label={t('form.age')} value={motherAge === '' ? '' : t('form.ageValue', { n: motherAge })} hint={t('form.ageHint')} />
+              <Field label={t('form.adoptionDate')} error={shown('adoption_date')}>
+                <DateInput value={adoptionDate} min={isoDaysAgo(MAX_ADOPTION_AGE_DAYS)} max={today}
+                  error={!!shown('adoption_date')} onBlur={() => touch('adoption_date')}
+                  onChange={v => setAdoptionDate(v)} />
+              </Field>
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <Field label={t('form.weight')} error={shown('weight')}>
+                <Input type="number" inputMode="decimal" step={0.1} value={weight} error={!!shown('weight')}
+                  onBlur={() => touch('weight')}
+                  onChange={e => setWeight(e.target.value ? Number(e.target.value) : '')} />
+              </Field>
+              <Field label={t('form.height')} error={shown('height')}>
+                <Input type="number" inputMode="decimal" step={0.1} value={height} error={!!shown('height')}
+                  onBlur={() => touch('height')}
+                  onChange={e => setHeight(e.target.value ? Number(e.target.value) : '')} />
+              </Field>
+            </>
+          )}
+
+          {step === 4 && (
+            <>
+              <Field label={delivered ? t('form.lmpOptional') : t('form.lmp')} error={shown('lmp')}>
+                <DateInput value={lmp} min={motherDob || undefined} max={adoptionDate || today}
+                  error={!!shown('lmp')} onBlur={() => touch('lmp')}
+                  onChange={v => setLmp(v)} />
+              </Field>
+              {!delivered && (
+                <>
                   <ReadOnly label={t('form.eddLmp')} value={eddLmp} hint={derivedHint || t('form.eddLmpHint')} />
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {/* The 12-week rule is an LMP-vs-adoption rule, so its error lives on
                       `lmp` — but repeat it here, on the number it is actually about. */}
                   <ReadOnly label={t('form.gestationalAge')}
                     value={gest ? t('form.gestationalValue', { weeks: gest.weeks, days: gest.days }) : ''}
                     hint={derivedHint || t('form.gestationalHint')}
                     error={lmpTooRecent ? shown('lmp') : undefined} />
-                  <Field label={t('form.eddRecords')} error={shown('edd_records')}>
-                    <DateInput value={eddRecords} error={!!shown('edd_records')}
-                      onBlur={() => touch('edd_records')}
-                      onChange={v => setEddRecords(v)} />
-                  </Field>
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <Field label={t('form.mobile')} error={shown('mobile')}>
-                    <Input type="tel" inputMode="numeric" placeholder={t('form.mobilePlaceholder')} value={mobile} error={!!shown('mobile')}
-                      onBlur={() => touch('mobile')}
-                      onChange={e => setMobile(e.target.value)} />
-                  </Field>
-                  <Field label={t('form.alternateMobile')} error={shown('alternate_mobile')}>
-                    <Input type="tel" inputMode="numeric" value={alternateMobile} error={!!shown('alternate_mobile')}
-                      onBlur={() => touch('alternate_mobile')}
-                      onChange={e => setAlternateMobile(e.target.value)} />
-                  </Field>
-                  <Field label={t('form.email')} error={shown('email')}>
-                    <Input type="email" value={email} error={!!shown('email')}
-                      onBlur={() => touch('email')}
-                      onChange={e => setEmail(e.target.value)} />
-                  </Field>
-                </div>
-              </div>
-            </div>
+                </>
+              )}
+              <Field label={t('form.eddRecords')} error={shown('edd_records')}>
+                <DateInput value={eddRecords} error={!!shown('edd_records')}
+                  onBlur={() => touch('edd_records')}
+                  onChange={v => setEddRecords(v)} />
+              </Field>
+            </>
           )}
 
-          {step === 1 && (
-            <div>
-              <SectionTitle>{t('form.sectionLocation')}</SectionTitle>
-              <div className="flex flex-col gap-4">
-                <SelectField label={t('form.state')} value={stateId} onChange={onState} error={shown('state_id')}
-                  placeholder={t('form.placeholders.selectState')} options={meta.states.map(s => ({ value: s.id, label: s.name }))} />
-                <SelectField label={t('form.district')} value={districtId} onChange={onDistrict} error={shown('district_id')}
-                  placeholder={t('form.placeholders.selectDistrict')} disabled={!stateId}
-                  options={meta.districts.map(d => ({ value: d.id, label: d.name }))} />
-                <SelectField label={t('form.taluk')} value={talukId} onChange={onTaluk} error={shown('taluk_id')}
-                  placeholder={t('form.placeholders.selectTaluk')} disabled={!districtId}
-                  options={meta.taluks.map(tk => ({ value: tk.id, label: tk.name }))} />
-                <ComboBox label={t('form.village')} value={village} error={shown('village')}
-                  onValueChange={txt => { setVillage(txt); touch('village'); }}
-                  onPick={o => { setVillage(o.label); touch('village'); }}
-                  placeholder={t('form.placeholders.village')} disabled={!talukId}
-                  options={meta.villages.map(v => ({ value: v.id, label: v.name }))} />
-                <SearchableSelect label={t('form.hwc')} value={hwcId} onChange={onHwc}
-                  error={shown('hwc_id')} placeholder={t('form.placeholders.searchHwc')} disabled={!talukId}
-                  options={[...meta.hwcs.map(h => ({ value: h.id, label: h.name })), { value: HWC_OTHER, label: t('form.otherSpecify') }]} />
-                {showHwcOther && (
-                  <Field label={t('form.hwcOther')} error={shown('hwc_other')}>
-                    <Input value={hwcOther} error={!!shown('hwc_other')}
-                      onBlur={() => touch('hwc_other')}
-                      onChange={e => setHwcOther(e.target.value)} />
-                  </Field>
-                )}
-                {!showHwcOther && (
-                  <ReadOnly label={t('form.phc')} value={meta.phc?.name ?? ''} hint={t('form.phcHint')} error={shown('phc_id')} />
-                )}
-                <SelectField label={t('form.education')} value={educationId} onChange={onEducation} error={shown('education_id')}
-                  placeholder={t('form.placeholders.selectEducation')} options={meta.educationLevels.map(l => ({ value: l.id, label: l.name }))} />
-                {showEducationField && (
-                  <>
-                    <SelectField label={t('form.educationField')} value={educationFieldId} onChange={onEducationField}
-                      error={shown('education_field_id')} placeholder={t('form.placeholders.selectField')}
-                      options={meta.educationFields.map(f => ({ value: f.id, label: f.name }))} />
-                    <SearchableSelect label={t('form.degree')} value={educationDegreeId}
-                      onChange={v => { setEducationDegreeId(v ? Number(v) : ''); touch('education_degree_id'); }}
-                      error={shown('education_degree_id')} placeholder={t('form.placeholders.searchDegree')} disabled={!educationFieldId}
-                      options={meta.educationDegrees.map(d => ({ value: d.id, label: d.name }))} />
-                  </>
-                )}
-                <SelectField label={t('form.occupation')} value={occupation}
-                  onChange={v => { setOccupation(v); touch('occupation'); untouch('occupation_other'); }} error={shown('occupation')}
-                  placeholder={t('form.placeholders.selectOccupation')} options={occupationOptions(t)} />
-                {showOccupationOther && (
-                  <Field label={t('form.occupationOther')} error={shown('occupation_other')}>
-                    <Input value={occupationOther} error={!!shown('occupation_other')}
-                      onBlur={() => touch('occupation_other')}
-                      onChange={e => setOccupationOther(e.target.value)} />
-                  </Field>
-                )}
-                <SelectField label={t('form.rationCard')} value={rationCard}
-                  onChange={v => { setRationCard(v); touch('ration_card'); untouch('ration_card_other'); }} error={shown('ration_card')}
-                  placeholder={t('form.placeholders.selectRationCard')} options={rationCardOptions(t)} />
-                {showRationCardOther && (
-                  <Field label={t('form.rationCardOther')} error={shown('ration_card_other')}>
-                    <Input value={rationCardOther} error={!!shown('ration_card_other')}
-                      onBlur={() => touch('ration_card_other')}
-                      onChange={e => setRationCardOther(e.target.value)} />
-                  </Field>
-                )}
-                <SelectField label={t('form.socialCategory')} value={socialCategory}
-                  onChange={v => { setSocialCategory(v); touch('social_category'); }} error={shown('social_category')}
-                  placeholder={t('form.placeholders.selectSocialCategory')} options={socialCategoryOptions(t)} />
-              </div>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div>
-              <SectionTitle>{t('form.sectionKnowledge')}</SectionTitle>
-              <div className="flex flex-col gap-4">
-                <Field label={t('form.nutritionCourse')} error={shown('nutrition_course')}>
-                  <div className="mt-1 flex gap-4">
-                    {[['Yes', t('options.yes')], ['No', t('options.no')]].map(([val, lbl]) => (
-                      <Radio key={val} name="nutrition_course" value={val} checked={nutritionCourse === val}
-                        onChange={e => { setNutritionCourse(e.target.value); touch('nutrition_course'); }} label={lbl} />
-                    ))}
-                  </div>
+          {step === 5 && (
+            <>
+              <SelectField label={t('form.state')} value={stateId} onChange={onState} error={shown('state_id')}
+                placeholder={t('form.placeholders.selectState')} options={meta.states.map(s => ({ value: s.id, label: s.name }))} />
+              <SelectField label={t('form.district')} value={districtId} onChange={onDistrict} error={shown('district_id')}
+                placeholder={t('form.placeholders.selectDistrict')} disabled={!stateId}
+                options={meta.districts.map(d => ({ value: d.id, label: d.name }))} />
+              <SelectField label={t('form.taluk')} value={talukId} onChange={onTaluk} error={shown('taluk_id')}
+                placeholder={t('form.placeholders.selectTaluk')} disabled={!districtId}
+                options={meta.taluks.map(tk => ({ value: tk.id, label: tk.name }))} />
+              <ComboBox label={t('form.village')} value={village} error={shown('village')}
+                onValueChange={txt => { setVillage(txt); touch('village'); }}
+                onPick={o => { setVillage(o.label); touch('village'); }}
+                placeholder={t('form.placeholders.village')} disabled={!talukId}
+                options={meta.villages.map(v => ({ value: v.id, label: v.name }))} />
+              <SearchableSelect label={t('form.hwc')} value={hwcId} onChange={onHwc}
+                error={shown('hwc_id')} placeholder={t('form.placeholders.searchHwc')} disabled={!talukId}
+                options={[...meta.hwcs.map(h => ({ value: h.id, label: h.name })), { value: HWC_OTHER, label: t('form.otherSpecify') }]} />
+              {showHwcOther && (
+                <Field label={t('form.hwcOther')} error={shown('hwc_other')}>
+                  <Input value={hwcOther} error={!!shown('hwc_other')}
+                    onBlur={() => touch('hwc_other')}
+                    onChange={e => setHwcOther(e.target.value)} />
                 </Field>
-                {showNutritionCourseName && (
-                  <Field label={t('form.nutritionCourseName')} error={shown('nutrition_course_name')}>
-                    <Input value={nutritionCourseName} error={!!shown('nutrition_course_name')}
-                      onBlur={() => touch('nutrition_course_name')}
-                      onChange={e => setNutritionCourseName(e.target.value)} />
-                  </Field>
-                )}
-                <SelectField label={t('form.videoFrequency')} value={videoFrequency}
-                  onChange={v => { setVideoFrequency(v); touch('video_frequency'); }} error={shown('video_frequency')}
-                  placeholder={t('form.placeholders.selectFrequency')} options={videoFrequencyOptions(t)} />
-
-                {likertQuestions(t).map(q => (
-                  <SelectField key={q.key} label={q.label} value={likert[q.key] ?? ''}
-                    onChange={v => { setLikert(prev => ({ ...prev, [q.key]: v })); touch(q.key); }}
-                    error={shown(q.key)} placeholder={t('form.placeholders.selectOne')} options={q.options} />
-                ))}
-
-                <Field label={t('form.ratingsQuestion')} error={shown('source_ratings')}>
-                  <RatingGrid rowHeader={t('form.ratingGrid.rowHeader')} rows={sourceRows(t)}
-                    columns={[{ key: 'trust', label: t('form.ratingGrid.trust') }, { key: 'willingness', label: t('form.ratingGrid.willingness') }]}
-                    value={ratings}
-                    onChange={(row, col, n) => {
-                      setRatings(prev => ({ ...prev, [row]: { ...prev[row], [col]: n } }));
-                      touch('source_ratings');
-                    }} />
-                </Field>
-              </div>
-            </div>
+              )}
+              {!showHwcOther && (
+                <ReadOnly label={t('form.phc')} value={meta.phc?.name ?? ''} hint={t('form.phcHint')} error={shown('phc_id')} />
+              )}
+            </>
           )}
 
-          <div className="flex items-center gap-3 border-t border-border pt-5">
-            <Button type="button" variant="ghost" onClick={() => navigate('/mothers')} disabled={loading}>{t('form.cancel')}</Button>
-            {step > 0 && <Button type="button" variant="secondary" onClick={back} disabled={loading}>{t('form.back')}</Button>}
+          {step === 6 && (
+            <>
+              <SelectField label={t('form.education')} value={educationId} onChange={onEducation} error={shown('education_id')}
+                placeholder={t('form.placeholders.selectEducation')} options={meta.educationLevels.map(l => ({ value: l.id, label: l.name }))} />
+              {showEducationField && (
+                <>
+                  <SelectField label={t('form.educationField')} value={educationFieldId} onChange={onEducationField}
+                    error={shown('education_field_id')} placeholder={t('form.placeholders.selectField')}
+                    options={meta.educationFields.map(f => ({ value: f.id, label: f.name }))} />
+                  <SearchableSelect label={t('form.degree')} value={educationDegreeId}
+                    onChange={v => { setEducationDegreeId(v ? Number(v) : ''); touch('education_degree_id'); }}
+                    error={shown('education_degree_id')} placeholder={t('form.placeholders.searchDegree')} disabled={!educationFieldId}
+                    options={meta.educationDegrees.map(d => ({ value: d.id, label: d.name }))} />
+                </>
+              )}
+              <SelectField label={t('form.occupation')} value={occupation}
+                onChange={v => { setOccupation(v); touch('occupation'); untouch('occupation_other'); }} error={shown('occupation')}
+                placeholder={t('form.placeholders.selectOccupation')} options={occupationOptions(t)} />
+              {showOccupationOther && (
+                <Field label={t('form.occupationOther')} error={shown('occupation_other')}>
+                  <Input value={occupationOther} error={!!shown('occupation_other')}
+                    onBlur={() => touch('occupation_other')}
+                    onChange={e => setOccupationOther(e.target.value)} />
+                </Field>
+              )}
+            </>
+          )}
+
+          {step === 7 && (
+            <>
+              <SelectField label={t('form.rationCard')} value={rationCard}
+                onChange={v => { setRationCard(v); touch('ration_card'); untouch('ration_card_other'); }} error={shown('ration_card')}
+                placeholder={t('form.placeholders.selectRationCard')} options={rationCardOptions(t)} />
+              {showRationCardOther && (
+                <Field label={t('form.rationCardOther')} error={shown('ration_card_other')}>
+                  <Input value={rationCardOther} error={!!shown('ration_card_other')}
+                    onBlur={() => touch('ration_card_other')}
+                    onChange={e => setRationCardOther(e.target.value)} />
+                </Field>
+              )}
+              <SelectField label={t('form.socialCategory')} value={socialCategory}
+                onChange={v => { setSocialCategory(v); touch('social_category'); }} error={shown('social_category')}
+                placeholder={t('form.placeholders.selectSocialCategory')} options={socialCategoryOptions(t)} />
+            </>
+          )}
+
+          {step === 8 && (
+            <>
+              <Field label={t('form.nutritionCourse')} error={shown('nutrition_course')}>
+                <div className="mt-1 grid grid-cols-2 gap-3">
+                  {[['Yes', t('options.yes')], ['No', t('options.no')]].map(([val, lbl]) => (
+                    <Radio key={val} name="nutrition_course" value={val} checked={nutritionCourse === val}
+                      onChange={e => { setNutritionCourse(e.target.value); touch('nutrition_course'); }} label={lbl} />
+                  ))}
+                </div>
+              </Field>
+              {showNutritionCourseName && (
+                <Field label={t('form.nutritionCourseName')} error={shown('nutrition_course_name')}>
+                  <Input value={nutritionCourseName} error={!!shown('nutrition_course_name')}
+                    onBlur={() => touch('nutrition_course_name')}
+                    onChange={e => setNutritionCourseName(e.target.value)} />
+                </Field>
+              )}
+              <SelectField label={t('form.videoFrequency')} value={videoFrequency}
+                onChange={v => { setVideoFrequency(v); touch('video_frequency'); }} error={shown('video_frequency')}
+                placeholder={t('form.placeholders.selectFrequency')} options={videoFrequencyOptions(t)} />
+            </>
+          )}
+
+          {step === 9 && likertQuestions(t).map(q => (
+            <SelectField key={q.key} label={q.label} value={likert[q.key] ?? ''}
+              onChange={v => { setLikert(prev => ({ ...prev, [q.key]: v })); touch(q.key); }}
+              error={shown(q.key)} placeholder={t('form.placeholders.selectOne')} options={q.options} />
+          ))}
+
+          {step === 10 && (
+            <Field label={t('form.ratingsQuestion')} error={shown('source_ratings')}>
+              <RatingGrid rowHeader={t('form.ratingGrid.rowHeader')} rows={sourceRows(t)}
+                columns={[{ key: 'trust', label: t('form.ratingGrid.trust') }, { key: 'willingness', label: t('form.ratingGrid.willingness') }]}
+                value={ratings}
+                onChange={(row, col, n) => {
+                  setRatings(prev => ({ ...prev, [row]: { ...prev[row], [col]: n } }));
+                  touch('source_ratings');
+                }} />
+            </Field>
+          )}
+
+          <div className="flex flex-col gap-2 border-t border-border pt-5">
             {!isLast ? (
-              <Button type="button" onClick={next} className="ml-auto">{t('form.continue')}</Button>
+              <Button type="submit" size="lg" fullWidth iconRight={<ArrowRight className="size-5" />}>{t('form.continue')}</Button>
             ) : (
-              <Button type="submit" size="lg" loading={loading} className="ml-auto">
-                {loading ? t('form.registering') : t('form.register')}
+              <Button type="submit" size="lg" fullWidth loading={loading}>
+                {loading ? t('form.registering') : t('form.saveAndContinue')}
               </Button>
             )}
+            {isLast && <p className="text-center text-xs text-ink-muted">{t('form.proteinNext')}</p>}
+            <Button type="button" variant="ghost" onClick={() => navigate('/mothers')} disabled={loading}>{t('form.cancel')}</Button>
           </div>
         </form>
       </Card>

@@ -38,6 +38,7 @@ from app.config import settings
 from app.dependencies import get_verified_user, get_current_admin, require_phi_access
 from app.rate_limit import limiter, principal_key
 from app.security import phi
+from app.security import pseudonym
 from app.routers.forms import PROTEIN_HIGH_TOTAL_G, _serialize_detail
 from app.who_growth import percentile_curves, zscore_for_value
 
@@ -947,6 +948,10 @@ def my_case_detail(
     rows = _summary_rows(cases, _rules_context(db, cases), allow_mock=False)
     detail["summary"] = rows[0] if rows else None
     detail["who_case"] = cases[0] if cases else None
+    # The baby page reads the latest check in words and colour (launch review
+    # of 19 Oct 2026): percentiles, a traffic light and what to do.
+    from app.fieldplan import baby_status
+    detail["status"] = baby_status(cases[0]) if cases else None
     return detail
 
 
@@ -1024,7 +1029,7 @@ def admin_growth_monitor(
             },
         },
     )
-    return {"cases": cases}
+    return {"cases": pseudonym.cases(cases)}
 
 
 @admin_router.get("/summary")
@@ -1056,7 +1061,7 @@ def admin_growth_summary(
                 "fields": ["mother_name", "mother_uid", "child_uid", "child_name", "case_village",
                            "case_block", "case_district", "case_hwc", "case_phc", "learner_mobile"]},
     )
-    return {"rows": rows, "mock": bool(gsm.MOCK_ENABLED)}
+    return {"rows": pseudonym.summary_rows(rows), "mock": bool(gsm.MOCK_ENABLED)}
 
 
 @admin_router.get("/alerts")
@@ -1095,7 +1100,7 @@ def admin_growth_alerts(
             "response_id": r.id,
             "assessment_date": r.assessment_date.isoformat() if r.assessment_date else None,
             "mother_id": r.mother_id,
-            "mother_name": mother.mother_name if mother else None,
+            "mother_name": (mother.mother_name if pseudonym.names_shown() else mother.mother_uid) if mother else None,
             "learner_name": (learner.full_name or learner.email) if learner else None,
             "total24": protein.get("total24"),
         })
@@ -1142,7 +1147,7 @@ def admin_growth_summary_export(
         department=department or None, learner_category=learner_category or None, learner_id=learner_id,
         learner_ids=_parse_learner_ids(learner_ids),
     )
-    rows = _summary_rows(cases, _rules_context(db, cases))
+    rows = pseudonym.summary_rows(_summary_rows(cases, _rules_context(db, cases)))
     buffer = _summary_xlsx(rows)
     # Written synchronously: at this moment the data leaves the platform's
     # custody, and under the MOU custody is what responsibility follows. The
@@ -1187,7 +1192,7 @@ def _faltering_rows(db: Session, district: str, conditions: str, monitor: str, b
         monitor_id=int(monitor) if monitor.isdigit() else None, no_monitor=monitor == "none",
         batch=batch or None, block=block or None, cadre=cadre or None, department=department or None,
         learner_id=learner_id)
-    return built, rows, chosen
+    return built, [pseudonym.falter_row(r) for r in rows], chosen
 
 
 _FALTER_FIELDS = ["mother_name", "mother_uid", "child_name", "child_uid", "case_village", "learner_mobile"]
@@ -1239,7 +1244,7 @@ def admin_learner_activity(
 
     def mother_of(mid):
         m = mothers.get(mid)
-        return {"id": m.id, "name": m.mother_name, "uid": m.mother_uid} if m else None
+        return pseudonym.person({"id": m.id, "name": m.mother_name, "uid": m.mother_uid}) if m else None
 
     for r in responses:
         child = children.get(r.child_id) if r.child_id else None
@@ -1247,7 +1252,7 @@ def admin_learner_activity(
             "kind": "form", "at": _iso_utc(r.updated_at or r.created_at),
             "form_key": r.form_key, "assessment_date": r.assessment_date.isoformat() if r.assessment_date else None,
             "mother": mother_of(r.mother_id or (child.mother_id if child else None)),
-            "child": {"id": child.id, "name": child.child_name, "uid": child.child_uid} if child else None,
+            "child": pseudonym.person({"id": child.id, "name": child.child_name, "uid": child.child_uid}) if child else None,
         })
     for m in adopted:
         events.append({"kind": "adoption", "at": _iso_utc(m.created_at), "mother": mother_of(m.id),
@@ -1498,8 +1503,9 @@ def admin_growth_case_detail(
         detail={"mother_id": child.mother_id, "scope": "supervisory_drilldown"},
     )
 
-    return _case_detail(db, child, mother, learner,
-                        department=gsm.resolved_department(learner.id, learner.department) if learner else None)  # MOCK: department fill
+    return pseudonym.case_detail(_case_detail(
+        db, child, mother, learner,
+        department=gsm.resolved_department(learner.id, learner.department) if learner else None))  # MOCK: department fill
 
 
 @admin_router.get("/responses/{response_id}")
@@ -1518,4 +1524,4 @@ def admin_response_detail(
     child = db.query(models.Child).filter(models.Child.id == response.child_id).first()
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
-    return _serialize_detail(response, child)
+    return pseudonym.response_detail(_serialize_detail(response, child), child.child_uid, None)

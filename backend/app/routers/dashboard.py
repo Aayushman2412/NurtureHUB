@@ -1,3 +1,4 @@
+from collections import defaultdict
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
@@ -260,6 +261,25 @@ def my_work(due_days: int = 7, current_user: User = Depends(get_verified_user), 
     return {"available": True, "project": {"name": project.name, "slug": project.slug}, **view}
 
 
+@router.get("/today", dependencies=[Depends(require_phi_access)])
+def today(current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
+    """The health worker's home: what to do today, this week, what to finish,
+    and her mothers and babies with a status in words (launch review of 19
+    Oct 2026). Only her own cases — see app/fieldplan.py."""
+    from app.fieldplan import today_view
+    from app.security import phi
+
+    view = today_view(db, current_user)
+    ids = [c["mother_id"] for c in view["cases"]]
+    if ids:
+        phi.log_list(
+            resource_type="mother", count=len(ids), subject_type=phi.MOTHER, subject_ids=ids,
+            detail={"scope": "own_cases", "view": "today",
+                    "fields": ["mother_name", "mother_uid", "child_name", "child_uid", "weight", "length"]},
+        )
+    return view
+
+
 @router.get("/my-team")
 def my_team(current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
     """A batch monitor's learners and how each is doing (review of 6 Oct and
@@ -274,6 +294,30 @@ def my_team(current_user: User = Depends(get_verified_user), db: Session = Depen
     if not ids or project is None:
         return {"learners": []}
     data = D.load(db, project, only_learners=ids, with_growth=False)
-    rows = E.team_view(data, date.today(), ids)
-    rows.sort(key=lambda r: (r["forms_pct"] if r["forms_pct"] is not None else -1, r["name"] or ""))
+    today_d = date.today()
+    rows = E.team_view(data, today_d, ids)
+    # Who needs hand-holding now (launch review of 19 Oct 2026: "when monitors
+    # log in they should get all the information — who are the learners who
+    # need hand-holding right away"): visits late or due today, and babies to
+    # be seen within 2 days. Counts only — the monitor calls the learner.
+    from app.fieldplan import baby_status
+    from app.routers.growth import _build_cases
+
+    urgent = defaultdict(int)
+    for case in _build_cases(db, learner_ids=ids):
+        if baby_status(case).get("see_within_days"):
+            urgent[case["learner"]["id"]] += 1
+    # The monitor's job here is to ring the learner ("kindly give a call"), so
+    # the learner's own number comes with the row — her colleague's, not a
+    # mother's: no patient identifier is in this view.
+    phones = {uid: phone for uid, phone in db.query(User.id, User.phone).filter(User.id.in_(ids))}
+    for r in rows:
+        r["phone"] = phones.get(r["id"])
+        plan = E.field_plan(data, today_d, r["id"], 0)
+        r["late_visits"] = sum(1 for items in plan.values() if any(i["late_days"] > 0 for i in items))
+        r["due_today"] = sum(1 for items in plan.values() if items)
+        r["urgent_babies"] = urgent.get(r["id"], 0)
+        r["needs_call"] = bool(r["urgent_babies"] or r["late_visits"] or (r["nil_days"] or 0) > 7)
+    rows.sort(key=lambda r: (not r["needs_call"], -r["urgent_babies"], -r["late_visits"],
+                             r["forms_pct"] if r["forms_pct"] is not None else -1, r["name"] or ""))
     return {"learners": rows}

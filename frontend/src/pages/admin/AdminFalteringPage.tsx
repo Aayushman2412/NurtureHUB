@@ -211,6 +211,14 @@ const AdminFalteringPage: React.FC = () => {
                       <span className={cn('block text-xs', r.weight_change_g < 0 ? 'font-semibold text-coral-700 dark:text-coral-300' : 'text-ink-muted')}>
                         {r.weight_change_g > 0 ? '+' : ''}{r.weight_change_g} g
                       </span>
+                    )}
+                    {/* Weight-for-age percentile, the visit before → now: a
+                        fall is faltering even when the weight rose a little. */}
+                    {r.wfa_pct != null && (
+                      <span className={cn('block text-xs', r.wfa_pct_before != null && r.wfa_pct < r.wfa_pct_before ? 'font-semibold text-coral-700 dark:text-coral-300' : 'text-ink-muted')}
+                        title={t('faltering.pctTitle')}>
+                        {r.wfa_pct_before != null ? `${t('faltering.pct', { n: r.wfa_pct_before })} → ${t('faltering.pct', { n: r.wfa_pct })}` : t('faltering.pct', { n: r.wfa_pct })}
+                      </span>
                     )}</td>
                   <td className={cn('text-center tabular-nums', zTone(r.z.wfaz))}>{fmtZ(r.z.wfaz)}</td>
                   <td className={cn('text-center tabular-nums', zTone(r.z.hfaz))}>{fmtZ(r.z.hfaz)}</td>

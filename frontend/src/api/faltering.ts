@@ -3,7 +3,7 @@ import { triggerBlobDownload } from './pipelines';
 
 /** Faltering cases for the supervisors (review of 18 Oct 2026) — backend
  *  app/faltering.py, GET /api/admin/growth/faltering. */
-export type FalterCondition = 'suw' | 'muw' | 'sam' | 'mam' | 'sst' | 'mst' | 'faltering';
+export type FalterCondition = 'suw' | 'muw' | 'sam' | 'mam' | 'sst' | 'mst' | 'mild' | 'faltering';
 
 export interface FalterRow {
   case_id: number;
@@ -22,6 +22,9 @@ export interface FalterRow {
   weight: number | null;
   length: number | null;
   weight_change_g: number | null;
+  /** Weight-for-age percentile at the last visit and the visit before. */
+  wfa_pct?: number | null;
+  wfa_pct_before?: number | null;
   z: { wfaz: number | null; hfaz: number | null; wfhz: number | null };
   categories: { wfaz: string | null; hfaz: string | null; wfhz: string | null };
 }

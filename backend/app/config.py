@@ -323,6 +323,19 @@ class Settings(BaseSettings):
     # cohorts and every label follow (served at /api/metadata/programme).
     PNC_SPLIT_DAYS: int = Field(default=150, ge=30, le=365, validation_alias="PNC_SPLIT_DAYS")
 
+    # Scheduled care reminders (launch review of 19 Oct 2026, app/care_alerts.py):
+    # the day's visits each morning, the evening "not done yet", and a call
+    # request to the batch monitor when visits stay late. Off until the
+    # programme switches it on — it messages every adopting worker. The
+    # "see this baby within 2 days" prompt after a growth check is always on.
+    CARE_REMINDERS_ENABLED: bool = Field(default=False, validation_alias="CARE_REMINDERS_ENABLED")
+    CARE_ESCALATE_AFTER_DAYS: int = Field(default=3, ge=1, le=30, validation_alias="CARE_ESCALATE_AFTER_DAYS")
+
+    # Administrators see a mother's and a baby's record ID (MR-…, CR-…) in
+    # place of their names, and not the mother's mobile (launch review of 19 Oct
+    # 2026 — app/security/pseudonym.py). True restores the names.
+    ADMIN_PATIENT_NAMES: bool = Field(default=False, validation_alias="ADMIN_PATIENT_NAMES")
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

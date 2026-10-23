@@ -27,10 +27,7 @@ import {
 import { Badge, Button, Card, PageLoader, ProgressBar, ProgressRing, WelcomeBanner } from '../components/ui';
 import SupportTeamCard from '../components/SupportTeamCard';
 import TrainingRings from '../components/dashboard/TrainingRings';
-import MyWorkCard from '../components/dashboard/MyWorkCard';
-import MyProgressChart from '../components/dashboard/MyProgressChart';
-import MyTeamCard from '../components/dashboard/MyTeamCard';
-import { getMyWork, type MyWork } from '../api/myWork';
+import FieldHome from '../components/field/FieldHome';
 import { getTopicReport, type TestTopicReport } from '../api/results';
 import TestTopicsCard from '../components/tests/TestTopicsCard';
 import { cn } from '../utils/cn';
@@ -238,9 +235,6 @@ type DashView = 'training' | 'adoptions';
 const DashboardPage: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  // The learner's own adoptions and forms (review of 17 Oct 2026); optional —
-  // the dashboard renders without it.
-  const [work, setWork] = useState<MyWork | null>(null);
   const [reports, setReports] = useState<TestTopicReport[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -262,7 +256,6 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     loadDashboard();
-    getMyWork().then(setWork).catch(() => { /* optional card */ });
     getTopicReport().then(setReports).catch(() => { /* optional card */ });
   }, []);
 
@@ -278,6 +271,11 @@ const DashboardPage: React.FC = () => {
   const asked = searchParams.get('view');
   const view: DashView = adoptionsOpen && asked !== 'training' ? 'adoptions' : 'training';
   const setView = (v: DashView) => setSearchParams(v === (adoptionsOpen ? 'adoptions' : 'training') ? {} : { view: v }, { replace: true });
+
+  // Once adoptions start the worker lands on what to do today, nothing else
+  // (launch review of 19 Oct 2026: "land them where the work is"). Training
+  // and test results stay one tap away.
+  if (view === 'adoptions') return <FieldHome />;
 
   return (
     <div className="flex flex-col gap-6">
@@ -364,16 +362,6 @@ const DashboardPage: React.FC = () => {
         </div>
       )}
 
-      {view === 'adoptions' ? (
-        <>
-          {/* My mothers and babies: adoptions, forms, what is due next. */}
-          {work?.available ? <MyWorkCard work={work} /> : (
-            <Card className="p-4 text-sm text-ink-muted sm:p-6">{t('modes.noWork')}</Card>
-          )}
-          {work?.available && work.cumulative && <MyProgressChart series={work.cumulative} />}
-          {user?.is_batch_monitor && <MyTeamCard />}
-        </>
-      ) : (
       <>
       {/* Selected: the training is behind her, and her work is in Adoptions. */}
       {state === 'selected' && (
@@ -669,7 +657,6 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
       </>
-      )}
 
       <SupportTeamCard />
     </div>

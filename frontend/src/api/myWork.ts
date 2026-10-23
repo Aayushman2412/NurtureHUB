@@ -76,6 +76,14 @@ export interface MyTeamRow {
   forms_pct: number | null;
   nil_days: number | null;
   last_activity: string | null;
+  /** Launch review of 19 Oct 2026: whom to call first. Mothers / babies with a
+   *  late visit, with forms due today, babies to be seen within 2 days. */
+  late_visits?: number;
+  due_today?: number;
+  urgent_babies?: number;
+  needs_call?: boolean;
+  /** The learner's own number, so the monitor can ring her. */
+  phone?: string | null;
 }
 
 export const getMyWork = (dueDays = 7): Promise<MyWork> =>

@@ -977,6 +977,15 @@ def get_response(
     return _serialize_detail(response, child, mother)
 
 
+def _care_prompt(db: Session, child_id: int, user: models.User) -> None:
+    """A growth check just came in: "see this baby within 2 days" when the
+    weight fell or stopped rising (launch review of 19 Oct 2026). Separate
+    transaction, after the submission is safe; never fails it."""
+    from app.care_alerts import on_growth_check
+
+    on_growth_check(db, child_id, user)
+
+
 @router.put("/responses/{response_id}")
 def update_response(
     response_id: int,
@@ -1025,6 +1034,8 @@ def update_response(
 
     db.commit()
     db.refresh(response)
+    if new_status == "submitted" and not was_submitted and response.form_key == GROWTH_FORM_KEY and response.child_id:
+        _care_prompt(db, response.child_id, current_user)
     subject_type, subject_id = _subject_of(response)
     phi.log_update(
         resource_type="form_response",
@@ -1195,6 +1206,8 @@ def create_response(
 
     db.commit()
     db.refresh(response)
+    if data.status == "submitted" and form_key == GROWTH_FORM_KEY and response.child_id:
+        _care_prompt(db, response.child_id, current_user)
     subject_type, subject_id = _subject_of(response)
     phi.log_create(
         resource_type="form_response",

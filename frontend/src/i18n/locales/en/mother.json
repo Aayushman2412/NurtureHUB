@@ -157,11 +157,14 @@
     "adoptionType": "This adoption is",
     "adoptionTypeHint": "Choose what the mother is on the day you adopt her. NurtureHUB also works it out from the dates you enter; if the two differ, it is flagged for you and your batch monitor to check.",
     "adoptionTypes": {
-      "anc": "Pregnant (ANC)",
-      "pnc_lt5": "Delivered — baby under 5 months (PNC <5M)",
-      "pnc_ge5": "Delivered — baby 5 months or older (PNC ≥5M)"
+      "anc": "Pregnant",
+      "pnc_lt5": "Delivered: baby under {{pncM}} months",
+      "pnc_ge5": "Delivered: baby {{pncM}} months or older"
     },
-    "lmpOptional": "Last menstrual period (LMP) — optional after delivery"
+    "lmpOptional": "Last menstrual period (LMP) — optional after delivery",
+    "pageOf": "{{n}} of {{of}}",
+    "saveAndContinue": "Save and continue",
+    "proteinNext": "Next comes her protein form. Registration is finished after it."
   },
   "child": {
     "titleNew": "Register a Child",

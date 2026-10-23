@@ -1,5 +1,6 @@
 import client from './client';
 import type { FormResponseDetail } from '../lib/flowTypes';
+import type { BabyStatus } from './today';
 
 /** One x-point of a WHO percentile table (x = age in days, or length in cm). */
 export interface GrowthStandardPoint {
@@ -276,6 +277,8 @@ export const getGrowthCaseDetail = (childId: number): Promise<GrowthCaseDetail> 
 export interface MyGrowthCaseDetail extends GrowthCaseDetail {
   summary: GrowthSummaryRow | null;
   who_case: GrowthCase | null;
+  /** The latest check as the worker reads it (backend app/fieldplan.baby_status). */
+  status?: BabyStatus | null;
 }
 
 export const getMyGrowthCaseDetail = (childId: number): Promise<MyGrowthCaseDetail> =>

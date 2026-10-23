@@ -19,7 +19,9 @@ const navItems = [
   { to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
   { to: '/tutorials', labelKey: 'nav.tutorials', icon: Video, also: ['/tests', '/results'] },
   { to: '/mothers', labelKey: 'nav.mothers', icon: Users, also: ['/assessments'], needsSelection: true },
-  { to: '/growth', labelKey: 'nav.growth', icon: Activity, needsSelection: true },
+  // The all-cases Growth Monitor is monitoring material: batch monitors only
+  // (launch review of 19 Oct 2026). A worker opens one baby at a time.
+  { to: '/growth', labelKey: 'nav.growth', icon: Activity, needsSelection: true, monitorsOnly: true },
   { to: '/profile', labelKey: 'nav.profile', icon: User },
 ];
 
@@ -58,7 +60,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
           {/* Nav */}
           <nav className="flex flex-col gap-1 p-3">
-            {navItems.map(item => item.needsSelection && !user?.adoptions_open ? (
+            {navItems.filter(item => !item.monitorsOnly || user?.is_batch_monitor).map(item => item.needsSelection && !user?.adoptions_open ? (
               // Locked until she is selected for face-to-face training.
               <div
                 key={item.to}
