@@ -53,7 +53,9 @@
     "facilityTypePlaceholder": "Type the name of your facility",
     "contactEmail": "Email address (optional)",
     "contactEmailPlaceholder": "you@example.com",
-    "contactEmailHint": "Not needed to start. If you add one, we will send a code to confirm it — you can do that later."
+    "contactEmailHint": "Not needed to start. If you add one, we will send a code to confirm it — you can do that later.",
+    "taluka": "Taluka",
+    "selectTalukaFirst": "Choose the taluka first"
   },
   "placeholders": {
     "selectMarital": "Select marital status",

@@ -29,6 +29,7 @@ from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app import models
@@ -39,6 +40,10 @@ SEE_WITHIN_DAYS = 2
 WEEK_DAYS = 7
 
 GREEN, YELLOW, RED, NONE = "green", "yellow", "red", "none"
+# The order a visit's forms are filled in: weigh and measure first, then
+# breastfeeding, then complementary feeding (review of 30 Oct 2026).
+FORM_ORDER = ("gm", "bf", "cf", "anc", "protein")
+DRAFTS_SHOWN = 10
 _RANK = {NONE: 0, GREEN: 1, YELLOW: 2, RED: 3}
 
 # Activity key -> (form key, whose form it is)
@@ -167,6 +172,41 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
         models.FormResponse.form_key == "mother_protein_intake",
         models.FormResponse.status == "submitted")} if mothers else set()
 
+    # What each baby already had today, and the drafts waiting (review of 30
+    # Oct 2026): coming back to a baby must not start the growth check again —
+    # "I should get the complementary feeding form or the breastfeeding form,
+    # whichever is pending" — and "a partially filled visit … kindly fill it up"
+    # comes on top, with any draft.
+    code_of = {form_key: code for code, (form_key, _who) in FORMS.items()}
+    child_by_id = {c.id: c for kids in children.values() for c in kids}
+    mother_by_id = {m.id: m for m in mothers}
+    done_today: Dict[int, set] = defaultdict(set)
+    if child_by_id:
+        for child_id, form_key in db.query(models.FormResponse.child_id, models.FormResponse.form_key).filter(
+                models.FormResponse.child_id.in_(list(child_by_id)),
+                models.FormResponse.status == "submitted",
+                models.FormResponse.assessment_date == as_of):
+            if form_key in code_of:
+                done_today[child_id].add(code_of[form_key])
+    drafts: List[Dict[str, Any]] = []
+    if mothers:
+        owned = [models.FormResponse.mother_id.in_(list(mother_by_id))]
+        if child_by_id:
+            owned.append(models.FormResponse.child_id.in_(list(child_by_id)))
+        for r in (db.query(models.FormResponse)
+                  .filter(models.FormResponse.status == "draft",
+                          models.FormResponse.form_key.in_(list(code_of)), or_(*owned))
+                  .order_by(models.FormResponse.id.desc()).limit(DRAFTS_SHOWN)):
+            kid = child_by_id.get(r.child_id) if r.child_id else None
+            mom = mother_by_id.get(kid.mother_id if kid else r.mother_id)
+            if mom is None:
+                continue
+            drafts.append({"response_id": r.id, "form": code_of[r.form_key],
+                           "mother_id": mom.id, "mother_name": mom.mother_name,
+                           "child_id": kid.id if kid else None, "child_name": kid.child_name if kid else None,
+                           "saved_on": r.assessment_date.isoformat()})
+    unfinished: List[Dict[str, Any]] = []
+
     def person(m: models.Mother, key: str) -> Optional[models.Child]:
         return children[m.id][0] if FORMS[key][1] == "child" and children[m.id] else None
 
@@ -184,16 +224,29 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
             st = babies.get(k.id) or {"status": NONE, "reasons": ["no_growth_check"], "latest": None}
             kid_rows.append({"id": k.id, "name": k.child_name, "uid": k.child_uid, "gender": k.gender,
                              "age_days": _age_days(k.dob, as_of), **st})
-            if st.get("see_within_days"):
+            had = done_today.get(k.id, set())
+            pending = [f for f in _baby_forms(_age_days(k.dob, as_of)) if f not in had]
+            if had and pending:
+                # Today's visit begun but not finished: carry on from here.
+                unfinished.append({"mother_id": m.id, "mother_name": m.mother_name, "child_id": k.id,
+                                   "child_name": k.child_name,
+                                   "done": [f for f in FORM_ORDER if f in had], "pending": pending})
+            elif st.get("see_within_days") and not had:
+                # Seen today already: not "see soon" again until tomorrow.
                 urgent.append({"mother_id": m.id, "mother_name": m.mother_name, "child_id": k.id,
                                "child_name": k.child_name, "status": st["status"], "reasons": st["reasons"],
                                "see_within_days": st["see_within_days"],
-                               "forms": _baby_forms(_age_days(k.dob, as_of)),
+                               "forms": pending,
                                "last_check": (st.get("latest") or {}).get("date")})
 
         # Registration not finished: no protein form, or a birth with no baby yet.
         delivered = mtype in ("pnc_lt5", "pnc_ge5", "sn") or bool(kids)
-        if m.id not in protein_done:
+        # A mother whose baby was adopted at the split age or older: the visits
+        # are about the child, not her protein intake (review of 30 Oct 2026:
+        # "this is not a priority for a mother who has a five month or older
+        # baby — neglect protein count form for that, focus only on the child").
+        protein_asked = mtype != "pnc_ge5"
+        if protein_asked and m.id not in protein_done:
             finish.append({"mother_id": m.id, "mother_name": m.mother_name, "missing": "protein",
                            "then": ["baby"] if delivered and not kids else []})
         elif delivered and not kids:
@@ -202,6 +255,8 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
         # Forms due today or late, and the coming week — grouped by person.
         groups: Dict[tuple, Dict[str, Any]] = {}
         for item in plan.get(m.id, []):
+            if item["key"] == "protein" and not protein_asked:
+                continue
             due = date.fromisoformat(item["due_on"])
             kid = person(m, item["key"])
             if FORMS[item["key"]][1] == "child" and kid is None:
@@ -262,6 +317,8 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
         "as_of": as_of.isoformat(),
         "project": {"name": project.name, "slug": project.slug} if project is not None else None,
         "urgent": urgent,
+        "unfinished": unfinished,
+        "drafts": drafts,
         "today": today,
         "finish": finish,
         "targets": targets,

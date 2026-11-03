@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Baby, ChevronDown, ChevronRight, CircleCheck, CloudUpload, FileText, History, Plus } from 'lucide-react';
+import { Baby, CalendarDays, ChevronDown, ChevronRight, CircleCheck, CloudUpload, FileText, History, Pencil, Plus } from 'lucide-react';
 import { buttonClasses, Card, PageHeader, PageLoader } from '../../components/ui';
 import LearnerMotherCard from '../../components/mothers/LearnerMotherCard';
 import VisitRow from '../../components/field/VisitRow';
@@ -10,6 +10,7 @@ import { getMother, type Mother } from '../../api/mothers';
 import { listChildren, type ChildListItem } from '../../api/children';
 import { formRunUrl, getToday, type CaseRow, type TodayView } from '../../api/today';
 import { flowString } from '../../lib/careFlow';
+import { formNames, shortDay, visitUrl } from '../../components/field/fieldText';
 import { TONE_CLASSES } from '../../lib/babyStatus';
 import { usePendingSync } from '../../offline/usePendingSync';
 import { SYNC_DONE_EVENT } from '../../offline/sync';
@@ -67,6 +68,20 @@ const MotherDetailPage: React.FC = () => {
 
   const row: CaseRow | undefined = today?.cases.find(c => c.mother_id === motherId);
   const now = today?.today.filter(g => g.mother_id === motherId) ?? [];
+  // Her own forms here; each baby's visit sits on the baby's row (review of
+  // 30 Oct 2026: "baby of Priyanka two times it has been repeated here").
+  const motherNow = now.filter(g => g.child_id == null);
+  const babyNow = (childId: number) => now.find(g => g.child_id === childId);
+  // Days from today to a date (negative = past).
+  const daysTo = (ymd: string) => {
+    const [y, m, d] = ymd.split('-').map(Number);
+    const to = new Date(y, m - 1, d);
+    const from = new Date();
+    from.setHours(0, 0, 0, 0);
+    return Math.round((to.getTime() - from.getTime()) / 86_400_000);
+  };
+  const nextDue = row?.next ?? null;
+  const nextIn = nextDue ? daysTo(nextDue.due_on) : null;
   const finish = today?.finish.find(f => f.mother_id === motherId);
   const statusOf = (childId: number) => row?.children.find(k => k.id === childId)?.status ?? 'none';
   const pregnant = children.length === 0 && (row?.type ?? 'anc') === 'anc';
@@ -78,6 +93,11 @@ const MotherDetailPage: React.FC = () => {
         description={[row?.type && row.type !== 'unknown' ? tf(`field.type.${row.type}`) : null, mother.village, mother.mother_uid]
           .filter(Boolean).join(' · ')}
         backTo="/mothers"
+        actions={(
+          <Link to={`/mothers/${motherId}/edit`} className={buttonClasses('outline', 'sm')}>
+            <Pencil className="size-4" />{tf('field.mother.edit')}
+          </Link>
+        )}
       />
 
       {params.get('done') === '1' && (
@@ -94,7 +114,34 @@ const MotherDetailPage: React.FC = () => {
       )}
 
       {/* What to do now */}
-      {(finish || now.length > 0) && (
+      {/* Her visits at a glance (review of 30 Oct 2026: adoption date, visit
+          one, the next visit with "2 days to go" — blinking when it is today
+          or tomorrow). */}
+      {mother.adoption_date && (
+        <Card className="p-4">
+          <h2 className="mb-2 flex items-center gap-2 font-display text-base font-bold text-ink">
+            <CalendarDays className="size-5 text-primary-ink" />{tf('field.mother.visits')}
+          </h2>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+            <dt className="text-ink-muted">{tf('field.mother.adopted')}</dt>
+            <dd className="font-semibold text-ink">{shortDay(mother.adoption_date)}</dd>
+            <dt className="text-ink-muted">{tf('field.mother.firstVisit')}</dt>
+            <dd className="font-semibold text-ink">{shortDay(mother.adoption_date)}</dd>
+            {nextDue && nextIn != null && (
+              <>
+                <dt className="text-ink-muted">{tf('field.mother.nextVisit')}</dt>
+                <dd className={cn('font-semibold', nextIn <= 1 ? 'animate-pulse text-error-600 dark:text-error-400' : 'text-ink')}>
+                  {shortDay(nextDue.due_on)} · {nextIn < 0 ? tf('field.late')
+                    : nextIn === 0 ? tf('field.dueToday') : tf('field.mother.daysToGo', { count: nextIn })}
+                  <span className="block text-xs font-normal text-ink-muted">{formNames(nextDue.forms, tf)}</span>
+                </dd>
+              </>
+            )}
+          </dl>
+        </Card>
+      )}
+
+      {(finish || motherNow.length > 0) && (
         <section className="flex flex-col gap-2.5">
           <h2 className="font-display text-lg font-bold text-ink">{tf('field.mother.doNow')}</h2>
           {finish && (
@@ -108,7 +155,7 @@ const MotherDetailPage: React.FC = () => {
               <ChevronRight className="size-5 shrink-0 text-ink-muted" />
             </Link>
           )}
-          {now.map(g => <VisitRow key={`${g.child_id ?? 'm'}`} g={g} />)}
+          {motherNow.map(g => <VisitRow key="m" g={g} />)}
         </section>
       )}
 
@@ -126,8 +173,10 @@ const MotherDetailPage: React.FC = () => {
         ))}
         {children.map(c => {
           const st = statusOf(c.id);
+          const visit = babyNow(c.id);
           return (
-            <Link key={c.id} to={`/babies/${c.id}`} className="flex min-h-16 items-center gap-3 rounded-xl border border-border bg-surface p-3.5 shadow-(--shadow-card) hover:border-border-strong">
+            <div key={c.id} className="flex min-h-16 items-center gap-3 rounded-xl border border-border bg-surface p-3.5 shadow-(--shadow-card)">
+            <Link to={`/babies/${c.id}`} className="flex min-w-0 flex-1 items-center gap-3">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-coral-50 text-primary-ink dark:bg-coral-500/10">
                 <Baby className="size-5" />
               </span>
@@ -136,9 +185,19 @@ const MotherDetailPage: React.FC = () => {
                 <span className={cn('flex items-center gap-1.5 text-sm font-semibold', TONE_CLASSES[st].text)}>
                   <span className={cn('size-2.5 rounded-full', TONE_CLASSES[st].dot)} aria-hidden />{tf(`field.short.${st}`)}
                 </span>
+                {visit && (
+                  <span className="block text-xs text-ink-muted">
+                    {formNames(visit.forms.map(f => f.key), tf)} · {visit.late_days > 0 ? tf('field.late') : tf('field.dueToday')}
+                  </span>
+                )}
               </span>
-              <ChevronRight className="size-5 shrink-0 text-ink-faint" />
             </Link>
+            {visit ? (
+              <Link to={visitUrl(motherId, c.id, visit.forms.map(f => f.key))} className={buttonClasses('primary', 'sm', 'shrink-0')}>
+                {tf('field.start')}<ChevronRight className="size-4" />
+              </Link>
+            ) : <ChevronRight className="size-5 shrink-0 text-ink-faint" />}
+            </div>
           );
         })}
         <Link to={`/mothers/${motherId}/children/new`} className={buttonClasses('outline', 'md', 'w-full min-h-12')}>

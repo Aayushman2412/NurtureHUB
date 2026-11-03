@@ -33,6 +33,11 @@ interface GrowthChartProps {
   series: GrowthSeries[];
   /** Name each case at the end of its line (several cases on one chart). */
   labelSeries?: boolean;
+  /** Shorter drawing and tighter card, so two charts fit one phone screen
+   *  (review of 30 Oct 2026: "minimalistic space on the top and bottom so
+   *  someone will be capable of seeing both weight-for-age and length-for-age
+   *  in the same window"). */
+  compact?: boolean;
   /** Text under each dot, and the dot's colour — the health worker's chart
    *  shows the percentile in the traffic-light colour (launch review of 19 Oct
    *  2026: "the percentile written below each dot"). */
@@ -54,9 +59,9 @@ interface Layout {
  * fixed 760-unit drawing shrank them to 5px there (review of 19 Oct 2026: "I
  * am not able to read what it is"). Wide screens keep the 760-unit drawing.
  */
-const layoutFor = (px: number): Layout => {
+const layoutFor = (px: number, compact = false): Layout => {
   const VIEW_W = Math.round(Math.min(760, Math.max(360, px * 1.25)));
-  const VIEW_H = Math.round(VIEW_W * (VIEW_W < 560 ? 0.82 : 0.63));
+  const VIEW_H = Math.round(VIEW_W * (compact ? 0.58 : VIEW_W < 560 ? 0.82 : 0.63));
   const M = { top: 18, right: 46, bottom: 46, left: 52 };
   return { VIEW_W, VIEW_H, M, PLOT_W: VIEW_W - M.left - M.right, PLOT_H: VIEW_H - M.top - M.bottom };
 };
@@ -97,6 +102,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
   xKind,
   series,
   labelSeries = false,
+  compact = false,
   pointLabel,
   onPointClick,
 }) => {
@@ -119,7 +125,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const small = useMemo(() => layoutFor(boxWidth), [boxWidth]);
+  const small = useMemo(() => layoutFor(boxWidth, compact), [boxWidth, compact]);
 
   useEffect(() => {
     if (!expanded) return;
@@ -190,6 +196,20 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
     const every = Math.max(1, Math.ceil(30 / gap));
     const keep = new Set(labelled.filter((_, i) => i % every === 0).map(tk => tk.value));
     const cid = `${clipId}${idSuffix}`;
+    // Percentile labels stay ~30 units apart, newest first, so close visits do
+    // not print over each other (review of 30 Oct 2026); the latest always shows.
+    const labelledPoints = new Map<number, Set<number>>();
+    if (pointLabel) {
+      for (const s of visibleSeries) {
+        const keep = new Set<number>();
+        let lastX = Infinity;
+        for (let i = s.points.length - 1; i >= 0; i -= 1) {
+          const x = sx(s.points[i].x);
+          if (lastX - x >= 30 && pointLabel(s.points[i])) { keep.add(i); lastX = x; }
+        }
+        labelledPoints.set(s.caseId, keep);
+      }
+    }
     return (
       <div className="relative">
         <svg
@@ -342,7 +362,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
                     }
                     onClick={() => p.visit && onPointClick?.(p)}
                   />
-                  {label && (
+                  {label && labelledPoints.get(s.caseId)?.has(i) && (
                     <text
                       x={sx(p.x)}
                       y={sy(p.y) + 22}
@@ -465,8 +485,8 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
   };
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-4 shadow-(--shadow-card)">
-      <div className="mb-2 flex items-start justify-between gap-2">
+    <div className={cn('rounded-xl border border-border bg-surface shadow-(--shadow-card)', compact ? 'px-2.5 pb-1.5 pt-2' : 'p-4')}>
+      <div className={cn('flex items-start justify-between gap-2', compact ? 'mb-0' : 'mb-2')}>
         <div>
           <h3 className="font-display text-sm font-bold text-ink">{title}</h3>
           {subtitle && <p className="text-xs text-ink-muted">{subtitle}</p>}

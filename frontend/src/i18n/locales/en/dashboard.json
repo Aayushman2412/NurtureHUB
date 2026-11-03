@@ -61,7 +61,8 @@
     "inProgress": "In Progress",
     "tutorialsCompleted": "Tutorials Completed: {{completed}} of {{total}}",
     "resume": "Resume Videos",
-    "start": "Start Watching"
+    "start": "Start Watching",
+    "quizzesAnswered": "Quizzes answered: {{done}} of {{total}}"
   },
   "badges": {
     "title": "Earned Badges",
@@ -248,16 +249,27 @@
       "edit": "Change the baby's details",
       "savedTitle": "Growth check saved",
       "ok": "OK",
-      "visitDone": "Visit done. Thank you!"
+      "visitDone": "Visit done. Thank you!",
+      "leaveTitle": "This visit is not finished",
+      "leaveBody": "Only the growth check is filled for this visit. Fill {{forms}} now to complete it?",
+      "later": "Later",
+      "fillNow": "Fill now"
     },
     "mother": {
       "doNow": "Do now",
       "babies": "Babies",
-      "forms": "Her forms",
+      "forms": "Mother's forms",
       "pastProtein": "Past protein forms",
       "pastAnc": "Past pregnancy checks",
       "moreDetails": "Show her details",
-      "lessDetails": "Hide her details"
+      "lessDetails": "Hide her details",
+      "edit": "Edit details",
+      "visits": "Visit dates",
+      "adopted": "Adopted on",
+      "firstVisit": "First visit",
+      "nextVisit": "Next visit",
+      "daysToGo_one": "{{count}} day to go",
+      "daysToGo_other": "{{count}} days to go"
     },
     "boy": "Boy",
     "girl": "Girl",
@@ -273,17 +285,17 @@
       "bf": "Breastfeeding",
       "cf": "Complementary feeding",
       "anc": "Pregnancy check",
-      "protein": "Protein form"
+      "protein": "Protein form (mother)"
     },
     "urgent": {
       "title": "See these babies soon",
-      "see_one": "See {{name}} within {{count}} day",
-      "see_other": "See {{name}} within {{count}} days",
+      "see_one": "See {{name}} at the earliest — within {{count}} day",
+      "see_other": "See {{name}} at the earliest — within {{count}} days",
       "open": "Open",
       "start": "Start visit"
     },
     "reason": {
-      "weight_fell": "Weight went down since the last visit",
+      "weight_fell": "Weight reduced since the last visit",
       "not_gaining": "Not gaining enough weight",
       "low_wfa": "Weight is low for age",
       "low_lfa": "Length is low for age",
@@ -405,6 +417,21 @@
       "yellow": "Watch",
       "red": "Needs care",
       "none": "Not checked"
+    },
+    "unfinished": {
+      "title": "Finish these first",
+      "done": "Done: {{forms}}",
+      "left": "Still to fill: {{forms}}",
+      "continue": "Continue",
+      "draft": "Draft — {{form}}, saved {{date}}"
     }
+  },
+  "progressInfo": {
+    "how": "How is this counted?",
+    "title": "How your progress is counted",
+    "intro": "Videos count for 60 points and the tests you pass for 40 points.",
+    "videos": "Videos finished: {{done}} of {{total}}",
+    "tests": "Tests passed: {{done}} of {{total}}",
+    "total": "Overall progress"
   }
 }

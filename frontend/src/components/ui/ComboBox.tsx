@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown, Check } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { Field } from './Field';
@@ -21,18 +22,25 @@ export interface ComboBoxProps {
   placeholder: string;
   disabled?: boolean;
   error?: string;
+  /** Fired when the text box loses focus (e.g. to check the answer at once). */
+  onBlur?: () => void;
 }
 
 /**
  * An editable combobox: type freely OR pick from a filtered dropdown. Unlike
  * SearchableSelect (which forces a selection), a typed value that matches no option
  * is kept as-is — used for the LR village field, where the master list may be
- * incomplete so learners can enter a village by name.
+ * incomplete so learners can enter a village by name. With no options at all it
+ * is a plain text box — no arrow promising a list that isn't there (review of
+ * 29 Oct 2026: "why am I having a drop-down symbol here, when it is clearly an
+ * open typable type of question?").
  */
 const ComboBox: React.FC<ComboBoxProps> = ({
-  label, value, onValueChange, onPick, options, placeholder, disabled = false, error,
+  label, value, onValueChange, onPick, options, placeholder, disabled = false, error, onBlur,
 }) => {
+  const { t } = useTranslation('common');
   const [open, setOpen] = useState(false);
+  const hasList = options.length > 0;
   const [active, setActive] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -73,16 +81,19 @@ const ComboBox: React.FC<ComboBoxProps> = ({
             placeholder={placeholder}
             onChange={e => { onValueChange(e.target.value); setOpen(true); setActive(0); }}
             onFocus={() => setOpen(true)}
+            onBlur={onBlur}
             onKeyDown={onKeyDown}
-            className={cn(inputClasses(false, !!error), 'pr-9')}
+            className={cn(inputClasses(false, !!error), hasList && 'pr-9')}
           />
-          <ChevronDown
-            className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-ink-faint"
-            aria-hidden
-          />
+          {hasList && (
+            <ChevronDown
+              className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-ink-faint"
+              aria-hidden
+            />
+          )}
         </div>
 
-        {open && !disabled && (
+        {open && !disabled && hasList && (
           <div className="absolute top-full z-(--z-dropdown) mt-1.5 max-h-64 w-full overflow-hidden rounded-xl
                           border border-border bg-surface-raised shadow-lg animate-fade-in">
             <ul className="max-h-64 overflow-y-auto py-1">
@@ -108,12 +119,10 @@ const ComboBox: React.FC<ComboBoxProps> = ({
               })}
               {value.trim() && !exactMatch && (
                 <li className="border-t border-border px-3.5 py-2 text-xs text-ink-faint">
-                  Not in the list — “{value.trim()}” will be saved as entered.
+                  {t('combo.notInList', { text: value.trim() })}
                 </li>
               )}
-              {filtered.length === 0 && !value.trim() && (
-                <li className="px-3.5 py-2 text-sm text-ink-faint">Start typing to search or add a village</li>
-              )}
+
             </ul>
           </div>
         )}

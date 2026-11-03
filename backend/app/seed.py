@@ -877,8 +877,9 @@ def _seed_professional_axis(db: Session):
     # ── Facility types (ordered by frequency); keyed by a short alias for mapping ──
     ft_specs = [
         ("Anganwadi Centre (AWC)", "AWC"),
-        ("Sub-centre (SC)", "SC"),
-        ("Health & Wellness Centre (HWC)", "HWC"),
+        # Sub-centre is the old name of the same place (review of 29 Oct 2026;
+        # migration b5e2c8d41f07 folds it into this row on existing databases).
+        ("Ayushman Arogya Mandir / Health & Wellness Centre (AAM / HWC)", "HWC"),
         ("Primary Health Centre (PHC)", "PHC"),
         ("Community Health Centre (CHC)", "CHC"),
         ("Taluk Hospital (TH)", "TH"),
@@ -900,13 +901,13 @@ def _seed_professional_axis(db: Session):
     # ── Designations (name, [facility-type aliases]) ordered by frequency. An empty
     #    list means the sheet gives no posting mapping → UI falls back to all types. ──
     hfw_desigs = [
-        ("ASHA", ["SC"]),
-        ("ANM", ["SC", "HWC"]),
+        ("ASHA", ["HWC"]),
+        ("ANM", ["HWC"]),
         ("CHO (Community Health Officer)", ["HWC"]),
         ("Staff Nurse", ["PHC", "CHC", "TH", "DH"]),
-        ("ASHA Facilitator", ["PHC"]),
+        ("ASHA Facilitator", ["HWC", "PHC"]),
         ("MLHP (Mid-Level Health Provider)", ["HWC"]),
-        ("MPHW (Male)", ["SC", "HWC"]),
+        ("MPHW (Male)", ["HWC"]),
         ("Health Assistant (Female)", ["PHC"]),
         ("Health Assistant (Male)", ["PHC"]),
         ("Health Inspector", ["PHC", "THO"]),
@@ -1007,7 +1008,7 @@ def _ensure_other_dept_rows(db: Session):
 # databases; this covers a fresh install, whose types are created after it.
 _WCD_FACILITY_TYPES = ("Anganwadi Centre (AWC)", "ICDS Project Office (CDPO Office)", "District ICDS Office")
 _HFW_FACILITY_TYPES = (
-    "Sub-centre (SC)", "Health & Wellness Centre (HWC)", "Primary Health Centre (PHC)",
+    "Ayushman Arogya Mandir / Health & Wellness Centre (AAM / HWC)", "Primary Health Centre (PHC)",
     "Community Health Centre (CHC)", "Taluk Hospital (TH)", "District Hospital (DH)",
     "Medical College Hospital", "Taluk Health Office (THO)", "District Health Office (DHO)",
 )

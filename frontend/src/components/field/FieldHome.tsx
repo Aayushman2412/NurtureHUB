@@ -113,8 +113,9 @@ const FieldHome: React.FC = () => {
   const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
   const nothingToday = view && !view.urgent.length && !view.today.length && !view.finish.length;
   // A baby to see soon is already at the top with its own "Start visit".
-  const urgentIds = new Set(view?.urgent.map(u => u.child_id));
-  const visits = (view?.today ?? []).filter(g => g.child_id == null || !urgentIds.has(g.child_id));
+  // A baby already on top (to see soon, or a visit to finish) is not listed twice.
+  const onTop = new Set([...(view?.urgent ?? []).map(u => u.child_id), ...(view?.unfinished ?? []).map(u => u.child_id)]);
+  const visits = (view?.today ?? []).filter(g => g.child_id == null || !onTop.has(g.child_id));
   const shownVisits = allVisits ? visits : visits.slice(0, FIRST_VISITS);
 
   return (
@@ -150,6 +151,39 @@ const FieldHome: React.FC = () => {
 
       {view && (
         <>
+          {/* Visits begun and drafts saved come first (review of 30 Oct 2026:
+              "whenever a draft is saved make sure it comes on the top"). */}
+          {(view.unfinished.length > 0 || view.drafts.length > 0) && (
+            <Section icon={<ClipboardList className="size-5 text-amber-600" />} title={t('field.unfinished.title')}
+              count={view.unfinished.length + view.drafts.length}>
+              {view.unfinished.map(u => (
+                <Link key={`u${u.child_id}`} to={visitUrl(u.mother_id, u.child_id, u.pending)}
+                  className="flex min-h-16 items-center gap-3 rounded-xl border-2 border-amber-500/60 bg-surface p-3.5 shadow-(--shadow-card) hover:bg-surface-sunken">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-display text-base font-bold text-ink">{u.child_name || t('field.baby')}</span>
+                    <span className="block text-sm text-success-600 dark:text-success-500">{t('field.unfinished.done', { forms: formNames(u.done, t) })}</span>
+                    <span className="block text-sm font-semibold text-amber-700 dark:text-amber-400">{t('field.unfinished.left', { forms: formNames(u.pending, t) })}</span>
+                  </span>
+                  <span className={buttonClasses('primary', 'sm', 'shrink-0 pointer-events-none')}>
+                    {t('field.unfinished.continue')}<ChevronRight className="size-4" />
+                  </span>
+                </Link>
+              ))}
+              {view.drafts.map(d => (
+                <Link key={`d${d.response_id}`} to={`${formRunUrl(d.form, d.mother_id, d.child_id)}?responseId=${d.response_id}`}
+                  className="flex min-h-14 items-center gap-3 rounded-xl border border-dashed border-amber-500/60 bg-surface p-3.5 hover:bg-surface-sunken">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-display text-base font-bold text-ink">{d.child_name || d.mother_name}</span>
+                    <span className="block text-sm text-amber-700 dark:text-amber-400">
+                      {t('field.unfinished.draft', { form: t(`field.form.${d.form}`), date: shortDay(d.saved_on) })}
+                    </span>
+                  </span>
+                  <ChevronRight className="size-5 shrink-0 text-ink-muted" />
+                </Link>
+              ))}
+            </Section>
+          )}
+
           {view.urgent.length > 0 && (
             <Section icon={<AlertTriangle className="size-5 text-error-600" />} title={t('field.urgent.title')} count={view.urgent.length}>
               {view.urgent.map(u => <UrgentRow key={u.child_id} u={u} />)}

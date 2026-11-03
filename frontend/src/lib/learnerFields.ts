@@ -9,7 +9,16 @@ export interface BlockOption { id: number; district_id: number; name: string; su
 export interface GramPanchayatOption { id: number; block_id: number; name: string; }
 
 /** "Subdivision – Taluka" in one option where the district has subdivisions (review of 17 Oct 2026). */
-export const blockLabel = (b: BlockOption) => (b.subdivision ? `${b.subdivision} – ${b.name}` : b.name);
+/** Talukas by their own name, A–Z (review of 29 Oct 2026: "when I mean taluk it
+ *  would be preferably a taluk" — "Rajura – Jiwati" read as two places). The
+ *  subdivision is added only when two talukas share a name. */
+export const talukaOptions = (blocks: BlockOption[]) => {
+  const seen = new Map<string, number>();
+  blocks.forEach(b => seen.set(b.name, (seen.get(b.name) ?? 0) + 1));
+  return [...blocks]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(b => ({ value: b.id, label: (seen.get(b.name) ?? 0) > 1 && b.subdivision ? `${b.name} (${b.subdivision})` : b.name }));
+};
 
 /** Marital status for which "do you have children" is not asked (and is No). */
 export const NEVER_MARRIED = 'Never married';

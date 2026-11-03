@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Award, ClipboardCheck, PlayCircle, Video } from 'lucide-react';
 import { ProgressRing } from '../ui';
 import { cn } from '../../utils/cn';
@@ -29,7 +30,10 @@ export interface RingScores {
 const TrainingRings: React.FC<{
   tutorials: RingTutorial[];
   scores: RingScores;
-}> = ({ tutorials, scores }) => {
+  /** Where each circle leads (review of 29 Oct 2026: "when they press on the
+   *  quiz they must be taken to the quiz which they have not attempted"). */
+  links?: Partial<Record<'videos' | 'watched' | 'quizzes' | 'tests', string>>;
+}> = ({ tutorials, scores, links = {} }) => {
   const { t } = useTranslation('dashboard');
   const done = tutorials.filter(x => x.is_completed).length;
   const minutes = tutorials.reduce((s, x) => s + Math.max(1, x.duration_minutes ?? 1), 0);
@@ -61,7 +65,8 @@ const TrainingRings: React.FC<{
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {rings.map(r => (
-        <div key={r.key} className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface p-3 text-center sm:flex-row sm:gap-3 sm:text-left">
+        <Link key={r.key} to={links[r.key as keyof typeof links] ?? '/tutorials'}
+          className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface p-3 text-center transition-colors hover:border-border-strong active:bg-surface-sunken sm:flex-row sm:gap-3 sm:text-left">
           <ProgressRing
             value={r.value} size={64} strokeWidth={7} className={cn('shrink-0', r.tone)}
             label={typeof r.main === 'string' ? <span className="text-[13px] tabular-nums">{r.main}</span> : r.main}
@@ -72,7 +77,7 @@ const TrainingRings: React.FC<{
             </div>
             <p className="mt-0.5 text-xs leading-snug text-ink-muted">{t(`rings.${r.key}Hint`, { count: tutorials.length })}</p>
           </div>
-        </div>
+        </Link>
       ))}
     </div>
   );

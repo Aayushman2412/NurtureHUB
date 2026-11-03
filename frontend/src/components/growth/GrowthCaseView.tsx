@@ -13,6 +13,7 @@ import type { FormKey, FormResponseDetail } from '../../lib/flowTypes';
 import { caseCategory, monthsDays } from '../../lib/growthDisplay';
 import { sexKeyForGender, type GrowthPoint } from '../../lib/growthChart';
 import GrowthChartGrid, { GrowthLegend } from './GrowthChartGrid';
+import GrowthVisitTable from './GrowthVisitTable';
 import VisitDetailModal from './VisitDetailModal';
 import VisitSummaryTable from './VisitSummaryTable';
 import VisitMatrix from './VisitMatrix';
@@ -284,6 +285,8 @@ const GrowthCaseView: React.FC<{ childId: number; mode: 'admin' | 'learner'; bac
           <div className="space-y-4">
             <GrowthLegend />
             <GrowthChartGrid cases={[whoCase]} sex={sex} standards={standards} onPointClick={setDetailPoint} />
+            {/* The numbers behind the dots, in the downloaded page too (review of 30 Oct 2026). */}
+            <GrowthVisitTable visits={detail.visits} className="mt-4" />
           </div>
         ) : (
           <p className="rounded-lg border border-border px-3 py-4 text-sm text-ink-muted">

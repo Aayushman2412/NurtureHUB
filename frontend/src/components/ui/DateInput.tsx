@@ -1,7 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Calendar } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { inputClasses } from './Input';
+import DatePicker from './DatePicker';
 
 export interface DateInputProps {
   /** ISO value 'yyyy-mm-dd' (or '' when empty) — the form state stays ISO. */
@@ -9,7 +11,7 @@ export interface DateInputProps {
   /** Called with an ISO 'yyyy-mm-dd' (or '' when cleared/incomplete). */
   onChange: (iso: string) => void;
   id?: string;
-  /** ISO bounds passed through to the native picker. */
+  /** ISO bounds for the picker. */
   max?: string;
   min?: string;
   disabled?: boolean;
@@ -44,14 +46,17 @@ const mask = (raw: string): string => {
 /**
  * A DD/MM/YYYY date field. The native <input type="date"> renders in the browser's
  * locale (often MM/DD/YYYY), which can't be overridden — so this shows a masked text
- * input in DD/MM/YYYY and keeps the native calendar via a picker button. The value
- * exchanged with the form is always ISO 'yyyy-mm-dd', so validation is unchanged.
+ * input in DD/MM/YYYY, and the calendar button opens our own year → month → day
+ * picker (the phone's dialog opened a date of birth at the year 1 AD — review of
+ * 29–30 Oct 2026). The value exchanged with the form is always ISO 'yyyy-mm-dd',
+ * so validation is unchanged.
  */
 const DateInput: React.FC<DateInputProps> = ({
   value, onChange, id, max, min, disabled, error, placeholder = 'DD/MM/YYYY', onBlur,
 }) => {
+  const { t } = useTranslation('common');
   const [text, setText] = useState(() => isoToDisplay(value));
-  const pickerRef = useRef<HTMLInputElement>(null);
+  const [picking, setPicking] = useState(false);
 
   // Sync display when the value changes from outside (prefill/reset/picker) — but not
   // while the user is mid-typing (guard: skip when our own text already maps to `value`).
@@ -67,12 +72,6 @@ const DateInput: React.FC<DateInputProps> = ({
     if (iso || masked === '') onChange(iso);   // commit a complete date, or clear; ignore partials
   };
 
-  const openPicker = () => {
-    const el = pickerRef.current;
-    if (!el) return;
-    if (typeof el.showPicker === 'function') { try { el.showPicker(); return; } catch { /* fall through */ } }
-    el.focus();
-  };
 
   return (
     <div className="relative">
@@ -85,32 +84,26 @@ const DateInput: React.FC<DateInputProps> = ({
         placeholder={placeholder}
         onChange={e => handleText(e.target.value)}
         onBlur={onBlur}
-        className={cn(inputClasses(false, !!error), 'pr-10')}
-      />
-      {/* Hidden native date input — fills the field so the picker anchors correctly. */}
-      <input
-        ref={pickerRef}
-        type="date"
-        value={value}
-        max={max}
-        min={min}
-        disabled={disabled}
-        onChange={e => onChange(e.target.value)}
-        tabIndex={-1}
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-0"
+        className={cn(inputClasses(false, !!error), 'pr-11')}
       />
       <button
         type="button"
-        onClick={openPicker}
+        onClick={() => setPicking(true)}
         disabled={disabled}
-        tabIndex={-1}
-        aria-label="Open calendar"
-        className="absolute right-0 top-0 flex h-full w-10 items-center justify-center rounded-r-lg
-                   text-ink-faint hover:text-ink disabled:opacity-50"
+        aria-label={t('datePicker.open')}
+        className="absolute right-0 top-0 flex h-full w-11 items-center justify-center rounded-r-lg
+                   text-ink-muted hover:text-ink disabled:opacity-50"
       >
-        <Calendar className="size-4" />
+        <Calendar className="size-5" />
       </button>
+      <DatePicker
+        open={picking}
+        value={value}
+        min={min}
+        max={max}
+        onPick={iso => { setPicking(false); onChange(iso); onBlur?.(); }}
+        onClose={() => setPicking(false)}
+      />
     </div>
   );
 };

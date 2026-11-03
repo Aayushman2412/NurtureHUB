@@ -6,7 +6,7 @@ import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronRight, CircleCheck, 
 import {
   getGrowthStandards, getMyGrowthCaseDetail, type GrowthStandards, type MyGrowthCaseDetail,
 } from '../../api/growth';
-import { formRunUrl, getToday, type BabyStatus, type FormCode, type Status, type TaskGroup, type Tone, type TodayView } from '../../api/today';
+import { FORM_KEY, formRunUrl, getToday, type BabyStatus, type FormCode, type Status, type TaskGroup, type Tone, type TodayView } from '../../api/today';
 import { babyVisitForms, nextInFlow, parseFlow } from '../../lib/careFlow';
 import { TONE_CLASSES } from '../../lib/babyStatus';
 import { Alert, Button, buttonClasses, Card, Modal, PageLoader } from '../../components/ui';
@@ -125,6 +125,8 @@ const BabyPage: React.FC = () => {
   const [standards, setStandards] = useState<GrowthStandards | null>(null);
   const [today, setToday] = useState<TodayView | null>(null);
   const [failed, setFailed] = useState(false);
+  /** Closing the chart with the visit unfinished asks first. */
+  const [askLeave, setAskLeave] = useState(false);
 
   const saved = params.get('saved') === 'gm';
   const done = params.get('done') === '1';
@@ -163,7 +165,17 @@ const BabyPage: React.FC = () => {
     next.delete('flow');
     setParams(next, { replace: true });
   };
-  const nextStep = flow?.rest[0];
+  // What this visit still needs, flow or not (review of 30 Oct 2026: "the
+  // moment a check growth form is filled, I must be able to directly go into
+  // the complementary feeding form or breastfeeding form, whichever is
+  // applicable").
+  const visitDate = status.latest?.date ?? null;
+  const filledThatDay = new Set<string>((detail.visits.find(v => v.date === visitDate)?.responses ?? [])
+    .filter(r => r.status === 'submitted').map(r => r.form_key));
+  const pendingAfterCheck = forms.filter(f => f !== 'gm' && !filledThatDay.has(FORM_KEY[f]));
+  const nextUrl = flow?.rest.length ? nextInFlow(flow, motherId, childId)
+    : pendingAfterCheck.length ? visitUrl(motherId, childId, pendingAfterCheck) : null;
+  const nextStep = flow?.rest[0] ?? pendingAfterCheck[0];
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
@@ -175,7 +187,15 @@ const BabyPage: React.FC = () => {
         >
           <ArrowLeft className="size-4" />{t('field.back')}
         </button>
-        <h1 className="font-display text-2xl font-extrabold text-ink">{name}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="font-display text-2xl font-extrabold text-ink">{name}</h1>
+          {/* Changing the baby's details is one tap from the top (review of 30 Oct 2026). */}
+          {motherId > 0 && (
+            <Link to={`/mothers/${motherId}/children/${childId}`} className={buttonClasses('outline', 'sm', 'shrink-0')}>
+              <Pencil className="size-4" />{t('field.mother.edit')}
+            </Link>
+          )}
+        </div>
         <p className="text-sm text-ink-muted">
           {[
             detail.child.gender === 'Male' ? t('field.boy') : detail.child.gender === 'Female' ? t('field.girl') : null,
@@ -249,11 +269,11 @@ const BabyPage: React.FC = () => {
       {/* A growth check was just saved: the chart opens at once. */}
       <Modal
         open={saved}
-        onClose={closeSaved}
+        onClose={() => (nextUrl ? setAskLeave(true) : closeSaved())}
         size="lg"
         title={<span className="flex items-center gap-2"><Check className="size-5 text-success-600" />{t('field.baby.savedTitle')}</span>}
-        footer={nextStep ? (
-          <Button size="lg" fullWidth onClick={() => navigate(nextInFlow(flow, motherId, childId), { replace: true })} iconRight={<ArrowRight className="size-5" />}>
+        footer={nextUrl && nextStep ? (
+          <Button size="lg" fullWidth onClick={() => navigate(nextUrl, { replace: true })} iconRight={<ArrowRight className="size-5" />}>
             {t(`flow.next.${nextStep}`, { ns: 'assessments' })}
           </Button>
         ) : (
@@ -265,6 +285,24 @@ const BabyPage: React.FC = () => {
           <Tiles status={status} />
           {detail.who_case && <BabyCharts who={detail.who_case} visits={detail.visits} standards={standards} />}
         </div>
+      </Modal>
+
+      {/* Leaving with the visit half done (review of 30 Oct 2026: "kindly note
+          that only check growth has been filled as a part of this visit —
+          do you wish to proceed to fill complementary feeding?"). */}
+      <Modal
+        open={askLeave}
+        onClose={() => setAskLeave(false)}
+        size="sm"
+        title={t('field.baby.leaveTitle')}
+        footer={(
+          <>
+            <Button variant="ghost" onClick={() => { setAskLeave(false); closeSaved(); }}>{t('field.baby.later')}</Button>
+            {nextUrl && <Button onClick={() => navigate(nextUrl, { replace: true })}>{t('field.baby.fillNow')}</Button>}
+          </>
+        )}
+      >
+        <p className="text-sm text-ink">{t('field.baby.leaveBody', { forms: formNames(pendingAfterCheck, t) })}</p>
       </Modal>
     </div>
   );

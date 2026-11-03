@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ComboBox, Field, Input, SelectField } from '../../components/ui';
 import type { LearnerMetadata } from '../../hooks/useLearnerMetadata';
-import { TRAINING_KEYS, blockLabel, internetOptions, recencyOptions } from '../../lib/learnerFields';
+import { TRAINING_KEYS, talukaOptions, internetOptions, recencyOptions } from '../../lib/learnerFields';
 import type { FieldErrors } from '../../lib/validation';
 
 export interface WorkDetailsValues {
@@ -59,7 +59,6 @@ const WorkDetailsTab: React.FC<WorkDetailsTabProps> = ({
   onDepartment, onDesignation, onFacilityType, onState, onDistrict, onBlock,
 }) => {
   const { t } = useTranslation('learner');
-  const hasSubdivisions = meta.blocks.some(b => b.subdivision);
   if (section === 'education') return (
   <div className="flex flex-col gap-5">
     <SelectField label={t('fields.qualification')} value={values.qualificationId} error={errors.qualificationId}
@@ -155,10 +154,10 @@ const WorkDetailsTab: React.FC<WorkDetailsTabProps> = ({
       placeholder={t('placeholders.selectDistrict')} disabled={!values.stateId}
       options={meta.districts.map(d => ({ value: d.id, label: d.name }))} />
 
-    <SelectField label={hasSubdivisions ? t('fields.subdivisionTaluk') : t('fields.block')} value={values.blockId}
+    <SelectField label={t('fields.taluka')} value={values.blockId}
       onChange={onBlock} error={errors.blockId}
       placeholder={t('placeholders.selectTaluk')} disabled={!values.districtId}
-      options={meta.blocks.map(b => ({ value: b.id, label: blockLabel(b) }))} />
+      options={talukaOptions(meta.blocks)} />
 
     {values.blockId !== '' && (
       <ComboBox label={t('fields.gramPanchayat')} value={values.gpName}

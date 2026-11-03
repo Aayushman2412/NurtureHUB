@@ -60,11 +60,34 @@ export interface CaseRow {
   children: ({ id: number; name: string; uid: string; gender: string | null; age_days: number | null } & BabyStatus)[];
 }
 
+/** Today's visit begun but not finished (growth check done, feeding form left). */
+export interface UnfinishedVisit {
+  mother_id: number;
+  mother_name: string;
+  child_id: number;
+  child_name: string | null;
+  done: FormCode[];
+  pending: FormCode[];
+}
+
+/** A form saved as a draft, waiting to be finished. */
+export interface DraftForm {
+  response_id: number;
+  form: FormCode;
+  mother_id: number;
+  mother_name: string;
+  child_id: number | null;
+  child_name: string | null;
+  saved_on: string;
+}
+
 export interface TodayView {
   available: boolean;
   as_of: string;
   project: { name: string; slug: string } | null;
   urgent: UrgentBaby[];
+  unfinished: UnfinishedVisit[];
+  drafts: DraftForm[];
   today: TaskGroup[];
   /** Registration not finished; `then` is what follows the missing step. */
   finish: { mother_id: number; mother_name: string; missing: 'protein' | 'baby'; then: 'baby'[] }[];

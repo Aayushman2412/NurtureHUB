@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -114,10 +114,19 @@ const CompleteRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 // for face-to-face training (review of 19 Oct 2026). Before that the page says
 // why, instead of a list she cannot use yet.
 const AdoptionsRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
-  if (user && !user.adoptions_open) {
-    return <CompleteRoute><SectionLocked /></CompleteRoute>;
-  }
+  const { user, refreshUser } = useAuth();
+  // The account held in this tab can be out of date — another tab signed in
+  // as someone else, or the selection was announced since (review of 30 Oct
+  // 2026: "the moment I press start I don't know why this is coming"). Ask the
+  // server once before showing the lock.
+  const locked = !!user && !user.adoptions_open;
+  const [checked, setChecked] = useState(false);
+  useEffect(() => {
+    if (!locked || checked) return;
+    refreshUser().finally(() => setChecked(true));
+  }, [locked, checked, refreshUser]);
+  if (locked && !checked) return <CompleteRoute><PageLoader /></CompleteRoute>;
+  if (locked) return <CompleteRoute><SectionLocked /></CompleteRoute>;
   return <CompleteRoute>{children}</CompleteRoute>;
 };
 
@@ -210,6 +219,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/mothers" element={<AdoptionsRoute><MothersListPage /></AdoptionsRoute>} />
         <Route path="/mothers/new" element={<AdoptionsRoute><MotherFormPage /></AdoptionsRoute>} />
         <Route path="/mothers/:id" element={<AdoptionsRoute><MotherDetailPage /></AdoptionsRoute>} />
+        <Route path="/mothers/:id/edit" element={<AdoptionsRoute><MotherFormPage /></AdoptionsRoute>} />
 
         {/* Child Registration (nested under a mother) */}
         <Route path="/mothers/:motherId/children/new" element={<AdoptionsRoute><ChildFormPage /></AdoptionsRoute>} />

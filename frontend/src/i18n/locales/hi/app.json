@@ -1,7 +1,7 @@
 {
   "nav": {
     "dashboard": "होम",
-    "tutorials": "ट्यूटोरियल और टेस्ट",
+    "tutorials": "प्रशिक्षण",
     "assessments": "टेस्ट",
     "mothers": "गोद लिए केस",
     "growth": "वृद्धि निगरानी",
@@ -10,7 +10,7 @@
   },
   "headerTitle": {
     "dashboard": "होम",
-    "tutorials": "ट्यूटोरियल और टेस्ट",
+    "tutorials": "प्रशिक्षण",
     "tests": "टेस्ट",
     "results": "टेस्ट का परिणाम",
     "profile": "प्रोफ़ाइल सेटिंग्स",
@@ -59,6 +59,7 @@
     "home": "होम",
     "mothers": "गोद लिए केस",
     "training": "प्रशिक्षण",
-    "profile": "प्रोफ़ाइल"
+    "profile": "प्रोफ़ाइल",
+    "locked": "चयन के बाद खुलेगा"
   }
 }

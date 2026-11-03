@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../context/ToastContext';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
@@ -20,7 +20,7 @@ import {
 } from '../../lib/motherFields';
 import { validateMother, type MotherFormValues } from '../../lib/motherSchema';
 import { pickErrors, type FieldErrors } from '../../lib/validation';
-import { type MotherPayload } from '../../api/mothers';
+import { getMother, updateMother, type MotherPayload } from '../../api/mothers';
 import { createMotherResilient, isQueuedResult } from '../../offline/submit';
 
 /**
@@ -56,6 +56,12 @@ const MotherFormPage: React.FC = () => {
   const { t } = useTranslation('mother');
   const { showToast, updateToast } = useToast();
   const { user } = useAuth();
+  // /mothers/:id/edit — the same small pages, filled with her details (review
+  // of 30 Oct 2026: "if I have to edit mother's basic details, where can I do
+  // it? an edit button would be helpful").
+  const { id: editParam } = useParams();
+  const editId = editParam ? Number(editParam) : null;
+  const hwcOtherRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -224,8 +230,35 @@ const MotherFormPage: React.FC = () => {
     })),
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Editing: load her details into every page.
+  useEffect(() => {
+    if (editId == null) return;
+    getMother(editId).then(m => {
+      setDeclaredType(m.declared_adoption_type ?? ''); setMotherName(m.mother_name);
+      setAdoptionDate(m.adoption_date ?? ''); setMotherDob(m.mother_dob ?? '');
+      setWeight(m.weight ?? ''); setHeight(m.height ?? ''); setLmp(m.lmp ?? ''); setEddRecords(m.edd_records ?? '');
+      setMobile(m.mobile ?? ''); setAlternateMobile(m.alternate_mobile ?? ''); setEmail(m.email ?? '');
+      setStateId(m.state_id ?? ''); setDistrictId(m.district_id ?? ''); setTalukId(m.taluk_id ?? ''); setVillage(m.village ?? '');
+      setHwcId(m.hwc_id ?? (m.hwc_other ? HWC_OTHER : '')); setHwcOther(m.hwc_other ?? '');
+      setEducationId(m.education_id ?? ''); setEducationFieldId(m.education_field_id ?? ''); setEducationDegreeId(m.education_degree_id ?? '');
+      setOccupation(m.occupation ?? ''); setOccupationOther(m.occupation_other ?? '');
+      setRationCard(m.ration_card ?? ''); setRationCardOther(m.ration_card_other ?? ''); setSocialCategory(m.social_category ?? '');
+      setNutritionCourse(m.nutrition_course == null ? '' : m.nutrition_course ? 'Yes' : 'No');
+      setNutritionCourseName(m.nutrition_course_name ?? ''); setVideoFrequency(m.video_frequency ?? '');
+      setLikert({
+        implement_video: m.implement_video ?? '', confidence_video: m.confidence_video ?? '',
+        willingness_hcw: m.willingness_hcw ?? '', information_seeking: m.information_seeking ?? '',
+      });
+      setRatings(Object.fromEntries((m.source_ratings ?? []).map(r => [r.source, {
+        ...(r.trust != null ? { trust: r.trust } : {}), ...(r.willingness != null ? { willingness: r.willingness } : {}),
+      }])));
+    }).catch(() => showToast(t('detail.loadFailed'), 'error'));
+    // Once per mother.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId]);
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     const allErrs = validateMother(values);
     if (Object.keys(allErrs).length) {
       setErrors(allErrs);
@@ -234,6 +267,19 @@ const MotherFormPage: React.FC = () => {
       return;
     }
     setLoading(true);
+    if (editId != null) {
+      const toastId = showToast(t('form.toastSaving'), 'loading');
+      try {
+        await updateMother(editId, buildPayload());
+        updateToast(toastId, t('form.toastSaved'), 'success');
+        navigate(`/mothers/${editId}`, { replace: true });
+      } catch {
+        updateToast(toastId, t('form.toastFail'), 'error');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
     const toastId = showToast(t('form.toastRegistering'), 'loading');
     try {
       const payload = buildPayload();
@@ -248,8 +294,16 @@ const MotherFormPage: React.FC = () => {
         // delivered mother's baby comes next (launch review of 19 Oct 2026:
         // "once they register the mother the protein form will come
         // automatically").
-        const delivered = declaredType === 'pnc_lt5' || declaredType === 'pnc_ge5';
-        navigate(formRunUrl('protein', created.id, null, flowString('reg', delivered ? ['baby'] : [])), { replace: true });
+        // The order of the first visit (review of 30 Oct 2026): a pregnant
+        // mother's antenatal check, then her protein form; a mother with a
+        // baby under the split age, her protein form, then the baby; with an
+        // older baby the protein form is not asked — the visit is about the
+        // child ("focus only on the child").
+        navigate(declaredType === 'pnc_ge5'
+          ? `/mothers/${created.id}/children/new?flow=reg`
+          : declaredType === 'pnc_lt5'
+            ? formRunUrl('protein', created.id, null, flowString('reg', ['baby']))
+            : formRunUrl('anc', created.id, null, flowString('reg', ['protein'])), { replace: true });
       }
     } catch {
       updateToast(toastId, t('form.toastFail'), 'error');
@@ -276,7 +330,7 @@ const MotherFormPage: React.FC = () => {
           <ArrowLeft className="size-5" />
         </button>
         <div className="min-w-0 flex-1">
-          <p className="font-display text-lg font-bold text-ink">{t('form.title')}</p>
+          <p className="font-display text-lg font-bold text-ink">{t(editId != null ? 'form.editTitle' : 'form.title')}</p>
           <div className="mt-1 flex items-center gap-2">
             <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-sunken">
               <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${((step + 1) / PAGES.length) * 100}%` }} />
@@ -396,6 +450,10 @@ const MotherFormPage: React.FC = () => {
 
           {step === 5 && (
             <>
+              {/* Filled from the worker's own place (review of 30 Oct 2026:
+                  "add a note telling that based on the location of the learner
+                  these details get filled"). */}
+              <p className="rounded-lg bg-surface-sunken px-3.5 py-2.5 text-sm text-ink-muted">{t('form.placeFromYou')}</p>
               <SelectField label={t('form.state')} value={stateId} onChange={onState} error={shown('state_id')}
                 placeholder={t('form.placeholders.selectState')} options={meta.states.map(s => ({ value: s.id, label: s.name }))} />
               <SelectField label={t('form.district')} value={districtId} onChange={onDistrict} error={shown('district_id')}
@@ -411,10 +469,15 @@ const MotherFormPage: React.FC = () => {
                 options={meta.villages.map(v => ({ value: v.id, label: v.name }))} />
               <SearchableSelect label={t('form.hwc')} value={hwcId} onChange={onHwc}
                 error={shown('hwc_id')} placeholder={t('form.placeholders.searchHwc')} disabled={!talukId}
-                options={[...meta.hwcs.map(h => ({ value: h.id, label: h.name })), { value: HWC_OTHER, label: t('form.otherSpecify') }]} />
+                options={[...meta.hwcs.map(h => ({ value: h.id, label: h.name })), { value: HWC_OTHER, label: t('form.otherSpecify') }]}
+                noMatchLabel={q => t('form.hwcNotListed', { name: q })}
+                onNoMatch={q => {
+                  setHwcId(HWC_OTHER); setHwcOther(q); touch('hwc_id');
+                  window.setTimeout(() => hwcOtherRef.current?.focus(), 0);
+                }} />
               {showHwcOther && (
                 <Field label={t('form.hwcOther')} error={shown('hwc_other')}>
-                  <Input value={hwcOther} error={!!shown('hwc_other')}
+                  <Input ref={hwcOtherRef} value={hwcOther} error={!!shown('hwc_other')}
                     onBlur={() => touch('hwc_other')}
                     onChange={e => setHwcOther(e.target.value)} />
                 </Field>
@@ -517,11 +580,21 @@ const MotherFormPage: React.FC = () => {
               <Button type="submit" size="lg" fullWidth iconRight={<ArrowRight className="size-5" />}>{t('form.continue')}</Button>
             ) : (
               <Button type="submit" size="lg" fullWidth loading={loading}>
-                {loading ? t('form.registering') : t('form.saveAndContinue')}
+                {editId != null ? t('form.saveChanges') : loading ? t('form.registering') : t('form.saveAndContinue')}
               </Button>
             )}
-            {isLast && <p className="text-center text-xs text-ink-muted">{t('form.proteinNext')}</p>}
-            <Button type="button" variant="ghost" onClick={() => navigate('/mothers')} disabled={loading}>{t('form.cancel')}</Button>
+            {/* Editing one detail should not mean walking every page. */}
+            {editId != null && !isLast && (
+              <Button type="button" variant="secondary" size="lg" fullWidth loading={loading} onClick={() => void handleSubmit()}>
+                {t('form.saveChanges')}
+              </Button>
+            )}
+            {isLast && editId == null && (
+              <p className="text-center text-xs text-ink-muted">
+                {t(declaredType === 'pnc_ge5' ? 'form.babyNext' : declaredType === 'pnc_lt5' ? 'form.proteinNext' : 'form.ancNext')}
+              </p>
+            )}
+            <Button type="button" variant="ghost" onClick={() => navigate(editId != null ? `/mothers/${editId}` : '/mothers')} disabled={loading}>{t('form.cancel')}</Button>
           </div>
         </form>
       </Card>

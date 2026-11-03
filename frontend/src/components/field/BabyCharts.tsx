@@ -6,6 +6,7 @@ import {
 } from '../../lib/growthChart';
 import { percentileOf, TONE_HEX, toneOf } from '../../lib/babyStatus';
 import GrowthChart from '../growth/GrowthChart';
+import GrowthVisitTable from '../growth/GrowthVisitTable';
 
 /**
  * One baby's weight-for-age and length-for-age charts (launch review of 19 Oct
@@ -33,7 +34,7 @@ const BabyCharts: React.FC<{
   const xLabel = t({ days: 'axis.ageDays', weeks: 'axis.ageWeeks', months: 'axis.ageMonths' }[ageUnitFor(cohort, domains.ageDomain)]);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2.5">
       {(['wfa', 'lfa'] as const).map(ind => (
         <GrowthChart
           key={ind}
@@ -45,9 +46,11 @@ const BabyCharts: React.FC<{
           xTicks={ageTicks(cohort, domains.ageDomain)}
           xKind="age"
           series={[buildSeries(who, ind, cohort)].filter(s => s.points.length > 0)}
+          compact
           pointLabel={label(ind === 'wfa' ? 'wfaz' : 'hfaz')}
         />
       ))}
+      <GrowthVisitTable visits={visits} />
     </div>
   );
 };

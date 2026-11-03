@@ -17,7 +17,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ClipboardList, Save, Send } from 'lucide-react';
+import { ClipboardList, Save, Send, ShieldCheck } from 'lucide-react';
 import { Alert, Button, Card, EmptyState, PageHeader, PageLoader } from '../../components/ui';
 import { useToast } from '../../context/ToastContext';
 import { getChild, type Child } from '../../api/children';
@@ -31,7 +31,8 @@ import {
 import { vaultClear, vaultKey, vaultLoad, vaultSave } from '../../offline/answerVault';
 import { afterGrowthCheck, nextInFlow, parseFlow } from '../../lib/careFlow';
 import type { FlatField, FlatSchema, FormDefinition, FormKey } from '../../lib/flowTypes';
-import { isMotherFormKey, OTHER_OPTION_VALUE } from '../../lib/flowTypes';
+import { isExclusiveOption, isMotherFormKey, OTHER_OPTION_VALUE } from '../../lib/flowTypes';
+import { autoRisks, motherAgeOn, withAutoRisks } from '../../lib/autoAnswers';
 import {
   buildFlatAnswersPayload,
   buildFlatZodSchema,
@@ -62,6 +63,9 @@ const gestationalAgeText = (lmp: string | null | undefined, atIso: string): stri
   if (days == null || days < 0) return '';
   return `${Math.floor(days / 7)} completed weeks + ${days % 7} completed days`;
 };
+
+/** The antenatal question whose height/age answers come from the registration. */
+const RISK_FIELD = 'high_risk_conditions';
 
 const FlatAssessmentRunnerPage: React.FC = () => {
   const { motherId: motherParam, childId: childParam, formKey: keyParam } = useParams();
@@ -299,9 +303,64 @@ const FlatAssessmentRunnerPage: React.FC = () => {
     if (Object.keys(patch).length > 0) setValues(prev => ({ ...prev, ...patch }));
   }, [computedValues, values]);
 
+  // ── Answers the registration already gives (antenatal high-risk) ───────────
+  // Short stature, under 18 and over 35 come from the mother's height and age
+  // (review of 30 Oct 2026); the learner answers the rest.
+  const riskField = useMemo(
+    () => (formKey === 'antenatal' ? fields.find(f => f.id === RISK_FIELD) ?? null : null),
+    [formKey, fields],
+  );
+  const autos = useMemo(
+    () => (riskField && mother
+      ? autoRisks(riskField.options ?? [], mother.height ?? null, motherAgeOn(mother.mother_dob, mother.mother_age, assessmentDate))
+      : []),
+    [riskField, mother, assessmentDate],
+  );
+  const autoValues = useMemo(() => new Set(autos.map(a => a.value)), [autos]);
+  /** The learner's own ticks: what is checked and shown. */
+  const tickedValues = useMemo(() => {
+    if (autos.length === 0) return values;
+    const ticked = Array.isArray(values[RISK_FIELD]) ? (values[RISK_FIELD] as string[]) : [];
+    return { ...values, [RISK_FIELD]: ticked.filter(v => !autoValues.has(v)) };
+  }, [values, autos, autoValues]);
+  /** What is stored: the ticks plus what the registration identifies. */
+  const storedValues = useMemo(() => {
+    if (!riskField || autos.length === 0) return values;
+    const exclusive = new Set((riskField.options ?? []).filter(isExclusiveOption).map(o => o.value));
+    return { ...values, [RISK_FIELD]: withAutoRisks(tickedValues[RISK_FIELD] as string[], autos, exclusive) };
+  }, [values, tickedValues, riskField, autos]);
+
+  // ── Checked as answered (review of 30 Oct 2026: "this flagging should happen
+  // immediately when they try to fill this", not only on Submit) ─────────────
+  const validationSubset = (): FlatFormValues => {
+    const subset: FlatFormValues = {};
+    // Computed fields are read-only text — they never block submission.
+    // Only visible fields are in the schema, so parse only those keys.
+    for (const f of visible) subset[f.id] = tickedValues[f.id] ?? (f.type === 'checkbox' ? [] : '');
+    // Semi-open fields also carry an "Other" text slot the schema validates.
+    for (const key of flatSchemaKeys(visible)) {
+      if (!(key in subset)) subset[key] = tickedValues[key] ?? '';
+    }
+    return subset;
+  };
+  const liveErrors = useMemo(() => {
+    const result = buildFlatZodSchema(fields, tickedValues, { t, ageDays, dobIso: child?.dob ?? null })
+      .safeParse(validationSubset());
+    return result.success ? {} : toFieldErrors(result);
+    // validationSubset reads the same inputs listed here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fields, tickedValues, visible, ageDays, child?.dob, t]);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const touch = (id: string) => setTouched(prev => (prev[id] ? prev : { ...prev, [id]: true }));
+  const shownError = (id: string): string | undefined => errors[id] || (touched[id] ? liveErrors[id] : undefined) || undefined;
+
   const setValue = (id: string, v: string | string[]) => {
     setValues(prev => ({ ...prev, [id]: v }));
     setErrors(prev => (prev[id] ? { ...prev, [id]: '' } : prev));
+    // A choice is an answer the moment it is made; typed answers are checked
+    // when the field is left (onBlur), so typing "5" on the way to "58" is fine.
+    const field = fields.find(f => f.id === id);
+    if (field && ['radio', 'checkbox', 'dropdown', 'date', 'image'].includes(field.type)) touch(id);
   };
 
   // Offline-resilient: with no network the submission lands in the local sync
@@ -311,7 +370,7 @@ const FlatAssessmentRunnerPage: React.FC = () => {
     ` — ${child?.child_name ?? mother?.mother_name ?? ''}`;
 
   const persist = async (status: 'draft' | 'submitted') => {
-    const answers = buildFlatAnswersPayload(fields, values, ageDays);
+    const answers = buildFlatAnswersPayload(fields, storedValues, ageDays);
     const payload = { assessment_date: assessmentDate, status, answers };
     const saved = await persistResponseResilient({
       formKey,
@@ -350,16 +409,8 @@ const FlatAssessmentRunnerPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    const schema = buildFlatZodSchema(fields, values, { t, ageDays, dobIso: child?.dob ?? null });
-    // Computed fields are read-only text — they never block submission.
-    // Only visible fields are in the schema, so parse only those keys.
-    const subset: FlatFormValues = {};
-    for (const f of visible) subset[f.id] = values[f.id] ?? (f.type === 'checkbox' ? [] : '');
-    // Semi-open fields also carry an "Other" text slot the schema validates.
-    for (const key of flatSchemaKeys(visible)) {
-      if (!(key in subset)) subset[key] = values[key] ?? '';
-    }
-    const result = schema.safeParse(subset);
+    const schema = buildFlatZodSchema(fields, tickedValues, { t, ageDays, dobIso: child?.dob ?? null });
+    const result = schema.safeParse(validationSubset());
     if (!result.success) {
       const fieldErrors = toFieldErrors(result);
       setErrors(fieldErrors);
@@ -467,19 +518,47 @@ const FlatAssessmentRunnerPage: React.FC = () => {
               {f.helpText && <p className="mt-1 text-xs text-ink-muted">{f.helpText}</p>}
             </div>
           ) : (
-            <FlatFieldInput
-              key={f.id}
-              field={f}
-              value={values[f.id] ?? (f.type === 'checkbox' ? [] : '')}
-              onChange={v => setValue(f.id, v)}
-              error={errors[f.id]}
-              otherText={String(values[otherTextKey(f.id)] ?? '')}
-              onOtherTextChange={v => setValue(otherTextKey(f.id), v)}
-              otherError={errors[otherTextKey(f.id)]}
-              disabled={busy}
-              dobIso={child?.dob ?? null}
-              todayIso={today}
-            />
+            <React.Fragment key={f.id}>
+              {f.id === RISK_FIELD && autos.length > 0 && mother && (
+                <div className="rounded-xl border border-border bg-surface-sunken/60 p-4">
+                  <p className="flex items-center gap-2 text-sm font-bold text-ink">
+                    <ShieldCheck className="size-4 text-primary-ink" />{t('anc.autoTitle')}
+                  </p>
+                  <p className="mb-2 mt-0.5 text-xs text-ink-muted">
+                    {t('anc.autoFrom', {
+                      height: mother.height != null ? `${mother.height} cm` : '—',
+                      age: motherAgeOn(mother.mother_dob, mother.mother_age, assessmentDate) ?? '—',
+                    })}
+                  </p>
+                  <ul className="flex flex-col gap-1.5">
+                    {autos.map(a => (
+                      <li key={a.value} className="flex items-center justify-between gap-3 text-sm">
+                        <span className="text-ink">{a.label}</span>
+                        <span className={a.applies ? 'font-bold text-error-600 dark:text-error-400'
+                          : a.applies === false ? 'font-semibold text-success-600 dark:text-success-500' : 'text-ink-muted'}>
+                          {a.applies ? t('anc.yes') : a.applies === false ? t('anc.no') : t(`anc.unknown.${a.basis}`)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <FlatFieldInput
+                field={f.id === RISK_FIELD && autos.length > 0
+                  ? { ...f, label: t('anc.otherRisks'), options: (f.options ?? []).filter(o => !autoValues.has(o.value)) }
+                  : f}
+                value={tickedValues[f.id] ?? (f.type === 'checkbox' ? [] : '')}
+                onChange={v => setValue(f.id, v)}
+                onBlur={() => { touch(f.id); touch(otherTextKey(f.id)); }}
+                error={shownError(f.id)}
+                otherText={String(values[otherTextKey(f.id)] ?? '')}
+                onOtherTextChange={v => setValue(otherTextKey(f.id), v)}
+                otherError={shownError(otherTextKey(f.id))}
+                disabled={busy}
+                dobIso={child?.dob ?? null}
+                todayIso={today}
+              />
+            </React.Fragment>
           ),
         )}
       </Card>

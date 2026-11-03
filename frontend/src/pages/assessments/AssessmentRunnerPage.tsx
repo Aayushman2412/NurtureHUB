@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardList, Layers, Lock, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardList, Layers, ListChecks, Lock, Pencil, X } from 'lucide-react';
 import {
   Alert,
   Button,
@@ -14,7 +14,7 @@ import {
 } from '../../components/ui';
 import { inputClasses } from '../../components/ui/Input';
 import { useToast } from '../../context/ToastContext';
-import { getChild, type Child } from '../../api/children';
+import { getChild, listChildren, type Child } from '../../api/children';
 import { getMother, type Mother } from '../../api/mothers';
 import { getFormDefinition, getResponse } from '../../api/forms';
 import {
@@ -22,7 +22,8 @@ import {
 } from '../../offline/submit';
 import { vaultClear, vaultKey, vaultLoad, vaultSave } from '../../offline/answerVault';
 import { flowString, nextInFlow, parseFlow } from '../../lib/careFlow';
-import type { FlowSchema, FormDefinition, FormKey, MatrixAnswer } from '../../lib/flowTypes';
+import { proteinStatusOption } from '../../lib/autoAnswers';
+import type { FlowOption, FlowSchema, FormDefinition, FormKey, MatrixAnswer } from '../../lib/flowTypes';
 import {
   CF_MIN_AGE_DAYS,
   findVerdict,
@@ -43,6 +44,7 @@ import {
   apiErrorMessage,
   buildAnswersPayload,
   derivePath,
+  formatDisplayDate,
   isAnswered,
   isMatrixAnswered,
   isStepAnswered,
@@ -52,6 +54,21 @@ import {
   type AnswersMap,
   type PathStep,
 } from '../../components/assessments/flowRunner';
+
+/** How a question's answers are laid out (review of 30 Oct 2026: "maybe two
+ *  images like this would fit the screen … six and a scrollable option"):
+ *  pictures two to a row; without pictures one slim line each; counts such as
+ *  "0 days"–"7 days" as small boxes, four to a row. */
+type OptionLayout = 'tile' | 'row' | 'chip';
+const optionLayout = (options: FlowOption[], showMedia: boolean): OptionLayout =>
+  showMedia && options.some(o => o.media.length > 0) ? 'tile'
+    : options.length > 2 && options.every(o => /^\d/.test(o.label.trim())) ? 'chip' : 'row';
+const OPTION_GRID: Record<OptionLayout, string> = {
+  tile: 'grid grid-cols-2 gap-2.5 md:grid-cols-3',
+  row: 'grid grid-cols-1 gap-2 sm:grid-cols-2',
+  chip: 'grid grid-cols-4 gap-2',
+};
+const optionGridClass = (options: FlowOption[], showMedia: boolean) => OPTION_GRID[optionLayout(options, showMedia)];
 
 /** Step transition keyframes — local to the runner, pure CSS. */
 const runnerStyles = `
@@ -70,7 +87,7 @@ const AssessmentRunnerPage: React.FC = () => {
   const childId = Number(childParam);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { t } = useTranslation('assessments');
+  const { t, i18n } = useTranslation('assessments');
   const { showToast } = useToast();
 
   const validKey = isFlowFormKey(keyParam ?? '');
@@ -102,10 +119,17 @@ const AssessmentRunnerPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
+  /** The answers listed for checking before they are submitted (review of 30
+   *  Oct 2026: "before submission ask — these are the following information
+   *  which you have filled, kindly confirm"; a pen beside each to change it). */
+  const [reviewing, setReviewing] = useState(false);
+  /** Came from the review list to change one answer: Next goes back to it. */
+  const [returnToReview, setReturnToReview] = useState(false);
 
   const savedRef = useRef<string>(JSON.stringify({}));
   const advanceTimerRef = useRef<number | null>(null);
   const stepsLenRef = useRef(0);
+  const returnToReviewRef = useRef(false);
 
   const clearAdvanceTimer = () => {
     if (advanceTimerRef.current != null) {
@@ -212,6 +236,9 @@ const AssessmentRunnerPage: React.FC = () => {
           setEditingSubmitted(resp.status === 'submitted');
           savedRef.current = JSON.stringify(prefill);
           if (resp.status !== 'submitted') resumeAtFrontier(prefill);
+          // A submitted form opens on its answers, each with a pen — not
+          // step by step from the start (review of 30 Oct 2026).
+          else setReviewing(true);
         } else {
           // A visit already captured offline for this subject+form: adopt its
           // queue item — otherwise this session would enqueue a SECOND
@@ -231,6 +258,21 @@ const AssessmentRunnerPage: React.FC = () => {
             resumeAtFrontier(prefill);
           } else {
             savedRef.current = JSON.stringify({});
+            // Protein form: "Mother's Status" is where she is now — pregnant
+            // until her baby is registered (review of 30 Oct 2026: a pregnant
+            // woman "took up the option of lactating").
+            const statusNode = (def.schema_json as FlowSchema).nodes?.pca_status;
+            if (formKey === 'mother_protein_intake' && isMother && statusNode?.kind === 'question') {
+              const m = subject as Mother;
+              const kids = await listChildren(motherId).catch(() => []);
+              const delivered = kids.length > 0 || m.declared_adoption_type === 'pnc_lt5' || m.declared_adoption_type === 'pnc_ge5';
+              const optionId = proteinStatusOption(!delivered);
+              if (statusNode.options.some(o => o.id === optionId)) {
+                const prefill: AnswersMap = { pca_status: { optionIds: [optionId], value: '' } };
+                setAnswers(prefill);
+                savedRef.current = JSON.stringify(prefill);
+              }
+            }
           }
         }
         if (cancelled) return;
@@ -291,6 +333,9 @@ const AssessmentRunnerPage: React.FC = () => {
   useEffect(() => {
     stepsLenRef.current = derived.steps.length;
   }, [derived.steps.length]);
+  useEffect(() => {
+    returnToReviewRef.current = returnToReview;
+  }, [returnToReview]);
 
   // Keep the cursor inside the (possibly shrunken) derived path.
   useEffect(() => {
@@ -322,6 +367,11 @@ const AssessmentRunnerPage: React.FC = () => {
       const fromIndex = stepIndex;
       advanceTimerRef.current = window.setTimeout(() => {
         advanceTimerRef.current = null;
+        if (returnToReviewRef.current) {
+          setReturnToReview(false);
+          setReviewing(true);
+          return;
+        }
         setDirection('fwd');
         setStepIndex(i => (i === fromIndex ? Math.min(i + 1, Math.max(0, stepsLenRef.current - 1)) : i));
       }, 350);
@@ -350,8 +400,21 @@ const AssessmentRunnerPage: React.FC = () => {
   };
   const goNext = () => {
     clearAdvanceTimer();
+    if (returnToReview) {
+      setReturnToReview(false);
+      setReviewing(true);
+      return;
+    }
     setDirection('fwd');
     setStepIndex(i => Math.min(i + 1, Math.max(0, derived.steps.length - 1)));
+  };
+  /** From the review list to one question; Next brings the learner back. */
+  const editStep = (index: number) => {
+    clearAdvanceTimer();
+    setReviewing(false);
+    setReturnToReview(true);
+    setDirection('back');
+    setStepIndex(index);
   };
 
   // ── Persistence ────────────────────────────────────────────────────────────
@@ -504,6 +567,29 @@ const AssessmentRunnerPage: React.FC = () => {
         : !current.question.required || isAnswered(current.question, answer);
   const isLast = stepIndex === derived.steps.length - 1;
   const showFinish = isLast && derived.complete;
+  /** Every required step answered — the review list can be submitted. */
+  const allRequiredAnswered = derived.steps.every(step =>
+    step.kind === 'info'
+    || !(step.kind === 'question' ? step.question.required : step.matrix.required)
+    || isStepAnswered(step, answers));
+  /** Question numbers for the review list ("you can add question number 1 2 3 4"). */
+  const numberOf = new Map<string, number>();
+  derived.steps.filter(step => step.kind !== 'info').forEach((step, i) => numberOf.set(step.id, i + 1));
+  /** One line per answer for the review list. */
+  const answerText = (step: PathStep): string => {
+    const a = answers[step.id];
+    if (step.kind === 'matrix') {
+      const rows = Object.values(parseMatrixAnswer(a?.value)).filter(r => Object.keys(r).length > 0).length;
+      return rows > 0 ? t('runner.matrixRows', { count: rows }) : '';
+    }
+    if (step.kind !== 'question') return '';
+    const q = step.question;
+    if (q.questionType === 'single' || q.questionType === 'multi') {
+      return q.options.filter(o => a?.optionIds.includes(o.id)).map(o => o.label).join(', ');
+    }
+    if (q.questionType === 'date') return a?.value ? formatDisplayDate(a.value, i18n.language) : '';
+    return a?.value ?? '';
+  };
   const denom = Math.max(totalQuestions, derived.steps.length);
   const progressPct = denom > 0 ? Math.min(100, (answeredCount / denom) * 100) : 0;
 
@@ -515,7 +601,19 @@ const AssessmentRunnerPage: React.FC = () => {
       <div className="sticky top-0 z-10 -mx-5 -mt-5 mb-6 border-b border-border bg-background/90 px-5 pb-3 pt-4 backdrop-blur-md sm:-mx-6 sm:-mt-6 sm:px-6">
         <div className="mx-auto flex max-w-2xl flex-col gap-2.5">
           <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
+            {/* Back lives up here, always in the same place (review of 30 Oct
+                2026: "back button should be on the top"). */}
+            <button
+              type="button"
+              onClick={reviewing ? () => { setReviewing(false); setStepIndex(derived.steps.length - 1); }
+                : stepIndex > 0 ? goBack : handleExit}
+              disabled={finishing}
+              aria-label={t('runner.back')}
+              className="-ml-1.5 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-surface-sunken hover:text-ink disabled:opacity-40"
+            >
+              <ArrowLeft className="size-5" />
+            </button>
+            <div className="min-w-0 flex-1">
               <div className="truncate font-display text-sm font-bold text-ink">
                 {definition.title}
               </div>
@@ -526,7 +624,7 @@ const AssessmentRunnerPage: React.FC = () => {
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <span className="text-xs font-semibold tabular-nums text-ink-muted">
-                {t('runner.stepCounter', {
+                {reviewing ? t('runner.reviewCounter') : t('runner.stepCounter', {
                   current: stepIndex + 1,
                   total: Math.max(totalQuestions, derived.steps.length),
                 })}
@@ -545,8 +643,43 @@ const AssessmentRunnerPage: React.FC = () => {
         </div>
       </div>
 
-      {/* One question per screen */}
-      <div className="mx-auto w-full max-w-2xl">
+      {/* One question per screen — or, before submitting, every answer */}
+      <div className="mx-auto w-full max-w-2xl pb-6">
+        {reviewing ? (
+          <Card className="p-5 sm:p-6">
+            <h2 className="flex items-center gap-2 font-display text-xl font-bold text-ink">
+              <ListChecks className="size-5 text-primary-ink" />{t('runner.reviewTitle')}
+            </h2>
+            <p className="mt-1 text-sm text-ink-muted">{t('runner.reviewHint')}</p>
+            <ol className="mt-4 flex flex-col divide-y divide-border">
+              {derived.steps.map((step, i) => {
+                if (step.kind === 'info') return null;
+                const title = step.kind === 'question' ? step.question.title : step.matrix.title;
+                const required = step.kind === 'question' ? step.question.required : step.matrix.required;
+                const done = isStepAnswered(step, answers);
+                const text = answerText(step);
+                return (
+                  <li key={step.id}>
+                    <button type="button" onClick={() => editStep(i)}
+                      className="flex w-full cursor-pointer items-start gap-3 py-3 text-left hover:bg-surface-sunken/60">
+                      <span className="mt-0.5 w-7 shrink-0 text-right text-sm font-bold tabular-nums text-ink-muted">{numberOf.get(step.id)}.</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-ink">{title}</span>
+                        <span className={required && !done ? 'block text-sm font-semibold text-error-600 dark:text-error-400' : 'block text-sm text-ink-muted'}>
+                          {done && text ? text : required ? t('runner.notAnswered') : t('runner.skipped')}
+                        </span>
+                      </span>
+                      <span className="flex size-10 shrink-0 items-center justify-center rounded-full text-primary-ink" aria-label={t('runner.change')}>
+                        <Pencil className="size-4" />
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </Card>
+        ) : (
+        <>
         {current.sectionId && (
           <div className="mb-3 flex justify-center">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-sage-100 px-3 py-1 text-xs font-semibold text-sage-700 dark:bg-sage-500/15 dark:text-sage-300">
@@ -667,14 +800,15 @@ const AssessmentRunnerPage: React.FC = () => {
                               {t('runner.multiHint')}
                             </p>
                           )}
-                          <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3">
-                            {q.options.map(o => (
+                          <div className={optionGridClass(q.options, qDisplay.optionMedia)}>
+                            {[...q.options.filter(isExclusiveOption), ...q.options.filter(o => !isExclusiveOption(o))].map(o => (
                               <OptionCard
                                 key={o.id}
                                 option={o}
                                 selected={selectedIds.includes(o.id)}
                                 onToggle={() => toggleOption(current, o.id)}
                                 showMedia={qDisplay.optionMedia}
+                                layout={optionLayout(q.options, qDisplay.optionMedia)}
                                 verdictDef={
                                   qDisplay.verdictTiming === 'during'
                                     ? findVerdict(verdictDefs, o.verdict)
@@ -691,17 +825,14 @@ const AssessmentRunnerPage: React.FC = () => {
               })()}
           </Card>
         </div>
+        </>
+        )}
+      </div>
 
-        {/* Footer controls */}
-        <div className="mt-6 flex items-center gap-2 sm:gap-3">
-          <Button
-            variant="outline"
-            onClick={goBack}
-            disabled={stepIndex === 0 || finishing}
-            iconLeft={<ArrowLeft className="size-4" />}
-          >
-            {t('runner.back')}
-          </Button>
+      {/* Footer controls: fixed at the bottom of the screen, so Next never
+          moves while the options above it change (review of 30 Oct 2026). */}
+      <div className="sticky bottom-0 z-10 -mx-5 border-t border-border bg-background/95 px-5 py-3 backdrop-blur-md sm:-mx-6 sm:px-6">
+        <div className="mx-auto flex w-full max-w-2xl items-center gap-2 sm:gap-3">
           {!editingSubmitted && (
             <Button
               variant="ghost"
@@ -713,19 +844,30 @@ const AssessmentRunnerPage: React.FC = () => {
               {t('runner.saveDraft')}
             </Button>
           )}
-          {showFinish ? (
+          {reviewing ? (
             <Button
               size="lg"
               onClick={finish}
               loading={finishing}
-              disabled={!canProceed || saving}
+              disabled={!derived.complete || !allRequiredAnswered || saving}
               iconLeft={<CheckCircle2 className="size-4" />}
               className={editingSubmitted ? 'ml-auto' : undefined}
             >
-              {editingSubmitted ? t('runner.saveChanges') : t('runner.finish')}
+              {editingSubmitted ? t('runner.saveChanges') : t('runner.confirmSubmit')}
+            </Button>
+          ) : showFinish || returnToReview ? (
+            <Button
+              size="lg"
+              onClick={() => { clearAdvanceTimer(); setReturnToReview(false); setReviewing(true); }}
+              disabled={!canProceed || finishing}
+              iconRight={<ArrowRight className="size-4" />}
+              className={editingSubmitted ? 'ml-auto' : undefined}
+            >
+              {returnToReview ? t('runner.backToReview') : t('runner.review')}
             </Button>
           ) : (
             <Button
+              size="lg"
               onClick={goNext}
               disabled={!canProceed || finishing}
               iconRight={<ArrowRight className="size-4" />}

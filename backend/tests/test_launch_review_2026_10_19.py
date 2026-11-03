@@ -351,3 +351,41 @@ def test_demo_monitor_refuses_without_a_synthetic_monitor(world):
     assert demo_accounts.pick_monitor(db) is None      # @t.mock is not a synthetic account
     with pytest.raises(SystemExit):
         demo_accounts.prepare_monitor(db)
+
+
+# ── Review of 29–30 Oct 2026: a visit is carried on, never restarted ──────
+
+def _submit(db, child_id, worker_id, form_key, on, status="submitted", mother_id=None):
+    db.add(models.FormResponse(form_key=form_key, child_id=child_id, mother_id=mother_id,
+                               submitted_by_user_id=worker_id, assessment_date=on, status=status,
+                               answers_json=[]))
+    db.commit()
+
+
+def test_a_growth_check_today_leaves_only_the_feeding_form(world):
+    db, worker, child = world["db"], world["worker"], world["child"]
+    _submit(db, child.id, worker.id, "growth_monitoring", AS_OF)
+    view = fieldplan.today_view(db, worker, AS_OF)
+    assert [u["child_id"] for u in view["urgent"]] == [], "seen today: not 'see soon' again"
+    assert view["unfinished"] == [{"mother_id": world["mother"].id, "mother_name": "Pallavi", "child_id": child.id,
+                                   "child_name": "Riya", "done": ["gm"], "pending": ["bf"]}]
+    _submit(db, child.id, worker.id, "breastfeeding", AS_OF)
+    assert fieldplan.today_view(db, worker, AS_OF)["unfinished"] == []
+
+
+def test_drafts_come_first(world):
+    db, worker, child = world["db"], world["worker"], world["child"]
+    _submit(db, child.id, worker.id, "complementary_feeding", AS_OF, status="draft")
+    drafts = fieldplan.today_view(db, worker, AS_OF)["drafts"]
+    assert [(d["form"], d["child_id"]) for d in drafts] == [("cf", child.id)]
+
+
+def test_no_protein_form_for_a_mother_of_an_older_baby(world):
+    db, worker, mother, child = world["db"], world["worker"], world["mother"], world["child"]
+    # Adopted at about seven months: the dates make her "baby 5 months or older".
+    child.dob = date(2025, 11, 10)
+    mother.declared_adoption_type = "pnc_ge5"
+    db.commit()
+    view = fieldplan.today_view(db, worker, AS_OF)
+    assert all(f["missing"] != "protein" for f in view["finish"])
+    assert all(f["key"] != "protein" for g in view["today"] for f in g["forms"])

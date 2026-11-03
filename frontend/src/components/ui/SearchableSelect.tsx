@@ -19,6 +19,10 @@ export interface SearchableSelectProps {
   error?: string;
   /** Message shown when a search yields nothing. */
   emptyMessage?: string;
+  /** When a search finds nothing: one tap to carry on with what was typed
+   *  (e.g. pick "Other" and keep the name — review of 30 Oct 2026). */
+  onNoMatch?: (query: string) => void;
+  noMatchLabel?: (query: string) => string;
 }
 
 /**
@@ -28,6 +32,7 @@ export interface SearchableSelectProps {
  */
 const SearchableSelect: React.FC<SearchableSelectProps> = ({
   label, value, onChange, options, placeholder, disabled = false, error, emptyMessage = 'No matches',
+  onNoMatch, noMatchLabel,
 }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -96,9 +101,16 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
               />
             </div>
             <ul className="max-h-52 overflow-y-auto py-1">
-              {filtered.length === 0 && (
+              {filtered.length === 0 && (onNoMatch && query.trim() ? (
+                <li>
+                  <button type="button" onClick={() => { onNoMatch(query.trim()); setOpen(false); }}
+                    className="w-full px-3.5 py-2.5 text-left text-sm font-semibold text-primary-ink hover:bg-surface-sunken">
+                    {noMatchLabel ? noMatchLabel(query.trim()) : emptyMessage}
+                  </button>
+                </li>
+              ) : (
                 <li className="px-3.5 py-2 text-sm text-ink-faint">{emptyMessage}</li>
-              )}
+              ))}
               {filtered.map((o, i) => {
                 const isSelected = String(o.value) === String(value);
                 return (

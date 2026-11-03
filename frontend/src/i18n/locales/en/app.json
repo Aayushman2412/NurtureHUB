@@ -1,7 +1,7 @@
 {
   "nav": {
     "dashboard": "Home",
-    "tutorials": "Tutorials & Tests",
+    "tutorials": "Training",
     "assessments": "Tests",
     "mothers": "Adoptions",
     "growth": "Growth Monitor",
@@ -10,7 +10,7 @@
   },
   "headerTitle": {
     "dashboard": "Home",
-    "tutorials": "Tutorials & Tests",
+    "tutorials": "Training",
     "tests": "Tests",
     "results": "Test result",
     "profile": "Profile Settings",
@@ -59,6 +59,7 @@
     "home": "Home",
     "mothers": "Adoptions",
     "training": "Training",
-    "profile": "Profile"
+    "profile": "Profile",
+    "locked": "Opens after selection"
   }
 }

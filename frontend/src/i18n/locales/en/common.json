@@ -24,5 +24,20 @@
     "compact": "Compact rows",
     "compactHint": "Less space around each row, so more learners fit on the screen",
     "reset": "Reset"
+  },
+  "datePicker": {
+    "title": "Choose a date",
+    "none": "No date chosen yet",
+    "pickYear": "Pick the year",
+    "pickMonth": "Pick the month",
+    "pickDay": "Pick the day",
+    "today": "Today",
+    "cancel": "Cancel",
+    "open": "Open the calendar",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month"
+  },
+  "combo": {
+    "notInList": "Not in the list — “{{text}}” will be saved as typed."
   }
 }

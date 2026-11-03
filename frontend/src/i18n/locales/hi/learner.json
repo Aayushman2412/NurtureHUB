@@ -53,7 +53,9 @@
     "facilityTypePlaceholder": "अपनी संस्था का नाम लिखें",
     "contactEmail": "ईमेल पता (वैकल्पिक)",
     "contactEmailPlaceholder": "you@example.com",
-    "contactEmailHint": "शुरू करने के लिए ज़रूरी नहीं। जोड़ने पर हम पुष्टि के लिए एक कोड भेजेंगे — यह आप बाद में भी कर सकते हैं।"
+    "contactEmailHint": "शुरू करने के लिए ज़रूरी नहीं। जोड़ने पर हम पुष्टि के लिए एक कोड भेजेंगे — यह आप बाद में भी कर सकते हैं।",
+    "taluka": "तालुका",
+    "selectTalukaFirst": "पहले तालुका चुनें"
   },
   "placeholders": {
     "selectMarital": "वैवाहिक स्थिति चुनें",

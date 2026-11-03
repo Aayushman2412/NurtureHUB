@@ -34,6 +34,8 @@ export interface FlatFieldInputProps {
   otherText?: string;
   onOtherTextChange?: (value: string) => void;
   otherError?: string;
+  /** The learner left the field — the runner checks the answer then. */
+  onBlur?: () => void;
 }
 
 const asString = (v: string | string[]): string => (Array.isArray(v) ? '' : v);
@@ -50,6 +52,7 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
   otherText = '',
   onOtherTextChange,
   otherError,
+  onBlur,
 }) => {
   const { t } = useTranslation('assessments');
   const { showToast } = useToast();
@@ -74,6 +77,7 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
         error={!!otherError}
         disabled={disabled || !otherPicked}
         onChange={e => onOtherTextChange?.(e.target.value)}
+        onBlur={onBlur}
       />
       {otherError && <p className="mt-1 text-xs text-error-500">{otherError}</p>}
     </div>
@@ -152,6 +156,7 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
             value={asString(value)}
             disabled={disabled}
             onChange={e => onChange(e.target.value)}
+            onBlur={onBlur}
           />
         );
 
@@ -168,6 +173,7 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
             error={!!error}
             disabled={disabled}
             onChange={e => onChange(e.target.value)}
+            onBlur={onBlur}
           />
         );
 
@@ -182,6 +188,7 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
             max={field.noFuture ? todayIso : undefined}
             min={field.notBeforeDob && dobIso ? dobIso.slice(0, 10) : undefined}
             placeholder={field.placeholder}
+            onBlur={onBlur}
           />
         );
 
@@ -250,9 +257,12 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
         );
 
       case 'checkbox':
+        // "None" goes on top (review of 30 Oct 2026: "it will be good if we
+        // shift none onto the top") — one tap for the commonest answer, and it
+        // reads as the alternative to everything below it.
         return (
           <div className="flex flex-col gap-2">
-            {(field.options ?? []).map(o => (
+            {[...(field.options ?? []).filter(isExclusiveOption), ...(field.options ?? []).filter(o => !isExclusiveOption(o))].map(o => (
               <Checkbox
                 key={o.value}
                 label={o.label}
@@ -346,6 +356,7 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
             error={!!error}
             disabled={disabled}
             onChange={e => onChange(e.target.value)}
+            onBlur={onBlur}
           />
         );
     }

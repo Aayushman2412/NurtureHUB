@@ -60,7 +60,7 @@ def _first(name: Optional[str]) -> str:
 
 def falter_message(child_name: str, reasons: List[str], days: int) -> Dict[str, str]:
     if "weight_fell" in reasons:
-        why = f"{child_name}'s weight went down since the last visit."
+        why = f"{child_name}'s weight reduced since the last visit."
     elif "not_gaining" in reasons:
         why = f"{child_name} is not gaining enough weight."
     else:

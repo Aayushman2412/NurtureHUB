@@ -164,7 +164,15 @@
     "lmpOptional": "Last menstrual period (LMP) — optional after delivery",
     "pageOf": "{{n}} of {{of}}",
     "saveAndContinue": "Save and continue",
-    "proteinNext": "Next comes her protein form. Registration is finished after it."
+    "proteinNext": "Next comes her protein form. Registration is finished after it.",
+    "ancNext": "Next comes her pregnancy check, then her protein form. Registration is finished after them.",
+    "babyNext": "Next you register her baby.",
+    "placeFromYou": "These are filled in from your own location. If the mother lives somewhere else, change them.",
+    "hwcNotListed": "Not in the list? Choose “Other” and keep “{{name}}”",
+    "editTitle": "Change the mother's details",
+    "saveChanges": "Save changes",
+    "toastSaving": "Saving…",
+    "toastSaved": "Saved."
   },
   "child": {
     "titleNew": "Register a Child",

@@ -174,21 +174,27 @@ const AssessmentPlanPage: React.FC = () => {
           />
         )}
         <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:gap-6 sm:text-left">
-          <ProgressRing
-            value={pct}
-            size={108}
-            strokeWidth={9}
-            className="shrink-0 text-success-500"
-            label={
-              <span className="text-lg">
-                {summary.green}
-                <span className="text-sm text-ink-muted">/{denom}</span>
-              </span>
-            }
-          />
+          {/* A form with no LAP verdicts has nothing to score — "0 of 0 as per
+              LAP" meant nothing to the reader (review of 30 Oct 2026). */}
+          {denom > 0 ? (
+            <ProgressRing
+              value={pct}
+              size={108}
+              strokeWidth={9}
+              className="shrink-0 text-success-500"
+              label={
+                <span className="text-lg">
+                  {summary.green}
+                  <span className="text-sm text-ink-muted">/{denom}</span>
+                </span>
+              }
+            />
+          ) : (
+            <CheckCircle2 aria-hidden className="size-14 shrink-0 text-success-500" />
+          )}
           <div className="min-w-0">
             <h2 className="font-display text-xl font-bold text-ink sm:text-2xl">
-              {t('plan.scoreTitle', { green: summary.green, total: denom })}
+              {denom > 0 ? t('plan.scoreTitle', { green: summary.green, total: denom }) : t('plan.savedTitle')}
             </h2>
             <p className="mt-1 text-sm text-ink-muted">
               {formTitle}

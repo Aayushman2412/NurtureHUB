@@ -24,7 +24,7 @@ import {
   Award,
   CalendarRange,
 } from 'lucide-react';
-import { Badge, Button, Card, PageLoader, ProgressBar, ProgressRing, WelcomeBanner } from '../components/ui';
+import { Badge, Button, Card, Modal, PageLoader, ProgressBar, ProgressRing, WelcomeBanner } from '../components/ui';
 import SupportTeamCard from '../components/SupportTeamCard';
 import TrainingRings from '../components/dashboard/TrainingRings';
 import FieldHome from '../components/field/FieldHome';
@@ -235,6 +235,7 @@ type DashView = 'training' | 'adoptions';
 const DashboardPage: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showProgress, setShowProgress] = useState(false);
   const [reports, setReports] = useState<TestTopicReport[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -277,6 +278,22 @@ const DashboardPage: React.FC = () => {
   // and test results stay one tap away.
   if (view === 'adoptions') return <FieldHome />;
 
+  // Each circle leads to what it counts: the next video, the first quiz not
+  // yet answered (review of 29 Oct 2026).
+  const allTutorials = data.stages.flatMap(s => s.tutorials);
+  const nextVideo = allTutorials.find(x => !x.is_completed);
+  const nextQuiz = allTutorials.find(x => x.is_completed && x.quiz_available && x.quiz_status === 'pending');
+  const ringLinks = {
+    videos: nextVideo ? `/tutorials/${nextVideo.id}` : '/tutorials',
+    watched: nextVideo ? `/tutorials/${nextVideo.id}` : '/tutorials',
+    quizzes: nextQuiz ? `/tutorials/${nextQuiz.id}?quiz=1` : '/tutorials',
+    tests: '/tutorials',
+  };
+  // The overall figure: videos count 60 points, tests passed 40 (as the server
+  // weighs them — routers/dashboard.py).
+  const videoPoints = data.total_tutorials ? Math.round((60 * data.tutorials_completed) / data.total_tutorials) : 60;
+  const testPoints = data.total_tests ? Math.round((40 * data.tests_passed) / data.total_tests) : 40;
+
   return (
     <div className="flex flex-col gap-6">
       {/* Welcome Banner — shared component, styled once (adapts light/dark) */}
@@ -296,12 +313,18 @@ const DashboardPage: React.FC = () => {
           total: data.total_tutorials,
         })}
       >
-        <ProgressRing value={data.progress_percentage} size={92} />
-        <span className="text-sm font-semibold leading-tight text-ink-muted">
-          {t('welcome.overall')}
-          <br />
-          {t('welcome.progress')}
-        </span>
+        {/* Tap to see how the number is made (review of 29 Oct 2026: "in spite
+            of me finishing three of the six videos why is it 30% — let me
+            know clearly … this should be a pop-up"). */}
+        <button type="button" onClick={() => setShowProgress(true)} className="flex cursor-pointer items-center gap-3 rounded-xl text-left">
+          <ProgressRing value={data.progress_percentage} size={92} />
+          <span className="text-sm font-semibold leading-tight text-ink-muted">
+            {t('welcome.overall')}
+            <br />
+            {t('welcome.progress')}
+            <span className="mt-1 block text-xs font-semibold text-primary-ink underline underline-offset-2">{t('progressInfo.how')}</span>
+          </span>
+        </button>
       </WelcomeBanner>
 
       {/* An easy password is allowed, never forced — but asked about (review of 17 Oct 2026). */}
@@ -410,6 +433,7 @@ const DashboardPage: React.FC = () => {
         <div className="flex flex-col gap-3">
           <TrainingRings
             tutorials={data.stages.flatMap(s => s.tutorials)}
+            links={ringLinks}
             scores={{
               formative: data.stages.find(s => s.test?.test_type === 'formative')?.test?.score ?? null,
               screening: data.stages.find(s => s.test?.test_type === 'screening')?.test?.score ?? null,
@@ -577,6 +601,21 @@ const DashboardPage: React.FC = () => {
                           <span>{pct}%</span>
                         </div>
                         <ProgressBar value={pct} tone="coral" />
+                        {/* Quizzes answered, under the videos (review of 29 Oct 2026). */}
+                        {stg.tutorials.some(x => x.quiz_available) && (() => {
+                          const quizzes = stg.tutorials.filter(x => x.quiz_available);
+                          const answered = quizzes.filter(x => x.quiz_status !== 'pending').length;
+                          const qPct = Math.round((answered / quizzes.length) * 100);
+                          return (
+                            <>
+                              <div className="mb-1.5 mt-2.5 flex justify-between text-xs font-semibold text-ink-muted">
+                                <span>{t('videos.quizzesAnswered', { done: answered, total: quizzes.length })}</span>
+                                <span>{qPct}%</span>
+                              </div>
+                              <ProgressBar value={qPct} tone="sage" />
+                            </>
+                          );
+                        })()}
                       </div>
                     )}
                     <Button
@@ -659,6 +698,24 @@ const DashboardPage: React.FC = () => {
       </>
 
       <SupportTeamCard />
+
+      <Modal open={showProgress} onClose={() => setShowProgress(false)} size="sm" title={t('progressInfo.title')}>
+        <div className="flex flex-col gap-3 text-sm text-ink">
+          <p className="text-ink-muted">{t('progressInfo.intro')}</p>
+          <div className="flex justify-between gap-3">
+            <span>{t('progressInfo.videos', { done: data.tutorials_completed, total: data.total_tutorials })}</span>
+            <b className="tabular-nums">{videoPoints} / 60</b>
+          </div>
+          <div className="flex justify-between gap-3">
+            <span>{t('progressInfo.tests', { done: data.tests_passed, total: data.total_tests })}</span>
+            <b className="tabular-nums">{testPoints} / 40</b>
+          </div>
+          <div className="flex justify-between gap-3 border-t border-border pt-2 font-bold">
+            <span>{t('progressInfo.total')}</span>
+            <span className="tabular-nums">{Math.round(data.progress_percentage)}%</span>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

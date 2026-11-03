@@ -34,7 +34,8 @@
     "numberChildrenRange": "Enter a number of children between 0 and 10.",
     "departmentOther": "Please specify the department.",
     "qualificationOther": "Please specify your qualification.",
-    "cannotExceedService": "Cannot exceed total years of service."
+    "cannotExceedService": "Cannot exceed total years of service.",
+    "villageLetters": "Type the village name in letters."
   },
   "mother": {
     "nameRequired": "Mother’s name is required (min 2 characters).",

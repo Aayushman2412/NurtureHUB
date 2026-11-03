@@ -34,7 +34,8 @@
     "numberChildrenRange": "0 और 10 के बीच बच्चों की संख्या दर्ज करें।",
     "departmentOther": "कृपया विभाग निर्दिष्ट करें।",
     "qualificationOther": "कृपया अपनी योग्यता निर्दिष्ट करें।",
-    "cannotExceedService": "सेवा के कुल वर्षों से अधिक नहीं हो सकता।"
+    "cannotExceedService": "सेवा के कुल वर्षों से अधिक नहीं हो सकता।",
+    "villageLetters": "गाँव का नाम अक्षरों में लिखें।"
   },
   "mother": {
     "nameRequired": "माता का नाम ज़रूरी है (न्यूनतम 2 अक्षर)।",

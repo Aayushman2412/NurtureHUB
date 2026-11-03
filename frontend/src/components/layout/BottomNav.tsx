@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, useLocation } from 'react-router-dom';
-import { GraduationCap, House, User, Users } from 'lucide-react';
+import { GraduationCap, House, Lock, User, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { cn } from '../../utils/cn';
 import { hasBottomNav } from '../../lib/bottomNav';
@@ -18,7 +18,9 @@ const BottomNav: React.FC = () => {
   if (!hasBottomNav(pathname)) return null;
   const items = [
     { to: '/dashboard', label: t('bottomNav.home'), icon: House, also: [] as string[] },
-    ...(user?.adoptions_open ? [{ to: '/mothers', label: t('bottomNav.mothers'), icon: Users, also: ['/babies'] }] : []),
+    // Always here, locked until selection (review of 29 Oct 2026: "check if
+    // adoption is activated will I get the adoption section also here").
+    { to: '/mothers', label: t('bottomNav.mothers'), icon: Users, also: ['/babies'], locked: !user?.adoptions_open },
     { to: '/tutorials', label: t('bottomNav.training'), icon: GraduationCap, also: ['/tests', '/results'] },
     { to: '/profile', label: t('bottomNav.profile'), icon: User, also: [] },
   ];
@@ -43,6 +45,9 @@ const BottomNav: React.FC = () => {
                   <span className={cn('flex h-8 w-14 items-center justify-center rounded-full',
                     (isActive || item.also.some(p => pathname.startsWith(p))) && 'bg-coral-50 dark:bg-coral-500/15')}>
                     <item.icon className="size-6" />
+                    {'locked' in item && item.locked && (
+                      <Lock className="-ml-1.5 mt-3 size-3.5 text-ink-faint" aria-label={t('bottomNav.locked')} />
+                    )}
                   </span>
                   {item.label}
                 </>

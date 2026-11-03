@@ -76,6 +76,9 @@ export const learnerSchema = z
   .superRefine((v, ctx) => {
     if (!(typeof v.villageId === 'number' && v.villageId > 0) && !v.villageName?.trim())
       ctx.addIssue({ code: 'custom', path: ['villageName'], message: 'validation:learner.village' });
+    // A typed village is a name: "/" was accepted (review of 29 Oct 2026).
+    else if (!(typeof v.villageId === 'number' && v.villageId > 0) && (v.villageName?.match(/\p{L}/gu)?.length ?? 0) < 2)
+      ctx.addIssue({ code: 'custom', path: ['villageName'], message: 'validation:learner.villageLetters' });
     if (!(typeof v.facilityId === 'number' && v.facilityId > 0) && !v.facilityName?.trim())
       ctx.addIssue({ code: 'custom', path: ['facilityName'], message: 'validation:learner.facility' });
     for (const t of TRAININGS) {

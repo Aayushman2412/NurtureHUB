@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { completeTutorial, getStages, updateTutorialProgress } from '../api/tutorials';
 import type { ProgressState } from '../api/tutorials';
@@ -51,6 +51,7 @@ const TutorialPlayerPage: React.FC = () => {
 
   const [stages, setStages] = useState<Stage[]>([]);
   const [currentTutorial, setCurrentTutorial] = useState<Tutorial | null>(null);
+  const [searchParams] = useSearchParams();
   const [watchPct, setWatchPct] = useState(0);
   const [quizOpen, setQuizOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -93,6 +94,15 @@ const TutorialPlayerPage: React.FC = () => {
     loadData();
   }, [id, loadData]);
 
+  // From the dashboard's quiz circle: straight to the quiz not yet answered.
+  useEffect(() => {
+    if (searchParams.get('quiz') === '1' && currentTutorial?.is_completed) {
+      maybeOpenQuiz({ quiz_available: currentTutorial.quiz_available, quiz_status: currentTutorial.quiz_status });
+    }
+    // Once per tutorial loaded.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTutorial?.id]);
+
   const maybeOpenQuiz = (state: Pick<ProgressState, 'quiz_available' | 'quiz_status'>) => {
     if (state.quiz_available && state.quiz_status === 'pending' && !quizShownRef.current) {
       quizShownRef.current = true;
@@ -114,7 +124,9 @@ const TutorialPlayerPage: React.FC = () => {
         setCurrentTutorial((prev) => (prev ? { ...prev, is_completed: true } : null));
         showToast(t('player.toast.moduleCompleted', { title: currentTutorial.title }), 'success');
         getStages().then(setStages).catch(() => {});
-        maybeOpenQuiz(state);
+        // The quiz waits for the end of the video (review of 29 Oct 2026: "I
+        // would prefer the quiz to come at the end of the video") — it opens
+        // from handleVideoEnded, not the moment the watch threshold is met.
       }
     } catch (e) {
       // Non-fatal: tracking beats may fail transiently (offline etc.)

@@ -78,7 +78,18 @@
     "emptyBody": "This assessment has no questions yet. Please check back later.",
     "lockedTitle": "Locked for now",
     "cfLockedBody": "The complementary feeding assessment unlocks once the child is {{min}} days old.",
-    "standardServingUnit": "Standard serving unit"
+    "standardServingUnit": "Standard serving unit",
+    "reviewCounter": "Check answers",
+    "reviewTitle": "Check the answers",
+    "reviewHint": "Tap an answer to change it. When everything is right, confirm.",
+    "notAnswered": "Not answered yet",
+    "skipped": "Left blank (optional)",
+    "change": "Change this answer",
+    "confirmSubmit": "Confirm and submit",
+    "backToReview": "Back to the answers",
+    "review": "Check answers",
+    "matrixRows_one": "{{count}} row filled",
+    "matrixRows_other": "{{count}} rows filled"
   },
   "plan": {
     "loading": "Building your plan",
@@ -107,10 +118,11 @@
     "proteinDailyAvg": "Average daily protein (habitual)",
     "proteinHqDailyAvg": "Average daily high-quality protein",
     "proteinHighTitle": "Unusually high protein intake",
-    "proteinHighBody": "The recorded 24-hour total of {{grams}}g is above the {{threshold}}g review threshold. Please double-check the portion sizes with the mother — the team has been notified.",
+    "proteinHighBody": "The recorded 24-hour total of {{grams}}g is higher than expected (above {{threshold}}g). Please check the portion sizes with the mother once more.",
     "doingWellSub": "Steps already being done as per LAP — acknowledge these with the mother.",
     "doingWellEmpty": "Nothing was recorded as per LAP in this assessment.",
-    "needsAttentionEmpty": "Everything in this assessment was as per LAP — nothing to work on."
+    "needsAttentionEmpty": "Everything in this assessment was as per LAP — nothing to work on.",
+    "savedTitle": "Saved"
   },
   "growth": {
     "optional": "(optional)",
@@ -155,5 +167,16 @@
       "baby": "Next: Register the baby",
       "done": "Finish"
     }
+  },
+  "anc": {
+    "autoTitle": "Identified from the registration",
+    "autoFrom": "Height {{height}} · age {{age}} years. To correct these, change the mother's details.",
+    "yes": "Yes",
+    "no": "No",
+    "unknown": {
+      "height": "Height not recorded",
+      "age": "Age not recorded"
+    },
+    "otherRisks": "Does the mother have any of these other high-risk conditions?"
   }
 }

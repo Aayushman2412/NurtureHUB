@@ -343,5 +343,14 @@
       "pnc_lt5": "PNC <5M",
       "pnc_ge5": "PNC ≥5M"
     }
+  },
+  "visitTable": {
+    "title": "Visits",
+    "date": "Date",
+    "age": "Age",
+    "weight": "Weight (kg)",
+    "length": "Length (cm)",
+    "wfa": "Weight for age",
+    "lfa": "Length for age"
   }
 }

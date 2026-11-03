@@ -10,7 +10,7 @@ import { useLearnerMetadata } from '../hooks/useLearnerMetadata';
 import client from '../api/client';
 import { clearJoinProject, getRegistrationScope, joinProjectSlug, type RegistrationScope } from '../api/registration';
 import {
-  TRAINING_KEYS, ageFromDob, maxDobForAge, blockLabel, NEVER_MARRIED,
+  TRAINING_KEYS, ageFromDob, maxDobForAge, talukaOptions, NEVER_MARRIED,
   genderOptions, maritalOptions, internetOptions, recencyOptions,
 } from '../lib/learnerFields';
 import { validateLearner, validateLearnerStep, LR_STEP_FIELDS, type LearnerFormValues } from '../lib/learnerSchema';
@@ -104,8 +104,9 @@ const RegistrationPage: React.FC = () => {
     msg => showToast(msg, 'error'),
     { project: locked ? joining : null },
   );
-  const hasSubdivisions = meta.blocks.some(b => b.subdivision);
-  const askChildren = maritalStatus !== NEVER_MARRIED;
+  // Asked only once a marital status other than "never married" is chosen
+  // (review of 29 Oct 2026: the question showed before any answer).
+  const askChildren = maritalStatus !== '' && maritalStatus !== NEVER_MARRIED;
 
   const selectedDept = meta.departments.find(d => d.id === Number(departmentId));
   const isOtherDept = selectedDept?.code === 'OTHER';
@@ -166,6 +167,13 @@ const RegistrationPage: React.FC = () => {
     villageId, villageName, facilityId, facilityName, residenceDistance, qualificationId, qualificationOther,
     yearsService, yearsDesignation, yearsFacility, internetWorkplace, trainings,
     isOtherDept, isOtherDesignation, isOtherFacilityType, showQualificationOther: showQualOther,
+  };
+
+  // Flag a field as soon as it is left (review of 29 Oct 2026: "this flagging
+  // should come immediately after I type this and move to the next question").
+  const check = (key: string) => {
+    const msg = validateLearner(values)[key];
+    if (msg) setErrors(e => (e[key] === msg ? e : { ...e, [key]: msg }));
   };
 
   const next = () => {
@@ -308,12 +316,12 @@ const RegistrationPage: React.FC = () => {
                 <Field label={t('fields.mobileNumber')} htmlFor="phone-input" error={errors.phone}>
                   <Input id="phone-input" type="tel" inputMode="numeric" placeholder={t('fields.phonePlaceholder')}
                     value={phone} error={!!errors.phone}
-                    onChange={e => { setPhone(e.target.value); clearError('phone'); }} />
+                    onChange={e => { setPhone(e.target.value); clearError('phone'); }} onBlur={() => check('phone')} />
                 </Field>
                 <Field label={t('fields.alternateNumber')} htmlFor="alt-phone-input" error={errors.alternatePhone}>
                   <Input id="alt-phone-input" type="tel" inputMode="numeric" placeholder={t('fields.optional')}
                     value={alternatePhone} error={!!errors.alternatePhone}
-                    onChange={e => { setAlternatePhone(e.target.value); clearError('alternatePhone'); }} />
+                    onChange={e => { setAlternatePhone(e.target.value); clearError('alternatePhone'); }} onBlur={() => check('alternatePhone')} />
                 </Field>
               </div>
 
@@ -332,7 +340,7 @@ const RegistrationPage: React.FC = () => {
               {isOtherDept && (
                 <Field label={t('fields.specifyDepartment')} htmlFor="dept-other" error={errors.departmentOther}>
                   <Input id="dept-other" type="text" placeholder={t('fields.enterDepartment')} error={!!errors.departmentOther}
-                    value={departmentOther} onChange={e => { setDepartmentOther(e.target.value); clearError('departmentOther'); }} required />
+                    value={departmentOther} onChange={e => { setDepartmentOther(e.target.value); clearError('departmentOther'); }} required onBlur={() => check('departmentOther')} />
                 </Field>
               )}
 
@@ -346,7 +354,7 @@ const RegistrationPage: React.FC = () => {
               {(isOtherDept || isOtherDesignation) && (
                 <Field label={t('fields.specifyDesignation')} htmlFor="desig-other" error={errors.designationOther}>
                   <Input id="desig-other" type="text" placeholder={t('fields.enterDesignation')} error={!!errors.designationOther}
-                    value={designationOther} onChange={e => { setDesignationOther(e.target.value); clearError('designationOther'); }} required />
+                    value={designationOther} onChange={e => { setDesignationOther(e.target.value); clearError('designationOther'); }} required onBlur={() => check('designationOther')} />
                 </Field>
               )}
 
@@ -360,7 +368,7 @@ const RegistrationPage: React.FC = () => {
               {(isOtherDept || isOtherFacilityType) && (
                 <Field label={t('fields.specifyFacilityType')} htmlFor="ft-other" error={errors.facilityTypeOther}>
                   <Input id="ft-other" type="text" placeholder={t('fields.enterFacilityType')} error={!!errors.facilityTypeOther}
-                    value={facilityTypeOther} onChange={e => { setFacilityTypeOther(e.target.value); clearError('facilityTypeOther'); }} required />
+                    value={facilityTypeOther} onChange={e => { setFacilityTypeOther(e.target.value); clearError('facilityTypeOther'); }} required onBlur={() => check('facilityTypeOther')} />
                 </Field>
               )}
 
@@ -383,33 +391,36 @@ const RegistrationPage: React.FC = () => {
                 placeholder={t('placeholders.selectDistrict')} disabled={!stateId || !!locked}
                 options={meta.districts.map(d => ({ value: d.id, label: d.name }))} />
 
-              <SelectField label={hasSubdivisions ? t('fields.subdivisionTaluk') : t('fields.block')} value={blockId} onChange={onBlock} error={errors.blockId}
+              {/* Talukas by name (review of 29 Oct 2026: "when I mean taluk it
+                  would be preferably a taluk" — not subdivision–taluka pairs). */}
+              <SelectField label={t('fields.taluka')} value={blockId} onChange={onBlock} error={errors.blockId}
                 placeholder={t('placeholders.selectTaluk')} disabled={!districtId}
-                options={meta.blocks.map(b => ({ value: b.id, label: blockLabel(b) }))} />
+                options={talukaOptions(meta.blocks)} />
 
-              {blockId !== '' && (
-                <ComboBox label={t('fields.gramPanchayat')} value={gpName}
-                  onValueChange={text => { setGpName(text); setGpId(''); }}
-                  onPick={o => { setGpId(Number(o.value)); setGpName(o.label); }}
-                  placeholder={meta.gramPanchayats.length ? t('fields.gramPanchayatPlaceholder') : t('fields.gramPanchayatType')}
-                  options={meta.gramPanchayats.map(g => ({ value: g.id, label: g.name }))} />
-              )}
+              {/* Always shown, so it is not a surprise once a taluka is picked. */}
+              <ComboBox label={t('fields.gramPanchayat')} value={gpName}
+                onValueChange={text => { setGpName(text); setGpId(''); }}
+                onPick={o => { setGpId(Number(o.value)); setGpName(o.label); }}
+                disabled={!blockId}
+                placeholder={!blockId ? t('fields.selectTalukaFirst')
+                  : meta.gramPanchayats.length ? t('fields.gramPanchayatPlaceholder') : t('fields.gramPanchayatType')}
+                options={meta.gramPanchayats.map(g => ({ value: g.id, label: g.name }))} />
 
               <ComboBox label={t('fields.village')} value={villageName} error={errors.villageName}
-                onValueChange={onVillageType} onPick={onVillagePick}
-                placeholder={t('fields.villageTypePlaceholder')} disabled={!blockId}
+                onValueChange={onVillageType} onPick={onVillagePick} onBlur={() => check('villageName')}
+                placeholder={!blockId ? t('fields.selectTalukaFirst') : t('fields.villageTypePlaceholder')} disabled={!blockId}
                 options={meta.villages.map(v => ({ value: v.id, label: v.name }))} />
 
               <Field label={t('fields.facilityName')} htmlFor="facility-name" error={errors.facilityName}>
                 <Input id="facility-name" type="text" placeholder={t('fields.facilityTypePlaceholder')}
                   value={facilityName} error={!!errors.facilityName} disabled={!blockId}
-                  onChange={e => onFacilityTyped(e.target.value)} />
+                  onChange={e => onFacilityTyped(e.target.value)} onBlur={() => check('facilityName')} />
               </Field>
 
               <Field label={t('fields.residenceDistance')} htmlFor="residence-distance" error={errors.residenceDistance}>
                 <Input id="residence-distance" type="number" min={0.1} max={100} step={0.1} placeholder={t('fields.residenceDistancePlaceholder')}
                   value={residenceDistance} error={!!errors.residenceDistance}
-                  onChange={e => { setResidenceDistance(e.target.value ? Number(e.target.value) : ''); clearError('residenceDistance'); }} />
+                  onChange={e => { setResidenceDistance(e.target.value ? Number(e.target.value) : ''); clearError('residenceDistance'); }} onBlur={() => check('residenceDistance')} />
               </Field>
             </div>
           </div>
@@ -429,7 +440,7 @@ const RegistrationPage: React.FC = () => {
               {showQualOther && (
                 <Field label={t('fields.specifyQualification')} htmlFor="qual-other" error={errors.qualificationOther}>
                   <Input id="qual-other" type="text" placeholder={t('fields.enterDetails')} error={!!errors.qualificationOther}
-                    value={qualificationOther} onChange={e => { setQualificationOther(e.target.value); clearError('qualificationOther'); }} required />
+                    value={qualificationOther} onChange={e => { setQualificationOther(e.target.value); clearError('qualificationOther'); }} required onBlur={() => check('qualificationOther')} />
                 </Field>
               )}
 
@@ -437,17 +448,17 @@ const RegistrationPage: React.FC = () => {
                 <Field label={t('fields.yearsService')} htmlFor="years-service" error={errors.yearsService}>
                   <Input id="years-service" type="number" min={0} max={50} step={0.1} placeholder={t('fields.yearsServicePlaceholder')}
                     value={yearsService} error={!!errors.yearsService}
-                    onChange={e => { setYearsService(e.target.value ? Number(e.target.value) : ''); clearError('yearsService'); }} />
+                    onChange={e => { setYearsService(e.target.value ? Number(e.target.value) : ''); clearError('yearsService'); }} onBlur={() => check('yearsService')} />
                 </Field>
                 <Field label={t('fields.yearsDesignation')} htmlFor="years-designation" error={errors.yearsDesignation}>
                   <Input id="years-designation" type="number" min={0} max={50} step={0.1} placeholder={t('fields.yearsPlaceholder')}
                     value={yearsDesignation} error={!!errors.yearsDesignation}
-                    onChange={e => { setYearsDesignation(e.target.value ? Number(e.target.value) : ''); clearError('yearsDesignation'); }} />
+                    onChange={e => { setYearsDesignation(e.target.value ? Number(e.target.value) : ''); clearError('yearsDesignation'); }} onBlur={() => check('yearsDesignation')} />
                 </Field>
                 <Field label={t('fields.yearsFacility')} htmlFor="years-facility" error={errors.yearsFacility}>
                   <Input id="years-facility" type="number" min={0} max={50} step={0.1} placeholder={t('fields.yearsPlaceholder')}
                     value={yearsFacility} error={!!errors.yearsFacility}
-                    onChange={e => { setYearsFacility(e.target.value ? Number(e.target.value) : ''); clearError('yearsFacility'); }} />
+                    onChange={e => { setYearsFacility(e.target.value ? Number(e.target.value) : ''); clearError('yearsFacility'); }} onBlur={() => check('yearsFacility')} />
                 </Field>
               </div>
 
@@ -479,7 +490,7 @@ const RegistrationPage: React.FC = () => {
                     <Field label={t('fields.numberChildren')} htmlFor="num-children" error={errors.numberChildren}>
                       <Input id="num-children" type="number" min={0} max={10} placeholder={t('fields.numberChildrenPlaceholder')} value={numberChildren}
                         error={!!errors.numberChildren}
-                        onChange={e => { setNumberChildren(e.target.value ? Number(e.target.value) : ''); clearError('numberChildren'); }} />
+                        onChange={e => { setNumberChildren(e.target.value ? Number(e.target.value) : ''); clearError('numberChildren'); }} onBlur={() => check('numberChildren')} />
                     </Field>
                   )}
                 </div>
