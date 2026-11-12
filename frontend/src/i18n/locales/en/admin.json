@@ -348,7 +348,7 @@
       "mam": "Moderate wasting (MAM)",
       "sst": "Severe stunting",
       "mst": "Moderate stunting",
-      "faltering": "Faltering (fell since the last visit)",
+      "faltering": "Faltering (fell since the last visit, or falling on the weight chart)",
       "mild": "Mild underweight"
     },
     "monitor": "Batch monitor",
@@ -360,7 +360,25 @@
     "noMonitor": "No batch monitor",
     "count_one": "{{count}} case",
     "count_other": "{{count}} cases",
-    "rule": "latest measurement; mild below −1 SD, moderate below −2 SD, severe below −3 SD; faltering = the weight or the weight-for-age percentile fell since the visit before (check the visits before acting — one fall can be a measurement error)",
+    "rule": "latest measurement; mild below −1 SD, moderate below −2 SD, severe below −3 SD; faltering = the weight or the weight-for-age percentile fell since the visit before, or the weight-for-age z fell by more than 0.67 over 14 days or more (check the visits before acting — one fall can be a measurement error)",
+    "tierRule": "Priority = death-risk score of the three grades × the weight-for-age trend, doubled when moderate or severe on all three (visit protocol, Nov 2026). Severe wasting or severe underweight is always Refer today.",
+    "tierLabel": "Priority",
+    "tier": {
+      "1": "Refer today",
+      "2": "Act this week",
+      "3": "Counsel at next visit",
+      "none": "Not flagged"
+    },
+    "score": "Score {{n}}",
+    "trend": {
+      "faltering": "Faltering",
+      "slowed": "Slowed",
+      "no_change": "No change",
+      "improved": "Improved",
+      "catch_up": "Catch-up",
+      "first_check": "No check 14+ days before",
+      "newborn": "Newborn (under 3 weeks)"
+    },
     "reset": "Clear filters",
     "emptyTitle": "No faltering cases",
     "emptyBody": "No baby in this selection is faltering or moderately or severely low at the latest measurement.",
@@ -371,6 +389,7 @@
     "daysAgo_one": "{{count}} day ago",
     "daysAgo_other": "{{count}} days ago",
     "col": {
+      "priority": "Priority",
       "why": "Why listed",
       "monitor": "Batch monitor",
       "learner": "Learner",

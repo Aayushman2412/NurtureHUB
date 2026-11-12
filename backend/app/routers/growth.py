@@ -1182,16 +1182,17 @@ def admin_growth_summary_export(
 
 def _faltering_rows(db: Session, district: str, conditions: str, monitor: str, batch: str,
                     block: str, cadre: str, learner_id: Optional[int],
-                    department: str = "") -> Tuple[Dict[str, Any], List[Dict[str, Any]], List[str]]:
+                    department: str = "", tier: str = "") -> Tuple[Dict[str, Any], List[Dict[str, Any]], List[str]]:
     from app import faltering
 
     chosen = [c for c in (conditions or "").split(",") if c in faltering.CONDITION_KEYS] or faltering.CONDITION_KEYS
+    tiers = [t for t in (tier or "").split(",") if t in faltering.TIER_KEYS]
     built = faltering.build(db, district or None)
     rows = faltering.apply_filters(
         built["rows"], conditions=chosen,
         monitor_id=int(monitor) if monitor.isdigit() else None, no_monitor=monitor == "none",
         batch=batch or None, block=block or None, cadre=cadre or None, department=department or None,
-        learner_id=learner_id)
+        learner_id=learner_id, tiers=tiers or None)
     return built, [pseudonym.falter_row(r) for r in rows], chosen
 
 
@@ -1297,13 +1298,18 @@ def admin_faltering_cases(
     cadre: str = Query(""),
     department: str = Query(""),
     learner_id: Optional[int] = Query(None),
+    tier: str = Query("", description="Comma-separated priority tiers 1,2,3 or 'none'; empty = all"),
     admin: dict = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """Every case whose baby's latest measurement is faltering, moderately or
-    severely low — see app/faltering.py. The filter options come from the
-    whole project's list, so they never offer a value that returns nothing."""
-    built, rows, chosen = _faltering_rows(db, district, conditions, monitor, batch, block, cadre, learner_id, department)
+    severely low — see app/faltering.py — most urgent first by the priority
+    tier. The filter options come from the whole project's list, so they
+    never offer a value that returns nothing."""
+    from app.faltering import TIER_KEYS, tier_key
+
+    built, rows, chosen = _faltering_rows(db, district, conditions, monitor, batch, block, cadre, learner_id,
+                                          department, tier)
     every = built["rows"]
     monitors = {}
     for r in every:
@@ -1314,13 +1320,14 @@ def admin_faltering_cases(
         resource_type="faltering_cases", count=len(rows), subject_type=phi.CHILD,
         subject_ids=[r["case_id"] for r in rows],
         detail={"scope": "supervisory_faltering", "district": district or None, "conditions": chosen,
-                "fields": _FALTER_FIELDS},
+                "tier": tier or None, "fields": _FALTER_FIELDS},
     )
     return {
         "rows": rows,
         "total": len(every),
         "conditions": built["conditions"],
         "counts": counts,
+        "tier_counts": {k: sum(1 for r in every if tier_key(r.get("priority")) == k) for k in TIER_KEYS},
         "options": {
             "monitors": [{"id": k, "name": v} for k, v in sorted(monitors.items(), key=lambda kv: (kv[1] or ""))],
             "no_monitor": any(not r["monitor"] for r in every),
@@ -1346,6 +1353,7 @@ def admin_faltering_export(
     cadre: str = Query(""),
     department: str = Query(""),
     learner_id: Optional[int] = Query(None),
+    tier: str = Query(""),
     admin: dict = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
@@ -1353,7 +1361,8 @@ def admin_faltering_export(
     batch monitor (a trainer's "break-up by batch monitor")."""
     from app import faltering
 
-    _built, rows, chosen = _faltering_rows(db, district, conditions, monitor, batch, block, cadre, learner_id, department)
+    _built, rows, chosen = _faltering_rows(db, district, conditions, monitor, batch, block, cadre, learner_id,
+                                           department, tier)
     project = db.query(models.ProgramDistrict.name).filter(models.ProgramDistrict.slug == district).scalar() if district else None
     buffer = faltering.xlsx(rows, project=project, conditions=chosen)
     # Synchronous, committed with the action: the file leaves our custody now.
@@ -1361,7 +1370,7 @@ def admin_faltering_export(
         resource_type="faltering_cases", record_count=len(rows), fmt="xlsx", subject_type=phi.CHILD, db=db,
         detail={"filters": {"district": district or None, "conditions": chosen, "monitor": monitor or None,
                             "batch": batch or None, "block": block or None, "cadre": cadre or None,
-                            "learner_id": learner_id},
+                            "learner_id": learner_id, "tier": tier or None},
                 "custody_note": "the exported file is in the custody of whoever holds it",
                 "fields": _FALTER_FIELDS},
     )
@@ -1395,16 +1404,20 @@ def _case_detail(db: Session, child: models.Child, mother: Optional[models.Mothe
     visits: List[Dict[str, Any]] = []
     for visit_date in sorted(k for k in by_date if k is not None):
         responses = by_date[visit_date]
-        weight = length = None
+        weight = length = checks = None
         for response in responses:
             if response.form_key == GROWTH_FORM_KEY:
                 metrics = _extract_metrics(response.answers_json)
                 weight, length = metrics["weight"], metrics["length"]
+                # The measurement checks flagged when it was saved, and whether
+                # the worker confirmed the value (app/growth_entry_checks.py).
+                checks = (response.summary_json or {}).get("entry_checks")
         visits.append({
             "date": visit_date.isoformat(),
             "age_days": (visit_date - dob).days if dob else None,
             "weight": weight,
             "length": length,
+            "checks": checks,
             "responses": [_serialize_detail(r, child, mother) for r in responses],
         })
 

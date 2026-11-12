@@ -14,6 +14,7 @@ import { cn } from '../../utils/cn';
 import { formNames, shortDay, visitUrl, whoLine } from './fieldText';
 import VisitRow from './VisitRow';
 import TeamCallList from './TeamCallList';
+import MyBabiesGrowth, { TierBadge } from './MyBabiesGrowth';
 
 /** Today's visits shown before "Show more" — the most late first. */
 const FIRST_VISITS = 6;
@@ -57,7 +58,11 @@ const UrgentRow: React.FC<{ u: UrgentBaby }> = ({ u }) => {
           <span className="block font-display text-base font-semibold leading-snug text-ink">
             {t('field.urgent.see', { name: u.child_name || t('field.baby'), count: u.see_within_days })}
           </span>
-          <span className={cn('block text-sm font-semibold', tone.text)}>{t(`field.reason.${u.reasons[0] ?? 'low_wfa'}`)}</span>
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className={cn('text-sm font-semibold', tone.text)}>{t(`field.reason.${u.reasons[0] ?? 'low_wfa'}`)}</span>
+            {/* Ordered by the priority score; its tier in words (visit protocol, Nov 2026). */}
+            <TierBadge tier={u.priority?.tier} />
+          </span>
           <span className="block truncate text-xs text-ink-muted">{t('field.motherIs', { mother: u.mother_name })}</span>
         </span>
       </Link>
@@ -215,6 +220,9 @@ const FieldHome: React.FC = () => {
               </button>
             )}
           </Section>
+
+          {/* Under the visit lists: her babies' growth in four groups (visit protocol, Nov 2026). */}
+          <MyBabiesGrowth />
 
           {view.finish.length > 0 && (
             <Section icon={<HeartHandshake className="size-5 text-ink-muted" />} title={t('field.finish.title')} count={view.finish.length}>

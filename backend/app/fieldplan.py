@@ -8,6 +8,8 @@ possible. Everything here is the worker's OWN cases (mothers she registered).
   stopped gaining (fell on the weight-for-age chart), or whose latest
   measurement is low: "see within 2 days" (Dr Rupal: catch faltering "as it is
   happening", relative to the previous visit, not the adoption visit).
+  Ordered by the priority score of the visit protocol of Nov 2026
+  (app/growth_priority.py): refer-today babies first.
 * **Today** — forms due today or already late, per mother / baby, from the
   same expected-forms rules the MASD dashboard uses (engine.field_plan).
 * **Finish** — a mother registered without her protein-intake form, or a
@@ -33,6 +35,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app import models
+from app.growth_priority import assess, sort_key
 
 RED_BELOW_Z = -1.5
 YELLOW_BELOW_Z = -1.0
@@ -126,6 +129,15 @@ def baby_status(case: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _priority(case: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """The tier and score of app/growth_priority.py for one baby's latest
+    check; None before the first weighing."""
+    assessed = assess(case)
+    if assessed is None:
+        return None
+    return {"tier": assessed["priority"]["tier"], "score": assessed["priority"]["score"]}
+
+
 def _baby_forms(age_days: Optional[int]) -> List[str]:
     """What a baby's visit is: a growth check, with breastfeeding before six
     and a half months and complementary feeding after six months."""
@@ -179,7 +191,10 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
     types = {c["mother_id"]: c["type"] for c in (view or {}).get("cases", [])}
     warnings = {c["mother_id"]: c["warnings"] for c in (view or {}).get("cases", [])}
 
-    babies = {c["child"]["id"]: baby_status(c) for c in _build_cases(db, user_id=user.id)}
+    built = _build_cases(db, user_id=user.id)
+    babies = {c["child"]["id"]: baby_status(c) for c in built}
+    # Who is seen first: the priority score of the visit protocol (Nov 2026).
+    ranked = {c["child"]["id"]: _priority(c) for c in built}
     protein_done = {mid for (mid,) in db.query(models.FormResponse.mother_id).filter(
         models.FormResponse.mother_id.in_([m.id for m in mothers]),
         models.FormResponse.form_key == "mother_protein_intake",
@@ -265,7 +280,8 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
                                "child_name": k.child_name, "status": st["status"], "reasons": st["reasons"],
                                "see_within_days": st["see_within_days"],
                                "forms": pending,
-                               "last_check": (st.get("latest") or {}).get("date")})
+                               "last_check": (st.get("latest") or {}).get("date"),
+                               "priority": ranked.get(k.id)})
 
         # Registration not finished: no protein form, or a birth with no baby yet.
         delivered = mtype in ("pnc_lt5", "pnc_ge5", "sn") or bool(kids)
@@ -332,7 +348,7 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
             "children": kid_rows,
         })
 
-    urgent.sort(key=lambda u: (-_RANK[u["status"]], u["last_check"] or ""))
+    urgent.sort(key=lambda u: (sort_key(u["priority"]), -_RANK[u["status"]], u["last_check"] or ""))
     today.sort(key=lambda g: (-g["late_days"], g["mother_name"] or ""))
     cases.sort(key=lambda c: (-_RANK[c["status"]], (c["next"] or {}).get("due_on") or "9999", c["mother_name"] or ""))
 

@@ -121,7 +121,9 @@ export const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, descripti
 // ── Combined EC/AC/IC histogram (Total / CG / BF / CF on one plot) ───────────
 
 interface ActivityChartProps {
-  groups: { label: string; block: ActivityBlock }[];
+  /** `notDue`: said instead of three empty bars when nothing of this form is
+   *  due yet and none was filled (complementary feeding before six months). */
+  groups: { label: string; block: ActivityBlock; notDue?: string }[];
   legend: { ec: string; ac: string; ic: string };
   svgRef: React.RefObject<SVGSVGElement | null>;
 }
@@ -179,7 +181,11 @@ export const ActivityComparisonChart: React.FC<ActivityChartProps> = ({ groups, 
             >
               {g.label}
             </text>
-            {series.map((s, si) => {
+            {g.notDue && g.block.expected === 0 && g.block.actual === 0 ? (
+              <text x={x0 + 4} y={gy + groupH / 2 + 4.5} fontSize={13} className="fill-current text-ink-muted">
+                {g.notDue}
+              </text>
+            ) : series.map((s, si) => {
               const v = s.pick(g.block);
               const y = gy + si * (BAR_H + BAR_GAP);
               const pct = s.key === 'ac' ? g.block.actual_pct : s.key === 'ic' ? g.block.incomplete_pct : null;
