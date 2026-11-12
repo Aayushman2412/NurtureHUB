@@ -32,6 +32,15 @@ export interface AdminProject {
   children?: AdminProject[];
   /** Registration by project (review of 17 Oct 2026). */
   registration?: { open: boolean; state_id: number | null; district_id: number | null; link_path: string };
+  /** Visit protocol (November 2026): what the workers plan visits by. `protocol` /
+   *  `pnc_split_days` are in force (the state's when `inherited_from` is set). */
+  visit?: {
+    protocol: string;
+    pnc_split_days: number;
+    inherited_from: string | null;
+    own_protocol: string;
+    own_pnc_split_days: number;
+  };
 }
 
 /** Selected project slug, or null when nothing is chosen yet. */

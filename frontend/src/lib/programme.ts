@@ -21,9 +21,26 @@ function applyToLabels() {
 
 applyToLabels();
 
+/** Set once a signed-in learner's project gives its own split. */
+let projectSplit = false;
+
+/**
+ * A learner on the November 2026 visit protocol: her project's PNC split
+ * (180 days for new projects) labels her screens, not the programme-wide one.
+ */
+export function applyProjectSplit(days: number): void {
+  projectSplit = true;
+  if (days === programme.pncSplitDays) return;
+  programme.pncSplitDays = days;
+  programme.pncSplitMonths = Math.round(days / 30);
+  applyToLabels();
+  i18n.emit('languageChanged', i18n.language);
+}
+
 export async function loadProgramme(): Promise<void> {
   try {
     const { data } = await client.get('/api/metadata/programme');
+    if (projectSplit) return;
     if (typeof data?.pnc_split_days === 'number') {
       const changed = data.pnc_split_days !== programme.pncSplitDays;
       programme.pncSplitDays = data.pnc_split_days;

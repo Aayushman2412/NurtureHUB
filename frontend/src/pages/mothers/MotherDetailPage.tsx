@@ -148,7 +148,7 @@ const MotherDetailPage: React.FC = () => {
             <Link
               to={finish.missing === 'protein'
                 ? formRunUrl('protein', motherId, null, flowString('reg', finish.then))
-                : `/mothers/${motherId}/children/new?flow=reg`}
+                : `/mothers/${motherId}/children/new?flow=${flowString('reg', finish.then)}`}
               className="flex min-h-14 items-center gap-3 rounded-lg border border-dashed border-amber-500/60 bg-surface p-3.5 hover:bg-surface-sunken"
             >
               <span className="min-w-0 flex-1 font-semibold text-amber-700 dark:text-amber-400">{tf(`field.finish.${finish.missing}`)}</span>

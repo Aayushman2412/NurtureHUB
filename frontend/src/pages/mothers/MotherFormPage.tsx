@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { formRunUrl } from '../../api/today';
 import { flowString } from '../../lib/careFlow';
+import { usesNewProtocol } from '../../lib/visitProtocol';
 import { cn } from '../../utils/cn';
 import { useMotherMetadata } from '../../hooks/useMotherMetadata';
 import { ageFromDob } from '../../lib/learnerFields';
@@ -299,11 +300,17 @@ const MotherFormPage: React.FC = () => {
         // baby under the split age, her protein form, then the baby; with an
         // older baby the protein form is not asked — the visit is about the
         // child ("focus only on the child").
-        navigate(declaredType === 'pnc_ge5'
-          ? `/mothers/${created.id}/children/new?flow=reg`
-          : declaredType === 'pnc_lt5'
-            ? formRunUrl('protein', created.id, null, flowString('reg', ['baby']))
-            : formRunUrl('anc', created.id, null, flowString('reg', ['protein'])), { replace: true });
+        // November 2026 protocol (docs/visit-protocol-2026-11.md): a baby's
+        // day 0 is MF → ChF → CG → BF (→ CF) → PF, so the baby comes first and
+        // the protein form last; a pregnancy is MF → AF → PF as before.
+        const newProtocol = usesNewProtocol(user);
+        navigate(newProtocol && (declaredType === 'pnc_lt5' || declaredType === 'pnc_ge5')
+          ? `/mothers/${created.id}/children/new?flow=${flowString('reg', ['protein'])}`
+          : declaredType === 'pnc_ge5'
+            ? `/mothers/${created.id}/children/new?flow=reg`
+            : declaredType === 'pnc_lt5'
+              ? formRunUrl('protein', created.id, null, flowString('reg', ['baby']))
+              : formRunUrl('anc', created.id, null, flowString('reg', ['protein'])), { replace: true });
       }
     } catch {
       updateToast(toastId, t('form.toastFail'), 'error');

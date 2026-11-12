@@ -54,6 +54,8 @@ FORMS = {
     "anc": ("antenatal", "mother"),
     "protein": ("mother_protein_intake", "mother"),
 }
+# The November 2026 planner's buckets, as the adoption types the app shows.
+_BUCKET_TYPE = {"anc": "anc", "pnc_lt": "pnc_lt5", "pnc_ge": "pnc_ge5"}
 
 
 def percentile(z: Optional[float]) -> Optional[int]:
@@ -156,12 +158,23 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
                   .order_by(models.Child.dob)):
             children[c.mother_id].append(c)
 
+    from app import visit_plan
+
     project = _masd_project(db, user)
     view = plan = None
+    # The November 2026 protocol, when her project runs it (app/visit_plan.py):
+    # the visits, their forms and dates come from app/visit_protocol.py; the
+    # targets and warnings still come from the MASD view.
+    protocol = visit_plan.settings_for(user)[0]
+    new_protocol = protocol == visit_plan.VP.LAP_2026_11
+    child_plans: Dict[int, Dict[str, Any]] = {}
     if project is not None:
         data = D.load(db, project, only_learners=[user.id], with_growth=False)
         view = E.learner_view(data, as_of, user.id, due_days=WEEK_DAYS)
-        plan = E.field_plan(data, as_of, user.id, WEEK_DAYS)
+        if not new_protocol:
+            plan = E.field_plan(data, as_of, user.id, WEEK_DAYS)
+    if new_protocol:
+        plan, child_plans = visit_plan.field_plan(db, user, mothers, children, as_of, WEEK_DAYS)
     plan = plan or {}
     types = {c["mother_id"]: c["type"] for c in (view or {}).get("cases", [])}
     warnings = {c["mother_id"]: c["warnings"] for c in (view or {}).get("cases", [])}
@@ -219,13 +232,28 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
     for m in mothers:
         kids = children[m.id]
         mtype = types.get(m.id) or m.declared_adoption_type or ("anc" if not kids else None)
+        if new_protocol and kids and kids[0].id in child_plans:
+            mtype = _BUCKET_TYPE.get(child_plans[kids[0].id]["bucket"], mtype)
         kid_rows = []
         for k in kids:
             st = babies.get(k.id) or {"status": NONE, "reasons": ["no_growth_check"], "latest": None}
             kid_rows.append({"id": k.id, "name": k.child_name, "uid": k.child_uid, "gender": k.gender,
                              "age_days": _age_days(k.dob, as_of), **st})
+        if m.dropped_out_on is not None:
+            # A confirmed drop-out leaves Today; she stays on the line list.
+            cases.append({"mother_id": m.id, "mother_name": m.mother_name, "mother_uid": m.mother_uid,
+                          "type": mtype, "status": NONE, "reason": "dropped_out", "next": None,
+                          "children": kid_rows})
+            continue
+        for k in kids:
+            st = babies.get(k.id) or {"status": NONE, "reasons": ["no_growth_check"], "latest": None}
             had = done_today.get(k.id, set())
-            pending = [f for f in _baby_forms(_age_days(k.dob, as_of)) if f not in had]
+            if new_protocol:
+                today_plan = (child_plans.get(k.id) or {}).get("today") or {"visited": False, "pending": []}
+                had = set(today_plan.get("done") or []) if today_plan["visited"] else set()
+                pending = list(today_plan["pending"])
+            else:
+                pending = [f for f in _baby_forms(_age_days(k.dob, as_of)) if f not in had]
             if had and pending:
                 # Today's visit begun but not finished: carry on from here.
                 unfinished.append({"mother_id": m.id, "mother_name": m.mother_name, "child_id": k.id,
@@ -245,8 +273,15 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
         # are about the child, not her protein intake (review of 30 Oct 2026:
         # "this is not a priority for a mother who has a five month or older
         # baby — neglect protein count form for that, focus only on the child").
-        protein_asked = mtype != "pnc_ge5"
-        if protein_asked and m.id not in protein_done:
+        # The November 2026 protocol asks it of every mother again (PF on day
+        # 0 of each bucket) — docs/visit-protocol-2026-11.md.
+        protein_asked = new_protocol or mtype != "pnc_ge5"
+        if new_protocol and not kids and m.declared_adoption_type in visit_plan.POSTNATAL_TYPES:
+            # Day 0 there is MF → ChF → CG → BF → PF: the baby first, her
+            # protein form after it.
+            finish.append({"mother_id": m.id, "mother_name": m.mother_name, "missing": "baby",
+                           "then": ["protein"] if m.id not in protein_done else []})
+        elif protein_asked and m.id not in protein_done:
             finish.append({"mother_id": m.id, "mother_name": m.mother_name, "missing": "protein",
                            "then": ["baby"] if delivered and not kids else []})
         elif delivered and not kids:
@@ -258,7 +293,9 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
             if item["key"] == "protein" and not protein_asked:
                 continue
             due = date.fromisoformat(item["due_on"])
-            kid = person(m, item["key"])
+            # The new protocol names the baby a visit is for, and the
+            # mother's protein form rides on that baby's visit.
+            kid = child_by_id.get(item["child_id"]) if "child_id" in item else person(m, item["key"])
             if FORMS[item["key"]][1] == "child" and kid is None:
                 continue          # the baby is not registered yet: "finish" covers it
             gkey = ("today" if due <= as_of else item["due_on"], kid.id if kid else None)
@@ -266,6 +303,8 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
                 "mother_id": m.id, "mother_name": m.mother_name,
                 "child_id": kid.id if kid else None, "child_name": kid.child_name if kid else None,
                 "forms": [], "late_days": 0, "due_on": item["due_on"]})
+            if "ask_delivery" in item:
+                g["ask_delivery"] = bool(g.get("ask_delivery") or item["ask_delivery"])
             g["forms"].append({"key": item["key"], "late_days": item["late_days"], "missing": item["missing"]})
             g["late_days"] = max(g["late_days"], item["late_days"])
             g["due_on"] = min(g["due_on"], item["due_on"])
@@ -315,6 +354,7 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
     return {
         "available": True,
         "as_of": as_of.isoformat(),
+        "protocol": protocol,
         "project": {"name": project.name, "slug": project.slug} if project is not None else None,
         "urgent": urgent,
         "unfinished": unfinished,

@@ -34,6 +34,9 @@ export interface TaskGroup {
   forms: TaskForm[];
   late_days: number;
   due_on: string;
+  /** November 2026 protocol: a pregnancy visit from 35 weeks first asks
+   *  "Has the delivery happened?". */
+  ask_delivery?: boolean;
 }
 
 export interface UrgentBaby {
@@ -54,7 +57,7 @@ export interface CaseRow {
   mother_uid: string;
   type: 'anc' | 'pnc_lt5' | 'pnc_ge5' | 'sn' | 'unknown' | null;
   status: Status;
-  /** all_done | late | due_today | finish_registration | edd_passed | a baby reason */
+  /** all_done | late | due_today | finish_registration | edd_passed | dropped_out | a baby reason */
   reason: string;
   next: { due_on: string; forms: FormCode[]; child_id: number | null } | null;
   children: ({ id: number; name: string; uid: string; gender: string | null; age_days: number | null } & BabyStatus)[];
@@ -84,13 +87,15 @@ export interface DraftForm {
 export interface TodayView {
   available: boolean;
   as_of: string;
+  /** lap_2025 | lap_2026_11 — the visit protocol of her project. */
+  protocol?: string;
   project: { name: string; slug: string } | null;
   urgent: UrgentBaby[];
   unfinished: UnfinishedVisit[];
   drafts: DraftForm[];
   today: TaskGroup[];
   /** Registration not finished; `then` is what follows the missing step. */
-  finish: { mother_id: number; mother_name: string; missing: 'protein' | 'baby'; then: 'baby'[] }[];
+  finish: { mother_id: number; mother_name: string; missing: 'protein' | 'baby'; then: ('baby' | 'protein')[] }[];
   targets: { type: 'anc' | 'pnc_lt5' | 'pnc_ge5'; target: number; adopted: number; more: number }[];
   week: { date: string; items: TaskGroup[] }[];
   cases: CaseRow[];

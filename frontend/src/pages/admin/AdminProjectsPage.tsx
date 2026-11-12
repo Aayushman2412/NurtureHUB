@@ -14,6 +14,7 @@ import {
 import { PROJECT_EVENT, type AdminProject } from '../../lib/adminProject';
 import ProjectSetupWizard from './ProjectSetupWizard';
 import ProjectRegistrationPanel from '../../components/admin/ProjectRegistrationPanel';
+import ProjectVisitProtocolPanel from '../../components/admin/ProjectVisitProtocolPanel';
 import { cn } from '../../utils/cn';
 
 type AddMode = { level: 'state' } | { level: 'district'; parentId: number | null; parentName?: string };
@@ -190,6 +191,7 @@ const AdminProjectsPage: React.FC = () => {
                 )}
               </div>
               {project.level === 'district' && <ProjectRegistrationPanel project={project} onSaved={announce} />}
+              <ProjectVisitProtocolPanel project={project} onSaved={announce} />
             </>
           )}
         </div>
@@ -338,6 +340,8 @@ const AdminProjectsPage: React.FC = () => {
               <p className="mt-1 text-[12px] text-ink-faint">{t('projects.hintPrefix')}</p>
             </div>
           </div>
+
+          <p className="text-[12px] text-ink-faint">{t('projects.visit.newProjects')}</p>
 
           {formError && <p className="text-[13px] text-error-600">{formError}</p>}
         </div>

@@ -224,7 +224,7 @@ const FieldHome: React.FC = () => {
                   key={f.mother_id}
                   to={f.missing === 'protein'
                     ? formRunUrl('protein', f.mother_id, null, flowString('reg', f.then))
-                    : `/mothers/${f.mother_id}/children/new?flow=reg`}
+                    : `/mothers/${f.mother_id}/children/new?flow=${flowString('reg', f.then)}`}
                   className="flex min-h-14 items-center gap-3 border-l-[3px] border-l-amber-500 px-3.5 py-3 hover:bg-surface-sunken"
                 >
                   <span className="min-w-0 flex-1">

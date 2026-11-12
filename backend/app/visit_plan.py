@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date, timedelta
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -33,6 +33,7 @@ FORM_CODES = {
     "antenatal": VP.AF, "mother_protein_intake": VP.PF,
 }
 BREASTFED_FIELD = "breastfed_24h"
+POSTNATAL_TYPES = ("pnc_lt5", "pnc_ge5")
 _DEFAULT_POSITIVE = {"green"}
 
 
@@ -158,7 +159,10 @@ def cases_for(db: Session, mothers: Sequence[models.Mother], children: Dict[int,
                        pnc_split_days=split_days)
         kids = sorted(children.get(m.id, []), key=lambda c: (c.dob or date.max, c.id))
         if not kids:
-            out[m.id] = [(None, base)]
+            # Registered as postnatal but the baby is not registered yet: no
+            # visits to plan until it is (Today's "finish" row asks for it) —
+            # she is not a pregnancy.
+            out[m.id] = [] if m.declared_adoption_type in POSTNATAL_TYPES else [(None, base)]
             continue
         out[m.id] = [(k, VP.Case(
             adopted=base.adopted, lmp=base.lmp, edd=base.edd, dob=k.dob, child_adopted=k.adoption_date,
@@ -195,7 +199,7 @@ def _items(plan: Dict[str, Any], child: Optional[models.Child], as_of: date) -> 
     forms = plan["today"]["pending"] if nxt["unfinished"] else nxt["forms"]
     due_now = date.fromisoformat(nxt["due_on"]) <= as_of
     out = [{"key": f, "due_on": nxt["due_on"], "late_days": nxt["late_days"], "missing": 1 if due_now else 0,
-            "child_id": child_id if f in VP.CHILD_FORMS or child_id is not None else None,
+            "child_id": child_id,
             "ask_delivery": nxt["ask_delivery"]} for f in forms]
     for v in plan.get("later") or []:
         out.extend({"key": f, "due_on": v["due_on"], "late_days": 0, "missing": 0, "child_id": child_id,
@@ -240,7 +244,7 @@ def child_plan(db: Session, user: models.User, child: models.Child, as_of: date,
     pairs = cases_for(db, [mother], {mother.id: siblings}, split, as_of)[mother.id]
     case = next(c for k, c in pairs if k is not None and k.id == child.id)
     plan = VP.plan(case, as_of, horizon_days)
-    dropped_by = mother.dropped_out_by
+    dropped_by = db.get(models.User, mother.dropped_out_by_user_id) if mother.dropped_out_by_user_id else None
     return {
         "protocol": protocol, "pnc_split_days": split, "child_id": child.id, "mother_id": mother.id,
         **plan,
@@ -250,8 +254,8 @@ def child_plan(db: Session, user: models.User, child: models.Child, as_of: date,
     }
 
 
-def plans_for_alerts(db: Session, user: models.User, child: models.Child, as_of: date) -> Optional[Dict[str, Any]]:
-    """The baby's plan today and as of the day before (None on lap_2025)."""
+def plan_for_alerts(db: Session, user: models.User, child: models.Child, as_of: date) -> Optional[Dict[str, Any]]:
+    """The baby's plan on `as_of` for the care prompts (None on lap_2025)."""
     plan = child_plan(db, user, child, as_of, horizon_days=0)
     return plan if plan.get("protocol") == VP.LAP_2026_11 else None
 
@@ -266,7 +270,3 @@ def visits_late_and_due(db: Session, user: models.User, as_of: date) -> Tuple[in
         late += any(n["late_days"] > 0 for n in nexts)
         due += bool(nexts)
     return late, due
-
-
-def ids(rows: Iterable[Any]) -> List[int]:
-    return [r.id for r in rows]

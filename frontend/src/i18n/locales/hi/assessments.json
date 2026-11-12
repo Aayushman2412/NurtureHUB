@@ -89,7 +89,9 @@
     "backToReview": "जवाबों पर वापस",
     "review": "जवाब जाँचें",
     "matrixRows_one": "{{count}} पंक्ति भरी",
-    "matrixRows_other": "{{count}} पंक्तियाँ भरीं"
+    "matrixRows_other": "{{count}} पंक्तियाँ भरीं",
+    "pointsHidden_one": "पिछले दो फ़ॉर्म में ठीक रहा {{count}} बिंदु नहीं पूछा जा रहा",
+    "pointsHidden_other": "पिछले दो फ़ॉर्म में ठीक रहे {{count}} बिंदु नहीं पूछे जा रहे"
   },
   "plan": {
     "loading": "आपकी योजना बन रही है",

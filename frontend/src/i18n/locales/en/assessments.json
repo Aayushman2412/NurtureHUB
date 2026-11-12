@@ -89,7 +89,9 @@
     "backToReview": "Back to the answers",
     "review": "Check answers",
     "matrixRows_one": "{{count}} row filled",
-    "matrixRows_other": "{{count}} rows filled"
+    "matrixRows_other": "{{count}} rows filled",
+    "pointsHidden_one": "{{count}} point done well in the last two forms is not asked",
+    "pointsHidden_other": "{{count}} points done well in the last two forms are not asked"
   },
   "plan": {
     "loading": "Building your plan",
