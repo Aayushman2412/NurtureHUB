@@ -1,6 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { AlertTriangle } from 'lucide-react';
 import type { GrowthVisitDetail } from '../../api/growth';
+import type { EntryChecks } from '../../api/growthStatus';
 import { formatAge } from '../../lib/growthChart';
 import { percentileOf, TONE_CLASSES, toneOf } from '../../lib/babyStatus';
 import { cn } from '../../utils/cn';
@@ -11,6 +13,25 @@ const Pct: React.FC<{ z: number | null | undefined }> = ({ z }) => {
   const tone = toneOf(z);
   return pct == null || !tone ? <span className="text-ink-faint">—</span>
     : <span className={cn('font-semibold tabular-nums', TONE_CLASSES[tone].text)}>P{pct}</span>;
+};
+
+/** The measurement checks flagged when this visit's growth check was saved
+ *  (visit protocol, Nov 2026; app/growth_entry_checks.py), and whether the
+ *  worker confirmed the value — for whoever reads the numbers next. */
+const CheckRow: React.FC<{ checks: EntryChecks }> = ({ checks }) => {
+  const { t } = useTranslation('growth');
+  const refer = checks.flags.some(f => f.action === 'refer_today');
+  return (
+    <tr>
+      <td colSpan={6} className={cn('border-l-[3px] bg-surface-sunken px-3 py-1.5 text-xs text-ink',
+        refer ? 'border-l-error-500' : 'border-l-amber-500')}>
+        <AlertTriangle className={cn('mr-1 inline size-3.5 align-[-2px]', refer ? 'text-error-600' : 'text-amber-600')} />
+        <span className="font-semibold">{t('visitTable.check.label')}:</span>{' '}
+        {checks.flags.map(f => t(`visitTable.check.${f.code}`)).join(', ')}
+        {' — '}{t(checks.all_confirmed ? 'visitTable.check.confirmed' : 'visitTable.check.notConfirmed')}
+      </td>
+    </tr>
+  );
 };
 
 /**
@@ -40,14 +61,17 @@ const GrowthVisitTable: React.FC<{ visits: GrowthVisitDetail[]; className?: stri
         </thead>
         <tbody className="divide-y divide-border">
           {measured.map(v => (
-            <tr key={v.date}>
-              <td className="whitespace-nowrap px-3 py-1.5 tabular-nums text-ink">{v.date.split('-').reverse().join('/')}</td>
-              <td className="whitespace-nowrap px-2 py-1.5 text-ink-muted">{v.age_days != null ? formatAge(v.age_days) : '—'}</td>
-              <td className="px-2 py-1.5 text-right tabular-nums text-ink">{v.weight ?? '—'}</td>
-              <td className="px-2 py-1.5 text-right tabular-nums text-ink">{v.length ?? '—'}</td>
-              <td className="px-2 py-1.5 text-right"><Pct z={v.z?.wfaz} /></td>
-              <td className="px-3 py-1.5 text-right"><Pct z={v.z?.hfaz} /></td>
-            </tr>
+            <React.Fragment key={v.date}>
+              <tr>
+                <td className="whitespace-nowrap px-3 py-1.5 tabular-nums text-ink">{v.date.split('-').reverse().join('/')}</td>
+                <td className="whitespace-nowrap px-2 py-1.5 text-ink-muted">{v.age_days != null ? formatAge(v.age_days) : '—'}</td>
+                <td className="px-2 py-1.5 text-right tabular-nums text-ink">{v.weight ?? '—'}</td>
+                <td className="px-2 py-1.5 text-right tabular-nums text-ink">{v.length ?? '—'}</td>
+                <td className="px-2 py-1.5 text-right"><Pct z={v.z?.wfaz} /></td>
+                <td className="px-3 py-1.5 text-right"><Pct z={v.z?.hfaz} /></td>
+              </tr>
+              {!!v.checks?.flags.length && <CheckRow checks={v.checks} />}
+            </React.Fragment>
           ))}
         </tbody>
       </table>

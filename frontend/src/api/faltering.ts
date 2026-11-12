@@ -27,7 +27,15 @@ export interface FalterRow {
   wfa_pct_before?: number | null;
   z: { wfaz: number | null; hfaz: number | null; wfhz: number | null };
   categories: { wfaz: string | null; hfaz: string | null; wfhz: string | null };
+  /** Visit protocol, Nov 2026 (app/growth_priority.py): the list is ordered by it. */
+  priority?: { tier: 1 | 2 | 3 | null; score: number } | null;
+  /** Weight-for-age trend group and its z change. */
+  trend?: { group: string; change: number | null } | null;
 }
+
+/** Tier filter values: 1 refer today, 2 act this week, 3 counsel at next visit, none not flagged. */
+export type FalterTier = '1' | '2' | '3' | 'none';
+export const FALTER_TIERS: FalterTier[] = ['1', '2', '3', 'none'];
 
 export interface FalterFilters {
   district?: string;
@@ -38,6 +46,7 @@ export interface FalterFilters {
   cadre?: string;
   department?: string;
   learner_id?: number;
+  tier?: FalterTier;
 }
 
 export interface FalterResponse {
@@ -45,6 +54,7 @@ export interface FalterResponse {
   total: number;
   conditions: { key: FalterCondition; label: string }[];
   counts: Record<FalterCondition, number>;
+  tier_counts?: Record<FalterTier, number>;
   options: {
     monitors: { id: number; name: string | null }[];
     no_monitor: boolean;
@@ -65,6 +75,7 @@ const params = (f: FalterFilters) => ({
   ...(f.cadre ? { cadre: f.cadre } : {}),
   ...(f.department ? { department: f.department } : {}),
   ...(f.learner_id ? { learner_id: f.learner_id } : {}),
+  ...(f.tier ? { tier: f.tier } : {}),
 });
 
 export const getFalteringCases = (f: FalterFilters): Promise<FalterResponse> =>

@@ -253,7 +253,8 @@ const GrowthCaseView: React.FC<{ childId: number; mode: 'admin' | 'learner'; bac
                     { label: t('summary.groups.total'), block: row.activities.total },
                     { label: 'CG', block: row.activities.cg },
                     { label: 'BF', block: row.activities.bf },
-                    { label: 'CF', block: row.activities.cf },
+                    // A baby not yet due any CF form: "Not due yet", not "0 of 0".
+                    { label: 'CF', block: row.activities.cf, notDue: t('casePage.notDueYet') },
                   ]}
                 />
               )}

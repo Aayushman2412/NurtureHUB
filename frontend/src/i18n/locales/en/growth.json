@@ -271,6 +271,8 @@
     "protein24": "Protein in the last 24 hours",
     "proteinAvg": "{{g}} g/day usual",
     "legendNotYet": "Visit not done yet",
+    "notDueYet": "Not due yet",
+    "notDueYetHint": "No complementary feeding form is due yet: it starts when the baby is about six months old.",
     "savePicture": "Save as picture",
     "rotateHint": "Turn your phone sideways to see more",
     "derived": {
@@ -351,6 +353,19 @@
     "weight": "Weight (kg)",
     "length": "Length (cm)",
     "wfa": "Weight for age",
-    "lfa": "Length for age"
+    "lfa": "Length for age",
+    "check": {
+      "label": "Data check",
+      "impossible_wfa": "weight impossible for the age",
+      "impossible_lfa": "length impossible for the age",
+      "impossible_wfl": "weight and length do not fit together",
+      "typing_error": "possible typing error",
+      "weight_loss_refer": "weight loss of 10% or more",
+      "weight_loss_revisit": "weight loss of 5–10%",
+      "newborn_loss": "more than 10% below the birth weight",
+      "length_shorter": "length shorter than before",
+      "confirmed": "the worker confirmed the value",
+      "notConfirmed": "not confirmed by the worker"
+    }
   }
 }

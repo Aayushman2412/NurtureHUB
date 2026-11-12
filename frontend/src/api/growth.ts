@@ -1,6 +1,7 @@
 import client from './client';
 import type { FormResponseDetail } from '../lib/flowTypes';
 import type { BabyStatus } from './today';
+import type { EntryChecks } from './growthStatus';
 
 /** One x-point of a WHO percentile table (x = age in days, or length in cm). */
 export interface GrowthStandardPoint {
@@ -242,6 +243,8 @@ export interface GrowthVisitDetail {
   z: VisitZ;
   /** BV/AV/LV triplets computed over the visits up to and including this one. */
   z_to_date: { wfaz: ZTriplet; hfaz: ZTriplet; wfhz: ZTriplet };
+  /** Measurement checks flagged when the growth check was saved (null: none). */
+  checks?: EntryChecks | null;
   responses: FormResponseDetail[];
 }
 

@@ -173,6 +173,18 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
     return `${v.m}${t('summary.monthShort')} ${v.d}${t('summary.dayShort')}`;
   };
 
+  // Complementary feeding before any CF form is due, and none filled: "not
+  // due yet" rather than "0 of 0" (a baby under six months).
+  const notDue = (r: GrowthSummaryRow, key: string) => {
+    const b = r.activities[key as keyof GrowthSummaryRow['activities']] ?? EMPTY_BLOCK;
+    return key === 'cf' && b.expected === 0 && b.actual === 0;
+  };
+  const notDueCell = (
+    <span className="text-ink-faint" title={t('casePage.notDueYetHint')}>
+      —<span className="sr-only"> {t('casePage.notDueYet')}</span>
+    </span>
+  );
+
   const activityGroup = (
     id: GroupId,
     label: string,
@@ -190,9 +202,11 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
         title: t('summary.ec'),
         base: 44,
         align: 'center',
-        render: r => (
+        render: r => (notDue(r, key) ? (
+          <span className="text-[12px] leading-tight text-ink-muted" title={t('casePage.notDueYetHint')}>{t('casePage.notDueYet')}</span>
+        ) : (
           <ExpectedCell block={r.activities[key] ?? EMPTY_BLOCK} mock={r.meta.expected_is_mock} demoLabel={demo} />
-        ),
+        )),
       },
       {
         key: `${id}-ac`,
@@ -201,8 +215,9 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
         title: t('summary.ac'),
         base: 62,
         align: 'center',
-        fill: r => pctCellFill((r.activities[key] ?? EMPTY_BLOCK).actual_pct),
-        render: r => <CountPctCell count={(r.activities[key] ?? EMPTY_BLOCK).actual} pct={(r.activities[key] ?? EMPTY_BLOCK).actual_pct} />,
+        fill: r => (notDue(r, key) ? undefined : pctCellFill((r.activities[key] ?? EMPTY_BLOCK).actual_pct)),
+        render: r => (notDue(r, key) ? notDueCell
+          : <CountPctCell count={(r.activities[key] ?? EMPTY_BLOCK).actual} pct={(r.activities[key] ?? EMPTY_BLOCK).actual_pct} />),
       },
       {
         key: `${id}-ic`,
@@ -211,10 +226,10 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
         title: t('summary.ic'),
         base: 62,
         align: 'center',
-        fill: r => pctCellFill((r.activities[key] ?? EMPTY_BLOCK).incomplete_pct, true),
-        render: r => (
+        fill: r => (notDue(r, key) ? undefined : pctCellFill((r.activities[key] ?? EMPTY_BLOCK).incomplete_pct, true)),
+        render: r => (notDue(r, key) ? notDueCell : (
           <CountPctCell count={(r.activities[key] ?? EMPTY_BLOCK).incomplete} pct={(r.activities[key] ?? EMPTY_BLOCK).incomplete_pct} />
-        ),
+        )),
       },
     ],
   });

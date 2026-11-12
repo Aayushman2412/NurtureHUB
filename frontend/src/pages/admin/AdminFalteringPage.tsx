@@ -2,15 +2,19 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Download, RotateCcw, TrendingDown } from 'lucide-react';
 import {
-  downloadFalteringXlsx, getFalteringCases,
-  type FalterCondition, type FalterFilters, type FalterResponse, type FalterRow,
+  downloadFalteringXlsx, FALTER_TIERS, getFalteringCases,
+  type FalterCondition, type FalterFilters, type FalterResponse, type FalterRow, type FalterTier,
 } from '../../api/faltering';
 import { useToast } from '../../context/ToastContext';
 import { getProjectSlug, onProjectChanged } from '../../lib/adminProject';
-import { Button, EmptyState, PageHeader, PageLoader, SelectField } from '../../components/ui';
+import { Badge, Button, EmptyState, PageHeader, PageLoader, SelectField } from '../../components/ui';
+import type { BadgeVariant } from '../../components/ui';
 import { cn } from '../../utils/cn';
 
 const SEVERE: FalterCondition[] = ['suw', 'sam', 'sst'];
+/** The tier is always written in words; the colour only repeats it. */
+const TIER_BADGE: Record<FalterTier, BadgeVariant> = { 1: 'error', 2: 'warning', 3: 'neutral', none: 'neutral' };
+const tierOf = (r: FalterRow): FalterTier => (r.priority?.tier ? String(r.priority.tier) as FalterTier : 'none');
 
 const fmtZ = (z: number | null) => (z == null ? '—' : `${z > 0 ? '+' : ''}${z.toFixed(1)}`);
 const zTone = (z: number | null) => (z == null ? 'text-ink-faint' : z < -3 ? 'font-semibold text-brand-700 dark:text-brand-300' : z < -2 ? 'font-semibold text-amber-700 dark:text-amber-300' : 'text-ink');
@@ -33,6 +37,8 @@ const AdminFalteringPage: React.FC = () => {
   const [cadre, setCadre] = useState('');
   const [department, setDepartment] = useState('');
   const [learner, setLearner] = useState('');
+  /** Priority tier (visit protocol, Nov 2026); '' = every tier. */
+  const [tier, setTier] = useState<FalterTier | ''>('');
   const [data, setData] = useState<FalterResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
@@ -43,6 +49,7 @@ const AdminFalteringPage: React.FC = () => {
     district: project || undefined, conditions, monitor: monitor || undefined, batch: batch || undefined,
     block: block || undefined, cadre: cadre || undefined, department: department || undefined,
     learner_id: learner ? Number(learner) : undefined,
+    tier: tier || undefined,
   };
   const key = JSON.stringify(filters);
 
@@ -64,8 +71,9 @@ const AdminFalteringPage: React.FC = () => {
     setConditions(prev => (prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]));
   const reset = () => {
     setConditions([]); setMonitor(''); setBatch(''); setBlock(''); setCadre(''); setDepartment(''); setLearner('');
+    setTier('');
   };
-  const filtered = conditions.length > 0 || !!(monitor || batch || block || cadre || department || learner);
+  const filtered = conditions.length > 0 || !!(monitor || batch || block || cadre || department || learner || tier);
 
   const download = async () => {
     setDownloading(true);
@@ -119,6 +127,24 @@ const AdminFalteringPage: React.FC = () => {
         ))}
       </div>
 
+      {/* Priority tier (visit protocol, Nov 2026): who to act on first. */}
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('faltering.tierLabel')}>
+        <span className="text-sm font-semibold text-ink-muted">{t('faltering.tierLabel')}</span>
+        {(['', ...FALTER_TIERS] as (FalterTier | '')[]).map(k => (
+          <button
+            key={k || 'all'}
+            type="button"
+            onClick={() => setTier(k)}
+            aria-pressed={tier === k}
+            className={cn('cursor-pointer rounded-md border px-3 py-1.5 text-sm font-semibold transition-colors',
+              tier === k ? 'border-primary bg-primary text-white' : 'border-border bg-surface text-ink hover:bg-surface-sunken')}
+          >
+            {k ? t(`faltering.tier.${k}`) : t('faltering.all')}
+            {k && data?.tier_counts && <span className="ml-1 tabular-nums opacity-80">({data.tier_counts[k] ?? 0})</span>}
+          </button>
+        ))}
+      </div>
+
       {/* Whose cases */}
       {data && (
         <div className="grid grid-cols-1 gap-3 rounded-lg border border-border bg-surface p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -144,6 +170,7 @@ const AdminFalteringPage: React.FC = () => {
         <span>
           {data && t('faltering.count', { count: data.rows.length })}
           {' · '}{t('faltering.rule')}
+          <span className="block">{t('faltering.tierRule')}</span>
         </span>
         {filtered && (
           <button type="button" onClick={reset} className="inline-flex cursor-pointer items-center gap-1.5 font-semibold text-primary-ink hover:text-primary-ink-hover">
@@ -161,6 +188,7 @@ const AdminFalteringPage: React.FC = () => {
           <table className="w-max min-w-full border-collapse text-sm">
             <thead className="sticky top-0 z-10 bg-surface-sunken text-left text-[12px] font-semibold text-ink-muted">
               <tr className="[&>th]:border-b [&>th]:border-border-strong [&>th]:px-3 [&>th]:py-2">
+                <th>{t('faltering.col.priority')}</th>
                 <th>{t('faltering.col.why')}</th>
                 <th>{t('faltering.col.monitor')}</th>
                 <th>{t('faltering.col.learner')}</th>
@@ -181,6 +209,14 @@ const AdminFalteringPage: React.FC = () => {
                   className="cursor-pointer align-top transition-colors hover:bg-surface-sunken [&>td]:px-3 [&>td]:py-2"
                   title={t('faltering.openCase')}
                 >
+                  <td className={cn('whitespace-nowrap border-l-[3px]',
+                    tierOf(r) === '1' ? 'border-l-error-500' : tierOf(r) === '2' ? 'border-l-amber-500' : 'border-l-transparent')}>
+                    <Badge variant={TIER_BADGE[tierOf(r)]}>{t(`faltering.tier.${tierOf(r)}`)}</Badge>
+                    <span className="block text-xs tabular-nums text-ink-muted">
+                      {[r.priority ? t('faltering.score', { n: r.priority.score.toFixed(1) }) : null,
+                        r.trend ? t(`faltering.trend.${r.trend.group}`, { defaultValue: '' }) : null].filter(Boolean).join(' · ')}
+                    </span>
+                  </td>
                   <td className="max-w-64">
                     <span className="flex flex-wrap gap-1">
                       {r.flags.map(f => (
