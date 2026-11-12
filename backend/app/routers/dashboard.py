@@ -311,11 +311,18 @@ def my_team(current_user: User = Depends(get_verified_user), db: Session = Depen
     # the learner's own number comes with the row — her colleague's, not a
     # mother's: no patient identifier is in this view.
     phones = {uid: phone for uid, phone in db.query(User.id, User.phone).filter(User.id.in_(ids))}
+    from app import visit_plan
+    learners = {u.id: u for u in db.query(User).filter(User.id.in_(ids))}
     for r in rows:
         r["phone"] = phones.get(r["id"])
-        plan = E.field_plan(data, today_d, r["id"], 0)
-        r["late_visits"] = sum(1 for items in plan.values() if any(i["late_days"] > 0 for i in items))
-        r["due_today"] = sum(1 for items in plan.values() if items)
+        learner = learners.get(r["id"])
+        if learner is not None and visit_plan.uses_new_protocol(learner):
+            # Her project plans visits by the November 2026 protocol.
+            r["late_visits"], r["due_today"] = visit_plan.visits_late_and_due(db, learner, today_d)
+        else:
+            plan = E.field_plan(data, today_d, r["id"], 0)
+            r["late_visits"] = sum(1 for items in plan.values() if any(i["late_days"] > 0 for i in items))
+            r["due_today"] = sum(1 for items in plan.values() if items)
         r["urgent_babies"] = urgent.get(r["id"], 0)
         r["needs_call"] = bool(r["urgent_babies"] or r["late_visits"] or (r["nil_days"] or 0) > 7)
     rows.sort(key=lambda r: (not r["needs_call"], -r["urgent_babies"], -r["late_visits"],

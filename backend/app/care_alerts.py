@@ -22,6 +22,7 @@ ever sent twice.
 """
 from __future__ import annotations
 
+import logging
 from datetime import date, datetime, timezone
 from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
@@ -34,6 +35,7 @@ from app.config import settings
 from app.notify import create_notification
 
 IST = ZoneInfo("Asia/Kolkata")
+logger = logging.getLogger(__name__)
 
 _FORM_WORDS = {"gm": "growth check", "bf": "breastfeeding form", "cf": "complementary feeding form",
                "anc": "antenatal check", "protein": "protein intake form"}
@@ -180,3 +182,43 @@ def run_reminders(db: Session, now: Optional[datetime] = None) -> int:
             db.rollback()
             print(f"[care_alerts] reminders failed for learner {uid}: {exc}")
     return sent
+
+
+# ── November 2026 protocol: breastfeeding stopped ─────────────────────────
+
+def on_feeding_check(db: Session, child_id: int, learner: models.User) -> int:
+    """After a growth check on a project that runs the November 2026
+    protocol: a mother found not breastfeeding prompts the learner to counsel
+    her; still not breastfeeding at two visits after the counselling, it
+    prompts her to decide on the drop-out (docs/visit-protocol-2026-11.md).
+    Once per stop. Never raises into the submission."""
+    from app import visit_plan
+
+    try:
+        child = db.get(models.Child, child_id)
+        plan = visit_plan.plan_for_alerts(db, learner, child, date.today()) if child is not None else None
+        if plan is None or plan.get("dropout"):
+            return 0
+        name = child.child_name or "the baby"
+        feeding = plan["feeding"]
+        sent = 0
+        if feeding["state"] == "counsel":
+            sent += _send(db, kind="bf_counsel", key=f"bfcounsel:{child_id}:{feeding['since']}",
+                          learner_id=learner.id, recipient_id=learner.id, child_id=child_id,
+                          title=f"Counsel {name}'s mother",
+                          message=(f"{name}'s mother is not breastfeeding. Talk to her about restarting, "
+                                   "then mark the counselling on the baby's page."),
+                          link=f"/babies/{child_id}")
+        elif feeding["state"] == "can_drop_out":
+            sent += _send(db, kind="bf_dropout", key=f"bfdropout:{child_id}:{feeding['since']}",
+                          learner_id=learner.id, recipient_id=learner.id, child_id=child_id,
+                          title=f"{name}: breastfeeding still stopped",
+                          message=("Still not breastfeeding at two visits after the counselling. If she will not "
+                                   "restart, confirm the drop-out on the baby's page."),
+                          link=f"/babies/{child_id}")
+        db.commit()
+        return sent
+    except Exception:  # a prompt must never break the form submission
+        db.rollback()
+        logger.exception("feeding prompt failed for child %s", child_id)
+        return 0

@@ -981,9 +981,10 @@ def _care_prompt(db: Session, child_id: int, user: models.User) -> None:
     """A growth check just came in: "see this baby within 2 days" when the
     weight fell or stopped rising (launch review of 19 Oct 2026). Separate
     transaction, after the submission is safe; never fails it."""
-    from app.care_alerts import on_growth_check
+    from app.care_alerts import on_feeding_check, on_growth_check
 
     on_growth_check(db, child_id, user)
+    on_feeding_check(db, child_id, user)   # November 2026 protocol only
 
 
 @router.put("/responses/{response_id}")

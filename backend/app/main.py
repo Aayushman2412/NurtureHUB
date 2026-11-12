@@ -17,7 +17,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.routers import auth, users, tutorials, tests, results, notifications, dashboard, metadata, admin
 from app.routers import ws_routes, mothers, admin_forms, forms, growth, admin_pipelines, push, admin_rawdata
-from app.routers import admin_security, masd
+from app.routers import admin_security, masd, visits
 from app.pipeline_service import PipelineError, fail_stale_runs
 from app.notify import wire_session_events
 import app.models_live  # noqa: F401 — registers live monitoring tables with Base
@@ -234,6 +234,7 @@ app.include_router(masd.router)          # admin MASD dashboard: /api/admin/masd
 app.include_router(admin_pipelines.router)  # guarded: /api/admin/pipelines/* (Database section)
 app.include_router(admin_rawdata.router)    # guarded: /api/admin/rawdata/* (Database → Raw Data)
 app.include_router(push.router)             # learner: /api/push/* (web-push subscriptions)
+app.include_router(visits.router)           # learner: /api/visits/* (November 2026 visit protocol)
 app.include_router(admin_security.router)   # guarded: /api/admin/security/* (data protection)
 app.include_router(admin_security.public_router)  # public: privacy notice + grievance intake
 
