@@ -352,6 +352,30 @@ def test_a_late_visit_after_180_days_is_cf_day_0():
     assert "cf" in p["next"]["forms"] and p["next"]["cf_no"] == 1
 
 
+def test_a_missed_visit_before_180_days_does_not_make_cf_day_0_late():
+    # Adopted at 150 days, visited to day 21. Day 28 (178 days old) was due 3
+    # days ago, but a visit today at 181 days is CF day 0 — the CF schedule's
+    # first visit, due today: "CG + CF-1", not "3 days late".
+    _, case = run(pnc(150), B2_DAYS[:10])
+    p = VP.plan(case, d(31))
+    assert (p["next"]["day"], p["next"]["cf_no"]) == (0, 1) and "cf" in p["next"]["forms"]
+    assert (p["next"]["due_on"], p["next"]["late_days"]) == (d(31).isoformat(), 0)
+    # The day before, at 179 days, the visit still counts for day 28: late.
+    p = VP.plan(case, d(29))
+    assert (p["next"]["day"], p["next"]["cf_no"]) == (28, None) and "cf" not in p["next"]["forms"]
+    assert (p["next"]["due_on"], p["next"]["late_days"]) == (d(28).isoformat(), 1)
+
+
+def test_a_visit_within_two_days_of_the_next_due_day_is_not_late_for_the_missed_one():
+    # Day 7 missed; on day 9 the visit counts for day 10 (±2 days), and its
+    # forms are day 10's: due today. On day 8 it still counts for day 7.
+    _, case = run(pnc(10), [0, 1, 2, 3, 5])
+    p = VP.plan(case, d(9))
+    assert (p["next"]["day"], p["next"]["due_on"], p["next"]["late_days"]) == (10, d(9).isoformat(), 0)
+    p = VP.plan(case, d(8))
+    assert (p["next"]["day"], p["next"]["due_on"], p["next"]["late_days"]) == (7, d(7).isoformat(), 1)
+
+
 def test_bf_stopped_stays_stopped_without_a_new_check():
     case = pnc(10, *STOPPED)
     assert VP.bf_status(case, d(5)) == {"due": False, "status": "stopped", "count": 2}

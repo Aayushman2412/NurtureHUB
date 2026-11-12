@@ -526,9 +526,16 @@ def _next_visit(case: Case, as_of: date, today: Dict[str, Any]) -> Tuple[Optiona
     overdue = [j for j in range(k + 1, len(slots))
                if slots[j].due_on <= as_of and (cap is None or slots[j].due_on <= cap)]
     if overdue and not today["visited"]:
-        due = slots[overdue[-1]].due_on
-        return _visit_dict(case, as_of, due, visit_slot(case, as_of), today["forms"],
-                           late_days=(as_of - due).days), as_of
+        missed, shown = slots[overdue[-1]], visit_slot(case, as_of)
+        due = missed.due_on
+        if shown is not None and shown.due_on >= as_of and (shown.segment, shown.day) != (missed.segment, missed.day):
+            # Lateness describes the visit shown. A visit today counts for a
+            # day not yet past — CF day 0 at the first visit at 180 days, or
+            # a due day within ±2 days — and carries that day's forms, not the
+            # missed one's: it is due today. (A missed planned CF day 0 is the
+            # same visit as today's CF day 0, so it stays late.)
+            due = as_of
+        return _visit_dict(case, as_of, due, shown, today["forms"], late_days=(as_of - due).days), as_of
     slot = next((slots[j] for j in range(k + 1, len(slots)) if slots[j].due_on > as_of), None)
     if slot is None:
         return None, None
