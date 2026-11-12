@@ -34,6 +34,7 @@ def _baby(case: Dict[str, Any], as_of: date) -> Dict[str, Any]:
 
 
 def my_babies(db: Session, user: models.User, as_of: Optional[date] = None) -> Dict[str, Any]:
+    from app.fieldplan import baby_status
     from app.routers.growth import _build_cases
 
     as_of = as_of or date.today()
@@ -53,7 +54,9 @@ def my_babies(db: Session, user: models.User, as_of: Optional[date] = None) -> D
             "grades": {group: assessed["grades"][ind] for group, ind in _GRADE_OF.items()},
             "trend": {"group": trend["group"], "rule": trend["rule"], "since": trend.get("since")},
             "priority": {"tier": assessed["priority"]["tier"], "score": assessed["priority"]["score"]},
-            "growing_well": GP.growing_well(assessed),
+            # Today's "see these babies soon" reads baby_status: a baby on it
+            # is not growing well here.
+            "growing_well": GP.growing_well(assessed, see_soon=bool(baby_status(case)["see_within_days"])),
         })
     weighed.sort(key=lambda b: (GP.sort_key(b["priority"]), b["last_check"], b["child_name"] or ""))
     unmeasured.sort(key=lambda b: (b["child_name"] or "", b["mother_name"] or ""))

@@ -161,6 +161,17 @@ def _trend(weighed: List[Dict[str, Any]], sex: Optional[str], birth_weight: Opti
     return waz_trend(checks)
 
 
+def _last_waz_change(weighed: List[Dict[str, Any]], sex: Optional[str]) -> Optional[float]:
+    """The WAZ change since the check just before the latest, however close
+    (not the trend: that one needs a check 14+ days before)."""
+    from app.routers.growth import _visit_z
+
+    if len(weighed) < 2:
+        return None
+    last, prev = _visit_z("wfa", sex, weighed[-1]), _visit_z("wfa", sex, weighed[-2])
+    return round(last - prev, 2) if last is not None and prev is not None else None
+
+
 def assess(case: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """One baby's latest growth check, graded, trended and ranked; None when
     the baby has not been weighed yet. `case` is a growth-monitor case
@@ -186,9 +197,17 @@ def assess(case: Dict[str, Any]) -> Optional[Dict[str, Any]]:
               if (g == "faltering" and trend["group"] == FALTERING)
               or any(_GROUP_OF[ind] == g and grades[ind] in LOW_GRADES for ind in HAZARD_RATIO)]
     return {"last_check": weighed[-1]["date"], "age_days": weighed[-1]["age_days"], "z": z, "grades": grades,
-            "trend": trend, "priority": priority(grades, trend["group"]), "groups": groups}
+            "trend": trend, "priority": priority(grades, trend["group"]), "groups": groups,
+            "last_waz_change": _last_waz_change(weighed, sex)}
 
 
-def growing_well(assessed: Optional[Dict[str, Any]]) -> bool:
-    """Weighed, in none of the four groups and not flagged by the score."""
-    return bool(assessed) and not assessed["groups"] and assessed["priority"]["tier"] is None
+def growing_well(assessed: Optional[Dict[str, Any]], see_soon: bool = False) -> bool:
+    """Weighed, in none of the four groups, not flagged by the score — and not
+    on the "see these babies soon" list (`see_soon`, fieldplan.baby_status) nor
+    lower on the weight-for-age chart than at the check before, so "My babies'
+    growth" never calls a baby growing well whom Today says to see soon.
+    Faltering itself stays the spec's 14-day trend."""
+    if not assessed or see_soon:
+        return False
+    fell = (assessed.get("last_waz_change") or 0.0) < 0
+    return not assessed["groups"] and assessed["priority"]["tier"] is None and not fell

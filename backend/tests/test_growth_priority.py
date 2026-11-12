@@ -199,6 +199,19 @@ def test_growing_well_is_measured_and_in_no_group_and_not_flagged():
     assert a["groups"] == [] and a["priority"]["tier"] is None and P.growing_well(a)
 
 
+def test_a_fall_on_the_weight_for_age_chart_is_not_growing_well():
+    # Six days apart: no trend yet (faltering needs 14+ days), but the latest
+    # check is lower on the chart than the one before it.
+    w60 = value_for_z("wfa", "boys", 60, 0.2)
+    w66 = value_for_z("wfa", "boys", 66, 0.1)
+    a = P.assess(_case((60, round(w60, 2), None), (66, round(w66, 2), None), gender="Male"))
+    assert a["trend"]["group"] == "first_check" and a["groups"] == [] and a["priority"]["tier"] is None
+    assert a["last_waz_change"] < 0 and not P.growing_well(a)
+    # On the "see these babies soon" list: never growing well either.
+    rising = P.assess(_case((60, round(w60, 2), None), gender="Male"))
+    assert P.growing_well(rising) and not P.growing_well(rising, see_soon=True)
+
+
 # ── Where the score is used ────────────────────────────────────────────────
 #
 # Three weighed babies and one not weighed yet, all the worker's own:
@@ -279,6 +292,34 @@ def test_my_babies_growth_counts_each_group_over_the_weighed_babies(world):
     assert asha["trend"]["group"] == "faltering" and asha["trend"]["since"]
     assert asha["forms"] == ["gm", "bf"]                     # the visit "Start visit" opens
     assert [b["child_name"] for b in view["unmeasured"]] == ["Chandu"]
+
+
+def test_a_baby_to_see_soon_is_not_counted_as_growing_well(world):
+    """Esha's weight went down 5 days after her last check: Today lists her
+    to see soon, so "My babies' growth" must not count her as growing well —
+    though with no check 14+ days before she is not faltering."""
+    from app import fieldplan, models
+    from app.growth_groups import my_babies
+
+    db, worker = world["db"], world["worker"]
+    esha = models.Child(child_uid="T-Esha", mother_id=world["kids"]["Dev"].mother_id, child_name="Esha",
+                        gender="Female", dob=AS_OF - timedelta(days=100), adoption_date=AS_OF - timedelta(days=100))
+    db.add(esha)
+    db.flush()
+    w90 = round(value_for_z("wfa", "girls", 90, 0.3), 2)
+    for age, w in ((90, w90), (95, round(w90 - 0.1, 2))):
+        db.add(models.FormResponse(
+            form_key="growth_monitoring", child_id=esha.id, submitted_by_user_id=worker.id,
+            assessment_date=esha.dob + timedelta(days=age), status="submitted",
+            answers_json=[{"nodeId": "baby_weight", "question": "Baby's weight (kg)", "questionType": "number",
+                           "value": str(w)}]))
+    db.commit()
+
+    assert "Esha" in [u["child_name"] for u in fieldplan.today_view(db, worker, AS_OF)["urgent"]]
+    view = my_babies(db, worker, AS_OF)
+    row = next(b for b in view["babies"] if b["child_name"] == "Esha")
+    assert row["groups"] == [] and row["trend"]["group"] == "first_check" and row["growing_well"] is False
+    assert (view["measured"], view["growing_well"]) == (4, 1)          # Bina only, as before
 
 
 def test_my_babies_growth_is_the_learners_own(world):
