@@ -64,7 +64,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
         {/* overflow-x-CLIP, not hidden: hidden makes <main> a scroll container,
             and then nothing inside it can stick to the top of the screen. */}
-        <main className={cn('flex-1 animate-fade-in overflow-x-clip p-5 sm:p-6', hasBottomNav(location.pathname) && 'pb-28 lg:pb-6')}>{children}</main>
+        <main className={cn('flex-1 overflow-x-clip p-5 sm:p-6', hasBottomNav(location.pathname) && 'pb-28 lg:pb-6')}>{children}</main>
       </div>
 
       <BottomNav />

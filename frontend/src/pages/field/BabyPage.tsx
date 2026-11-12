@@ -37,8 +37,8 @@ const StatusCard: React.FC<{ status: BabyStatus }> = ({ status }) => {
   const tone = TONE_CLASSES[status.status];
   const reasons = status.reasons.filter(r => r !== 'no_growth_check');
   return (
-    <div className={cn('rounded-2xl p-4 ring-2', tone.soft, tone.ring)}>
-      <p className={cn('flex items-center gap-2.5 font-display text-xl font-extrabold', tone.text)}>
+    <div className={cn('rounded-lg p-4 ring-2', tone.soft, tone.ring)}>
+      <p className={cn('flex items-center gap-2.5 font-display text-xl font-semibold', tone.text)}>
         <span className={cn('size-4 shrink-0 rounded-full', tone.dot)} aria-hidden />
         {t(`field.status.${status.status}`)}
       </p>
@@ -48,7 +48,7 @@ const StatusCard: React.FC<{ status: BabyStatus }> = ({ status }) => {
         </ul>
       )}
       {status.see_within_days != null && (
-        <p className="mt-2 rounded-lg bg-surface px-3 py-2 text-sm font-bold text-ink">
+        <p className="mt-2 rounded-lg bg-surface px-3 py-2 text-sm font-semibold text-ink">
           {t('field.baby.seeWithin', { count: status.see_within_days })}
         </p>
       )}
@@ -60,10 +60,10 @@ const StatusCard: React.FC<{ status: BabyStatus }> = ({ status }) => {
 const Tile: React.FC<{ label: string; value: string; tone: Tone | null; word: string; wordy?: boolean }> = ({ label, value, tone, word, wordy }) => {
   const c = TONE_CLASSES[(tone ?? 'none') as Status];
   return (
-    <div className={cn('flex flex-col items-center gap-0.5 rounded-xl px-2 py-3 text-center', c.soft)}>
+    <div className={cn('flex flex-col items-center gap-0.5 rounded-lg px-2 py-3 text-center', c.soft)}>
       <span className="text-xs font-semibold leading-tight text-ink-muted">{label}</span>
-      <span className={cn('font-display font-extrabold tabular-nums', wordy ? 'py-1 text-base leading-tight' : 'text-2xl', c.text)}>{value}</span>
-      <span className={cn('flex items-center gap-1 text-xs font-bold', c.text)}>
+      <span className={cn('font-display font-semibold tabular-nums', wordy ? 'py-1 text-base leading-tight' : 'text-2xl', c.text)}>{value}</span>
+      <span className={cn('flex items-center gap-1 text-xs font-semibold', c.text)}>
         <span className={cn('size-2 rounded-full', c.dot)} aria-hidden />{word}
       </span>
     </div>
@@ -188,7 +188,7 @@ const BabyPage: React.FC = () => {
           <ArrowLeft className="size-4" />{t('field.back')}
         </button>
         <div className="flex items-start justify-between gap-3">
-          <h1 className="font-display text-2xl font-extrabold text-ink">{name}</h1>
+          <h1 className="font-display text-2xl font-semibold text-ink">{name}</h1>
           {/* Changing the baby's details is one tap from the top (review of 30 Oct 2026). */}
           {motherId > 0 && (
             <Link to={`/mothers/${motherId}/children/${childId}`} className={buttonClasses('outline', 'sm', 'shrink-0')}>
@@ -206,7 +206,7 @@ const BabyPage: React.FC = () => {
       </div>
 
       {done && (
-        <p className="flex items-center gap-2 rounded-xl bg-success-50 px-4 py-3 font-semibold text-success-600 dark:bg-success-500/15 dark:text-success-500">
+        <p className="flex items-center gap-2 rounded-lg bg-success-50 px-4 py-3 font-semibold text-success-600 dark:bg-success-500/15 dark:text-success-500">
           <CircleCheck className="size-5 shrink-0" />{t('field.baby.visitDone')}
         </p>
       )}
@@ -216,7 +216,7 @@ const BabyPage: React.FC = () => {
 
       {/* The next visit, or start one now */}
       <Card className="flex flex-col gap-3 p-4">
-        <h2 className="flex items-center gap-2 font-display text-base font-bold text-ink">
+        <h2 className="flex items-center gap-2 font-display text-base font-semibold text-ink">
           <CalendarDays className="size-5 text-primary-ink" />{t('field.baby.nextVisit')}
         </h2>
         {visit ? (
@@ -237,7 +237,7 @@ const BabyPage: React.FC = () => {
 
       {detail.who_case && <BabyCharts who={detail.who_case} visits={detail.visits} standards={standards} />}
 
-      <div className="flex flex-col divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+      <div className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
         {forms.map(f => (
           <Link key={f} to={formRunUrl(f, motherId, childId)} className="flex min-h-14 items-center gap-3 px-4 py-3 font-semibold text-ink hover:bg-surface-sunken">
             <FileText className="size-5 text-primary-ink" />

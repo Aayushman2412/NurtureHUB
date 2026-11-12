@@ -33,7 +33,7 @@ const FORM_CODES: Record<string, string> = {
 
 const Fact: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <div className="flex flex-col">
-    <span className="text-[12px] uppercase tracking-wide text-ink-faint">{label}</span>
+    <span className="text-[12px] text-ink-faint">{label}</span>
     <span className="text-sm font-medium text-ink">{value}</span>
   </div>
 );
@@ -42,7 +42,7 @@ const IdentitySection: React.FC<{ icon: React.ReactNode; title: string; facts: {
   icon, title, facts,
 }) => (
   <div className="rounded-lg border border-border bg-surface-sunken/60 p-3">
-    <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-muted">{icon}{title}</div>
+    <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-ink-muted">{icon}{title}</div>
     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
       {facts.map(f => <Fact key={f.label} label={f.label} value={f.value} />)}
     </div>
@@ -238,7 +238,7 @@ const GrowthCaseView: React.FC<{ childId: number; mode: 'admin' | 'learner'; bac
       {/* ── activity + outcome charts ────────────────────────────────────── */}
       {row && (
         <section>
-          <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-muted">
+          <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-ink-muted">
             <BarChart3 className="size-3.5" />{t('caseDetail.metrics')}
           </div>
           <div className="grid gap-2 lg:grid-cols-2">
@@ -277,7 +277,7 @@ const GrowthCaseView: React.FC<{ childId: number; mode: 'admin' | 'learner'; bac
 
       {/* ── this pair's WHO growth charts ────────────────────────────────── */}
       <section>
-        <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-muted">
+        <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-ink-muted">
           <LineChart className="size-3.5" />{t('casePage.whoCharts')}
         </div>
         <p className="mb-2 text-xs leading-snug text-ink-muted">{t('casePage.explain.who')}</p>
@@ -298,7 +298,7 @@ const GrowthCaseView: React.FC<{ childId: number; mode: 'admin' | 'learner'; bac
       {/* ── per-visit summary table ──────────────────────────────────────── */}
       <section>
         <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          <span className="flex items-center gap-1.5 text-sm font-bold text-ink">
+          <span className="flex items-center gap-1.5 text-sm font-semibold text-ink">
             <Baby className="size-4 text-ink-muted" />{t('casePage.visitSummary')} ({detail.visits.length})
           </span>
           <RotateHint />
@@ -315,13 +315,13 @@ const GrowthCaseView: React.FC<{ childId: number; mode: 'admin' | 'learner'; bac
 
       {/* ── LAP forms: ✓ / ✕ per question, visits side by side ───────────── */}
       <section>
-        <div className="mb-2 flex items-center gap-1.5 text-sm font-bold text-ink">
+        <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-ink">
           <BarChart3 className="size-4 text-ink-muted" />{t('casePage.lapMatrices')}
         </div>
         <div className="mb-2 flex flex-wrap items-center gap-3 text-[13px] text-ink-muted">
-          <span className="flex items-center gap-1"><span className="font-bold text-success-600">✓</span> {t('casePage.legendGreen')}</span>
-          <span className="flex items-center gap-1"><span className="font-bold text-coral-700">✕</span> {t('casePage.legendRed')}</span>
-          <span className="flex items-center gap-1"><span className="font-bold text-ink-faint">—</span> {t('casePage.legendNotAsked')}</span>
+          <span className="flex items-center gap-1"><span className="font-semibold text-success-600">✓</span> {t('casePage.legendGreen')}</span>
+          <span className="flex items-center gap-1"><span className="font-semibold text-brand-700">✕</span> {t('casePage.legendRed')}</span>
+          <span className="flex items-center gap-1"><span className="font-semibold text-ink-faint">—</span> {t('casePage.legendNotAsked')}</span>
           <span className="flex items-center gap-1"><span className="inline-block size-3 rounded-sm bg-surface-sunken ring-1 ring-border" /> {t('casePage.legendNotYet')}</span>
         </div>
         <div className="space-y-2">
@@ -342,7 +342,7 @@ const GrowthCaseView: React.FC<{ childId: number; mode: 'admin' | 'learner'; bac
 
       {/* ── the other forms: what was recorded, visits side by side ──────── */}
       <section>
-        <div className="mb-2 flex items-center gap-1.5 text-sm font-bold text-ink">
+        <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-ink">
           <ClipboardList className="size-4 text-ink-muted" />{t('casePage.infoForms')}
         </div>
         <div className="space-y-2">

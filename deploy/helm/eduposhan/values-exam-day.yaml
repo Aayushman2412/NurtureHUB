@@ -1,0 +1,14 @@
+# Exam day overlay — apply an hour before candidates arrive, drop it afterwards:
+#   helm upgrade eduposhan deploy/helm/eduposhan -f prod.yaml -f values-exam-day.yaml
+#
+# Autoscaling reacts within ~30 s, but it cannot move a WebSocket that is
+# already open: new pods only get NEW connections. So the sockets must find
+# their pods waiting. Sized for ~50,000 candidates at ~5,000 sockets a pod,
+# plus headroom for sign-in (bcrypt is CPU on purpose) and answer saves.
+realtime:
+  autoscaling:
+    minReplicas: 12
+    maxReplicas: 24
+api:
+  autoscaling:
+    minReplicas: 16

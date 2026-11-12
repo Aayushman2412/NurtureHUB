@@ -62,7 +62,7 @@ _COMMON = {
     "111111", "000000", "iloveyou", "admin", "admin123", "administrator",
     "welcome", "welcome1", "letmein", "monkey", "dragon", "sunshine",
     "princess", "football", "changeme", "secret", "test123", "india123",
-    "nurturehub", "nurturehub123", "asha123", "anganwadi", "health123",
+    "nurturehub", "nurturehub123", "eduposhan", "eduposhan123", "asha123", "anganwadi", "health123",
 }
 
 _KEYBOARD_RUNS = (

@@ -19,8 +19,8 @@ export const MasdSupportStructure: React.FC<{ report: MasdReport }> = ({ report 
   const batches = report.calendar.batches.filter(b => b.id != null);
   if (!batches.length) return null;
   return (
-    <section className="space-y-2 rounded-xl border border-border bg-surface p-4">
-      <h3 className="inline-flex items-center gap-2 font-display text-base font-bold text-ink">
+    <section className="space-y-2 rounded-lg border border-border bg-surface p-4">
+      <h3 className="inline-flex items-center gap-2 font-display text-base font-semibold text-ink">
         <Network className="size-5 text-primary-ink" />{t('support.title')}
       </h3>
       <p className="text-sm text-ink">{t('support.explain')}</p>
@@ -49,7 +49,7 @@ export const MasdSupportStructure: React.FC<{ report: MasdReport }> = ({ report 
               </td>
               <td className="px-3 py-2 text-center tabular-nums">{b.learners}</td>
               <td className="px-3 py-2 text-sm text-ink">{b.monitors?.length ? b.monitors.map(m => m.name).join(', ') : <span className="text-ink-muted">—</span>}</td>
-              <td className={`px-3 py-2 text-center tabular-nums ${b.without_monitor ? 'font-bold text-amber-700 dark:text-amber-400' : 'text-ink-muted'}`}>{b.without_monitor ?? 0}</td>
+              <td className={`px-3 py-2 text-center tabular-nums ${b.without_monitor ? 'font-semibold text-amber-700 dark:text-amber-400' : 'text-ink-muted'}`}>{b.without_monitor ?? 0}</td>
             </tr>
           ))}
         </tbody>
@@ -64,9 +64,9 @@ const MasdMonitors: React.FC<{ report: MasdReport }> = ({ report }) => {
   const data = report.batch_monitors;
   if (!data || data.monitors.length === 0) return null;
   return (
-    <section className="space-y-2 rounded-xl border border-border bg-surface p-4">
+    <section className="space-y-2 rounded-lg border border-border bg-surface p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="inline-flex items-center gap-2 font-display text-base font-bold text-ink">
+        <h3 className="inline-flex items-center gap-2 font-display text-base font-semibold text-ink">
           <UserCheck className="size-5 text-primary-ink" />
           {t('monitors.title', { count: data.monitors.length })}
         </h3>
@@ -97,7 +97,7 @@ const MasdMonitors: React.FC<{ report: MasdReport }> = ({ report }) => {
               </td>
               <td className="px-3 py-2 text-center font-semibold tabular-nums text-ink">{m.learners}</td>
               <td className="px-3 py-2 text-center tabular-nums text-success-700 dark:text-success-300">{m.on_track}</td>
-              <td className="px-3 py-2 text-center font-bold tabular-nums text-error-700 dark:text-error-300">{m.need_call || '—'}</td>
+              <td className="px-3 py-2 text-center font-semibold tabular-nums text-error-700 dark:text-error-300">{m.need_call || '—'}</td>
               <RateCell value={m.own_pct} />
               <td className="px-3 py-2 text-sm text-ink">
                 {m.calls.length === 0 ? <span className="text-ink-muted">{m.learners ? t('monitors.allOnTrack') : t('monitors.noLearners')}</span> : (

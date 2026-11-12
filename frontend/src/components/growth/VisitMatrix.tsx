@@ -163,12 +163,12 @@ const VisitMatrix: React.FC<{
     { key: 'age', label: t('casePage.derived.age'), cell: d => derived.get(d)?.age ?? '—' },
     { key: 'dw', label: t('casePage.derived.weightChange'), cell: d => {
       const x = derived.get(d);
-      return x?.dw != null ? <span className={cn(x.dw < 0 && 'text-coral-700 dark:text-coral-300')}>{signed(x.dw)} g</span> : '—';
+      return x?.dw != null ? <span className={cn(x.dw < 0 && 'text-brand-700 dark:text-brand-300')}>{signed(x.dw)} g</span> : '—';
     } },
     { key: 'perDay', label: t('casePage.derived.gainPerDay'), cell: d => {
       const x = derived.get(d);
       return x?.perDay != null
-        ? <span className={cn(x.perDay < 0 && 'text-coral-700 dark:text-coral-300')}>{signed(x.perDay, 1)} g/{t('casePage.derived.day')}<span className="block text-[11px] font-normal text-ink-faint">{t('casePage.derived.overDays', { count: x.gap ?? 0 })}</span></span>
+        ? <span className={cn(x.perDay < 0 && 'text-brand-700 dark:text-brand-300')}>{signed(x.perDay, 1)} g/{t('casePage.derived.day')}<span className="block text-[11px] font-normal text-ink-faint">{t('casePage.derived.overDays', { count: x.gap ?? 0 })}</span></span>
         : '—';
     } },
     { key: 'dl', label: t('casePage.derived.lengthChange'), cell: d => {
@@ -189,7 +189,7 @@ const VisitMatrix: React.FC<{
       return (
         <td
           key={`${row.key}-${date}`} title={cellTitle(v)}
-          className={cn('px-2 py-1.5 text-center text-base font-bold leading-none', v === 'green' && GREEN_INK, v === 'red' && RED_INK)}
+          className={cn('px-2 py-1.5 text-center text-base font-semibold leading-none', v === 'green' && GREEN_INK, v === 'red' && RED_INK)}
           style={{ backgroundColor: v === 'neutral' || v === null ? undefined : lapCellFill(v, true) }}
         >
           {v === 'green' ? '✓' : v === 'red' ? '✕' : v === 'neutral' ? (cell?.text ? <span className="text-xs font-normal text-ink">{cell.text}</span> : '•') : '—'}
@@ -216,17 +216,17 @@ const VisitMatrix: React.FC<{
       >
         <thead className="sticky top-0 z-20">
           <tr>
-            <th className="sticky left-0 z-10 w-28 min-w-28 bg-surface-sunken px-2 py-2 text-left text-[13px] font-bold uppercase tracking-wide text-ink-muted">
+            <th className="sticky left-0 z-10 w-28 min-w-28 bg-surface-sunken px-2 py-2 text-left text-[13px] font-semibold text-ink-muted">
               {t('casePage.visit')}
             </th>
             {kind === 'lap' && dates.some(d => score(d)) && (
-              <th className="w-24 min-w-24 bg-surface-sunken px-2 py-2 text-center text-[13px] font-bold text-ink">{t('casePage.pointsCorrect')}</th>
+              <th className="w-24 min-w-24 bg-surface-sunken px-2 py-2 text-center text-[13px] font-semibold text-ink">{t('casePage.pointsCorrect')}</th>
             )}
             {dates.some(d => protein(d)) && (
-              <th className="w-28 min-w-28 bg-surface-sunken px-2 py-2 text-center text-[13px] font-bold text-ink">{t('casePage.protein24')}</th>
+              <th className="w-28 min-w-28 bg-surface-sunken px-2 py-2 text-center text-[13px] font-semibold text-ink">{t('casePage.protein24')}</th>
             )}
             {derivedRows.map(dr => (
-              <th key={dr.key} className="w-28 min-w-28 bg-sage-50 px-2 py-2 text-center text-[13px] font-bold text-ink dark:bg-sage-900">{dr.label}</th>
+              <th key={dr.key} className="w-28 min-w-28 bg-success-50 px-2 py-2 text-center text-[13px] font-semibold text-ink dark:bg-success-900">{dr.label}</th>
             ))}
             {rows.map((row, index) => (
               <th key={row.key} title={row.question}
@@ -246,17 +246,17 @@ const VisitMatrix: React.FC<{
                   <span className="block text-[11px] font-normal text-ink-faint">{t('casePage.visitN', { n: i + 1 })}</span>{date}
                 </td>
                 {kind === 'lap' && dates.some(d => score(d)) && (
-                  <td className="px-2 py-1.5 text-center text-sm font-bold tabular-nums text-ink">
+                  <td className="px-2 py-1.5 text-center text-sm font-semibold tabular-nums text-ink">
                     {sc ? <>{sc.n}/{sc.of}<span className="block text-xs font-semibold text-ink-muted">{sc.pct}%</span></> : '—'}
                   </td>
                 )}
                 {dates.some(d => protein(d)) && (
-                  <td className="px-2 py-1.5 text-center text-sm font-bold tabular-nums text-ink">
+                  <td className="px-2 py-1.5 text-center text-sm font-semibold tabular-nums text-ink">
                     {pr ? <>{pr.total24} g<span className="block text-xs font-semibold text-ink-muted">{t('casePage.proteinAvg', { g: pr.dailyAvg })}</span></> : '—'}
                   </td>
                 )}
                 {derivedRows.map(dr => (
-                  <td key={dr.key} className="bg-sage-50/60 px-2 py-1.5 text-center text-[13px] font-semibold tabular-nums text-ink dark:bg-sage-500/5">{dr.cell(date)}</td>
+                  <td key={dr.key} className="bg-success-50/60 px-2 py-1.5 text-center text-[13px] font-semibold tabular-nums text-ink dark:bg-success-500/5">{dr.cell(date)}</td>
                 ))}
                 {rows.map(row => answerCell(row, date))}
               </tr>
@@ -309,8 +309,8 @@ const VisitMatrix: React.FC<{
         >
           <thead className="sticky top-0 z-20">
             <tr>
-              <th className="sticky left-0 z-10 w-10 bg-surface-sunken px-2 py-2 text-right text-[13px] font-bold text-ink-muted">#</th>
-              <th className={cn('sticky left-10 z-10 bg-surface-sunken px-3 py-2 text-left text-[13px] font-bold uppercase tracking-wide text-ink-muted', qW)}>
+              <th className="sticky left-0 z-10 w-10 bg-surface-sunken px-2 py-2 text-right text-[13px] font-semibold text-ink-muted">#</th>
+              <th className={cn('sticky left-10 z-10 bg-surface-sunken px-3 py-2 text-left text-[13px] font-semibold text-ink-muted', qW)}>
                 {t('casePage.question')}
               </th>
               {shown.map((date, i) => (
@@ -328,11 +328,11 @@ const VisitMatrix: React.FC<{
             {hasScore && (
               <tr>
                 <th className="sticky left-0 z-10 bg-surface px-2 py-1.5" />
-                <th className="sticky left-10 z-10 bg-surface px-3 py-1.5 text-left text-sm font-bold text-ink">{t('casePage.pointsCorrect')}</th>
+                <th className="sticky left-10 z-10 bg-surface px-3 py-1.5 text-left text-sm font-semibold text-ink">{t('casePage.pointsCorrect')}</th>
                 {shown.map(date => {
                   const s = score(date);
                   return (
-                    <th key={date} className="bg-surface px-2 py-1.5 text-center text-sm font-bold tabular-nums text-ink">
+                    <th key={date} className="bg-surface px-2 py-1.5 text-center text-sm font-semibold tabular-nums text-ink">
                       {s ? <>{s.n}/{s.of}<span className="block text-xs font-semibold text-ink-muted">{s.pct}%</span></> : '—'}
                     </th>
                   );
@@ -343,11 +343,11 @@ const VisitMatrix: React.FC<{
             {hasProtein && (
               <tr>
                 <th className="sticky left-0 z-10 bg-surface px-2 py-1.5" />
-                <th className="sticky left-10 z-10 bg-surface px-3 py-1.5 text-left text-sm font-bold text-ink">{t('casePage.protein24')}</th>
+                <th className="sticky left-10 z-10 bg-surface px-3 py-1.5 text-left text-sm font-semibold text-ink">{t('casePage.protein24')}</th>
                 {shown.map(date => {
                   const p = protein(date);
                   return (
-                    <th key={date} className="bg-surface px-2 py-1.5 text-center text-sm font-bold tabular-nums text-ink">
+                    <th key={date} className="bg-surface px-2 py-1.5 text-center text-sm font-semibold tabular-nums text-ink">
                       {p ? <>{p.total24} g<span className="block text-xs font-semibold text-ink-muted">{t('casePage.proteinAvg', { g: p.dailyAvg })}</span></> : '—'}
                     </th>
                   );
@@ -360,10 +360,10 @@ const VisitMatrix: React.FC<{
             {/* Worked out from the measurements — not questions on the form. */}
             {derivedRows.map(dr => (
               <tr key={dr.key}>
-                <td className="sticky left-0 z-10 w-10 bg-sage-50 px-2 py-1.5 dark:bg-sage-900" />
-                <td className={cn('sticky left-10 z-10 bg-sage-50 px-3 py-1.5 text-sm font-bold text-ink dark:bg-sage-900', qW)}>{dr.label}</td>
+                <td className="sticky left-0 z-10 w-10 bg-success-50 px-2 py-1.5 dark:bg-success-900" />
+                <td className={cn('sticky left-10 z-10 bg-success-50 px-3 py-1.5 text-sm font-semibold text-ink dark:bg-success-900', qW)}>{dr.label}</td>
                 {shown.map(date => (
-                  <td key={date} className="bg-sage-50/60 px-2 py-1.5 text-center text-[13px] font-semibold tabular-nums text-ink dark:bg-sage-500/5">{dr.cell(date)}</td>
+                  <td key={date} className="bg-success-50/60 px-2 py-1.5 text-center text-[13px] font-semibold tabular-nums text-ink dark:bg-success-500/5">{dr.cell(date)}</td>
                 ))}
                 {Array.from({ length: placeholders }, (_, i) => <td key={`ph${i}`} className="bg-surface-sunken/60" />)}
               </tr>

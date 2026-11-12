@@ -193,7 +193,7 @@ const GrowthChartsPage: React.FC = () => {
       <>
       {/* Which case, and boys or girls — frozen at the top so the learner never
           scrolls back up to change them (review of 18 Oct 2026). */}
-      <div className="sticky top-[3.75rem] z-20 -mx-5 mb-4 flex flex-wrap items-end gap-x-3 gap-y-2 border-b border-border bg-background/95 px-5 py-2 backdrop-blur-md sm:-mx-6 sm:px-6">
+      <div className="sticky top-[3.75rem] z-20 -mx-5 mb-4 flex flex-wrap items-end gap-x-3 gap-y-2 border-b border-border bg-background px-5 py-2 sm:-mx-6 sm:px-6">
         <div className="min-w-0 flex-1 basis-64 sm:max-w-md">
           <MultiSelect
             label={t('learner.pickCases')}
@@ -258,7 +258,7 @@ const GrowthChartsPage: React.FC = () => {
       {selectedCase && (
         <Link
           to={`/growth/cases/${selectedCase.child.id}`}
-          className="flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm transition-colors hover:bg-primary/10"
+          className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm transition-colors hover:bg-primary/10"
         >
           <span>
             <span className="block font-semibold text-ink">{t('learner.openCase')}</span>

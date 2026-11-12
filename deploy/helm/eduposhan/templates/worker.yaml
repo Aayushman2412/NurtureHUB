@@ -1,0 +1,4 @@
+{{/* The leased jobs: security sweeps + audit anchors, attempt finalizer, care reminders. */}}
+{{ include "eduposhan.backend" (dict "root" . "role" "worker" "cfg" .Values.worker) }}
+---
+{{ include "eduposhan.pdb" (dict "root" . "role" "worker") }}

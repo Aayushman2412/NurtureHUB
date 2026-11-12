@@ -732,11 +732,11 @@ def _matrix(mid: str, title: str, rows: list, columns: list,
 
 # Portions eaten in the last 24 hours (0–10, half-serving granularity) and
 # days/week ("0 days" … "7 days"), matching the Cuedwell instrument.
-# Mother's Protein Intake (PCA) — replacement flow schema for NurtureHUB.
+# Mother's Protein Intake (PCA) — replacement flow schema for EduPoshan.
 #
 # Authored from the "PCA" tab of the assessment workbook (sheets.json):
 # rows 2-4 assessment details; rows 7-23 the food matrix, re-cut here as ONE
-# NurtureHUB matrix node per Food Group in sheet order; rows 25-26 the
+# EduPoshan matrix node per Food Group in sheet order; rows 25-26 the
 # nutritional-supplements gate question; rows 28-37 the supplement matrix.
 # The workbook's computed variables (rows 41-45: total / high-quality protein,
 # 24-hour and habitual) are produced by the platform from the matrix answers

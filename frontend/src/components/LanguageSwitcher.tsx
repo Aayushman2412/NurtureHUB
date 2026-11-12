@@ -20,8 +20,8 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ variant = 'pill' })
   // off-screen. The language is still one tap away and the dropdown names it.
   const triggerClass =
     variant === 'compact'
-      ? 'inline-flex size-9.5 items-center justify-center rounded-full border border-border bg-surface text-sm font-semibold text-ink-muted hover:text-ink transition-colors cursor-pointer sm:size-auto sm:gap-1.5 sm:px-3 sm:py-1.5'
-      : 'inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold text-ink-muted hover:text-ink transition-colors cursor-pointer';
+      ? 'inline-flex size-10 items-center justify-center rounded-md border border-border-control bg-surface text-sm font-semibold text-ink-muted hover:text-ink transition-colors cursor-pointer sm:size-auto sm:gap-1.5 sm:px-3 sm:py-1.5'
+      : 'inline-flex items-center gap-2 rounded-md border border-border-control bg-surface px-3 py-2 text-sm font-semibold text-ink-muted hover:text-ink transition-colors cursor-pointer';
 
   return (
     <Dropdown

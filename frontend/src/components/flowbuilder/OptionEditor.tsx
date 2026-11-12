@@ -112,7 +112,7 @@ const OptionEditor: React.FC<OptionEditorProps> = ({
     <div
       className={cn(
         'rounded-lg border bg-surface transition-colors',
-        expanded ? 'border-border-strong/70 shadow-(--shadow-card)' : 'border-border',
+        expanded ? 'border-border-strong/70 ' : 'border-border',
         connecting && 'ring-2 ring-primary/40',
       )}
     >
@@ -178,7 +178,7 @@ const OptionEditor: React.FC<OptionEditorProps> = ({
                         ? 'border-transparent text-white'
                         : 'border-border bg-surface text-ink-muted hover:bg-surface-sunken',
                     )}
-                    style={active ? { backgroundColor: def?.color ?? 'var(--color-cream-600)' } : undefined}
+                    style={active ? { backgroundColor: def?.color ?? 'var(--color-gray-600)' } : undefined}
                   >
                     <VerdictDot verdict={id} verdictDefs={verdictDefs} />
                     {def ? def.label : 'Neutral'}
@@ -192,7 +192,7 @@ const OptionEditor: React.FC<OptionEditorProps> = ({
             <label className="flex cursor-pointer items-start gap-2 text-[12px] text-ink-muted">
               <input
                 type="checkbox"
-                className="mt-0.5 size-3.5 shrink-0 cursor-pointer accent-[var(--color-coral-500)]"
+                className="mt-0.5 size-3.5 shrink-0 cursor-pointer accent-[var(--color-brand-500)]"
                 checked={isExclusiveOption(option)}
                 onChange={e => patch({ exclusive: e.target.checked })}
               />

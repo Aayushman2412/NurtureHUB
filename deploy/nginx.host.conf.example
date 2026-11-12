@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# NurtureHUB — HOST-level nginx (managed by ops).
+# EduPoshan — HOST-level nginx (managed by ops).
 #
 # Terminates TLS and forwards ALL traffic to the frontend container, which serves
 # the SPA and internally proxies /api and /ws to the backend. So this host config
@@ -9,7 +9,7 @@
 # Assumes the compose stack runs on the same host with the frontend published on
 # 127.0.0.1:8080  (i.e. BIND_ADDR=127.0.0.1, FRONTEND_PORT=8080 in .env).
 #
-# Replace nurturehub.example.org with the real domain and point the certs at your
+# Replace eduposhan.example.org with the real domain and point the certs at your
 # TLS files (e.g. Let's Encrypt / certbot).
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -99,7 +99,7 @@ limit_req_log_level warn;
 server {
     listen 80;
     listen [::]:80;
-    server_name nurturehub.example.org;
+    server_name eduposhan.example.org;
 
     location /.well-known/acme-challenge/ { root /var/www/certbot; }
     location / { return 301 https://$host$request_uri; }
@@ -109,10 +109,10 @@ server {
     listen 443 ssl;
     listen [::]:443 ssl;
     http2 on;
-    server_name nurturehub.example.org;
+    server_name eduposhan.example.org;
 
-    ssl_certificate     /etc/letsencrypt/live/nurturehub.example.org/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/nurturehub.example.org/privkey.pem;
+    ssl_certificate     /etc/letsencrypt/live/eduposhan.example.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/eduposhan.example.org/privkey.pem;
 
     # ── TLS hardening ───────────────────────────────────────────────────────
     # This platform carries identified maternal and child health records over

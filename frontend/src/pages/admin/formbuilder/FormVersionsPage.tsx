@@ -215,7 +215,7 @@ const FormVersionsPage: React.FC = () => {
                 className={cn(
                   'absolute -left-[31px] top-5 flex size-4 items-center justify-center rounded-full border-2',
                   version.is_default
-                    ? 'border-coral-500 bg-coral-500 text-white'
+                    ? 'border-brand-500 bg-brand-500 text-white'
                     : 'border-border bg-surface',
                 )}
               >
@@ -226,11 +226,11 @@ const FormVersionsPage: React.FC = () => {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
+                      <span className="flex items-center gap-1.5 font-display text-base font-semibold text-ink">
                         <GitCommitHorizontal className="size-4 text-ink-muted" />
                         {t('versions.versionN', { n: version.version_number })}
                       </span>
-                      {version.is_default && <Badge variant="coral">{t('versions.defaultBadge')}</Badge>}
+                      {version.is_default && <Badge variant="info">{t('versions.defaultBadge')}</Badge>}
                       <span className="flex items-center gap-1 text-xs text-ink-muted">
                         <CalendarDays className="size-3.5" />
                         {version.created_on ?? '—'}
@@ -243,7 +243,7 @@ const FormVersionsPage: React.FC = () => {
                     {version.detected_changes.length > 0 && (
                       <div className="mt-1.5 border-l-2 border-border pl-2.5">
                         {version.diffed_from_version != null && (
-                          <p className="text-[12px] font-semibold uppercase tracking-wide text-ink-faint">
+                          <p className="text-[12px] font-semibold text-ink-faint">
                             {t('versions.diffedFrom', { n: version.diffed_from_version })}
                           </p>
                         )}
@@ -258,7 +258,7 @@ const FormVersionsPage: React.FC = () => {
                         version without cutting a new version number. */}
                     {(version.change_log ?? []).length > 0 && (
                       <div className="mt-2 rounded-lg border border-border bg-surface-sunken/50 p-2.5">
-                        <p className="mb-1 mt-0 text-[12px] font-bold uppercase tracking-wide text-ink-muted">
+                        <p className="mb-1 mt-0 text-[12px] font-semibold text-ink-muted">
                           {t('versions.changeLogTitle', { n: version.change_log.length })}
                         </p>
                         <ul className="space-y-1.5">
@@ -326,7 +326,7 @@ const FormVersionsPage: React.FC = () => {
                           iconLeft={<Trash2 className="size-3.5" />}
                           disabled={(data?.versions.length ?? 0) <= 1}
                           title={t('versions.deleteHint')}
-                          className="text-coral-700 hover:bg-coral-50 dark:text-coral-300 dark:hover:bg-coral-500/10"
+                          className="text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-500/10"
                           onClick={() => setDeleteFor(version)}
                         >
                           {t('versions.delete')}

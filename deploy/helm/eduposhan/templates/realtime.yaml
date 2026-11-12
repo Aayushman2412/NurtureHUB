@@ -1,0 +1,6 @@
+{{/* /ws/*: live monitoring and proctoring sockets. Redis pub/sub shares them across pods. */}}
+{{ include "eduposhan.backend" (dict "root" . "role" "realtime" "cfg" .Values.realtime) }}
+---
+{{ include "eduposhan.hpa" (dict "root" . "role" "realtime" "cfg" .Values.realtime "kind" "StatefulSet") }}
+---
+{{ include "eduposhan.pdb" (dict "root" . "role" "realtime") }}

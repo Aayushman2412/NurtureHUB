@@ -18,7 +18,7 @@ import psycopg2
 
 DB_URL = os.environ.get(
     "NH_LOADTEST_DB",
-    "postgresql://postgres:756824@localhost/nurturehub_loadtest",
+    "postgresql://postgres:756824@localhost/eduposhan_loadtest",
 )
 
 

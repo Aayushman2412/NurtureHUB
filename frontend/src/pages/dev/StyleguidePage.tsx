@@ -12,7 +12,7 @@ import { useTheme } from '../../context/ThemeContext';
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <section className="mb-10">
-    <h3 className="font-display font-bold text-lg text-ink mb-4 pb-2 border-b border-border">{title}</h3>
+    <h3 className="font-display font-semibold text-lg text-ink mb-4 pb-2 border-b border-border">{title}</h3>
     <div className="flex flex-wrap items-start gap-4">{children}</div>
   </section>
 );
@@ -29,7 +29,7 @@ const StyleguidePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background text-ink p-8 max-w-6xl mx-auto">
       <PageHeader
-        title="NurtureHUB Styleguide"
+        title="EduPoshan components"
         description="Every ui primitive in every variant. DEV only."
         actions={<Button variant="outline" onClick={toggleDarkMode}>{darkMode ? 'Light' : 'Dark'} mode</Button>}
       />
@@ -50,7 +50,7 @@ const StyleguidePage: React.FC = () => {
         <Button>Primary action</Button>
         <Button variant="danger">Destructive action</Button>
         <Badge variant="error">Failed</Badge>
-        <Badge variant="coral">Coral badge</Badge>
+        <Badge variant="info">Coral badge</Badge>
       </Section>
 
       <Section title="Badges">
@@ -59,7 +59,7 @@ const StyleguidePage: React.FC = () => {
         <Badge variant="warning">Pending</Badge>
         <Badge variant="info">Info</Badge>
         <Badge variant="neutral">Neutral</Badge>
-        <Badge variant="coral" size="md">Coral md</Badge>
+        <Badge variant="info" size="md">Coral md</Badge>
       </Section>
 
       <Section title="Inputs">
@@ -85,22 +85,22 @@ const StyleguidePage: React.FC = () => {
         <Card className="w-56"><CardBody>Plain card</CardBody></Card>
         <Card interactive className="w-56"><CardBody>Interactive card</CardBody></Card>
         <Card locked className="w-56"><CardBody><Lock className="size-4 inline mr-1" />Locked card</CardBody></Card>
-        <Card accent="coral" className="w-56"><CardBody>Coral accent</CardBody></Card>
-        <Card accent="sage" className="w-56"><CardBody>Sage accent</CardBody></Card>
-        <Card accent="amber" className="w-56"><CardBody>Amber accent</CardBody></Card>
+        <Card accent="brand" className="w-56"><CardBody>Coral accent</CardBody></Card>
+        <Card accent="success" className="w-56"><CardBody>Sage accent</CardBody></Card>
+        <Card accent="warning" className="w-56"><CardBody>Amber accent</CardBody></Card>
       </Section>
 
       <Section title="Stat cards">
-        <StatCard icon={<BookOpen />} label="Completed Tutorials" value="12/30" tone="coral" className="w-64" />
-        <StatCard icon={<Award />} label="Assessments Passed" value="4/6" tone="amber" className="w-64" />
-        <StatCard icon={<TrendingUp />} label="Progress" value="63%" trend="+12% this week" tone="sage" className="w-64" />
+        <StatCard icon={<BookOpen />} label="Completed Tutorials" value="12/30" tone="neutral" className="w-64" />
+        <StatCard icon={<Award />} label="Assessments Passed" value="4/6" tone="warning" className="w-64" />
+        <StatCard icon={<TrendingUp />} label="Progress" value="63%" trend="+12% this week" tone="success" className="w-64" />
       </Section>
 
       <Section title="Progress">
         <div className="w-64 space-y-3">
           <ProgressBar value={72} />
-          <ProgressBar value={45} tone="coral" size="lg" />
-          <ProgressBar value={90} tone="sage" size="sm" />
+          <ProgressBar value={45} tone="brand" size="lg" />
+          <ProgressBar value={90} tone="success" size="sm" />
         </div>
         <ProgressRing value={63} />
         <ProgressRing value={88} size={64} strokeWidth={6} />

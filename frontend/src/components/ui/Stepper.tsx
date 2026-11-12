@@ -19,7 +19,7 @@ const Stepper: React.FC<StepperProps> = ({ steps, current, className }) => (
           {i > 0 && <span className={cn('h-px w-6 sm:w-10', done || active ? 'bg-primary' : 'bg-border')} />}
           <span
             className={cn(
-              'flex items-center justify-center size-7 rounded-full text-xs font-bold shrink-0 transition-colors',
+              'flex items-center justify-center size-7 rounded-full text-xs font-semibold shrink-0 transition-colors',
               done && 'bg-primary text-primary-fg',
               active && 'bg-primary/15 text-primary-ink ring-2 ring-primary',
               !done && !active && 'bg-surface-sunken text-ink-faint',

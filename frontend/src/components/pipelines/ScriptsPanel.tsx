@@ -78,18 +78,18 @@ const ScriptsPanel: React.FC<ScriptsPanelProps> = ({ pipeline, slots, onChanged 
           <Card key={slot.slot}>
             <CardBody className="space-y-3">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="flex size-9 items-center justify-center rounded-lg bg-surface-sunken">
+                <span className="inline-flex shrink-0">
                   <FileCode2 className="size-4.5 text-primary-ink" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="font-display text-sm font-bold text-ink">{slot.label}</div>
+                  <div className="font-display text-sm font-semibold text-ink">{slot.label}</div>
                   <div className="truncate text-xs text-ink-muted">
                     {slot.canonical
                       ? t('scripts.replaces', { file: slot.canonical })
                       : t('scripts.extraHint')}
                   </div>
                 </div>
-                <Badge variant={slot.active_version != null || (slot.multi && slot.versions.some(v => v.is_active)) ? 'coral' : 'neutral'} size="sm">
+                <Badge variant={slot.active_version != null || (slot.multi && slot.versions.some(v => v.is_active)) ? 'info' : 'neutral'} size="sm">
                   {activeLabel}
                 </Badge>
                 {slot.canonical && (

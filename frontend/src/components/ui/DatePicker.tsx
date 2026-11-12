@@ -116,8 +116,8 @@ const DatePicker: React.FC<DatePickerProps> = ({ open, value, min, max, onPick, 
       onClick={() => setStep(target)}
       aria-pressed={step === target}
       className={cn(
-        'inline-flex min-h-11 items-center gap-1 rounded-full border px-3.5 text-base font-bold transition-colors',
-        step === target ? 'border-primary bg-coral-50 text-primary-ink dark:bg-coral-500/15' : 'border-border text-ink hover:bg-surface-sunken',
+        'inline-flex min-h-11 items-center gap-1 rounded-sm border px-3.5 text-base font-semibold transition-colors',
+        step === target ? 'border-primary bg-brand-50 text-primary-ink dark:bg-brand-500/15' : 'border-border text-ink hover:bg-surface-sunken',
       )}
     >
       {label}<ChevronDown className="size-4" />
@@ -139,7 +139,7 @@ const DatePicker: React.FC<DatePickerProps> = ({ open, value, min, max, onPick, 
         </div>
       )}
     >
-      <p className="mb-3 font-display text-2xl font-extrabold text-ink">{headline}</p>
+      <p className="mb-3 font-display text-2xl font-semibold text-ink">{headline}</p>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {chip(String(year), 'year')}
         {step !== 'year' && chip(monthName(month, 'short'), 'month')}

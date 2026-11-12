@@ -1,4 +1,4 @@
-# NurtureHUB load & stress test — findings, fixes, and 50k readiness
+# EduPoshan load & stress test — findings, fixes, and 50k readiness
 
 **Date:** 2026-07-17 · **Branch:** `perf/loadtest-hardening` · **Scope:** backend
 (FastAPI + SQLAlchemy + Postgres) under the full learner journey at high concurrency.
@@ -35,7 +35,7 @@ at the end).
 - **Pre-minted JWTs** for capacity runs to isolate content-endpoint capacity from the login
   funnel (see "Login wall").
 - Postgres connection state + process CPU sampled every 2 s (`monitor_server.py`).
-- Dedicated `nurturehub_loadtest` DB, 5,000 seeded accounts.
+- Dedicated `eduposhan_loadtest` DB, 5,000 seeded accounts.
 
 ## What was measured — before
 
@@ -122,7 +122,7 @@ and the limit is now env-tunable.
   migrations/seed as a one-shot init job.
 
 **Bandwidth correction:** the earlier plan assumed webcam-snapshot proctoring (~300 MB/s
-of media). Real NurtureHUB proctoring is **WebSocket JSON text events** (a few hundred
+of media). Real EduPoshan proctoring is **WebSocket JSON text events** (a few hundred
 bytes each), so proctoring bandwidth is single-digit MB/s at 50k — a much smaller concern
 than assumed.
 

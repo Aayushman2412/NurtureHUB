@@ -110,7 +110,7 @@ const MasdFlags: React.FC<{ report: MasdReport; project: string; asOf?: string }
   const reasonPills = (reasons: (FlagReason | PncFlagReason)[]) => (
     <div className="flex flex-wrap gap-1">
       {reasons.map(r => (
-        <span key={r} className={cn('rounded-full px-2 py-0.5 text-xs font-medium', REASON_TONE[r])}>{t(`flags.${r}`)}</span>
+        <span key={r} className={cn('rounded-sm px-2 py-0.5 text-xs font-medium', REASON_TONE[r])}>{t(`flags.${r}`)}</span>
       ))}
     </div>
   );

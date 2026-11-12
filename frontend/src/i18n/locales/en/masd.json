@@ -1,6 +1,6 @@
 {
   "title": "Programme Progress — adoptions, activities and outcomes",
-  "description": "Adoption target fulfilment, the share of expected activity done, the pregnancies needing follow-up and malnutrition outcomes for the F2F-trained learners of a project — the district report, computed live from NurtureHUB's own records.",
+  "description": "Adoption target fulfilment, the share of expected activity done, the pregnancies needing follow-up and malnutrition outcomes for the F2F-trained learners of a project — the district report, computed live from EduPoshan's own records.",
   "settingsButton": "Programme settings",
   "downloadPptx": "Download PowerPoint",
   "downloadXlsx": "Download Excel",
@@ -303,7 +303,7 @@
     "retained": "% retained",
     "demoTitle": "Mother demographic profile (n={{n}})",
     "demoSub": "Mothers of the analysed dyads",
-    "familyTypeNote": "Family type is not collected in NurtureHUB's mother registration, so it is not shown.",
+    "familyTypeNote": "Family type is not collected in EduPoshan's mother registration, so it is not shown.",
     "prevTitle": "Malnutrition: birth → adoption visit → last visit",
     "prevSub": "Share below −2 SD — and below −3 SD for the severe forms: stunting (length-for-age), underweight (weight-for-age), wasting (weight-for-length; severe wasting = SAM)",
     "overall": "All cases",
@@ -997,7 +997,7 @@
     "words": {
       "learner": {
         "term": "Learner",
-        "meaning": "A health worker (Anganwadi worker, ASHA, ANM, Staff Nurse …) trained by NurtureHUB."
+        "meaning": "A health worker (Anganwadi worker, ASHA, ANM, Staff Nurse …) trained by EduPoshan."
       },
       "adoption": {
         "term": "Adoption",

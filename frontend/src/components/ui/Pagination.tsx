@@ -125,7 +125,7 @@ export const Pagination: React.FC<PaginationProps> = ({
                 className={cn(
                   'inline-flex min-w-8 h-8 items-center justify-center rounded-lg px-2 text-xs font-medium transition-colors',
                   isCurrent
-                    ? 'bg-primary font-bold text-primary-fg shadow-sm'
+                    ? 'bg-primary font-semibold text-primary-fg '
                     : 'border border-transparent text-ink-muted hover:border-border hover:bg-surface-sunken hover:text-ink',
                 )}
               >

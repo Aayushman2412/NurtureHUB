@@ -78,9 +78,9 @@ const VisibleIfEditor: React.FC<VisibleIfEditorProps> = ({ schema, nodeId, value
                   type="button"
                   onClick={() => toggleOption(o.id)}
                   className={cn(
-                    'cursor-pointer rounded-full border px-2.5 py-1 text-[12px] font-semibold transition-colors',
+                    'cursor-pointer rounded-md border px-2.5 py-1 text-[12px] font-semibold transition-colors',
                     selected
-                      ? 'border-primary bg-coral-50 text-primary-ink dark:bg-coral-500/15'
+                      ? 'border-primary bg-brand-50 text-primary-ink dark:bg-brand-500/15'
                       : 'border-border text-ink-muted hover:border-border-strong',
                   )}
                 >

@@ -54,7 +54,7 @@ const ValidationChip: React.FC<ValidationChipProps> = ({ issues, onSelectIssue }
         onClick={() => setOpen(o => !o)}
         title="Validation issues"
         className={cn(
-          'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer',
+          'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer',
           pill,
         )}
       >
@@ -63,7 +63,7 @@ const ValidationChip: React.FC<ValidationChipProps> = ({ issues, onSelectIssue }
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-surface p-2 shadow-(--shadow-card-hover) animate-fade-in">
+        <div className="absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-surface p-2 animate-overlay-in">
           {issues.length === 0 ? (
             <div className="flex items-center gap-2 px-2.5 py-2 text-xs font-semibold text-success-600 dark:text-success-500">
               <CheckCircle2 className="size-4" /> No issues — this flow is ready to publish.

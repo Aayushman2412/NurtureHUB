@@ -2,7 +2,7 @@
 
 The analysts drop a mother–baby pair from the outcome analysis when its
 dates contradict each other (app/masd/engine.py `_dyad_checks`). In the
-earlier CommCare data that happened often; in NurtureHUB it should not be
+earlier CommCare data that happened often; in EduPoshan it should not be
 possible at all (review of 6–7 Oct 2026), so these are refused at entry,
 with a message that says what to correct:
 

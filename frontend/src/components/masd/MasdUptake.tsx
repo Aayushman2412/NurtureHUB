@@ -13,7 +13,7 @@ import { applyFilters, filtersActive, pct, UPTAKE_KEYS, uptakeFor, type MasdSpli
 type Group = 'all' | 'rol' | 'sn';
 // When an adoption for a tranche came: early is good, never is the worry.
 const UPTAKE_COLORS: Record<UptakeBucketKey, string> = {
-  before: '#2A7F8F', d7: '#2F9E56', d15: '#7FB069', d30: '#E0A11B', later: '#D6453D', not_yet: '#A8A29E',
+  before: '#2A7F8F', d7: '#228049', d15: '#7FB069', d30: '#E0A11B', later: '#D6453D', not_yet: '#9FAAB3',
 };
 const DAY = 86_400_000;
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
@@ -86,12 +86,12 @@ const MasdUptake: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({ r
         </tbody>
       </DataTable>
 
-      <h4 className="mb-1 mt-6 text-base font-bold text-ink">{t('expected.nthTitle')}</h4>
+      <h4 className="mb-1 mt-6 text-base font-semibold text-ink">{t('expected.nthTitle')}</h4>
       <p className="mb-3 text-sm text-ink-muted">{t('expected.nthSub2')}</p>
       <div className="space-y-5">
         {rows.map(({ u, c }) => c.nth.length > 0 && (
           <div key={u.step}>
-            <div className="mb-2 text-sm font-bold text-ink">{t('expected.tranche', { n: u.step })}</div>
+            <div className="mb-2 text-sm font-semibold text-ink">{t('expected.tranche', { n: u.step })}</div>
             <div className="space-y-2.5">
               {c.nth.map(n => {
                 const made = ADOPTION_TYPES.reduce((a, k) => a + n.types[k], 0);
@@ -105,7 +105,7 @@ const MasdUptake: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({ r
                       parts={UPTAKE_KEYS.map(b => ({ key: b, label: t(`expected.bucket.${b}`), value: n.by[b], color: UPTAKE_COLORS[b] }))} />
                     <div className="flex flex-wrap gap-1.5 text-xs">
                       {made > 0 && ADOPTION_TYPES.filter(k => n.types[k]).map(k => (
-                        <span key={k} className="inline-flex items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-ink">
+                        <span key={k} className="inline-flex items-center gap-1 rounded-sm bg-surface-sunken px-2 py-0.5 text-ink">
                           <span className="size-2 rounded-full" style={{ background: MASD_COLORS[k] }} aria-hidden />
                           {t(`expected.kind.${k}`)} {Math.round((100 * n.types[k]) / made)}%
                         </span>

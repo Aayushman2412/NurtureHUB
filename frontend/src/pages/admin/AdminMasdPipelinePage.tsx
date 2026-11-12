@@ -129,14 +129,14 @@ const AdminMasdPipelinePage: React.FC = () => {
 
   const presenceBanner = inputStatus && (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+      <span className="text-xs font-semibold text-ink-muted">
         {t('masd.detectedTitle')}
       </span>
       {inputStatus.projects.map(p => (
         <span
           key={p.prefix}
           className={
-            'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ' +
+            'inline-flex items-center gap-1.5 rounded-sm border px-2.5 py-1 text-xs font-semibold ' +
             (p.present
               ? 'border-success-300 bg-success-50 text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400'
               : 'border-border bg-surface-sunken text-ink-faint')
@@ -197,11 +197,11 @@ const AdminMasdPipelinePage: React.FC = () => {
           triggerControls={
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="flex size-9 items-center justify-center rounded-lg bg-coral-50 dark:bg-coral-500/10">
+                <span className="inline-flex shrink-0">
                   <FileSpreadsheet className="size-4.5 text-primary-ink" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="font-display text-sm font-bold text-ink">{t('masd.runTitle')}</div>
+                  <div className="font-display text-sm font-semibold text-ink">{t('masd.runTitle')}</div>
                   <div className="text-xs text-ink-muted">{t('masd.runHint')}</div>
                 </div>
                 <Button

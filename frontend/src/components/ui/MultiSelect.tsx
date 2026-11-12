@@ -95,8 +95,8 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
         </button>
 
         {open && (
-          <div className="absolute top-full z-(--z-dropdown) mt-1.5 max-h-72 w-full overflow-hidden rounded-xl
-                          border border-border bg-surface-raised shadow-lg animate-fade-in">
+          <div className="absolute top-full z-(--z-dropdown) mt-1.5 max-h-72 w-full overflow-hidden rounded-lg
+                          border border-border bg-surface-raised shadow-(--shadow-overlay) animate-overlay-in">
             <div className="flex items-center gap-2 border-b border-border px-3 py-2">
               <Search className="size-4 shrink-0 text-ink-faint" aria-hidden />
               <input

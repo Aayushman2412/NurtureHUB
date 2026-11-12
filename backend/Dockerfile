@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-# NurtureHUB backend — FastAPI + Alembic + Postgres (psycopg2).
+# EduPoshan backend — FastAPI + Alembic + Postgres (psycopg2).
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \

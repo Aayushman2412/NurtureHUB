@@ -2,7 +2,8 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Video, User, LogOut, Sprout, Users, Activity, Lock } from 'lucide-react';
+import { LayoutDashboard, Video, User, LogOut, Users, Activity, Lock } from 'lucide-react';
+import Logo from '../brand/Logo';
 import { Avatar } from '../ui';
 import { cn } from '../../utils/cn';
 
@@ -36,7 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       <div
         onClick={onClose}
         className={cn(
-          'fixed inset-0 z-(--z-sidebar) bg-cream-950/40 backdrop-blur-xs transition-opacity lg:hidden print:hidden',
+          'fixed inset-0 z-(--z-sidebar) bg-gray-950/40 transition-opacity lg:hidden print:hidden',
           isOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
         aria-hidden
@@ -51,22 +52,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       >
         <div className="flex-1 overflow-y-auto">
           {/* Brand */}
-          <div className="flex items-center gap-2.5 border-b border-border px-5 py-5">
-            <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-coral-400 to-coral-600">
-              <Sprout className="size-5 text-white" />
-            </span>
-            <span className="font-display text-lg font-extrabold">{t('common:brand.name')}</span>
+          <div className="flex items-center border-b border-border px-4 py-3.5">
+            <Logo />
           </div>
 
           {/* Nav */}
-          <nav className="flex flex-col gap-1 p-3">
+          <nav className="flex flex-col py-2">
             {navItems.filter(item => !item.monitorsOnly || user?.is_batch_monitor).map(item => item.needsSelection && !user?.adoptions_open ? (
               // Locked until she is selected for face-to-face training.
               <div
                 key={item.to}
                 aria-disabled="true"
                 title={t('nav.lockedHint')}
-                className="flex cursor-not-allowed items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold text-ink-faint"
+                className="flex cursor-not-allowed items-center gap-3 border-l-[3px] border-transparent py-2.5 pl-[13px] pr-4 text-sm font-medium text-ink-faint"
               >
                 <item.icon className="size-[18px]" />
                 <span className="flex-1">{t(item.labelKey)}</span>
@@ -79,10 +77,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 onClick={onClose}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold transition-colors',
+                    'flex items-center gap-3 border-l-[3px] py-2.5 pl-[13px] pr-4 text-sm transition-colors',
                     isActive || item.also?.some(p => pathname.startsWith(p))
-                      ? 'bg-coral-50 text-primary-ink dark:bg-coral-500/10'
-                      : 'text-ink-muted hover:bg-surface-sunken hover:text-ink',
+                      ? 'border-primary bg-brand-50 font-semibold text-primary-ink dark:bg-brand-500/10'
+                      : 'border-transparent font-medium text-ink-muted hover:bg-surface-sunken hover:text-ink',
                   )
                 }
               >

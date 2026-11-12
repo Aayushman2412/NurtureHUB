@@ -24,13 +24,13 @@ export const runDuration = (run: PipelineRun): string => {
 
 export const statusBadgeVariant = (
   status: PipelineRun['status'],
-): 'success' | 'error' | 'warning' | 'info' | 'neutral' | 'coral' => {
+): 'success' | 'error' | 'warning' | 'info' | 'neutral' => {
   switch (status) {
     case 'success': return 'success';
     case 'failed': return 'error';
     case 'running': return 'info';
     case 'queued': return 'warning';
-    case 'imported': return 'coral';
+    case 'imported': return 'info';
     default: return 'neutral';
   }
 };

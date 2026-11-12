@@ -128,7 +128,7 @@ const OptionsEditor: React.FC<{
         <button
           type="button"
           onClick={() => { setBulkOpen(o => !o); setNotice(''); }}
-          className="mb-1.5 inline-flex items-center gap-1.5 text-[12px] font-bold text-primary-ink hover:underline cursor-pointer"
+          className="mb-1.5 inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary-ink hover:underline cursor-pointer"
         >
           <ClipboardPaste className="size-3.5" />
           {bulkOpen ? t('options.bulkHide') : t('options.bulkShow')}
@@ -167,7 +167,7 @@ const OptionsEditor: React.FC<{
       </div>
 
       {bulkOpen && (
-        <div className="mt-2 rounded-lg border border-dashed border-border-strong/60 p-3">
+        <div className="mt-2 rounded-lg border border-dashed border-border-control p-3">
           <textarea
             rows={5}
             className={cn(inputClasses(), 'resize-y font-mono text-xs')}
@@ -376,7 +376,7 @@ const FlatFormEditorPage: React.FC = () => {
     return (
       <Alert variant="error" title="Unknown form">
         This form key does not exist. Head back to the{' '}
-        <a href="/admin/form-builder" className="font-bold underline">
+        <a href="/admin/form-builder" className="font-semibold underline">
           Form Builder
         </a>
         .
@@ -412,7 +412,7 @@ const FlatFormEditorPage: React.FC = () => {
           <span className="inline-flex flex-wrap items-center gap-2.5">
             {def?.title ?? t('header.title')}
             <Badge variant="neutral">Field list</Badge>
-            {def && <Badge variant="coral">v{def.version}</Badge>}
+            {def && <Badge variant="info">v{def.version}</Badge>}
           </span>
         }
         description="Add, remove and reorder fields. Click Save to publish your changes to learners."
@@ -615,7 +615,7 @@ const FlatFormEditorPage: React.FC = () => {
         {/* Preview */}
         {showPreview && (
           <Card className="h-fit p-6">
-            <h3 className="mb-4 font-display font-bold text-ink">{t('preview.title')}</h3>
+            <h3 className="mb-4 font-display font-semibold text-ink">{t('preview.title')}</h3>
             <div className="flex flex-col gap-4">
               {fields.map(field => (
                 <div key={field.id}>
@@ -664,7 +664,7 @@ const FlatFormEditorPage: React.FC = () => {
                             className="accent-(--primary)"
                           />{' '}
                           {t('options.otherLabel')}
-                          <span className="ml-1 min-w-24 flex-1 border-b border-border-strong/60" />
+                          <span className="ml-1 min-w-24 flex-1 border-b border-border-control" />
                         </label>
                       )}
                     </div>

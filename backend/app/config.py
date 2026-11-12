@@ -5,11 +5,14 @@ from pydantic import Field
 # Dev-only default secrets. If any of these are still in use when APP_ENV=production,
 # the app refuses to boot (see Settings.validate_production).
 DEV_JWT_SECRET = "supersecretkeyfornurturehubdevelopment12345"
+_PLACEHOLDER_DPO_EMAILS = frozenset({"privacy@example.org", "privacy@nurturehub.org"})  # the second is the pre-rename placeholder
 DEV_DATABASE_URL = "postgresql://postgres:756824@localhost/NurtureHub"
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "NurtureHUB API"
+    # The product name shown to people; deliberately not env-driven.
+    APP_NAME: str = "EduPoshan"
+    PROJECT_NAME: str = "EduPoshan API"
 
     # Runtime environment: "development" | "production"
     APP_ENV: str = Field(default="development", validation_alias="APP_ENV")
@@ -124,14 +127,14 @@ class Settings(BaseSettings):
     #   python -c "from py_vapid import Vapid01; from py_vapid.utils import b64urlencode; from cryptography.hazmat.primitives import serialization; v=Vapid01(); v.generate_keys(); print('VAPID_PRIVATE_KEY='+b64urlencode(v.private_key.private_numbers().private_value.to_bytes(32,'big'))); pk=v.public_key.public_bytes(serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint); print('VAPID_PUBLIC_KEY='+b64urlencode(pk))"
     VAPID_PUBLIC_KEY: str = Field(default="", validation_alias="VAPID_PUBLIC_KEY")
     VAPID_PRIVATE_KEY: str = Field(default="", validation_alias="VAPID_PRIVATE_KEY")
-    VAPID_SUBJECT: str = Field(default="mailto:admin@nurturehub.org", validation_alias="VAPID_SUBJECT")
+    VAPID_SUBJECT: str = Field(default="mailto:admin@eduposhan.org", validation_alias="VAPID_SUBJECT")
 
     # SMTP/Email settings for OTP
     SMTP_HOST: str = Field(default="smtp.gmail.com", validation_alias="SMTP_HOST")
     SMTP_PORT: int = Field(default=587, validation_alias="SMTP_PORT")
     SMTP_USER: str = Field(default="", validation_alias="SMTP_USER")
     SMTP_PASSWORD: str = Field(default="", validation_alias="SMTP_PASSWORD")
-    SMTP_FROM: str = Field(default="NurtureHUB <noreply@nurturehub.org>", validation_alias="SMTP_FROM")
+    SMTP_FROM: str = Field(default="", validation_alias="SMTP_FROM")
     SMTP_TIMEOUT: int = Field(default=10, validation_alias="SMTP_TIMEOUT")  # seconds
 
     # WhatsApp Cloud API — one-time codes for mobile sign-up / sign-in (review
@@ -186,6 +189,20 @@ class Settings(BaseSettings):
     # get their own bucket rather than all sharing the proxy's IP. Only enable
     # when a trusted proxy sets the header (else clients can spoof it).
     TRUST_PROXY_HEADERS: bool = Field(default=False, validation_alias="TRUST_PROXY_HEADERS")
+    # A header the edge OVERWRITES with the true client address on every request
+    # (Cloudflare: "cf-connecting-ip"). Read only with TRUST_PROXY_HEADERS. When
+    # set, X-Forwarded-For is ignored entirely: behind a CDN its left-most hop is
+    # whatever the client sent, and audit rows would carry a forged address.
+    CLIENT_IP_HEADER: str = Field(default="", validation_alias="CLIENT_IP_HEADER")
+
+    # ── Process roles (deploy/scale/ARCHITECTURE_300K.md §4.2) ──
+    # The defaults are the single-stack behaviour docker-compose relies on. In
+    # Kubernetes one image plays several roles and these switch the extras off:
+    # migrations run once in a Job (`python -m app.migrate`), the leased jobs in
+    # one worker (`python -m app.worker`), and pipelines in the admin pod only.
+    RUN_MIGRATIONS_ON_START: bool = Field(default=True, validation_alias="RUN_MIGRATIONS_ON_START")
+    RUN_BACKGROUND_TASKS: bool = Field(default=True, validation_alias="RUN_BACKGROUND_TASKS")
+    OWNS_PIPELINE_RUNS: bool = Field(default=True, validation_alias="OWNS_PIPELINE_RUNS")
 
     # CORS — comma-separated list of allowed frontend origins
     CORS_ORIGINS: str = Field(
@@ -200,7 +217,7 @@ class Settings(BaseSettings):
     # ── Organisation identity, used in breach notifications and privacy notices ──
     ORG_LEGAL_NAME: str = Field(default="Spoken Tutorial Project, IIT Bombay", validation_alias="ORG_LEGAL_NAME")
     DPO_NAME: str = Field(default="Data Protection Officer", validation_alias="DPO_NAME")
-    DPO_EMAIL: str = Field(default="privacy@nurturehub.org", validation_alias="DPO_EMAIL")
+    DPO_EMAIL: str = Field(default="privacy@example.org", validation_alias="DPO_EMAIL")
     DPO_PHONE: str = Field(default="", validation_alias="DPO_PHONE")
     PUBLIC_BASE_URL: str = Field(default="", validation_alias="PUBLIC_BASE_URL")
     CERTIN_EMAIL: str = Field(default="incident@cert-in.org.in", validation_alias="CERTIN_EMAIL")
@@ -248,7 +265,7 @@ class Settings(BaseSettings):
     STUFFING_ACCOUNT_THRESHOLD: int = Field(default=8, validation_alias="STUFFING_ACCOUNT_THRESHOLD")
 
     # ── Multi-factor (app/security/mfa.py) ──
-    MFA_ISSUER: str = Field(default="NurtureHUB", validation_alias="MFA_ISSUER")
+    MFA_ISSUER: str = Field(default="EduPoshan", validation_alias="MFA_ISSUER")
     # Enrol administrators first, then switch this on — turning it on before
     # anyone has enrolled locks every administrator out of the console.
     MFA_REQUIRED_FOR_ADMINS: bool = Field(default=False, validation_alias="MFA_REQUIRED_FOR_ADMINS")
@@ -302,14 +319,14 @@ class Settings(BaseSettings):
 
     # ── Administrator bootstrap ──
     # This replaces the credentials that used to be literals in admin.py
-    # (admin@nurturehub.org / admin123), which meant every deployment of this
+    # (admin@eduposhan.org / admin123), which meant every deployment of this
     # code shipped with a known password to the full patient database.
     #
     # ADMIN_BOOTSTRAP_PASSWORD creates the first administrator on a database
     # that has none, then must be unset — production refuses to boot while it
     # is still set. ALLOW_DEV_ADMIN is the local-development convenience and
     # cannot be enabled in production.
-    ADMIN_BOOTSTRAP_EMAIL: str = Field(default="admin@nurturehub.org", validation_alias="ADMIN_BOOTSTRAP_EMAIL")
+    ADMIN_BOOTSTRAP_EMAIL: str = Field(default="admin@eduposhan.org", validation_alias="ADMIN_BOOTSTRAP_EMAIL")
     ADMIN_BOOTSTRAP_PASSWORD: str = Field(default="", validation_alias="ADMIN_BOOTSTRAP_PASSWORD")
     # Defaults on so a developer's existing local login keeps working; the
     # production validator rejects it outright, and boot prints a warning
@@ -415,7 +432,7 @@ class Settings(BaseSettings):
         # ${DPO_EMAIL:-}, so an unconfigured deployment arrives here with "" rather
         # than the default — which used to sail past this check and publish a blank
         # contact on /privacy.
-        if not self.DPO_EMAIL.strip() or self.DPO_EMAIL.strip() == "privacy@nurturehub.org":
+        if not self.DPO_EMAIL.strip() or self.DPO_EMAIL.strip().lower() in _PLACEHOLDER_DPO_EMAILS:
             errors.append(
                 "DPO_EMAIL is unset or still the placeholder. The DPDP Act requires a published "
                 "contact for the person answering data-principal requests."

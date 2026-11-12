@@ -2,19 +2,16 @@ import asyncio
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import os
 
-from alembic import command
-from alembic.config import Config
-
-from sqlalchemy import text
 from sqlalchemy.exc import TimeoutError as SQLTimeoutError
 
+from app import background, bootstrap, health
 from app.config import settings
-from app.database import SessionLocal, engine
-from app.seed import seed_database
+from app.database import SessionLocal
 from app.rate_limit import limiter
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -27,15 +24,12 @@ import app.models_live  # noqa: F401 — registers live monitoring tables with B
 import app.models_security  # noqa: F401 — registers the data-protection tables with Base
 from app.security import audit
 from app.security import audit as security_audit
-from app.security import anomaly, ropa
-from app.security import retention as security_retention
 from app.security.middleware import (
     RequestContextMiddleware, SecurityHeadersMiddleware, allowed_hosts,
 )
 from app.security.redaction import install_log_redaction
 from app.models_live import LiveSession
 from app.ws_manager import manager
-from app.attempt_finalizer import finalize_overdue_attempts
 from app.event_processor import build_candidate_state_from_session
 
 # How often the sweeper runs, and how long a candidate can be silent before we
@@ -83,204 +77,24 @@ async def _stale_candidate_sweeper():
             print(f"[stale_sweeper] error: {e}")
 
 
-async def _security_sweeper():
-    """Notarise the audit chains and run the detection rules on a timer.
+def clean_up_interrupted_runs() -> int:
+    """Fail pipeline runs whose worker thread died with the previous process.
 
-    Two jobs on one loop, at different cadences:
-
-    * **Anchoring.** A hash chain proves nothing was altered but cannot prove
-      nothing was removed from its end. Periodically recording where each chain
-      stood closes that gap (see security/audit.py:write_anchors).
-    * **Detection.** The rules in security/anomaly.py look for the shapes misuse
-      of a health record system takes. They run here rather than inline on the
-      request path so a heavy query never slows down a field worker's device.
-
-    Both statutory clocks that apply here start at *awareness*, which is what
-    this loop is for. Set SECURITY_SWEEP_INTERVAL_SECONDS=0 to disable it.
+    Only the process that runs pipelines may do this (OWNS_PIPELINE_RUNS). The
+    sweep fails every running run that was started on another host, which in a
+    cluster means every other pod: an api pod scaling up mid-afternoon would
+    otherwise kill the admin pod's crosstabs run half-way through.
     """
-    interval = settings.SECURITY_SWEEP_INTERVAL_SECONDS
-    if interval <= 0:
-        print("[security] sweeper disabled (SECURITY_SWEEP_INTERVAL_SECONDS=0)")
-        return
-    last_anchor = 0.0
-    while True:
-        try:
-            await asyncio.sleep(interval)
-            # One runner across the deployment. With several workers each would
-            # otherwise run the detections itself and raise every alert N times.
-            # The lease outlives a cycle comfortably so a slow sweep keeps it.
-            if not await manager.try_lead("security_sweeper", ttl_seconds=int(interval * 3) + 30):
-                continue
-            db = SessionLocal()
-            try:
-                anomaly.run_detections(db)
-                now = asyncio.get_event_loop().time()
-                if now - last_anchor >= settings.AUDIT_ANCHOR_INTERVAL_SECONDS:
-                    security_audit.write_anchors(db)
-                    last_anchor = now
-            finally:
-                db.close()
-        except asyncio.CancelledError:
-            break
-        except Exception as exc:  # never let the sweeper kill the loop
-            print(f"[security_sweeper] error: {exc}")
-
-
-async def _attempt_finalizer():
-    """Score attempts whose time ran out but whose browser never submitted.
-
-    See app/attempt_finalizer.py for why this exists and why it is safe. Runs on
-    ONE worker at a time; the scoring itself is off the event loop.
-    """
-    while True:
-        try:
-            await asyncio.sleep(30)
-            if not await manager.try_lead("attempt_finalizer", ttl_seconds=120):
-                continue
-            updates = await asyncio.to_thread(finalize_overdue_attempts)
-            for test_id, state in updates:
-                await manager.broadcast_to_admins(test_id, {"type": "CANDIDATE_UPDATE", "data": state})
-        except asyncio.CancelledError:
-            break
-        except Exception as exc:  # never let the loop die
-            print(f"[attempt_finalizer] error: {exc}")
-
-
-async def _care_sweeper():
-    """Scheduled care reminders (app/care_alerts.py): every 15 minutes on one
-    worker; does nothing unless CARE_REMINDERS_ENABLED and inside a window."""
-    while True:
-        try:
-            await asyncio.sleep(900)
-            if not settings.CARE_REMINDERS_ENABLED:
-                continue
-            if not await manager.try_lead("care_sweeper", ttl_seconds=1800):
-                continue
-            await asyncio.to_thread(_run_care_reminders)
-        except asyncio.CancelledError:
-            break
-        except Exception as exc:  # never let the loop die
-            print(f"[care_sweeper] error: {exc}")
-
-
-def _run_care_reminders() -> None:
-    from app.care_alerts import run_reminders
-
-    db = SessionLocal()
+    if not settings.OWNS_PIPELINE_RUNS:
+        return 0
     try:
-        sent = run_reminders(db)
-        if sent:
-            print(f"[care_sweeper] sent {sent} reminder(s)")
-    finally:
-        db.close()
-
-
-def run_migrations() -> None:
-    """Bring the database schema up to date by applying all Alembic migrations.
-
-    Alembic is the single source of truth for the schema (see backend/alembic/).
-    Paths resolve relative to this file so it works regardless of the CWD the app
-    is launched from. Runs synchronously at startup and fails fast — the app must
-    not serve requests against a broken or half-migrated schema.
-    """
-    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    alembic_cfg = Config(os.path.join(backend_dir, "alembic.ini"))
-    alembic_cfg.set_main_option("script_location", os.path.join(backend_dir, "alembic"))
-    command.upgrade(alembic_cfg, "head")
-
-
-# Arbitrary constant identifying the migrate+seed critical section for
-# pg_advisory_lock. Any integer works; it just has to be the same across workers.
-_INIT_LOCK_KEY = 0x4E555254  # "NURT"
-
-
-def _run_migrate_and_seed():
-    """Apply migrations then seed. Safe to call once the init lock is held."""
-    print("Applying database migrations (alembic upgrade head)...")
-    run_migrations()
-    db = SessionLocal()
-    try:
-        seed_database(db)
-    except Exception as e:
-        print(f"Error seeding database on startup: {e}")
-    # The data-protection reference data is seeded separately and never blocks
-    # boot: a platform that cannot start because its retention schedule failed
-    # to seed is a worse outcome than one that starts and reports the gap.
-    try:
-        created_policies = security_retention.ensure_policies(db)
-        created_activities = ropa.seed(db)
-        bootstrapped = _bootstrap_admin(db)
-        if created_policies or created_activities:
-            print(
-                f"Seeded {created_policies} retention policy(ies) and "
-                f"{created_activities} processing activity record(s)."
-            )
-        if bootstrapped:
-            print(bootstrapped)
-    except Exception as e:
-        db.rollback()
-        print(f"WARNING: could not seed data-protection reference data: {e}")
-    finally:
-        db.close()
-
-
-def _bootstrap_admin(db) -> str:
-    """Create the first administrator from ADMIN_BOOTSTRAP_PASSWORD, if asked.
-
-    This replaces the credentials that used to be literals in admin.py. It runs
-    only when the setting is present AND no administrator row exists, so it
-    cannot silently reset a real account, and production refuses to boot while
-    the setting is still configured.
-    """
-    from app.auth import get_password_hash
-    from app.models import User
-    from app.security import passwords
-
-    if not settings.ADMIN_BOOTSTRAP_PASSWORD:
-        return ""
-    if db.query(User).filter(User.is_admin.is_(True)).first():
-        return (
-            "ADMIN_BOOTSTRAP_PASSWORD is set but an administrator already exists — "
-            "no account created. Unset the variable."
-        )
-    email = settings.ADMIN_BOOTSTRAP_EMAIL.strip().lower()
-    try:
-        passwords.validate(settings.ADMIN_BOOTSTRAP_PASSWORD, is_admin=True, email=email)
-    except passwords.PasswordPolicyError as exc:
-        return f"ADMIN_BOOTSTRAP_PASSWORD rejected: {exc}"
-    admin = User(
-        email=email,
-        password_hash=get_password_hash(settings.ADMIN_BOOTSTRAP_PASSWORD),
-        full_name="Administrator",
-        is_admin=True,
-        is_verified=True,
-        avatar_initials="AD",
-    )
-    db.add(admin)
-    db.commit()
-    return (
-        f"Created the first administrator ({email}). "
-        "Unset ADMIN_BOOTSTRAP_PASSWORD now — production will not boot while it is set."
-    )
-
-
-def migrate_and_seed_guarded():
-    """Run migrate+seed under a Postgres advisory lock so multiple workers /
-    replicas booting together serialize instead of racing Alembic's version
-    table and the seed's read-then-insert count guards. On SQLite (dev) there
-    are no advisory locks and no multi-worker boot, so just run directly.
-    """
-    if settings.DATABASE_URL.startswith("sqlite"):
-        _run_migrate_and_seed()
-        return
-    # A dedicated connection holds the session-level lock across the whole
-    # critical section; other workers block here until it is released.
-    with engine.connect() as conn:
-        conn.execute(text("SELECT pg_advisory_lock(:k)"), {"k": _INIT_LOCK_KEY})
-        try:
-            _run_migrate_and_seed()
-        finally:
-            conn.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": _INIT_LOCK_KEY})
+        stale_runs = fail_stale_runs()
+    except Exception as exc:  # never block boot on housekeeping
+        print(f"WARNING: could not clean up stale pipeline runs: {exc}")
+        return 0
+    if stale_runs:
+        print(f"Marked {stale_runs} interrupted pipeline run(s) as failed.")
+    return stale_runs
 
 
 @asynccontextmanager
@@ -305,44 +119,34 @@ async def lifespan(app: FastAPI):
             for check in posture:
                 print(f"  - {check['label']}: {check['detail']}")
 
-    # 1-2. Migrate + seed, serialized across workers via an advisory lock.
-    migrate_and_seed_guarded()
+    # 1-2. The schema. Migrate + seed, serialized across workers by an advisory
+    # lock — or, in Kubernetes where a Job migrates before the rollout, only
+    # check it (RUN_MIGRATIONS_ON_START; see app/bootstrap.py).
+    bootstrap.prepare_database()
 
     # 2b. Pipeline runs that were queued/running when the previous process
     # died can never finish (their worker thread is gone) — fail them so the
     # admin UI doesn't show a phantom in-progress run forever.
-    try:
-        stale_runs = fail_stale_runs()
-        if stale_runs:
-            print(f"Marked {stale_runs} interrupted pipeline run(s) as failed.")
-    except Exception as exc:  # never block boot on housekeeping
-        print(f"WARNING: could not clean up stale pipeline runs: {exc}")
+    clean_up_interrupted_runs()
 
     # 3. Live monitoring: connect to Redis when configured (required with more
     # than one worker) and start the admin batch flusher.
     await manager.start()
 
-    # 3b. Start the live-monitoring stale-candidate sweeper
-    sweeper_task = asyncio.create_task(_stale_candidate_sweeper())
+    # 3b. The live-monitoring stale-candidate sweeper watches the sockets THIS
+    # process holds, so it runs in every process.
+    tasks = [asyncio.create_task(_stale_candidate_sweeper(), name="stale_candidate_sweeper")]
 
-    # 4. Start the security sweeper (audit anchoring + detection rules)
-    security_task = asyncio.create_task(_security_sweeper())
-
-    # 5. Score attempts whose time ran out but whose browser never submitted.
-    finalizer_task = asyncio.create_task(_attempt_finalizer())
-
-    # 6. Scheduled care reminders — off unless CARE_REMINDERS_ENABLED.
-    care_task = asyncio.create_task(_care_sweeper())
+    # 4-6. The leased jobs — security sweeper (anchoring + detection), attempt
+    # finalizer, care reminders — here, or in the dedicated worker
+    # (`python -m app.worker`) when RUN_BACKGROUND_TASKS is off.
+    if settings.RUN_BACKGROUND_TASKS:
+        tasks += background.start_singleton_jobs()
 
     yield
 
     # Cleanup on shutdown
-    for task in (sweeper_task, security_task, finalizer_task, care_task):
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+    await background.stop_tasks(tasks)
     await manager.stop()
 
     # Flush queued audit events before the process exits. Anything still in
@@ -357,8 +161,8 @@ async def lifespan(app: FastAPI):
 _docs_enabled = settings.ENABLE_API_DOCS and not settings.is_production
 
 app = FastAPI(
-    title="NurtureHUB API",
-    description="Backend API for NurtureHUB training & assessment platform",
+    title="EduPoshan API",
+    description="Backend API for EduPoshan training & assessment platform",
     version="1.0.0",
     lifespan=lifespan,
     docs_url="/docs" if _docs_enabled else None,
@@ -488,4 +292,24 @@ if settings.SERVE_LOCAL_UPLOADS:
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to NurtureHUB API! Go to /docs for Swagger documentation."}
+    return {"message": "Welcome to EduPoshan API! Go to /docs for Swagger documentation."}
+
+
+@app.get("/healthz", include_in_schema=False)
+async def healthz():
+    """Liveness: the process is up and its event loop answers.
+
+    `async` so it runs on the loop rather than in the threadpool — a pod whose
+    threads are all waiting on a slow database is busy, not dead, and must not
+    be restarted for it. See app/health.py for why nothing else is checked.
+    """
+    return {"status": "ok"}
+
+
+@app.get("/readyz", include_in_schema=False)
+async def readyz():
+    """Readiness: whether this pod should receive traffic right now."""
+    problems = health.readiness_problems(await health.gather_probe())
+    if problems:
+        return JSONResponse(status_code=503, content={"ready": False, "problems": problems})
+    return {"ready": True}

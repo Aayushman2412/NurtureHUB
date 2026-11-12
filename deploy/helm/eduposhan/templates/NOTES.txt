@@ -1,0 +1,16 @@
+EduPoshan {{ .Values.image.tag }} -> {{ .Release.Namespace }}/{{ .Release.Name }}
+
+  https://{{ .Values.publicHost }}
+
+Watch the rollout (StatefulSets roll one pod at a time):
+  kubectl -n {{ .Release.Namespace }} rollout status statefulset/{{ include "eduposhan.fullname" . }}-api
+
+A failed migration stops the release before any pod changes, and keeps its Job:
+  kubectl -n {{ .Release.Namespace }} logs job/{{ include "eduposhan.fullname" . }}-migrate
+
+Ask a pod why it is not ready:
+  kubectl -n {{ .Release.Namespace }} exec {{ include "eduposhan.fullname" . }}-api-0 -- \
+    python -c "import urllib.request as u; print(u.urlopen(u.Request('http://localhost:8000/readyz', headers={'Host': '{{ .Values.publicHost }}'})).read())"
+
+Before an exam, raise the floors — autoscaling cannot move sockets that are already open:
+  helm upgrade {{ .Release.Name }} deploy/helm/eduposhan -f <your values> -f deploy/helm/eduposhan/values-exam-day.yaml

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="512" height="512">
+  <title>EduPoshan</title>
+  <rect width="32" height="32" rx="6" fill="#0F5562"/>
+  <path d="M6 22.5C11.5 21.2 16 17.6 19.6 13.6S24.4 8.4 26.5 7.6" fill="none" stroke="#80C1CB" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M6 26C11 25.2 15 22.6 18.8 18.3" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"/>
+  <circle cx="19.6" cy="17.4" r="2.6" fill="#FFFFFF"/>
+</svg>

@@ -104,7 +104,7 @@ const OptionTile: React.FC<{
   const action = actionLabel(option.action);
 
   return (
-    <div className="flex break-inside-avoid flex-col overflow-hidden rounded-xl border-2 border-border bg-surface">
+    <div className="flex break-inside-avoid flex-col overflow-hidden rounded-lg border-2 border-border bg-surface">
       {media && !imgFailed ? (
         <img
           src={resolveAssetUrl(media.url)}
@@ -115,9 +115,9 @@ const OptionTile: React.FC<{
       ) : (
         <div
           aria-hidden
-          className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-coral-50 to-cream-200"
+          className="flex aspect-video w-full items-center justify-center bg-surface-sunken"
         >
-          <span className="font-display text-4xl font-bold text-coral-300">{initial}</span>
+          <span className="font-display text-4xl font-semibold text-brand-300">{initial}</span>
         </div>
       )}
       <div className="flex flex-1 flex-col items-start gap-1.5 p-3">
@@ -142,14 +142,14 @@ const QuestionBlock: React.FC<{
 }> = ({ question, label, verdicts, stepNoFor, defaultNextId }) => {
   const numeric = numericLabel(question.numeric);
   return (
-    <div className="break-inside-avoid rounded-2xl border border-border bg-surface p-5 shadow-(--shadow-card)">
+    <div className="break-inside-avoid rounded-lg border border-border bg-surface p-5 ">
       <div className="mb-1.5 flex flex-wrap items-center gap-2">
-        <Badge variant="coral">{label}</Badge>
+        <Badge variant="info">{label}</Badge>
         <Anno>{question.questionType}</Anno>
         {question.required && <Anno>required</Anno>}
         {numeric && <Anno icon={<Flag className="size-3" />}>{numeric}</Anno>}
       </div>
-      <h3 className="font-display text-lg font-bold text-ink">{question.title || 'Untitled question'}</h3>
+      <h3 className="font-display text-lg font-semibold text-ink">{question.title || 'Untitled question'}</h3>
       {question.helpText?.trim() && <p className="mt-1 text-sm text-ink-muted">{question.helpText}</p>}
 
       {(question.media ?? []).length > 0 && (
@@ -196,14 +196,14 @@ const QuestionBlock: React.FC<{
 const InfoBlock: React.FC<{ node: FlowInfoNode; label: string }> = ({ node, label }) => {
   const action = actionLabel(node.action);
   return (
-    <div className="break-inside-avoid rounded-2xl border border-primary/25 bg-coral-50/40 p-5 dark:bg-coral-500/5">
+    <div className="break-inside-avoid rounded-lg border border-primary/25 bg-brand-50/40 p-5 dark:bg-brand-500/5">
       <div className="mb-1.5 flex flex-wrap items-center gap-2">
-        <Badge variant="coral">{label}</Badge>
-        <span className="flex items-center gap-1 text-[12px] font-bold uppercase tracking-wider text-primary-ink">
+        <Badge variant="info">{label}</Badge>
+        <span className="flex items-center gap-1 text-[12px] font-semibold text-primary-ink">
           <Info className="size-3.5" /> Info — no answer collected
         </span>
       </div>
-      {node.title.trim() && <h3 className="font-display text-lg font-bold text-ink">{node.title}</h3>}
+      {node.title.trim() && <h3 className="font-display text-lg font-semibold text-ink">{node.title}</h3>}
       {node.body.trim() && <p className="mt-1 whitespace-pre-wrap text-sm text-ink-muted">{node.body}</p>}
       {node.media.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2.5">
@@ -247,7 +247,7 @@ const FlowPrint: React.FC<{ schema: FlowSchema }> = ({ schema }) => {
     <>
       {/* Verdict legend */}
       <div className="mb-6 flex flex-wrap items-center gap-2">
-        <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">Verdicts:</span>
+        <span className="text-xs font-semibold text-ink-muted">Verdicts:</span>
         {verdicts.map(v => (
           <VerdictChip key={v.id} def={v} />
         ))}
@@ -292,13 +292,13 @@ const FlowPrint: React.FC<{ schema: FlowSchema }> = ({ schema }) => {
               )}
 
               {isSectionNode(node) && (
-                <div className="break-inside-avoid-page rounded-2xl border border-sage-500/40 bg-sage-50/40 p-4 dark:bg-sage-500/5">
+                <div className="break-inside-avoid-page rounded-lg border border-success-500/40 bg-success-50/40 p-4 dark:bg-success-500/5">
                   <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <Badge variant="coral">{label}</Badge>
+                    <Badge variant="info">{label}</Badge>
                     {node.visibleIf && (
                       <Anno icon={<GitBranch className="size-3" />}>{visibleIfLabel(schema, node.visibleIf)}</Anno>
                     )}
-                    <span className="text-[12px] font-bold uppercase tracking-wider text-sage-700 dark:text-sage-300">
+                    <span className="text-[12px] font-semibold text-success-700 dark:text-success-300">
                       Common section — {node.title || 'Untitled'}
                     </span>
                   </div>
@@ -319,15 +319,15 @@ const FlowPrint: React.FC<{ schema: FlowSchema }> = ({ schema }) => {
               {isInfoNode(node) && <InfoBlock node={node} label={label} />}
 
               {isMatrixNode(node) && (
-                <div className="break-inside-avoid rounded-2xl border border-border bg-surface p-5 shadow-(--shadow-card)">
+                <div className="break-inside-avoid rounded-lg border border-border bg-surface p-5 ">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <Badge variant="coral">{label}</Badge>
+                    <Badge variant="info">{label}</Badge>
                     {node.required && <Anno>required</Anno>}
                     {node.visibleIf && (
                       <Anno icon={<GitBranch className="size-3" />}>{visibleIfLabel(schema, node.visibleIf)}</Anno>
                     )}
                   </div>
-                  <h3 className="mb-2 font-display text-lg font-bold text-ink">{node.title}</h3>
+                  <h3 className="mb-2 font-display text-lg font-semibold text-ink">{node.title}</h3>
                   {/* The printed spec documents the whole grid, so every row is
                       shown — the answer-gated ones are annotated below. */}
                   <MatrixStepCard node={node as FlowMatrixNode} rows={node.rows} value={{}} onChange={() => {}} />
@@ -365,8 +365,8 @@ const FlowPrint: React.FC<{ schema: FlowSchema }> = ({ schema }) => {
       </div>
 
       {unreachable.length > 0 && (
-        <div className="mt-8 break-inside-avoid rounded-xl border border-dashed border-border-strong p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-ink-muted">
+        <div className="mt-8 break-inside-avoid rounded-lg border border-dashed border-border-strong p-4">
+          <p className="text-xs font-semibold text-ink-muted">
             Not reachable from the start — learners never see these
           </p>
           <ul className="mt-1.5 list-inside list-disc text-sm text-ink-muted">
@@ -405,9 +405,9 @@ const FlatPrint: React.FC<{ schema: FlatSchema }> = ({ schema }) => {
         const condition = flatConditionLabel(field);
 
         return (
-          <div key={field.id} className="break-inside-avoid rounded-2xl border border-border bg-surface p-5 shadow-(--shadow-card)">
+          <div key={field.id} className="break-inside-avoid rounded-lg border border-border bg-surface p-5 ">
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <Badge variant="coral">{index + 1}</Badge>
+              <Badge variant="info">{index + 1}</Badge>
               <Anno>{field.type}</Anno>
               {field.required && <Anno>required</Anno>}
               {restrictions.map((r, i) => (
@@ -474,7 +474,7 @@ const FormPrintPage: React.FC = () => {
       <style>{'@page { size: A4; margin: 14mm; }'}</style>
 
       {/* Toolbar — never printed */}
-      <header className="sticky top-0 z-10 border-b border-border bg-surface/95 px-5 py-3 backdrop-blur print:hidden">
+      <header className="sticky top-0 z-10 border-b border-border bg-surface px-5 py-3 print:hidden">
         <div className="mx-auto flex max-w-3xl items-center gap-3">
           <Button
             size="sm"
@@ -499,14 +499,14 @@ const FormPrintPage: React.FC = () => {
       <main className="mx-auto max-w-3xl px-5 py-8">
         {/* Cover */}
         <div className="mb-7 border-b-2 border-primary/60 pb-5">
-          <p className="text-xs font-bold uppercase tracking-widest text-primary-ink">
-            NurtureHUB — questionnaire preview
+          <p className="text-xs font-semibold text-primary-ink">
+            EduPoshan — questionnaire preview
           </p>
-          <h1 className="mt-1 font-display text-3xl font-extrabold text-ink">{def.title}</h1>
+          <h1 className="mt-1 font-display text-3xl font-semibold text-ink">{def.title}</h1>
           {def.description && <p className="mt-2 text-[15px] text-ink-muted">{def.description}</p>}
           <p className="mt-3 flex flex-wrap gap-2">
             <Badge variant="neutral">{def.builder_type === 'flow' ? 'Guided flow' : 'Field list'}</Badge>
-            <Badge variant="coral">v{def.version}</Badge>
+            <Badge variant="info">v{def.version}</Badge>
           </p>
         </div>
 
@@ -517,7 +517,7 @@ const FormPrintPage: React.FC = () => {
         )}
 
         <p className="mt-10 border-t border-border pt-3 text-center text-[12px] text-ink-faint">
-          {def.title} • version {def.version} • exported from the NurtureHUB form builder
+          {def.title} • version {def.version} • exported from the EduPoshan form builder
         </p>
       </main>
     </div>

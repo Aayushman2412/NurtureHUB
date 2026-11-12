@@ -142,8 +142,8 @@ const GoogleButton: React.FC<GoogleButtonProps> = ({ onSuccessRedirect = '/dashb
       type="button"
       onClick={handleFallbackClick}
       className="inline-flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-lg
-                 border border-border-strong/60 bg-surface px-6 py-3 font-display text-base
-                 font-semibold text-ink transition-all duration-150 hover:border-border-strong
+                 border border-border-control bg-surface px-6 py-3 font-display text-base
+                 font-semibold text-ink transition-colors duration-150 hover:border-border-strong
                  hover:bg-surface-sunken/50 active:translate-y-px"
     >
       {/* SVG Google Logo */}

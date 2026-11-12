@@ -1,4 +1,4 @@
-"""Headless runner for the MASD notebooks (NurtureHUB server add-on).
+"""Headless runner for the MASD notebooks (EduPoshan server add-on).
 
 Executes a MASD notebook the same way the crosstabs master_pipeline runs its
 notebooks: json-load the .ipynb, concatenate the code cells, patch the single

@@ -742,7 +742,7 @@ const FlowBuilderPage: React.FC = () => {
     return (
       <Alert variant="error" title="Unknown form">
         This form key has no canvas designer. Head back to the{' '}
-        <a href="/admin/form-builder" className="font-bold underline">
+        <a href="/admin/form-builder" className="font-semibold underline">
           Form Builder
         </a>
         .
@@ -793,9 +793,9 @@ const FlowBuilderPage: React.FC = () => {
             }}
             aria-label="Form title"
             placeholder="Form title"
-            className="w-56 rounded-lg border border-transparent bg-transparent px-2 py-1.5 font-display text-base font-bold text-ink outline-none transition-colors hover:border-border focus:border-primary focus:ring-2 focus:ring-primary/25 lg:w-72"
+            className="w-56 rounded-lg border border-transparent bg-transparent px-2 py-1.5 font-display text-base font-semibold text-ink outline-none transition-colors hover:border-border focus:border-primary focus:ring-2 focus:ring-primary/25 lg:w-72"
           />
-          <Badge variant="coral">Canvas designer</Badge>
+          <Badge variant="info">Canvas designer</Badge>
           {def && <Badge variant="neutral">v{def.version}</Badge>}
         </div>
 
@@ -914,7 +914,7 @@ const FlowBuilderPage: React.FC = () => {
               key={key}
               checked={display[key]}
               onChange={() => toggleDisplay(key)}
-              className="flex items-start gap-3 rounded-xl border border-border p-3.5 transition-colors hover:bg-surface-sunken"
+              className="flex items-start gap-3 rounded-lg border border-border p-3.5 transition-colors hover:bg-surface-sunken"
               label={
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold text-ink">{label}</span>
@@ -926,7 +926,7 @@ const FlowBuilderPage: React.FC = () => {
         </div>
 
         {/* ── When verdicts are revealed ─────────────────────────────────── */}
-        <h4 className="mt-6 font-display text-sm font-bold text-ink">Show verdicts</h4>
+        <h4 className="mt-6 font-display text-sm font-semibold text-ink">Show verdicts</h4>
         <p className="mt-1 text-xs text-ink-muted">
           A verdict tells the worker whether an answer was right. Reveal it too early and they can
           simply change the answer — so the assessment records what they learned scores well, not
@@ -939,7 +939,7 @@ const FlowBuilderPage: React.FC = () => {
               name="verdict-timing"
               checked={display.verdictTiming === value}
               onChange={() => setVerdictTiming(value)}
-              className="flex items-start gap-3 rounded-xl border border-border p-3.5 transition-colors hover:bg-surface-sunken"
+              className="flex items-start gap-3 rounded-lg border border-border p-3.5 transition-colors hover:bg-surface-sunken"
               label={
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold text-ink">{label}</span>
@@ -952,7 +952,7 @@ const FlowBuilderPage: React.FC = () => {
 
         {/* ── Verdict vocabulary ─────────────────────────────────────────── */}
         <div className="mt-6 flex items-center justify-between gap-3">
-          <h4 className="font-display text-sm font-bold text-ink">Verdicts</h4>
+          <h4 className="font-display text-sm font-semibold text-ink">Verdicts</h4>
           <Button size="sm" variant="outline" iconLeft={<Plus className="size-3.5" />} onClick={addVerdict}>
             Add verdict
           </Button>
@@ -965,7 +965,7 @@ const FlowBuilderPage: React.FC = () => {
           {verdictDefs.map(def => {
             const used = verdictUsage(def.id);
             return (
-              <div key={def.id} className="rounded-xl border border-border p-3">
+              <div key={def.id} className="rounded-lg border border-border p-3">
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
@@ -1038,11 +1038,11 @@ const FlowBuilderPage: React.FC = () => {
           {selectedIds.length > 1 ? (
             <div className="space-y-4 p-4">
               <div className="flex items-center gap-2">
-                <span className="flex size-9 items-center justify-center rounded-lg bg-coral-50 text-primary-ink dark:bg-coral-500/10">
+                <span className="inline-flex shrink-0 text-primary-ink">
                   <BoxSelect className="size-4.5" />
                 </span>
                 <div>
-                  <div className="font-display text-sm font-bold text-ink">
+                  <div className="font-display text-sm font-semibold text-ink">
                     {selectedIds.length} steps selected
                   </div>
                   <div className="text-xs text-ink-muted">

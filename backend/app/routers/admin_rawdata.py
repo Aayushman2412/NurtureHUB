@@ -1,4 +1,4 @@
-"""Admin Database → Raw Data: generate pipeline raw inputs from NurtureHUB's
+"""Admin Database → Raw Data: generate pipeline raw inputs from EduPoshan's
 own collected data and ingest them into the pipeline input stores.
 
 PipelineError is translated to a JSON response by the app-level handler in

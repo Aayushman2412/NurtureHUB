@@ -1,0 +1,11 @@
+{{/*
+/api/admin/* and /uploads/*: MASD, exports, pipelines, the form builder.
+One pod: it owns the pipeline volume (OWNS_PIPELINE_RUNS) and is the only one
+allowed to fail interrupted runs.
+*/}}
+{{- if gt (int .Values.admin.replicas) 1 -}}
+{{- fail "admin.replicas must be 1: the pipeline volume and run bookkeeping belong to one pod" -}}
+{{- end -}}
+{{ include "eduposhan.backend" (dict "root" . "role" "admin" "cfg" .Values.admin) }}
+---
+{{ include "eduposhan.pdb" (dict "root" . "role" "admin") }}

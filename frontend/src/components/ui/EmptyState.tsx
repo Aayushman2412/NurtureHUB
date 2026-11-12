@@ -9,17 +9,17 @@ export interface EmptyStateProps {
   className?: string;
 }
 
+/** Nothing here yet: say what is missing and what to do next. */
 const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, description, action, className }) => (
   <div
     className={cn(
-      'flex flex-col items-center justify-center text-center gap-2 rounded-xl',
-      'border border-dashed border-border-strong/60 bg-surface-sunken/40 px-6 py-12',
+      'flex flex-col items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-5 py-9 text-center',
       className,
     )}
   >
-    {icon && <div className="text-ink-faint mb-1 [&>svg]:size-10" aria-hidden>{icon}</div>}
-    <h4 className="font-display font-bold text-ink">{title}</h4>
-    {description && <p className="text-sm text-ink-muted max-w-sm">{description}</p>}
+    {icon && <div className="mb-1 text-ink-faint [&>svg]:size-6" aria-hidden>{icon}</div>}
+    <h4 className="text-sm font-semibold text-ink">{title}</h4>
+    {description && <p className="max-w-sm text-sm text-ink-muted">{description}</p>}
     {action && <div className="mt-3">{action}</div>}
   </div>
 );

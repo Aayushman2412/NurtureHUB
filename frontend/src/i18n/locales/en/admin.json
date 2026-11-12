@@ -1,13 +1,13 @@
 {
   "layout": {
-    "panel": "Admin Panel",
+    "panel": "Administration",
     "openMenu": "Open menu",
     "toggleTheme": "Toggle theme mode",
     "selectDistrict": "Select District",
     "usersCount": "{{n}} users",
     "adminFallback": "Administrator",
     "superAdmin": "Super Admin",
-    "logout": "Logout",
+    "logout": "Sign out",
     "nav": {
       "dashboard": "Dashboard",
       "projects": "Projects",
@@ -19,7 +19,6 @@
       "results": "Test Results",
       "growthMonitor": "Learner Activities",
       "masd": "Programme Progress",
-      "databaseSection": "Database",
       "crosstabsPipeline": "Crosstabs Pipeline",
       "masdPipeline": "MASD Pipeline",
       "rawData": "Raw Data",
@@ -29,38 +28,44 @@
     },
     "selectProject": "Select project",
     "stateBadge": "State",
-    "inheritsBadge": "follows state"
+    "inheritsBadge": "follows state",
+    "menu": "Administration menu",
+    "navGroups": {
+      "programme": "Programme",
+      "training": "Training",
+      "field": "Field records",
+      "data": "Data"
+    }
   },
   "dashboard": {
-    "eyebrow": "Welcome back",
-    "title": "Admin Dashboard",
-    "subtitleDistrict": "Managing <strong>{{district}}</strong> district — configure forms, upload tutorials, and control assessments.",
-    "subtitleDefault": "Manage your platform from here — configure forms, upload tutorials, and control assessments.",
-    "quickActions": "Quick Actions",
+    "title": "Overview",
+    "subtitleDistrict": "Project: <strong>{{district}}</strong>. The figures below are for this project only.",
+    "subtitleDefault": "Choose a project in the menu to see its figures.",
+    "quickActions": "Common tasks",
     "stats": {
-      "districtUsers": "District Users",
-      "trainingStages": "Training Stages",
+      "districtUsers": "Learners",
+      "trainingStages": "Training stages",
       "tutorials": "Tutorials",
-      "assessments": "Assessments",
-      "formFields": "Form Fields",
-      "activeTests": "Active Tests"
+      "assessments": "Tests",
+      "formFields": "Registration fields",
+      "activeTests": "Tests running now"
     },
     "actions": {
       "districts": {
-        "label": "Manage Districts",
-        "desc": "Add, edit, or remove program districts"
+        "label": "Projects and districts",
+        "desc": "Add a state or district, open or close learner registration"
       },
       "form": {
-        "label": "Configure Registration Form",
-        "desc": "Add, remove, or reorder registration fields"
+        "label": "Registration form",
+        "desc": "Add, remove or reorder the fields learners fill in"
       },
       "tutorials": {
-        "label": "Manage Tutorials & Stages",
-        "desc": "Upload YouTube videos, clip sections, manage stages"
+        "label": "Tutorials and stages",
+        "desc": "Add videos, set clip sections, arrange the stages"
       },
       "tests": {
-        "label": "Test Manager",
-        "desc": "Upload questions, start/stop tests, download results"
+        "label": "Tests",
+        "desc": "Upload questions, start and stop tests, download results"
       }
     }
   },

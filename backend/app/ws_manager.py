@@ -106,6 +106,20 @@ class ConnectionManager:
     def shared(self) -> bool:
         return self._redis is not None
 
+    async def redis_ping(self, timeout_seconds: float = 1.0) -> Optional[bool]:
+        """None when Redis is not configured; otherwise whether it answered.
+
+        For the readiness probe (app/health.py). Bounded, because a probe that
+        hangs on a dead socket is reported by Kubernetes as a failure anyway —
+        only later, and without saying why.
+        """
+        if self._redis is None:
+            return None
+        try:
+            return bool(await asyncio.wait_for(self._redis.ping(), timeout=timeout_seconds))
+        except Exception:
+            return False
+
     async def start(self):
         """Connect to Redis (if configured) and start the background loops."""
         if settings.REDIS_URL:

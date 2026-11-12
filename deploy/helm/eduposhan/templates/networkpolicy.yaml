@@ -1,0 +1,54 @@
+{{- if .Values.networkPolicy.enabled }}
+{{/* The serving pods accept traffic only from the Gateway's proxies and from
+     this release (the SPA's nginx fallback proxy). Kubelet probes come from the
+     node and are not affected on common CNIs. Egress is left open: a managed
+     database or Redis lives outside the cluster. */}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "eduposhan.fullname" . }}-app
+  labels:
+    {{- include "eduposhan.labels" (dict "root" . "component" "network") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: eduposhan
+      app.kubernetes.io/instance: {{ .Release.Name }}
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values: [api, realtime, admin, frontend]
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml .Values.networkPolicy.gatewayNamespaceLabels | nindent 14 }}
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports:
+        - port: 8000
+        - port: 80
+{{- if .Values.pgbouncer.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "eduposhan.fullname" . }}-pgbouncer
+  labels:
+    {{- include "eduposhan.labels" (dict "root" . "component" "network") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "eduposhan.selectorLabels" (dict "root" . "component" "pgbouncer") | nindent 6 }}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports:
+        - port: 6432
+{{- end }}
+{{- end }}

@@ -56,7 +56,7 @@ const VisitDetailModal: React.FC<VisitDetailModalProps> = ({ point, onClose, fet
       {/* visit header */}
       <div className="mb-4 rounded-lg bg-surface-sunken p-3 text-sm">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <span className="flex items-center gap-1.5 font-bold text-ink">
+          <span className="flex items-center gap-1.5 font-semibold text-ink">
             <span
               className="inline-block size-2.5 rounded-full"
               style={{ background: sourceComboColor(point.combo) }}

@@ -11,7 +11,7 @@ from pathlib import Path
 # PIPELINE CONFIGURATION & PATH SETUP
 # ==============================================================================
 # ==============================================================================
-# ADD-ON (NurtureHUB server): workspace root comes from the environment so each
+# ADD-ON (EduPoshan server): workspace root comes from the environment so each
 # run executes in its own isolated working directory; the original Desktop path
 # is kept as the fallback for local use. Revert by restoring the literal Path.
 WORKSPACE_DIR = Path(os.environ.get(
@@ -29,7 +29,7 @@ def find_raw_input_dir():
     trailing word = district/state). Pick the most recently modified dated
     subfolder; fall back to Inputs/input_folder itself if none exists.
 
-    ADD-ON (NurtureHUB server): PIPELINE_RAW_INPUT_DIR names the folder
+    ADD-ON (EduPoshan server): PIPELINE_RAW_INPUT_DIR names the folder
     explicitly, because copying an input store into a fresh run directory
     rewrites directory mtimes and would make the "newest" heuristic pick the
     wrong folder. Unset = original mtime behaviour."""
@@ -95,7 +95,7 @@ REQUESTED_CT_NOTEBOOK = SCRIPTS_DIR / "CrossTab_requested_individual_CTs.ipynb"
 BVAVLV_NOTEBOOK = SCRIPTS_DIR / "UW_ST_WT_BVAVLV.ipynb"
 
 # Date Suffix (used in stage 1 cleaning file names)
-# ADD-ON (NurtureHUB server): overridable per run so cleaned files carry the
+# ADD-ON (EduPoshan server): overridable per run so cleaned files carry the
 # actual run date; default preserves the original hardcoded value.
 RUN_DATE = os.environ.get("PIPELINE_RUN_DATE", "2026-06-18")
 
@@ -502,7 +502,7 @@ DERIVED_OUTPUT_DIR = r'{DERIVED_DIR}'
 
         # Extract CrossTab notebook code and do regex replacements
         crosstab_nb_code = extract_nb_code(CROSSTAB_NOTEBOOK)
-        # ADD-ON (NurtureHUB server): ANALYSIS_LEVEL must be "state" for a
+        # ADD-ON (EduPoshan server): ANALYSIS_LEVEL must be "state" for a
         # Meghalaya run and "district" elsewhere. The notebook hardcodes
         # "district"; when PIPELINE_ANALYSIS_LEVEL is set we rewrite it, so the
         # caller never has to edit the notebook per district. Unset = untouched.
@@ -629,7 +629,7 @@ MASD_BLOCK_SHEET = r'{MASD_SHEET_FILE}'
         REQUESTED_CT_DIR_2.mkdir(parents=True, exist_ok=True)
 
         requested_nb_code = extract_nb_code(REQUESTED_CT_NOTEBOOK)
-        # ADD-ON (NurtureHUB server): ANALYSIS_LEVEL must be "state" for a
+        # ADD-ON (EduPoshan server): ANALYSIS_LEVEL must be "state" for a
         # Meghalaya run and "district" elsewhere. The notebook hardcodes
         # "district"; when PIPELINE_ANALYSIS_LEVEL is set we rewrite it, so the
         # caller never has to edit the notebook per district. Unset = untouched.

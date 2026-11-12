@@ -1,4 +1,4 @@
-# NurtureHUB
+# EduPoshan
 
 Training, assessment, and field data-collection platform for ICDS / health workers.
 A learner (health worker) signs up, completes a profile, works through staged
@@ -35,7 +35,9 @@ Type-check / lint the frontend: `cd frontend && npx tsc -b` and `npm run lint`.
 ## Database migrations — Alembic (IMPORTANT)
 
 Alembic is the **single source of truth** for the schema. On startup `main.py` runs
-`alembic upgrade head` (`run_migrations()`), then seeds. There is **no** `create_all()`
+`alembic upgrade head` (`app/bootstrap.py:run_migrations()`), then seeds — or, with
+`RUN_MIGRATIONS_ON_START=false` (Kubernetes, where a Job runs `python -m app.migrate`
+before the rollout), only checks the schema is not behind the code. There is **no** `create_all()`
 or auto-`ALTER` at boot — editing a model does **not** change the DB by itself; you must
 generate a migration.
 
@@ -88,7 +90,7 @@ Two layers, all idempotent via count guards:
 ## Data protection (`backend/app/security/`) — IMPORTANT
 
 The platform holds identified maternal and child health records, and the Maharashtra
-MOU makes NurtureHUB answerable for what happens to them. Full rationale and the
+MOU makes EduPoshan answerable for what happens to them. Full rationale and the
 legal mapping live in **`SECURITY.md`** — read it before changing anything below.
 
 ### Rules when touching patient data

@@ -24,11 +24,12 @@ function initials(name: string) {
     .join('');
 }
 
+/** A person: their photo, or their initials on a flat tint. */
 const Avatar: React.FC<AvatarProps> = ({ name, src, size = 'md', className }) => (
   <div
     className={cn(
-      'inline-flex items-center justify-center rounded-full font-display font-bold select-none shrink-0',
-      'bg-gradient-to-br from-coral-400 to-coral-600 text-white overflow-hidden',
+      'inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full font-semibold',
+      'bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-100',
       sizes[size],
       className,
     )}

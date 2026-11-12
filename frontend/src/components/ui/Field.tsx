@@ -14,8 +14,8 @@ export const FieldLabel: React.FC<FieldLabelProps> = ({ htmlFor, size = 'md', cl
   <label
     htmlFor={htmlFor}
     className={cn(
-      'block font-semibold',
-      size === 'sm' ? 'mb-1.5 text-xs text-ink-muted' : 'mb-2 text-sm text-ink',
+      'block font-medium',
+      size === 'sm' ? 'mb-1 text-xs text-ink-muted' : 'mb-1.5 text-sm text-ink',
       className,
     )}
   >
@@ -37,6 +37,6 @@ export const Field: React.FC<FieldProps> = ({ label, htmlFor, className, error, 
   <div className={className}>
     <FieldLabel htmlFor={htmlFor}>{label}</FieldLabel>
     {children}
-    {error && <p className="mt-1.5 text-xs text-error-500">{error}</p>}
+    {error && <p className="mt-1.5 text-xs text-error-600 dark:text-error-300">{error}</p>}
   </div>
 );

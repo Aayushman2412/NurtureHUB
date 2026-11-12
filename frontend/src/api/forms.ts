@@ -60,7 +60,7 @@ export const adminDownloadFormCatalog = async (project?: string | null): Promise
     params: project ? { project } : undefined,
   });
   const disposition = String(res.headers?.['content-disposition'] ?? '');
-  const name = /filename="([^"]+)"/.exec(disposition)?.[1] ?? 'nurturehub_form_questions.xlsx';
+  const name = /filename="([^"]+)"/.exec(disposition)?.[1] ?? 'eduposhan_form_questions.xlsx';
   const url = URL.createObjectURL(res.data as Blob);
   const anchor = document.createElement('a');
   anchor.href = url;

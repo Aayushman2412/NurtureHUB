@@ -274,10 +274,10 @@ const ProfilePage: React.FC = () => {
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
       {/* Header */}
-      <Card className="flex flex-wrap items-center gap-6 bg-gradient-to-br from-surface to-surface-sunken p-5 sm:p-8">
-        <Avatar name={user?.full_name || 'U'} size="xl" className="ring-4 ring-coral-100 dark:ring-coral-500/20" />
+      <Card className="flex flex-wrap items-center gap-6 p-5 sm:p-6">
+        <Avatar name={user?.full_name || 'U'} size="xl" className="ring-4 ring-brand-100 dark:ring-brand-500/20" />
         <div className="min-w-0 flex-1">
-          <h2 className="mb-1 font-display text-2xl font-extrabold text-ink">
+          <h2 className="mb-1 font-display text-2xl font-semibold text-ink">
             {user?.full_name || t('profile.nameFallback')}
           </h2>
           <p className="mb-3 text-sm text-ink-muted">
@@ -302,7 +302,7 @@ const ProfilePage: React.FC = () => {
             </span>
           </div>
         </div>
-        {/* Install NurtureHUB on this device (hidden once installed). */}
+        {/* Install EduPoshan on this device (hidden once installed). */}
         <InstallAppButton className="shrink-0" />
       </Card>
 

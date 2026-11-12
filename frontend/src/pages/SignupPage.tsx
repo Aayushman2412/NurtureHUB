@@ -82,7 +82,7 @@ const SignupPage: React.FC = () => {
     <AuthLayout title={t('signup.title')} subtitle={t('signup.subtitleMobile')}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         {scope?.locked && (
-          <div className="flex items-start gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm text-ink">
+          <div className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm text-ink">
             <MapPin className="mt-0.5 size-4 shrink-0 text-primary-ink" />
             <span>{t('signup.joining', {
               project: scope.locked.project.name,
@@ -91,7 +91,7 @@ const SignupPage: React.FC = () => {
           </div>
         )}
         {scope?.link_closed && (
-          <p className="rounded-xl bg-amber-50 px-3 py-2.5 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+          <p className="rounded-lg bg-amber-50 px-3 py-2.5 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
             {t('signup.linkClosed')}
           </p>
         )}

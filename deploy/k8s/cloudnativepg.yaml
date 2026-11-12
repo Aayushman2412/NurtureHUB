@@ -1,0 +1,69 @@
+# Postgres for EduPoshan inside the cluster, run by the CloudNativePG operator
+# (install the operator first). The managed-database path does not need this.
+#
+# Applied ONCE, before the app chart, and never as part of it:
+#   * the app's migration Job is a pre-install hook — it runs before any of the
+#     app release's own resources exist, so a database inside that release
+#     would not be there yet on a first install;
+#   * the operator removes a cluster's volumes when the Cluster is deleted, so a
+#     database inside the app release would be one `helm uninstall` from gone.
+#
+#   kubectl apply -n eduposhan -f deploy/k8s/cloudnativepg.yaml
+#
+# Then, in the app's Secret:
+#   DATABASE_URL        -> eduposhan-pg-pooler-rw:5432   (transaction pooling)
+#   DIRECT_DATABASE_URL -> eduposhan-pg-rw:5432          (the primary; migrations)
+# The operator writes the credentials into the eduposhan-pg-app Secret.
+#
+# Edit the sizes and storage class for your nodes. Configure backups — WAL
+# archiving + base backups to object storage with the operator's Barman Cloud
+# plugin — BEFORE any real data lands, and rehearse a restore.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: eduposhan-pg
+spec:
+  instances: 3                    # primary + synchronous standby + one more replica
+  imageName: ghcr.io/cloudnative-pg/postgresql:16
+  # One synchronous standby: a saved answer survives losing the primary.
+  minSyncReplicas: 1
+  maxSyncReplicas: 1
+  primaryUpdateStrategy: unsupervised
+  postgresql:
+    parameters:
+      max_connections: "400"
+      shared_buffers: 8GB
+      effective_cache_size: 24GB
+      work_mem: 32MB
+      maintenance_work_mem: 1GB
+      random_page_cost: "1.1"
+  bootstrap:
+    initdb:
+      database: eduposhan
+      owner: eduposhan
+  storage:
+    size: 1Ti
+    # storageClass: <a fast SSD class>
+  walStorage:
+    size: 100Gi
+  resources:
+    requests: { cpu: "8", memory: 32Gi }
+    limits: { cpu: "16", memory: 64Gi }
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: topology.kubernetes.io/zone
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Pooler
+metadata:
+  name: eduposhan-pg-pooler-rw
+spec:
+  cluster:
+    name: eduposhan-pg
+  instances: 2
+  type: rw
+  pgbouncer:
+    poolMode: transaction
+    parameters:
+      max_client_conn: "2000"
+      default_pool_size: "40"

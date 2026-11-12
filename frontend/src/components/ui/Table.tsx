@@ -7,10 +7,11 @@ interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> {
 
 const DensityContext = React.createContext<'compact' | 'normal'>('normal');
 
+/** A ruled table. Column separators and tabular figures come from base.css. */
 export const Table: React.FC<TableProps> = ({ density = 'normal', className, children, ...rest }) => (
   <DensityContext.Provider value={density}>
-    <div className="w-full overflow-x-auto rounded-xl border border-border bg-surface">
-      <table className={cn('w-full text-sm text-left border-collapse', className)} {...rest}>
+    <div className="w-full overflow-x-auto rounded-lg border border-border bg-surface">
+      <table className={cn('w-full border-collapse text-left text-sm', className)} {...rest}>
         {children}
       </table>
     </div>
@@ -18,7 +19,7 @@ export const Table: React.FC<TableProps> = ({ density = 'normal', className, chi
 );
 
 export const THead: React.FC<React.HTMLAttributes<HTMLTableSectionElement>> = ({ className, children, ...rest }) => (
-  <thead className={cn('bg-surface-sunken/60', className)} {...rest}>
+  <thead className={cn('border-b border-border-strong bg-surface-sunken', className)} {...rest}>
     {children}
   </thead>
 );
@@ -36,7 +37,7 @@ export const Tr: React.FC<React.HTMLAttributes<HTMLTableRowElement> & { clickabl
   ...rest
 }) => (
   <tr
-    className={cn(clickable && 'cursor-pointer transition-colors hover:bg-surface-sunken/50', className)}
+    className={cn(clickable && 'cursor-pointer transition-colors hover:bg-surface-sunken/60', className)}
     {...rest}
   >
     {children}
@@ -48,8 +49,8 @@ export const Th: React.FC<React.ThHTMLAttributes<HTMLTableCellElement>> = ({ cla
   return (
     <th
       className={cn(
-        'font-semibold text-xs uppercase tracking-wider text-ink-muted',
-        density === 'compact' ? 'px-3 py-2' : 'px-4 py-3',
+        'text-xs font-semibold text-ink-muted',
+        density === 'compact' ? 'px-3 py-1.5' : 'px-3.5 py-2.5',
         className,
       )}
       {...rest}
@@ -62,7 +63,7 @@ export const Th: React.FC<React.ThHTMLAttributes<HTMLTableCellElement>> = ({ cla
 export const Td: React.FC<React.TdHTMLAttributes<HTMLTableCellElement>> = ({ className, children, ...rest }) => {
   const density = React.useContext(DensityContext);
   return (
-    <td className={cn('text-ink', density === 'compact' ? 'px-3 py-2' : 'px-4 py-3', className)} {...rest}>
+    <td className={cn('text-ink', density === 'compact' ? 'px-3 py-1.5' : 'px-3.5 py-2.5', className)} {...rest}>
       {children}
     </td>
   );

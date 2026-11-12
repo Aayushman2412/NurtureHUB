@@ -151,7 +151,7 @@ const MasdRules: React.FC<{ report: MasdReport; onChanged: () => void }> = ({ re
               <Th className="sticky left-0 z-10 bg-surface-sunken text-left">{t('rules.adoptionType')}</Th>
               <Th className="text-left">{t('rules.activity')}</Th>
               {table.durations.map(d => (
-                <Th key={d} className={cn(fuDays.has(d) && 'text-coral-600')}>{t('rules.days', { n: d })}</Th>
+                <Th key={d} className={cn(fuDays.has(d) && 'text-brand-600')}>{t('rules.days', { n: d })}</Th>
               ))}
             </tr>
           </thead>
@@ -161,7 +161,7 @@ const MasdRules: React.FC<{ report: MasdReport; onChanged: () => void }> = ({ re
                 <td className="sticky left-0 z-10 whitespace-nowrap bg-surface px-3 py-1.5 font-medium text-ink">{t(ROW_LABEL[row])}</td>
                 <td className="whitespace-nowrap px-3 py-1.5 text-ink-muted">{t(`activities.${key}`)}</td>
                 {(table.rows[row][key] ?? []).map((v, i) => (
-                  <td key={i} className={cn('px-1 py-1 text-center tabular-nums', cal.fu_days === table.durations[i] && 'bg-coral-50/60 dark:bg-coral-500/10')}>
+                  <td key={i} className={cn('px-1 py-1 text-center tabular-nums', cal.fu_days === table.durations[i] && 'bg-brand-50/60 dark:bg-brand-500/10')}>
                     {draft ? (
                       <input
                         inputMode="numeric"

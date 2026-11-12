@@ -47,7 +47,7 @@ const ResponseDetailCard: React.FC<{ detail: FormResponseDetail }> = ({ detail }
   return (
     <section className="mb-4 last:mb-0">
       <div className="mb-1 flex items-center justify-between">
-        <h4 className="font-display text-sm font-bold text-ink">
+        <h4 className="font-display text-sm font-semibold text-ink">
           {t(`forms.${detail.form_key}`, { defaultValue: detail.form_key })}
         </h4>
         {(detail.summary_json.green > 0 || detail.summary_json.red > 0) && (

@@ -520,8 +520,8 @@ const FlatAssessmentRunnerPage: React.FC = () => {
           ) : (
             <React.Fragment key={f.id}>
               {f.id === RISK_FIELD && autos.length > 0 && mother && (
-                <div className="rounded-xl border border-border bg-surface-sunken/60 p-4">
-                  <p className="flex items-center gap-2 text-sm font-bold text-ink">
+                <div className="rounded-lg border border-border bg-surface-sunken/60 p-4">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-ink">
                     <ShieldCheck className="size-4 text-primary-ink" />{t('anc.autoTitle')}
                   </p>
                   <p className="mb-2 mt-0.5 text-xs text-ink-muted">
@@ -534,7 +534,7 @@ const FlatAssessmentRunnerPage: React.FC = () => {
                     {autos.map(a => (
                       <li key={a.value} className="flex items-center justify-between gap-3 text-sm">
                         <span className="text-ink">{a.label}</span>
-                        <span className={a.applies ? 'font-bold text-error-600 dark:text-error-400'
+                        <span className={a.applies ? 'font-semibold text-error-600 dark:text-error-400'
                           : a.applies === false ? 'font-semibold text-success-600 dark:text-success-500' : 'text-ink-muted'}>
                           {a.applies ? t('anc.yes') : a.applies === false ? t('anc.no') : t(`anc.unknown.${a.basis}`)}
                         </span>

@@ -1,6 +1,6 @@
 """data protection layer
 
-Adds the tables that let NurtureHUB answer for the patient data it holds, as
+Adds the tables that let EduPoshan answer for the patient data it holds, as
 required by the data-privacy clause of the Maharashtra MOU and by the DPDP Act
 2023 / CERT-In Directions 2022 it points at:
 

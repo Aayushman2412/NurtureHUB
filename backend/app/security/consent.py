@@ -6,7 +6,7 @@ Section 9 adds that a child's personal data may be processed only with
 verifiable consent of a parent or lawful guardian, and forbids tracking or
 behavioural monitoring of children and targeted advertising directed at them.
 
-Every mother and child in NurtureHUB is registered in the field by a health
+Every mother and child in EduPoshan is registered in the field by a health
 worker, which shapes how this is implemented:
 
 * Consent is captured *per purpose*, not once for everything. Care delivery and

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
@@ -24,6 +25,7 @@ export interface ModalProps {
  * top-layer stacking come for free.
  */
 const Modal: React.FC<ModalProps> = ({ open, onClose, title, size = 'md', footer, children }) => {
+  const { t } = useTranslation('common');
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -37,8 +39,8 @@ const Modal: React.FC<ModalProps> = ({ open, onClose, title, size = 'md', footer
     <dialog
       ref={ref}
       onCancel={e => {
-        // React propagates the synthetic cancel up the component tree, so a
-        // nested modal's ESC would also close its parent — contain it here.
+        // React propagates the synthetic cancel up the component tree, so the
+        // ESC of a nested modal would also close its parent: contain it here.
         e.stopPropagation();
         onClose();
       }}
@@ -47,28 +49,28 @@ const Modal: React.FC<ModalProps> = ({ open, onClose, title, size = 'md', footer
         if (e.target === ref.current) onClose();
       }}
       className={cn(
-        'm-auto w-[calc(100vw-2rem)] rounded-2xl bg-surface text-ink shadow-2xl border border-border p-0',
-        'backdrop:bg-cream-950/50 backdrop:backdrop-blur-xs',
-        'open:animate-fade-in',
+        'm-auto w-[calc(100vw-2rem)] rounded-lg border border-border bg-surface p-0 text-ink shadow-(--shadow-overlay)',
+        'backdrop:bg-gray-950/55',
+        'open:animate-overlay-in',
         sizes[size],
       )}
     >
       {title !== undefined && (
-        <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-border">
-          <h3 className="font-display font-bold text-lg">{title}</h3>
+        <div className="flex items-center justify-between gap-4 border-b border-border px-5 py-3.5">
+          <h3 className="text-base font-semibold">{title}</h3>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
-            className="text-ink-faint hover:text-ink rounded-md p-1 hover:bg-surface-sunken cursor-pointer"
+            aria-label={t('close')}
+            className="cursor-pointer rounded-md p-1 text-ink-faint hover:bg-surface-sunken hover:text-ink"
           >
             <X className="size-5" />
           </button>
         </div>
       )}
-      <div className="px-6 py-5 max-h-[70vh] overflow-y-auto">{children}</div>
+      <div className="max-h-[70vh] overflow-y-auto px-5 py-4">{children}</div>
       {footer && (
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border">
+        <div className="flex items-center justify-end gap-2 border-t border-border bg-surface-sunken/60 px-5 py-3">
           {footer}
         </div>
       )}

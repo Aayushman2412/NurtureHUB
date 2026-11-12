@@ -165,7 +165,7 @@ const AppRoutes: React.FC = () => {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
-        <PageLoader label="Initializing NurtureHUB…" />
+        <PageLoader label="Loading EduPoshan…" />
       </div>
     );
   }

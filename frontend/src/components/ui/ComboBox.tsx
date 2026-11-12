@@ -94,8 +94,8 @@ const ComboBox: React.FC<ComboBoxProps> = ({
         </div>
 
         {open && !disabled && hasList && (
-          <div className="absolute top-full z-(--z-dropdown) mt-1.5 max-h-64 w-full overflow-hidden rounded-xl
-                          border border-border bg-surface-raised shadow-lg animate-fade-in">
+          <div className="absolute top-full z-(--z-dropdown) mt-1.5 max-h-64 w-full overflow-hidden rounded-lg
+                          border border-border bg-surface-raised shadow-(--shadow-overlay) animate-overlay-in">
             <ul className="max-h-64 overflow-y-auto py-1">
               {filtered.map((o, i) => {
                 const isSelected = o.label.toLowerCase() === value.trim().toLowerCase();

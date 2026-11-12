@@ -58,7 +58,7 @@ export const GroupedColumns: React.FC<{
             <div className="mb-1 flex gap-2 sm:gap-3">
               {groups.map((g, i) => (
                 <div key={i} style={{ flex: g.span }}
-                  className="rounded-md bg-surface-sunken px-2 py-1 text-center text-xs font-bold text-ink">{g.label}</div>
+                  className="rounded-md bg-surface-sunken px-2 py-1 text-center text-xs font-semibold text-ink">{g.label}</div>
               ))}
             </div>
           )}
@@ -95,7 +95,7 @@ export const GroupedColumns: React.FC<{
             {categories.map(c => (
               <div key={c.key} className="min-w-0 flex-1 text-center">
                 <div className={cn('truncate text-xs font-medium', c.shaded ? 'text-ink-faint' : 'text-ink')} title={c.label}>{c.label}</div>
-                {c.sub && <div className={cn('text-xs', c.shaded ? 'font-bold text-ink-faint' : 'text-ink-faint')}>{c.sub}</div>}
+                {c.sub && <div className={cn('text-xs', c.shaded ? 'font-semibold text-ink-faint' : 'text-ink-faint')}>{c.sub}</div>}
               </div>
             ))}
           </div>
@@ -115,7 +115,7 @@ export interface Bubble {
   size: number;
 }
 
-const BUBBLE_PALETTE = ['#E85D4C', '#2A7F8F', '#7C5CBF', '#E0A11B', '#5C9E3C', '#C2410C', '#3B6EA8', '#8A6E4B', '#B83280', '#4B8F8C'];
+const BUBBLE_PALETTE = ['#C2410C', '#2A7F8F', '#7C5CBF', '#E0A11B', '#5C9E3C', '#C2410C', '#3B6EA8', '#8A6E4B', '#B83280', '#4B8F8C'];
 
 export const BubblePlot: React.FC<{
   bubbles: Bubble[];
@@ -288,10 +288,10 @@ export const RateCell: React.FC<{
 }> = ({ value, lowerIsBetter = false, className, sub }) => {
   const under = sub != null && <div className="mt-0.5 text-xs tabular-nums text-ink-faint">{sub}</div>;
   if (value == null) return <td className={cn('px-3 py-2 text-center text-ink-faint', className)}>—{under}</td>;
-  const c = lowerIsBetter ? (value < 10 ? '#2F9E56' : value < 20 ? '#E0A11B' : '#DC2F2F') : rateTone(value);
+  const c = lowerIsBetter ? (value < 10 ? '#228049' : value < 20 ? '#E0A11B' : '#C62828') : rateTone(value);
   return (
     <td className={cn('px-2 py-1.5 text-center', className)}>
-      <span className="inline-block min-w-14 rounded-md px-2 py-0.5 text-sm font-bold tabular-nums"
+      <span className="inline-block min-w-14 rounded-md px-2 py-0.5 text-sm font-semibold tabular-nums"
         style={{ background: `color-mix(in srgb, ${c} 15%, transparent)`, color: c }}>
         {value.toFixed(1)}%
       </span>
@@ -301,7 +301,7 @@ export const RateCell: React.FC<{
 };
 
 export const Th: React.FC<{ children?: React.ReactNode; className?: string; title?: string }> = ({ children, className, title }) => (
-  <th title={title} className={cn('whitespace-nowrap px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-ink-muted', className)}>
+  <th title={title} className={cn('whitespace-nowrap px-3 py-2 text-center text-xs font-semibold text-ink-muted', className)}>
     {children}
   </th>
 );
@@ -310,7 +310,7 @@ export const Th: React.FC<{ children?: React.ReactNode; className?: string; titl
  *  screen instead of scrolling sideways (review of 19 Oct 2026: "decrease this
  *  width and make sure all of this is visible within the single view"). */
 export const DataTable: React.FC<{ children: React.ReactNode; className?: string; compact?: boolean }> = ({ children, className, compact }) => (
-  <div className={cn('overflow-x-auto rounded-xl border border-border', className)}>
+  <div className={cn('overflow-x-auto rounded-lg border border-border', className)}>
     <table className={cn('w-full text-sm [&_tbody_tr]:border-t [&_tbody_tr]:border-border [&_tbody_tr:hover]:bg-surface-sunken/60 [&_thead]:bg-surface-sunken',
       compact && '[&_th]:whitespace-normal [&_th]:px-1.5 [&_th]:leading-tight [&_td]:px-1.5 [&_td_span]:min-w-0')}>
       {children}
@@ -320,7 +320,7 @@ export const DataTable: React.FC<{ children: React.ReactNode; className?: string
 
 /** A header cell spanning a group of columns ("NFHS indicators", "Project outcomes"). */
 export const GroupTh: React.FC<{ span: number; children: React.ReactNode; className?: string }> = ({ span, children, className }) => (
-  <th colSpan={span} className={cn('border-l-2 border-border-strong px-3 pt-2 text-center text-xs font-bold uppercase tracking-wide text-ink', className)}>
+  <th colSpan={span} className={cn('border-l-2 border-border-strong px-3 pt-2 text-center text-xs font-semibold text-ink', className)}>
     {children}
   </th>
 );

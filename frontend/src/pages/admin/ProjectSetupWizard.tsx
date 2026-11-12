@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Rocket, Save } from 'lucide-react';
+import { Play, Save } from 'lucide-react';
 import { Alert, Button, Checkbox, FieldLabel, Modal, Select, Spinner } from '../../components/ui';
 import client from '../../api/client';
 import { inputClasses } from '../../components/ui/Input';
@@ -117,7 +117,7 @@ const ProjectSetupWizard: React.FC<Props> = ({ projectId, onClose, onDone }) => 
       size="lg"
       title={
         <span className="flex items-center gap-2">
-          <Rocket className="size-4" />
+          <Play className="size-4" />
           {t('setup.title', { name: options?.project.name ?? '' })}
         </span>
       }
@@ -139,7 +139,7 @@ const ProjectSetupWizard: React.FC<Props> = ({ projectId, onClose, onDone }) => 
 
           {/* 1. Content */}
           <section>
-            <h4 className="mb-1 mt-0 text-sm font-bold text-ink">{t('setup.contentTitle')}</h4>
+            <h4 className="mb-1 mt-0 text-sm font-semibold text-ink">{t('setup.contentTitle')}</h4>
             <p className="mb-2 mt-0 text-[12px] text-ink-faint">{t('setup.contentHint')}</p>
             <Select value={copyFrom} onChange={e => setCopyFrom(e.target.value)}>
               <option value="">{t('setup.startEmpty')}</option>
@@ -164,7 +164,7 @@ const ProjectSetupWizard: React.FC<Props> = ({ projectId, onClose, onDone }) => 
 
           {/* 2. Form versions */}
           <section>
-            <h4 className="mb-1 mt-0 text-sm font-bold text-ink">{t('setup.formsTitle')}</h4>
+            <h4 className="mb-1 mt-0 text-sm font-semibold text-ink">{t('setup.formsTitle')}</h4>
             <p className="mb-2 mt-0 text-[12px] text-ink-faint">{t('setup.formsHint')}</p>
             <div className="flex flex-col gap-2">
               {options?.forms.map(form => (
@@ -194,7 +194,7 @@ const ProjectSetupWizard: React.FC<Props> = ({ projectId, onClose, onDone }) => 
           {/* 3. Districts inside a state project */}
           {options?.can_have_districts && (
             <section>
-              <h4 className="mb-1 mt-0 text-sm font-bold text-ink">{t('setup.districtsTitle')}</h4>
+              <h4 className="mb-1 mt-0 text-sm font-semibold text-ink">{t('setup.districtsTitle')}</h4>
               <p className="mb-2 mt-0 text-[12px] text-ink-faint">{t('setup.districtsHint')}</p>
               <FieldLabel size="sm">{t('setup.districtsLabel')}</FieldLabel>
               <textarea

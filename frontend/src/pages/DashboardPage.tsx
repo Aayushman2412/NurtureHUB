@@ -9,7 +9,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Lock,
-  Trophy,
+  Award,
   PlayCircle,
   CalendarClock,
   FileText,
@@ -20,11 +20,9 @@ import {
   HeartHandshake,
   Lightbulb,
   BarChart3,
-  PartyPopper,
-  Award,
   CalendarRange,
 } from 'lucide-react';
-import { Badge, Button, Card, Modal, PageLoader, ProgressBar, ProgressRing, WelcomeBanner } from '../components/ui';
+import { Badge, Button, Card, Modal, PageLoader, ProgressBar, ProgressRing } from '../components/ui';
 import SupportTeamCard from '../components/SupportTeamCard';
 import TrainingRings from '../components/dashboard/TrainingRings';
 import FieldHome from '../components/field/FieldHome';
@@ -225,7 +223,7 @@ const PhaseHeader: React.FC<{
       <span className="min-w-0">{eyebrow}</span>
       <span className="shrink-0">{badge}</span>
     </div>
-    <h4 className="mt-1 font-display text-lg font-bold leading-snug text-ink">{title}</h4>
+    <h4 className="mt-1 font-display text-lg font-semibold leading-snug text-ink">{title}</h4>
     {description && <p className="mt-1 text-sm leading-snug text-ink-muted">{description}</p>}
   </>
 );
@@ -296,28 +294,24 @@ const DashboardPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Welcome Banner — shared component, styled once (adapts light/dark) */}
-      <WelcomeBanner
-        eyebrow={
-          user?.program_district?.name
-            ? t('welcome.districtEyebrow', { district: user.program_district.name })
-            : t('welcome.defaultEyebrow')
-        }
-        title={
-          <>
-            {user?.full_name || t('welcome.nameFallback')}
-          </>
-        }
-        subtitle={t('welcome.subtitle', {
-          completed: data.tutorials_completed,
-          total: data.total_tutorials,
-        })}
-      >
+      {/* Who and where, then the one figure that matters: overall progress. */}
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+        <div className="min-w-0">
+          <p className="text-sm text-ink-muted">
+            {user?.program_district?.name
+              ? t('welcome.districtEyebrow', { district: user.program_district.name })
+              : t('welcome.defaultEyebrow')}
+          </p>
+          <h1 className="text-xl font-semibold text-ink sm:text-2xl">{user?.full_name || t('welcome.nameFallback')}</h1>
+          <p className="mt-1 text-sm text-ink-muted">
+            {t('welcome.subtitle', { completed: data.tutorials_completed, total: data.total_tutorials })}
+          </p>
+        </div>
         {/* Tap to see how the number is made (review of 29 Oct 2026: "in spite
             of me finishing three of the six videos why is it 30% — let me
             know clearly … this should be a pop-up"). */}
-        <button type="button" onClick={() => setShowProgress(true)} className="flex cursor-pointer items-center gap-3 rounded-xl text-left">
-          <ProgressRing value={data.progress_percentage} size={92} />
+        <button type="button" onClick={() => setShowProgress(true)} className="flex cursor-pointer items-center gap-3 rounded-lg text-left">
+          <ProgressRing value={data.progress_percentage} size={68} strokeWidth={6} />
           <span className="text-sm font-semibold leading-tight text-ink-muted">
             {t('welcome.overall')}
             <br />
@@ -325,11 +319,11 @@ const DashboardPage: React.FC = () => {
             <span className="mt-1 block text-xs font-semibold text-primary-ink underline underline-offset-2">{t('progressInfo.how')}</span>
           </span>
         </button>
-      </WelcomeBanner>
+      </header>
 
       {/* An easy password is allowed, never forced — but asked about (review of 17 Oct 2026). */}
       {user?.password_weak && (
-        <Card accent="amber" className="flex flex-wrap items-center gap-3 p-4">
+        <Card accent="warning" className="flex flex-wrap items-center gap-3 p-4">
           <KeyRound className="size-5 shrink-0 text-amber-600" />
           <p className="min-w-0 flex-1 text-sm text-ink">{t('weakPassword.body')}</p>
           <Link to="/profile?tab=account" className="text-sm font-semibold text-primary-ink hover:text-primary-ink-hover">
@@ -343,7 +337,7 @@ const DashboardPage: React.FC = () => {
         <Card className="flex items-start gap-3 p-4">
           <MapPinOff className="mt-0.5 size-5 shrink-0 text-ink-muted" />
           <div>
-            <h4 className="font-display font-bold text-ink">{t('noProject.title')}</h4>
+            <h4 className="font-display font-semibold text-ink">{t('noProject.title')}</h4>
             <p className="text-sm text-ink-muted">{t('noProject.body')}</p>
           </div>
         </Card>
@@ -351,7 +345,7 @@ const DashboardPage: React.FC = () => {
 
       {/* Training | Adoptions — the two modes of the project. */}
       {user?.program_district_id && (
-        <div role="tablist" className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-surface p-1.5">
+        <div role="tablist" className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-surface p-1.5">
           {([
             { v: 'training' as const, icon: <GraduationCap className="size-5" />, label: t('modes.training'), hint: t('modes.trainingHint') },
             { v: 'adoptions' as const, icon: <HeartHandshake className="size-5" />, label: t('modes.adoptions'),
@@ -369,14 +363,14 @@ const DashboardPage: React.FC = () => {
                 disabled={locked}
                 onClick={() => setView(m.v)}
                 className={cn(
-                  'flex min-w-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors',
-                  active ? 'bg-primary text-white shadow-sm' : 'text-ink hover:bg-surface-sunken',
+                  'flex min-w-0 items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-colors',
+                  active ? 'bg-primary text-white ' : 'text-ink hover:bg-surface-sunken',
                   locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
                 )}
               >
                 <span className="shrink-0">{locked ? <Lock className="size-5" /> : m.icon}</span>
                 <span className="min-w-0">
-                  <span className="block text-sm font-bold sm:text-base">{m.label}</span>
+                  <span className="block text-sm font-semibold sm:text-base">{m.label}</span>
                   <span className={cn('block truncate text-xs', active ? 'text-white/85' : 'text-ink-muted')}>{m.hint}</span>
                 </span>
               </button>
@@ -388,12 +382,10 @@ const DashboardPage: React.FC = () => {
       <>
       {/* Selected: the training is behind her, and her work is in Adoptions. */}
       {state === 'selected' && (
-        <Card accent="sage" className="flex flex-wrap items-center gap-4 p-4 sm:p-6">
-          <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-xl bg-sage-500/15 text-sage-600">
-            <PartyPopper className="size-6" />
-          </div>
+        <Card accent="success" className="flex flex-wrap items-center gap-4 p-4 sm:p-6">
+          <CheckCircle2 className="size-5 shrink-0 text-success-600 dark:text-success-300" aria-hidden />
           <div className="min-w-0 flex-1 basis-60">
-            <h4 className="mb-1 font-display font-bold text-ink">{t('selection.selectedTitle')}</h4>
+            <h4 className="mb-1 font-display font-semibold text-ink">{t('selection.selectedTitle')}</h4>
             <p className="text-sm leading-snug text-ink-muted">{t('selection.selectedBody')}</p>
           </div>
           <Button size="sm" onClick={() => setView('adoptions')} iconRight={<ChevronRight className="size-3.5" />}>
@@ -404,12 +396,10 @@ const DashboardPage: React.FC = () => {
 
       {/* Finished, results announced, not on the list. */}
       {state === 'not_selected' && (
-        <Card accent="amber" className="flex items-center gap-4 p-4 sm:p-6">
-          <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600">
-            <Award className="size-6" />
-          </div>
+        <Card accent="warning" className="flex items-center gap-4 p-4 sm:p-6">
+          <Lock className="mt-0.5 size-5 shrink-0 self-start text-amber-600 dark:text-amber-300" aria-hidden />
           <div>
-            <h4 className="mb-1 font-display font-bold text-ink">{t('selection.notSelectedTitle')}</h4>
+            <h4 className="mb-1 font-display font-semibold text-ink">{t('selection.notSelectedTitle')}</h4>
             <p className="text-sm leading-snug text-ink-muted">{t('selection.notSelectedBody')}</p>
           </div>
         </Card>
@@ -417,12 +407,10 @@ const DashboardPage: React.FC = () => {
 
       {/* Awaiting the selection for face-to-face training — everything is done */}
       {state === 'awaiting' && (
-        <Card accent="amber" className="flex items-center gap-4 p-4 sm:p-6">
-          <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600">
-            <Hourglass className="size-6" />
-          </div>
+        <Card accent="warning" className="flex items-center gap-4 p-4 sm:p-6">
+          <Hourglass className="mt-0.5 size-5 shrink-0 self-start text-amber-600 dark:text-amber-300" aria-hidden />
           <div>
-            <h4 className="mb-1 font-display font-bold text-ink">{t('awaiting.title')}</h4>
+            <h4 className="mb-1 font-display font-semibold text-ink">{t('awaiting.title')}</h4>
             <p className="text-sm leading-snug text-ink-muted">{t('awaiting.body')}</p>
           </div>
         </Card>
@@ -439,7 +427,7 @@ const DashboardPage: React.FC = () => {
               screening: data.stages.find(s => s.test?.test_type === 'screening')?.test?.score ?? null,
             }}
           />
-          <p className="flex items-start gap-2 rounded-xl bg-surface-sunken/70 px-4 py-3 text-sm font-semibold text-ink">
+          <p className="flex items-start gap-2 rounded-lg bg-surface-sunken/70 px-4 py-3 text-sm font-semibold text-ink">
             <Lightbulb className="mt-0.5 size-4 shrink-0 text-amber-600" />
             <span>{trainingStatus(data, t)}</span>
           </p>
@@ -449,7 +437,7 @@ const DashboardPage: React.FC = () => {
       {/* The tests, topic by topic, with what to watch again. */}
       {reports.length > 0 && (
         <Card className="p-4 sm:p-6">
-          <h3 className="mb-1 flex items-center gap-2 font-display text-lg font-bold text-ink">
+          <h3 className="mb-1 flex items-center gap-2 font-display text-lg font-semibold text-ink">
             <BarChart3 className="size-5 text-primary-ink" />{t('topics.title')}
           </h3>
           <p className="mb-4 text-sm text-ink-muted">{t('topics.subtitle')}</p>
@@ -470,7 +458,7 @@ const DashboardPage: React.FC = () => {
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
         {/* Stage timeline */}
         <div className="flex flex-col gap-4 lg:col-span-2">
-          <h3 className="font-display text-xl font-bold text-ink">{t('timeline')}</h3>
+          <h3 className="font-display text-xl font-semibold text-ink">{t('timeline')}</h3>
 
           <div className="flex flex-col gap-3">
             {data.stages.map((stg, i) => {
@@ -480,13 +468,13 @@ const DashboardPage: React.FC = () => {
               if (isTestPhase && stg.test) {
                 const test = stg.test;
                 const canTake = test.status === 'active' && !stg.is_locked && !test.is_submitted;
-                const accent = test.is_submitted || canTake ? 'sage' : 'amber';
+                const accent = test.is_submitted || canTake ? 'success' : 'warning';
                 const taken = test.is_submitted && test.score != null;
                 return (
                   <Card key={stg.id} accent={accent} className="p-4 sm:p-5">
                     <PhaseHeader
                       eyebrow={
-                        <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-600">
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-600">
                           <FileText className="size-3" /> {t('phase', { n: i + 1 })} •{' '}
                           {test.test_type === 'screening' ? t('test.screeningLabel') : t('test.formativeLabel')}
                         </span>
@@ -507,7 +495,7 @@ const DashboardPage: React.FC = () => {
                       <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-border bg-surface-sunken px-4 py-2.5">
                         <div>
                           <span className="block text-xs text-ink-faint">{t('test.yourScore')}</span>
-                          <strong className="font-display text-2xl font-extrabold leading-tight text-ink">{Math.round(test.score ?? 0)}%</strong>
+                          <strong className="font-display text-2xl font-semibold leading-tight text-ink">{Math.round(test.score ?? 0)}%</strong>
                           {test.correct != null && !!test.total_questions && (
                             <span className="ml-1.5 text-sm text-ink-muted">{t('test.rightOf', { correct: test.correct, total: test.total_questions })}</span>
                           )}
@@ -567,10 +555,10 @@ const DashboardPage: React.FC = () => {
                 : 0;
               const completed = stg.total_tutorials > 0 && stg.tutorials_completed >= stg.total_tutorials;
               return (
-                <Card key={stg.id} accent="coral" className="p-4 sm:p-5">
+                <Card key={stg.id} accent="brand" className="p-4 sm:p-5">
                   <PhaseHeader
                     eyebrow={
-                      <span className="text-xs font-bold uppercase tracking-wider text-primary-ink">
+                      <span className="text-xs font-semibold text-primary-ink">
                         {t('phase', { n: i + 1 })} • {t('videos.label')}
                       </span>
                     }
@@ -579,7 +567,7 @@ const DashboardPage: React.FC = () => {
                         <CheckCircle2 className="size-3" /> {t('videos.completed')}
                       </Badge>
                     ) : (
-                      <Badge variant="coral">{t('videos.inProgress')}</Badge>
+                      <Badge variant="info">{t('videos.inProgress')}</Badge>
                     )}
                     title={stg.title}
                     description={stg.description}
@@ -600,7 +588,7 @@ const DashboardPage: React.FC = () => {
                           </span>
                           <span>{pct}%</span>
                         </div>
-                        <ProgressBar value={pct} tone="coral" />
+                        <ProgressBar value={pct} tone="brand" />
                         {/* Quizzes answered, under the videos (review of 29 Oct 2026). */}
                         {stg.tutorials.some(x => x.quiz_available) && (() => {
                           const quizzes = stg.tutorials.filter(x => x.quiz_available);
@@ -612,7 +600,7 @@ const DashboardPage: React.FC = () => {
                                 <span>{t('videos.quizzesAnswered', { done: answered, total: quizzes.length })}</span>
                                 <span>{qPct}%</span>
                               </div>
-                              <ProgressBar value={qPct} tone="sage" />
+                              <ProgressBar value={qPct} tone="success" />
                             </>
                           );
                         })()}
@@ -638,8 +626,8 @@ const DashboardPage: React.FC = () => {
         <div className="flex flex-col gap-6">
           {/* Achievements */}
           <Card className="p-4 sm:p-6">
-            <h3 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink">
-              <Trophy className="size-[18px] text-amber-500" />
+            <h3 className="mb-4 flex items-center gap-2 font-display text-lg font-semibold text-ink">
+              <Award className="size-[18px] text-ink-muted" />
               <span>{t('badges.title')}</span>
             </h3>
 
@@ -651,7 +639,7 @@ const DashboardPage: React.FC = () => {
                   <div key={ach.id} className="flex items-center gap-3 rounded-lg bg-surface-sunken p-2.5">
                     <span className="text-3xl">{ach.emoji_icon}</span>
                     <div>
-                      <h4 className="text-sm font-bold text-ink">{ach.title}</h4>
+                      <h4 className="text-sm font-semibold text-ink">{ach.title}</h4>
                       <p className="text-xs text-ink-muted">{ach.description}</p>
                     </div>
                   </div>
@@ -662,7 +650,7 @@ const DashboardPage: React.FC = () => {
 
           {/* Activity feed */}
           <Card className="p-4 sm:p-6">
-            <h3 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink">
+            <h3 className="mb-4 flex items-center gap-2 font-display text-lg font-semibold text-ink">
               <CheckCircle2 className="size-[18px] text-primary-ink" />
               <span>{t('activity.title')}</span>
             </h3>
@@ -710,7 +698,7 @@ const DashboardPage: React.FC = () => {
             <span>{t('progressInfo.tests', { done: data.tests_passed, total: data.total_tests })}</span>
             <b className="tabular-nums">{testPoints} / 40</b>
           </div>
-          <div className="flex justify-between gap-3 border-t border-border pt-2 font-bold">
+          <div className="flex justify-between gap-3 border-t border-border pt-2 font-semibold">
             <span>{t('progressInfo.total')}</span>
             <span className="tabular-nums">{Math.round(data.progress_percentage)}%</span>
           </div>

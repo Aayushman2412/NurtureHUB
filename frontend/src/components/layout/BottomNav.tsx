@@ -27,7 +27,7 @@ const BottomNav: React.FC = () => {
   return (
     <nav
       aria-label={t('bottomNav.label')}
-      className="fixed inset-x-0 bottom-0 z-(--z-dropdown) border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden print:hidden"
+      className="fixed inset-x-0 bottom-0 z-(--z-dropdown) border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden"
     >
       <ul className="mx-auto flex max-w-lg">
         {items.map(item => (
@@ -36,14 +36,16 @@ const BottomNav: React.FC = () => {
               to={item.to}
               end={item.to === '/dashboard'}
               className={({ isActive }) => cn(
-                'flex min-h-16 flex-col items-center justify-center gap-0.5 text-xs font-semibold transition-colors',
-                isActive || item.also.some(p => pathname.startsWith(p)) ? 'text-primary-ink' : 'text-ink-muted hover:text-ink',
+                // The open tab is marked by a bar along its top edge and a heavier label.
+                'flex min-h-16 flex-col items-center justify-center gap-1 border-t-[3px] text-xs transition-colors',
+                isActive || item.also.some(p => pathname.startsWith(p))
+                  ? 'border-primary font-semibold text-primary-ink'
+                  : 'border-transparent font-medium text-ink-muted hover:text-ink',
               )}
             >
-              {({ isActive }) => (
+              {() => (
                 <>
-                  <span className={cn('flex h-8 w-14 items-center justify-center rounded-full',
-                    (isActive || item.also.some(p => pathname.startsWith(p))) && 'bg-coral-50 dark:bg-coral-500/15')}>
+                  <span className="flex items-center justify-center">
                     <item.icon className="size-6" />
                     {'locked' in item && item.locked && (
                       <Lock className="-ml-1.5 mt-3 size-3.5 text-ink-faint" aria-label={t('bottomNav.locked')} />

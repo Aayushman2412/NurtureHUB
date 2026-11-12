@@ -59,7 +59,7 @@ const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
         />
       </Field>
       <Field label={t('fields.age')}>
-        <div className="rounded-lg border border-border-strong/60 bg-surface-sunken px-3.5 py-2.5 text-sm">
+        <div className="rounded-lg border border-border-control bg-surface-sunken px-3.5 py-2.5 text-sm">
           {age === '' ? <span className="text-ink-faint">{t('fields.ageCalculated')}</span> : t('fields.ageValue', { age })}
         </div>
       </Field>

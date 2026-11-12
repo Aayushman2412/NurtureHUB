@@ -1,6 +1,7 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { attemptStorageKey } from '../lib/attemptStorage';
 import { submitAttempt } from '../api/tests';
 import { useToast } from '../context/ToastContext';
 import { useTestEventEmitter } from '../hooks/useTestEventEmitter';
@@ -75,7 +76,7 @@ const ActiveTestPage: React.FC = () => {
   const { attempt_id, duration_minutes, questions } = attemptData;
 
   // --- Persist start time to localStorage so timer survives refresh ---
-  const storageKey = `nurturehub_attempt_${attempt_id}`;
+  const storageKey = useMemo(() => attemptStorageKey(attempt_id), [attempt_id]);
 
   const getPersistedStartTime = (): string => {
     const stored = localStorage.getItem(storageKey);
@@ -340,7 +341,7 @@ const ActiveTestPage: React.FC = () => {
         <div
           role="status"
           aria-live="polite"
-          className="fixed inset-x-0 bottom-0 z-50 border-t border-warning-500/40 bg-warning-50 px-4 py-3 text-center text-sm font-semibold text-ink shadow-lg dark:bg-warning-500/15"
+          className="fixed inset-x-0 bottom-0 z-50 border-t border-amber-500/40 bg-amber-50 px-4 py-3 text-center text-sm font-semibold text-ink dark:bg-amber-500/15"
         >
           {t('active.submitRetrying', { n: submitRetry })}
         </div>
@@ -348,18 +349,18 @@ const ActiveTestPage: React.FC = () => {
       {/* Header — sticky so the countdown and Finish stay visible while the
           learner scrolls questions on a phone. Bleeds over AppLayout's main
           padding (keep the -mx/-mt values in sync with p-5 sm:p-6). */}
-      <div className="sticky top-0 z-20 -mx-5 -mt-5 border-b border-border bg-surface px-5 py-3 sm:-mx-6 sm:-mt-6 sm:px-6 sm:py-4 lg:static lg:z-auto lg:mx-0 lg:mt-0 lg:rounded-xl lg:border lg:px-5">
+      <div className="sticky top-0 z-20 -mx-5 -mt-5 border-b border-border bg-surface px-5 py-3 sm:-mx-6 sm:-mt-6 sm:px-6 sm:py-4 lg:static lg:z-auto lg:mx-0 lg:mt-0 lg:rounded-lg lg:border lg:px-5">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="min-w-0 flex-1 basis-40">
-            <span className="hidden text-xs font-bold uppercase tracking-wider text-primary-ink sm:block">{t('active.eyebrow')}</span>
-            <h3 className="truncate font-display text-base font-bold text-ink sm:text-lg">{testTitle}</h3>
+            <span className="hidden text-xs font-semibold text-primary-ink sm:block">{t('active.eyebrow')}</span>
+            <h3 className="truncate font-display text-base font-semibold text-ink sm:text-lg">{testTitle}</h3>
           </div>
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {/* Live monitoring connection indicator (icon-only on phones) */}
             <div
               className={cn(
-                'flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-bold',
+                'flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-semibold',
                 wsConnected
                   ? 'border-success-500/40 bg-success-50 text-success-600 dark:bg-success-500/10 dark:text-success-500'
                   : 'border-amber-500/40 bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-500',
@@ -372,7 +373,7 @@ const ActiveTestPage: React.FC = () => {
 
             <div
               className={cn(
-                'flex items-center gap-2 rounded-lg border px-2.5 py-2 font-bold sm:px-3.5',
+                'flex items-center gap-2 rounded-lg border px-2.5 py-2 font-semibold sm:px-3.5',
                 timerClasses[getTimerClass()],
               )}
             >
@@ -403,8 +404,8 @@ const ActiveTestPage: React.FC = () => {
         <Card className="flex flex-col justify-between p-6">
           <div>
             <div className="mb-4 flex items-center justify-between">
-              <span className="font-display font-bold text-ink">{t('common.question', { n: currentIdx + 1 })}</span>
-              <span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700 dark:bg-coral-500/15 dark:text-coral-300">
+              <span className="font-display font-semibold text-ink">{t('common.question', { n: currentIdx + 1 })}</span>
+              <span className="rounded-sm bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
                 {t('active.marks', { marks: currentQuestion.marks })}
               </span>
             </div>
@@ -416,7 +417,7 @@ const ActiveTestPage: React.FC = () => {
               <img
                 src={resolveAssetUrl(currentQuestion.image_url)}
                 alt=""
-                className="mb-5 max-h-72 w-full rounded-xl border border-border object-contain"
+                className="mb-5 max-h-72 w-full rounded-lg border border-border object-contain"
               />
             )}
 
@@ -429,15 +430,15 @@ const ActiveTestPage: React.FC = () => {
                     key={opt.id}
                     onClick={() => handleSelectOption(currentQuestion.id, opt.id)}
                     className={cn(
-                      'flex items-center gap-3 rounded-xl border-2 p-3.5 text-left transition-colors',
+                      'flex items-center gap-3 rounded-lg border-2 p-3.5 text-left transition-colors',
                       isSelected
-                        ? 'border-primary bg-coral-50 dark:bg-coral-500/10'
+                        ? 'border-primary bg-brand-50 dark:bg-brand-500/10'
                         : 'border-border hover:border-border-strong hover:bg-surface-sunken/50',
                     )}
                   >
                     <span
                       className={cn(
-                        'flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold',
+                        'flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
                         isSelected ? 'bg-primary text-primary-fg' : 'bg-surface-sunken text-ink-muted',
                       )}
                     >
@@ -507,7 +508,7 @@ const ActiveTestPage: React.FC = () => {
 
         {/* Question map */}
         <Card className="p-5">
-          <h4 className="mb-4 font-display font-bold text-ink">{t('active.questionsMap')}</h4>
+          <h4 className="mb-4 font-display font-semibold text-ink">{t('active.questionsMap')}</h4>
 
           <div className="grid grid-cols-6 gap-2 lg:grid-cols-5">
             {questions.map((q, idx) => {
@@ -521,13 +522,13 @@ const ActiveTestPage: React.FC = () => {
                   key={q.id}
                   onClick={() => setCurrentIdx(idx)}
                   className={cn(
-                    'flex h-9 items-center justify-center rounded-lg text-sm font-bold transition-colors',
+                    'flex h-9 items-center justify-center rounded-lg text-sm font-semibold transition-colors',
                     isCurrent
                       ? 'bg-primary text-primary-fg ring-2 ring-primary ring-offset-2 ring-offset-surface'
                       : isMarked
                         ? 'bg-amber-500 text-white'
                         : isAnswered
-                          ? 'bg-sage-500 text-white'
+                          ? 'bg-success-500 text-white'
                           : 'bg-surface-sunken text-ink-muted hover:bg-border',
                   )}
                 >
@@ -540,7 +541,7 @@ const ActiveTestPage: React.FC = () => {
           {/* Legend */}
           <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-xs text-ink-muted">
             <span className="flex items-center gap-1.5">
-              <span className="size-3 rounded-full bg-sage-500" /> {t('active.legendAnswered')}
+              <span className="size-3 rounded-full bg-success-500" /> {t('active.legendAnswered')}
             </span>
             <span className="flex items-center gap-1.5">
               <span className="size-3 rounded-full bg-amber-500" /> {t('active.legendMarked')}
@@ -578,13 +579,13 @@ const ActiveTestPage: React.FC = () => {
 
         <dl className="grid grid-cols-2 gap-y-2 text-sm">
           <dt className="text-ink-muted">{t('active.totalQuestions')}</dt>
-          <dd className="text-right font-bold text-ink">{totalQuestions}</dd>
+          <dd className="text-right font-semibold text-ink">{totalQuestions}</dd>
           <dt className="text-ink-muted">{t('active.answered')}</dt>
-          <dd className="text-right font-bold text-primary-ink">{answeredCount}</dd>
+          <dd className="text-right font-semibold text-primary-ink">{answeredCount}</dd>
           <dt className="text-ink-muted">{t('active.flaggedReview')}</dt>
-          <dd className="text-right font-bold text-amber-600">{reviewCount}</dd>
+          <dd className="text-right font-semibold text-amber-600">{reviewCount}</dd>
           <dt className="text-ink-muted">{t('active.unanswered')}</dt>
-          <dd className={cn('text-right font-bold', unansweredCount > 0 ? 'text-error-500' : 'text-ink-faint')}>
+          <dd className={cn('text-right font-semibold', unansweredCount > 0 ? 'text-error-500' : 'text-ink-faint')}>
             {unansweredCount}
           </dd>
         </dl>
@@ -599,7 +600,7 @@ const ActiveTestPage: React.FC = () => {
         footer={<Button onClick={clearWarning}>{t('active.iUnderstand')}</Button>}
       >
         <div className="flex flex-col items-center gap-4 text-center">
-          <div className="flex size-14 items-center justify-center rounded-full bg-amber-50 dark:bg-amber-500/15">
+          <div className="inline-flex shrink-0">
             <AlertTriangle className="size-7 text-amber-500" />
           </div>
           <p className="text-sm leading-relaxed text-ink-muted">{warningMessage}</p>

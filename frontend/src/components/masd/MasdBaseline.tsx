@@ -31,7 +31,7 @@ const MasdBaseline: React.FC<{ report: MasdReport; className?: string }> = ({ re
   const rol = (k: ActivityKey) => sum(i => trs[i].community.forms[k] ?? 0);
   const sn = (k: ActivityKey) => sum(i => trs[i].nurse.forms[k] ?? 0);
   const grp = 'border-l-2 border-border-strong';
-  const groupHead = `${grp} px-3 pt-2 text-center text-xs font-bold uppercase tracking-wide text-ink`;
+  const groupHead = `${grp} px-3 pt-2 text-center text-xs font-semibold text-ink`;
   const cell = 'px-2 py-2.5 text-center text-base tabular-nums text-ink';
   const date = fmtDate(report.as_of);
 
@@ -81,7 +81,7 @@ const MasdBaseline: React.FC<{ report: MasdReport; className?: string }> = ({ re
                 <td className={cell} title={tr.clock_from ? t('baseline.clockFrom', { date: fmtDate(tr.clock_from) }) : undefined}>
                   {tr.fu_raw ?? '—'}
                 </td>
-                <td className={`${cell} font-bold`}>{tr.fu_days ?? '—'}</td>
+                <td className={`${cell} font-semibold`}>{tr.fu_days ?? '—'}</td>
                 {REST_KEYS.map((k, i) => (
                   <td key={k} className={`${i === 0 ? grp : ''} ${cell}`}>{tr.added[k] ? `+${tr.added[k]}` : '·'}</td>
                 ))}
@@ -89,30 +89,30 @@ const MasdBaseline: React.FC<{ report: MasdReport; className?: string }> = ({ re
                 {ACTIVITY_KEYS.map((k, i) => (
                   <td key={k} className={`${i === 0 ? grp : ''} ${cell}`}>{tr.community.forms[k] || '·'}</td>
                 ))}
-                <td className={`${cell} font-bold`}>{tr.community.total}</td>
+                <td className={`${cell} font-semibold`}>{tr.community.total}</td>
                 {NURSE_KEYS.map((k, i) => (
                   <td key={k} className={`${i === 0 ? grp : ''} ${cell}`}>{tr.nurse.forms[k] || '·'}</td>
                 ))}
-                <td className={`${cell} font-bold`}>{tr.nurse.total}</td>
+                <td className={`${cell} font-semibold`}>{tr.nurse.total}</td>
               </tr>
             );
           })}
-          <tr className="border-t-2 border-border-strong bg-coral-50/60 dark:bg-coral-500/10">
-            <td className="px-3 py-2.5 font-bold text-ink" colSpan={5}>{t('baseline.totalRow', { date })}</td>
+          <tr className="border-t-2 border-border-strong bg-brand-50/60 dark:bg-brand-500/10">
+            <td className="px-3 py-2.5 font-semibold text-ink" colSpan={5}>{t('baseline.totalRow', { date })}</td>
             {REST_KEYS.map((k, i) => (
-              <td key={k} className={`${i === 0 ? grp : ''} ${cell} font-bold`}>{asked(k)}</td>
+              <td key={k} className={`${i === 0 ? grp : ''} ${cell} font-semibold`}>{asked(k)}</td>
             ))}
-            <td className={`${grp} ${cell} font-bold`}>{asked('nurse')}</td>
+            <td className={`${grp} ${cell} font-semibold`}>{asked('nurse')}</td>
             {ACTIVITY_KEYS.map((k, i) => (
-              <td key={k} className={`${i === 0 ? grp : ''} ${cell} font-bold`}>{rol(k)}</td>
+              <td key={k} className={`${i === 0 ? grp : ''} ${cell} font-semibold`}>{rol(k)}</td>
             ))}
-            <td className="px-2 py-2.5 text-center text-lg font-extrabold tabular-nums text-coral-700 dark:text-coral-300">
+            <td className="px-2 py-2.5 text-center text-lg font-semibold tabular-nums text-brand-700 dark:text-brand-300">
               {sum(i => trs[i].community.total)}
             </td>
             {NURSE_KEYS.map((k, i) => (
-              <td key={k} className={`${i === 0 ? grp : ''} ${cell} font-bold`}>{sn(k)}</td>
+              <td key={k} className={`${i === 0 ? grp : ''} ${cell} font-semibold`}>{sn(k)}</td>
             ))}
-            <td className="px-2 py-2.5 text-center text-lg font-extrabold tabular-nums text-coral-700 dark:text-coral-300">
+            <td className="px-2 py-2.5 text-center text-lg font-semibold tabular-nums text-brand-700 dark:text-brand-300">
               {sum(i => trs[i].nurse.total)}
             </td>
           </tr>

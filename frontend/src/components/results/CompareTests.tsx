@@ -94,13 +94,13 @@ const CompareTests: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
     <div className="space-y-6">
       {/* Headline */}
       <Card className="overflow-hidden p-0">
-        <div className="bg-gradient-to-r from-coral-50 via-surface to-sage-50 p-5 sm:p-6 dark:from-coral-500/10 dark:via-surface dark:to-sage-500/10">
+        <div className="border-b border-border p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 max-w-3xl">
-              <div className="mb-1 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary-ink">
+              <div className="mb-1 inline-flex items-center gap-1.5 text-xs font-semibold text-primary-ink">
                 <ArrowRightLeft className="size-3.5" /> {t('cmp.eyebrow', { a: a.label, b: b.label })}
               </div>
-              <h2 className="font-display text-xl font-extrabold text-ink sm:text-2xl">
+              <h2 className="font-display text-xl font-semibold text-ink sm:text-2xl">
                 {s.n > 0
                   // Who is compared comes first (review of 19 Oct 2026: "two
                   // learners wrote both tests — what does that sentence mean?").
@@ -119,7 +119,7 @@ const CompareTests: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
                 </div>
               )}
               {Object.keys(filters).length > 0 && (
-                <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
+                <div className="mt-3 inline-flex items-center gap-2 rounded-sm border border-amber-300 bg-amber-50 px-3 py-1 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
                   <Filter className="size-3 text-amber-700 dark:text-amber-400" />
                   <span>{t('focus.filteredNotice', { count: users.length, total: data.users.length })}</span>
                   <button
@@ -160,16 +160,16 @@ const CompareTests: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
           <Section icon={<ArrowRightLeft />} title={t('cmp.outcomesTitle')} subtitle={t('cmp.outcomesSubtitle')}>
             <div className="grid grid-cols-2 gap-3">
               {([
-                ['both', t('cmp.passBoth'), s.passBoth, '#2F9E56'],
-                ['aOnly', t('cmp.passOnly', { test: a.label }), s.passAOnly, '#B45309'],
+                ['both', t('cmp.passBoth'), s.passBoth, '#228049'],
+                ['aOnly', t('cmp.passOnly', { test: a.label }), s.passAOnly, '#9A6400'],
                 ['bOnly', t('cmp.passOnly', { test: b.label }), s.passBOnly, TEST_B_COLOR],
-                ['neither', t('cmp.passNeither'), s.passNeither, '#DC2F2F'],
+                ['neither', t('cmp.passNeither'), s.passNeither, '#C62828'],
               ] as [string, string, number, string][]).map(([key, label, n, color]) => (
-                <div key={key} className="rounded-xl border border-border p-4"
+                <div key={key} className="rounded-lg border border-border p-4"
                   style={{ background: `color-mix(in srgb, ${color} 10%, transparent)` }}>
                   <div className="text-sm font-semibold text-ink">{label}</div>
                   <div className="mt-1 flex items-baseline gap-2">
-                    <span className="font-display text-3xl font-extrabold tabular-nums" style={{ color }}>{n}</span>
+                    <span className="font-display text-3xl font-semibold tabular-nums" style={{ color }}>{n}</span>
                     <span className="text-sm tabular-nums text-ink-muted">{fmtPct(pctOf(n, s.n))}</span>
                   </div>
                 </div>
@@ -177,9 +177,9 @@ const CompareTests: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
             </div>
             <h4 className="mb-2 mt-6 text-sm font-semibold text-ink">{t('cmp.movementTitle', { a: a.label, b: b.label })}</h4>
             <StackedBar parts={[
-              { key: 'up', label: t('cmp.improved'), value: s.improved, color: '#2F9E56' },
-              { key: 'same', label: t('cmp.same'), value: s.same, color: '#A8A29E' },
-              { key: 'down', label: t('cmp.dropped'), value: s.dropped, color: '#DC2F2F' },
+              { key: 'up', label: t('cmp.improved'), value: s.improved, color: '#228049' },
+              { key: 'same', label: t('cmp.same'), value: s.same, color: '#9FAAB3' },
+              { key: 'down', label: t('cmp.dropped'), value: s.dropped, color: '#C62828' },
             ]} />
           </Section>
         </div>
@@ -215,9 +215,9 @@ const CompareTests: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
                 <h4 className="text-sm font-semibold text-ink">{t('scorecard.title', { dim: t(`dim.${dim}`) })}</h4>
                 <ToneLegend good={t('scorecard.good')} ok={t('scorecard.ok')} low={t('scorecard.low')} />
               </div>
-              <div className="overflow-x-auto rounded-xl border border-border">
+              <div className="overflow-x-auto rounded-lg border border-border">
                 <table className="w-full min-w-[48rem] text-sm">
-                  <thead className="bg-surface-sunken text-xs uppercase tracking-wide text-ink-muted">
+                  <thead className="bg-surface-sunken text-xs text-ink-muted">
                     <tr>
                       <th className="px-3 py-2.5 text-left">{t(`dim.${dim}`)}</th>
                       <th className="px-3 py-2.5 text-center">{t('cmp.wroteBoth')}</th>
@@ -253,7 +253,7 @@ const CompareTests: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
                         <td className="px-3 py-2 text-center">
                           {r.n > 0 && (
                             <span className={cn(
-                              'rounded-full px-2 py-0.5 text-xs font-bold tabular-nums',
+                              'rounded-sm px-2 py-0.5 text-xs font-semibold tabular-nums',
                               Math.abs(r.change) < 1 ? 'bg-surface-sunken text-ink-muted'
                                 : r.change > 0 ? 'bg-success-50 text-success-600 dark:bg-success-500/15'
                                   : 'bg-error-50 text-error-600 dark:bg-error-500/15',

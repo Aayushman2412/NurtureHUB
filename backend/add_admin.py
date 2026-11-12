@@ -5,7 +5,7 @@ from app.models import User
 from app.auth import get_password_hash
 
 def main():
-    parser = argparse.ArgumentParser(description="Create or update an admin user in NurtureHUB.")
+    parser = argparse.ArgumentParser(description="Create or update an admin user in EduPoshan.")
     parser.add_argument("email", nargs="?", help="Admin user email")
     parser.add_argument("password", nargs="?", help="Admin user password")
     parser.add_argument("name", nargs="?", default=None, help="Admin user full name (optional)")

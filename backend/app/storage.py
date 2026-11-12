@@ -29,7 +29,7 @@ from typing import Optional
 
 from app.config import settings
 
-logger = logging.getLogger("nurturehub.storage")
+logger = logging.getLogger("eduposhan.storage")
 
 _client = None  # cached boto3 client (thread-safe for use once created)
 

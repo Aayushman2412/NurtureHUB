@@ -1,5 +1,5 @@
 """
-Put a reviewed language workbook back into NurtureHUB.
+Put a reviewed language workbook back into EduPoshan.
 
 Reads the file produced by scripts.export_translation_sheet and:
   * applies "Hindi - correction" over the Hindi in use;

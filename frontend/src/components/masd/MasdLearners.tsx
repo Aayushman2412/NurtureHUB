@@ -71,7 +71,7 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
   const head = (key: SortKey, label: string, left = false) => (
     <Th className={left ? 'text-left' : undefined}>
       <button type="button" onClick={() => toggleSort(key)}
-        className={cn('inline-flex cursor-pointer items-center gap-1 uppercase', sort.key === key && 'text-ink')}>
+        className={cn('inline-flex cursor-pointer items-center gap-1 ', sort.key === key && 'text-ink')}>
         {label}<ArrowDownUp className="size-3 opacity-60" />
       </button>
     </Th>
@@ -156,7 +156,7 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
     <div className="space-y-4">
       <MasdSupportStructure report={report} />
       <MasdMonitors report={report} />
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-3 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2">
         <p className="text-sm text-ink">{t('batchUpload.lead')}</p>
         <MasdBatchUpload project={report.project.slug} onDone={onChanged} />
       </div>
@@ -175,7 +175,7 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
       </div>
       <p className="text-xs text-ink-muted">{t('learners.hint')} {t('monitors.hint')}</p>
       {monitors.length > 0 && rows.some(l => !l.is_monitor) && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface-sunken px-3 py-2 text-sm">
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-sunken px-3 py-2 text-sm">
           <span className="font-semibold text-ink">{t('monitors.bulkLabel', { n: rows.filter(l => !l.is_monitor).length })}</span>
           <select value={bulkMonitor} onChange={e => setBulkMonitor(e.target.value)} aria-label={t('monitors.bulkPick')}
             className="cursor-pointer rounded-md border border-border bg-surface px-2 py-1 text-sm text-ink">
@@ -209,7 +209,7 @@ const MasdLearners: React.FC<{ report: MasdReport; onChanged: () => void }> = ({
               <td className="px-3 py-2">
                 <LearnerIdentity name={l.name} id={l.id} mobile={l.mobile} email={l.email} />
                 {(l.declared_mismatch ?? 0) > 0 && (
-                  <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-error-50 px-2 py-0.5 text-xs font-medium text-error-600 dark:bg-error-500/15"
+                  <span className="mt-0.5 inline-flex items-center gap-1 rounded-sm bg-error-50 px-2 py-0.5 text-xs font-medium text-error-600 dark:bg-error-500/15"
                     title={t('learners.mismatchTitle')}>
                     <Shuffle className="size-3" />{t('learners.mismatch', { count: l.declared_mismatch })}
                   </span>

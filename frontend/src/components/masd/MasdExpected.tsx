@@ -36,7 +36,7 @@ const kindOf = (g: MasdAgg, k: Kind): TypeAgg => {
 const MIN_FOR_RANK = 3;
 
 const BAND_COLORS: Record<OwnBand, string> = {
-  none: '#8E3B2F', b1_20: '#D6453D', b21_40: '#E0A11B', b41_60: '#C9B458', b61_80: '#7FB069', b81_100: '#2F9E56',
+  none: '#8E3B2F', b1_20: '#D6453D', b21_40: '#E0A11B', b41_60: '#C9B458', b61_80: '#7FB069', b81_100: '#228049',
 };
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
@@ -110,7 +110,7 @@ const MasdExpected: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({
       {example && (
         <Section icon={<Calculator />} title={t('expected.workedTitle')} subtitle={t('expected.workedSub')}>
           {exampleText.length > 0 && (
-            <div className="rounded-xl bg-surface-sunken p-4 text-sm leading-relaxed text-ink">
+            <div className="rounded-lg bg-surface-sunken p-4 text-sm leading-relaxed text-ink">
               <span className="font-semibold">{t('expected.exampleLead')}</span>{' '}
               {exampleText.join(' | ')}{' '}
               <span className="font-semibold">= {t('expected.exampleTotal', { n: example.expected.community.total })}</span>
@@ -140,7 +140,7 @@ const MasdExpected: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({
                       <td className="px-3 py-2 text-center text-ink-muted">{fmtDate(b.end_date)}</td>
                       <td className="px-3 py-2 text-center tabular-nums">{b.learners}</td>
                       <td className="px-3 py-2 text-center tabular-nums">{b.tranche_fu.join(' · ') || '—'}</td>
-                      <td className="px-3 py-2 text-center font-bold tabular-nums">{b.expected.community.total}</td>
+                      <td className="px-3 py-2 text-center font-semibold tabular-nums">{b.expected.community.total}</td>
                       <td className="px-3 py-2 text-center tabular-nums text-ink-muted">{b.expected.nurse.total}</td>
                     </tr>
                   ))}
@@ -189,15 +189,15 @@ const MasdExpected: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({
         />
         {best && worst && best.key !== worst.key && (
           <div className="mt-4 flex flex-wrap gap-2 text-sm">
-            <span className="rounded-full bg-success-50 px-3 py-1 font-medium text-success-600 dark:bg-success-500/15">
+            <span className="rounded-sm bg-success-50 px-3 py-1 font-medium text-success-600 dark:bg-success-500/15">
               {t('expected.best2', { name: best.label, pct: fmt1(kindOf(best, kind).activity_pct) })}
             </span>
-            <span className="rounded-full bg-error-50 px-3 py-1 font-medium text-error-600 dark:bg-error-500/15">
+            <span className="rounded-sm bg-error-50 px-3 py-1 font-medium text-error-600 dark:bg-error-500/15">
               {t('expected.worst2', { name: worst.label, pct: fmt1(kindOf(worst, kind).activity_pct) })}
             </span>
           </div>
         )}
-        <h4 className="mb-2 mt-6 flex items-center gap-2 text-base font-bold text-ink"><ChartScatter className="size-4" />{t('expected.bubbleTitle')}</h4>
+        <h4 className="mb-2 mt-6 flex items-center gap-2 text-base font-semibold text-ink"><ChartScatter className="size-4" />{t('expected.bubbleTitle')}</h4>
         <BubblePlot
           bubbles={groups.filter(g => kindOf(g, kind).adoption_pct != null && kindOf(g, kind).activity_pct != null).map(g => ({
             key: g.key, label: g.label, x: kindOf(g, kind).adoption_pct!, y: kindOf(g, kind).activity_pct!, size: g.learners,

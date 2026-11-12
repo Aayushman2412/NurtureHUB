@@ -58,4 +58,4 @@ Maharashtra's ICDS system; it goes out for review with the language workbook
 | Register / sign up | | पंजीकरण / साइन अप | नोंदणी / साइन अप |
 | Sign in / log in | | साइन इन / लॉग इन | साइन इन / लॉग इन |
 
-> Brand names (NurtureHUB, Google, YouTube, Excel) are kept in Latin script.
+> Brand names (EduPoshan, Google, YouTube, Excel) are kept in Latin script.

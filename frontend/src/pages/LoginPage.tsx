@@ -215,7 +215,7 @@ const LoginPage: React.FC = () => {
               autoCorrect="off"
               spellCheck={false}
               autoComplete="username"
-              placeholder="admin@nurturehub.org"
+              placeholder="name@example.org"
               value={adminEmail}
               onChange={e => setAdminEmail(e.target.value)}
               required

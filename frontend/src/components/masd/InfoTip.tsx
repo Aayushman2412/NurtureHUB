@@ -25,7 +25,7 @@ const InfoTip: React.FC<{ label: string; children: React.ReactNode }> = ({ label
       </button>
       {open && (
         <span role="tooltip"
-          className="absolute left-1/2 top-full z-(--z-dropdown) mt-1.5 w-72 -translate-x-1/2 rounded-xl border border-border bg-surface-raised p-3 text-left text-xs font-normal leading-relaxed text-ink shadow-lg">
+          className="absolute left-1/2 top-full z-(--z-dropdown) mt-1.5 w-72 -translate-x-1/2 rounded-lg border border-border bg-surface-raised p-3 text-left text-xs font-normal leading-relaxed text-ink shadow-(--shadow-overlay)">
           {children}
         </span>
       )}

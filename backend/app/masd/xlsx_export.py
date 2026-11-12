@@ -66,7 +66,7 @@ def build_workbook(report: Dict[str, Any]) -> BytesIO:
     wb.remove(wb.active)
     p, cal = report["project"], report["calendar"]
     tn = cal["targets"]["now"]
-    note = (f"NurtureHUB MASD · {p['name']} · as of {report['as_of']} · targets in force: ANC {tn['anc']}, "
+    note = (f"EduPoshan MASD · {p['name']} · as of {report['as_of']} · targets in force: ANC {tn['anc']}, "
             f"PNC <5M {tn['pnc_lt5']}, PNC ≥5M {tn['pnc_ge5']}, Staff Nurse {tn['nurse']} · each tranche's follow-up = "
             f"days since it opened (or the learner's batch ended, if later) − its buffer, rounded down to "
             f"{cal['step_days']}; expected = per tranche, the adoptions asked for × the table at its follow-up")

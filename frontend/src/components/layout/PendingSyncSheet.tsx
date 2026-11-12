@@ -82,7 +82,7 @@ const PendingSyncSheet: React.FC<PendingSyncSheetProps> = ({ open, onClose }) =>
             description={t('emptyDescription')}
           />
         ) : (
-          <ul className="divide-y divide-border rounded-xl border border-border">
+          <ul className="divide-y divide-border rounded-lg border border-border">
             {items.map(item => (
               <li key={item.id} className="flex items-center gap-3 p-3">
                 <div className="min-w-0 flex-1">

@@ -54,7 +54,7 @@ const RatingGrid: React.FC<RatingGridProps> = ({
                 'disabled:cursor-not-allowed disabled:opacity-60',
                 selected
                   ? 'border-primary bg-primary text-primary-fg font-semibold'
-                  : 'border-border-strong/60 text-ink-muted hover:border-primary hover:text-primary-ink',
+                  : 'border-border-control text-ink-muted hover:border-primary hover:text-primary-ink',
               )}
             >
               {n}
@@ -68,7 +68,7 @@ const RatingGrid: React.FC<RatingGridProps> = ({
   return (
     <div>
       {/* ≥sm: table layout */}
-      <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
+      <div className="hidden overflow-x-auto rounded-lg border border-border sm:block">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-sunken/50">
@@ -96,7 +96,7 @@ const RatingGrid: React.FC<RatingGridProps> = ({
       {/* mobile: one card per row, each scale stacked and labelled */}
       <div className="flex flex-col gap-3 sm:hidden">
         {rows.map(row => (
-          <div key={row.key} className="rounded-xl border border-border p-3.5">
+          <div key={row.key} className="rounded-lg border border-border p-3.5">
             <div className="mb-3 font-semibold text-ink">{row.label}</div>
             <div className="flex flex-col gap-3">
               {columns.map(col => (

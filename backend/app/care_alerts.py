@@ -134,7 +134,7 @@ def remind_learner(db: Session, learner: models.User, view: Dict[str, Any], now:
         sent += _send(db, kind="reminder_am", key=f"am:{learner.id}:{day}", learner_id=learner.id,
                       recipient_id=learner.id, child_id=None,
                       title=f"Today: {len(todo)} visit{'s' if len(todo) != 1 else ''}",
-                      message=f"Visit today: {_names(todo)}. Open NurtureHUB to start.", link="/dashboard")
+                      message=f"Visit today: {_names(todo)}. Open EduPoshan to start.", link="/dashboard")
     if 18 <= now.hour < 21:
         sent += _send(db, kind="reminder_pm", key=f"pm:{learner.id}:{day}", learner_id=learner.id,
                       recipient_id=learner.id, child_id=None,

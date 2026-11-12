@@ -7,7 +7,7 @@ import { ProgressBar } from '../ui';
 import { cn } from '../../utils/cn';
 
 const tone = (pct: number | null, pass: number) =>
-  pct == null ? 'amber' : pct >= 80 ? 'sage' : pct >= pass ? 'amber' : 'coral';
+  pct == null ? 'warning' : pct >= 80 ? 'success' : pct >= pass ? 'warning' : 'danger';
 
 /**
  * One test, topic by topic, with what to do about it (review of 18 Oct 2026,
@@ -29,10 +29,10 @@ const TestTopicsCard: React.FC<{ report: TestTopicReport; showTitle?: boolean }>
           focused first?"). */}
       {showTitle && (
         <div className="flex flex-col gap-1.5">
-          <h4 className="font-display text-base font-bold text-ink">{report.title}</h4>
-          <div className="flex flex-wrap items-baseline gap-x-2 rounded-xl border border-border bg-surface-sunken/70 px-3 py-2">
+          <h4 className="font-display text-base font-semibold text-ink">{report.title}</h4>
+          <div className="flex flex-wrap items-baseline gap-x-2 rounded-lg border border-border bg-surface-sunken/70 px-3 py-2">
             <span className="text-sm font-semibold text-ink-muted">{t('topics.total')}</span>
-            <span className="font-display text-2xl font-extrabold tabular-nums text-ink">{Math.round(report.score ?? 0)}%</span>
+            <span className="font-display text-2xl font-semibold tabular-nums text-ink">{Math.round(report.score ?? 0)}%</span>
             <span className="text-sm font-semibold text-ink">{t('topics.rightOf', { correct: report.correct, total: report.total })}</span>
           </div>
         </div>
@@ -44,7 +44,7 @@ const TestTopicsCard: React.FC<{ report: TestTopicReport; showTitle?: boolean }>
             <span className={cn('truncate text-sm', r.topic ? 'font-semibold text-ink' : 'text-ink-muted')}>
               {r.topic ?? (named.length ? t('topics.untagged') : t('topics.allQuestions'))}
             </span>
-            <span className="text-sm font-bold tabular-nums text-ink">
+            <span className="text-sm font-semibold tabular-nums text-ink">
               {Math.round(r.pct ?? 0)}% <span className="font-normal text-ink-muted">({r.correct}/{r.total})</span>
             </span>
             <div className="col-span-2"><ProgressBar value={r.pct ?? 0} tone={tone(r.pct, pass)} /></div>
@@ -53,7 +53,7 @@ const TestTopicsCard: React.FC<{ report: TestTopicReport; showTitle?: boolean }>
       </ul>
 
       {named.length > 0 && (
-        <div className="flex flex-col gap-2 rounded-xl bg-surface-sunken/70 p-3 text-sm">
+        <div className="flex flex-col gap-2 rounded-lg bg-surface-sunken/70 p-3 text-sm">
           {report.strong.length > 0 && (
             <p className="flex items-start gap-2 text-ink">
               <ThumbsUp className="mt-0.5 size-4 shrink-0 text-success-600" />

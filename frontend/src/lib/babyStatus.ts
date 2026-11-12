@@ -24,7 +24,7 @@ export const toneOf = (z: number | null | undefined): Tone | null =>
   z == null ? null : z < -1.5 ? 'red' : z < -1 ? 'yellow' : 'green';
 
 /** Fixed colours (not theme tokens) so a downloaded chart keeps them. */
-export const TONE_HEX: Record<Tone, string> = { green: '#21753F', yellow: '#B45309', red: '#DC2F2F' };
+export const TONE_HEX: Record<Tone, string> = { green: '#1B6B3C', yellow: '#9A6400', red: '#C62828' };
 
 export const TONE_CLASSES: Record<Status, { dot: string; soft: string; text: string; ring: string }> = {
   green: {

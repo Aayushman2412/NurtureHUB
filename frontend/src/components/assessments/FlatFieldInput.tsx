@@ -308,7 +308,7 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
                 <img
                   src={resolveAssetUrl(url)}
                   alt={field.label}
-                  className="max-h-48 rounded-xl border border-border object-contain"
+                  className="max-h-48 rounded-lg border border-border object-contain"
                 />
                 )}
                 <button
@@ -323,7 +323,7 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
                     }
                     onChange('');
                   }}
-                  className="absolute -right-2 -top-2 flex size-7 cursor-pointer items-center justify-center rounded-full border border-border bg-surface text-ink-muted shadow-sm hover:text-error-500"
+                  className="absolute -right-2 -top-2 flex size-7 cursor-pointer items-center justify-center rounded-full border border-border bg-surface text-ink-muted hover:text-error-500"
                 >
                   <X className="size-4" />
                 </button>
@@ -333,7 +333,7 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
                 type="button"
                 disabled={disabled || uploading}
                 onClick={() => fileRef.current?.click()}
-                className="flex w-fit cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border px-4 py-3 text-sm font-semibold text-ink-muted transition-colors hover:border-primary hover:text-primary-ink disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm font-semibold text-ink-muted transition-colors hover:border-primary hover:text-primary-ink disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {uploading ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -386,8 +386,8 @@ const OfflineMediaPreview: React.FC<{ mediaId: string; alt: string }> = ({ media
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [mediaId]);
-  if (!src) return <div className="h-24 w-32 animate-pulse rounded-xl bg-surface-sunken" />;
-  return <img src={src} alt={alt} className="max-h-48 rounded-xl border border-dashed border-amber-500/60 object-contain" />;
+  if (!src) return <div className="h-24 w-32 animate-pulse rounded-lg bg-surface-sunken" />;
+  return <img src={src} alt={alt} className="max-h-48 rounded-lg border border-dashed border-amber-500/60 object-contain" />;
 };
 
 export default FlatFieldInput;

@@ -49,7 +49,7 @@ const PasswordRules: React.FC<Props> = ({ password, policy, results, showTip = t
     <div
       id={id}
       className={cn(
-        'rounded-xl border p-3.5 transition-colors',
+        'rounded-lg border p-3.5 transition-colors',
         allMet ? 'border-success-500/40 bg-success-50 dark:bg-success-500/10' : 'border-border bg-surface-sunken',
         className,
       )}
@@ -66,7 +66,7 @@ const PasswordRules: React.FC<Props> = ({ password, policy, results, showTip = t
 
       <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-border" aria-hidden>
         <div
-          className={cn('h-full rounded-full transition-all duration-300', allMet ? 'bg-success-500' : met >= checkable.length - 1 ? 'bg-amber-500' : 'bg-error-500')}
+          className={cn('h-full rounded-full transition-colors duration-300', allMet ? 'bg-success-500' : met >= checkable.length - 1 ? 'bg-amber-500' : 'bg-error-500')}
           style={{ width: `${typed ? (met / checkable.length) * 100 : 0}%` }}
         />
       </div>

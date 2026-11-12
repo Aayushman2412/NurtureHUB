@@ -13,10 +13,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle2, ShieldCheck } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import client from '../api/client';
 import { Alert, Button, Card, Field, Input, Select, Spinner } from '../components/ui';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import Logo from '../components/brand/Logo';
 
 interface Notice {
   version: string;
@@ -95,8 +96,8 @@ const PrivacyPage: React.FC = () => {
     <div className="min-h-screen bg-surface-sunken">
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-5 py-4">
-          <Link to="/" className="flex items-center gap-2 font-display font-bold text-ink">
-            <ShieldCheck className="size-5 text-primary-ink" /> NurtureHUB
+          <Link to="/" className="rounded-md">
+            <Logo />
           </Link>
           <LanguageSwitcher />
         </div>
@@ -104,11 +105,11 @@ const PrivacyPage: React.FC = () => {
 
       <main className="mx-auto flex max-w-3xl flex-col gap-6 px-5 py-8">
         <div>
-          <h1 className="font-display text-3xl font-bold text-ink">Your information</h1>
+          <h1 className="font-display text-3xl font-semibold text-ink">Your information</h1>
           {notice && (
             <p className="mt-2 text-sm text-ink-muted">
               How {notice.collector} looks after the information you and your health worker record in
-              NurtureHUB. Notice version {notice.version}.
+              EduPoshan. Notice version {notice.version}.
             </p>
           )}
         </div>
@@ -118,7 +119,7 @@ const PrivacyPage: React.FC = () => {
         {notice && (
           <>
             <Card className="p-6">
-              <h2 className="font-display text-xl font-bold text-ink">What we use it for</h2>
+              <h2 className="font-display text-xl font-semibold text-ink">What we use it for</h2>
               <ul className="mt-3 flex flex-col gap-3">
                 {notice.purposes.map(p => (
                   <li key={p.purpose}>
@@ -137,14 +138,14 @@ const PrivacyPage: React.FC = () => {
             </Card>
 
             <Card className="p-6">
-              <h2 className="font-display text-xl font-bold text-ink">Children</h2>
+              <h2 className="font-display text-xl font-semibold text-ink">Children</h2>
               <p className="mt-2 text-sm text-ink">{notice.children}</p>
-              <h2 className="mt-5 font-display text-xl font-bold text-ink">Who else sees it</h2>
+              <h2 className="mt-5 font-display text-xl font-semibold text-ink">Who else sees it</h2>
               <p className="mt-2 text-sm text-ink">{notice.sharing}</p>
             </Card>
 
             <Card className="p-6">
-              <h2 className="font-display text-xl font-bold text-ink">Your rights</h2>
+              <h2 className="font-display text-xl font-semibold text-ink">Your rights</h2>
               <ul className="mt-3 list-disc pl-5 text-sm text-ink">
                 {notice.rights.map(r => (
                   <li key={r} className="mb-1">
@@ -165,7 +166,7 @@ const PrivacyPage: React.FC = () => {
         )}
 
         <Card className="p-6" id="request">
-          <h2 className="font-display text-xl font-bold text-ink">Ask us about your information</h2>
+          <h2 className="font-display text-xl font-semibold text-ink">Ask us about your information</h2>
 
           {submitted ? (
             <Alert variant="success" className="mt-4">

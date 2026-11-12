@@ -46,7 +46,7 @@ const formatDateTime = (iso: string | null): string =>
   iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—';
 
 const DEADLINE_TONE: Record<string, string> = {
-  overdue: 'text-error-600 dark:text-error-500 font-bold',
+  overdue: 'text-error-600 dark:text-error-500 font-semibold',
   due_soon: 'text-amber-700 dark:text-amber-500 font-semibold',
   pending: 'text-ink-muted',
   met: 'text-success-600 dark:text-success-500',
@@ -152,7 +152,7 @@ const OverviewTab: React.FC<{
       {/* Statutory clocks first — nothing on this page matters more. */}
       {deadlines.length > 0 && (
         <Card className="p-5 border-l-4 border-l-error-500">
-          <h3 className="font-display font-bold text-lg text-ink flex items-center gap-2 mb-1">
+          <h3 className="font-display font-semibold text-lg text-ink flex items-center gap-2 mb-1">
             <Clock className="size-5 text-error-600" /> Reporting deadlines running
           </h3>
           <p className="text-sm text-ink-muted mb-4">
@@ -194,28 +194,28 @@ const OverviewTab: React.FC<{
           icon={<Eye className="size-5" />}
           label="Patient records opened (24h)"
           value={overview.audit.phi_accesses_24h.toLocaleString()}
-          tone="coral"
+          tone="neutral"
           wrapLabel
         />
         <StatCard
           icon={<Download className="size-5" />}
           label="Records exported (7 days)"
           value={overview.audit.records_exported_7d.toLocaleString()}
-          tone={overview.audit.records_exported_7d > 0 ? 'amber' : 'neutral'}
+          tone={overview.audit.records_exported_7d > 0 ? 'warning' : 'neutral'}
           wrapLabel
         />
         <StatCard
           icon={<ShieldAlert className="size-5" />}
           label="Open alerts"
           value={overview.alerts.open_total}
-          tone={overview.alerts.open_total ? 'amber' : 'sage'}
+          tone={overview.alerts.open_total ? 'warning' : 'success'}
           wrapLabel
         />
         <StatCard
           icon={<UserX className="size-5" />}
           label="Access refused (24h)"
           value={overview.audit.denials_24h}
-          tone={overview.audit.denials_24h > 20 ? 'amber' : 'neutral'}
+          tone={overview.audit.denials_24h > 20 ? 'warning' : 'neutral'}
           wrapLabel
         />
       </div>
@@ -223,7 +223,7 @@ const OverviewTab: React.FC<{
       <div className="grid grid-cols-1 @4xl:grid-cols-2 gap-6">
         {/* Integrity: the claim everything else rests on. */}
         <Card className="p-5">
-          <h3 className="font-display font-bold text-lg text-ink flex items-center gap-2 mb-3">
+          <h3 className="font-display font-semibold text-lg text-ink flex items-center gap-2 mb-3">
             <Fingerprint className="size-5" /> Audit trail integrity
           </h3>
           {overview.audit.integrity_valid ? (
@@ -261,7 +261,7 @@ const OverviewTab: React.FC<{
         </Card>
 
         <Card className="p-5">
-          <h3 className="font-display font-bold text-lg text-ink flex items-center gap-2 mb-3">
+          <h3 className="font-display font-semibold text-lg text-ink flex items-center gap-2 mb-3">
             <Lock className="size-5" /> Protective controls
           </h3>
           <ul className="flex flex-col divide-y divide-border">
@@ -294,7 +294,7 @@ const OverviewTab: React.FC<{
       </div>
 
       <Card className="p-5">
-        <h3 className="font-display font-bold text-lg text-ink flex items-center gap-2 mb-3">
+        <h3 className="font-display font-semibold text-lg text-ink flex items-center gap-2 mb-3">
           <Database className="size-5" /> Encryption at rest
         </h3>
         {overview.encryption.enabled ? (
@@ -325,7 +325,7 @@ const OverviewTab: React.FC<{
       </Card>
 
       <Card className="p-5">
-        <h3 className="font-display font-bold text-base text-ink mb-2">Accountable contact</h3>
+        <h3 className="font-display font-semibold text-base text-ink mb-2">Accountable contact</h3>
         <p className="text-sm text-ink-muted">
           {overview.contacts.organisation} · {overview.contacts.dpo_name} ·{' '}
           <a href={`mailto:${overview.contacts.dpo_email}`} className="text-primary-ink hover:underline">
@@ -519,7 +519,7 @@ const AuditTab: React.FC = () => {
                 </Td>
                 <Td className="text-ink-muted whitespace-nowrap">{e.source_ip ?? '—'}</Td>
                 <Td className="text-right align-middle">
-                  {e.is_phi && <Badge variant="coral">patient data</Badge>}
+                  {e.is_phi && <Badge variant="info">patient data</Badge>}
                 </Td>
               </Tr>
             ))}
@@ -823,7 +823,7 @@ const IncidentsTab: React.FC<{ onChanged: () => void }> = ({ onChanged }) => {
                   </Td>
                   <Td>
                     {overdue.length > 0 ? (
-                      <span className="text-error-600 font-bold">{overdue.length} overdue</span>
+                      <span className="text-error-600 font-semibold">{overdue.length} overdue</span>
                     ) : unmet.length > 0 ? (
                       <span className="text-amber-700 font-semibold">{unmet.length} pending</span>
                     ) : (
@@ -965,7 +965,7 @@ const CreateIncidentModal: React.FC<{
           <Input
             value={form.controlling_system}
             onChange={e => setForm({ ...form, controlling_system: e.target.value })}
-            placeholder="e.g. the NurtureHUB application server, a shared export file, a state portal"
+            placeholder="e.g. the EduPoshan application server, a shared export file, a state portal"
           />
         </Field>
         <Field label="Why you reached that conclusion">
@@ -1106,7 +1106,7 @@ const IncidentDetailModal: React.FC<{
         {incident.summary && <p className="text-sm text-ink">{incident.summary}</p>}
 
         <div>
-          <h4 className="font-display font-bold text-base text-ink mb-2">Notification obligations</h4>
+          <h4 className="font-display font-semibold text-base text-ink mb-2">Notification obligations</h4>
           <Table density="compact" className="[&_td]:align-top [&_th]:align-bottom">
             <THead>
               <Tr>
@@ -1179,7 +1179,7 @@ const IncidentDetailModal: React.FC<{
 
         <div>
           <div className="flex items-center justify-between gap-3 mb-2">
-            <h4 className="font-display font-bold text-base text-ink">
+            <h4 className="font-display font-semibold text-base text-ink">
               Custody and fault evidence
             </h4>
             <Button variant="ghost" onClick={() => void loadEvidence()}>
@@ -1337,7 +1337,7 @@ const AccessTab: React.FC<{ onChanged: () => void }> = ({ onChanged }) => {
   return (
     <div className="flex flex-col gap-6">
       <Card className="p-5">
-        <h3 className="font-display font-bold text-lg text-ink flex items-center gap-2 mb-1">
+        <h3 className="font-display font-semibold text-lg text-ink flex items-center gap-2 mb-1">
           <KeyRound className="size-5" /> Your second factor
         </h3>
         <p className="text-sm text-ink-muted mb-4">
@@ -1358,7 +1358,7 @@ const AccessTab: React.FC<{ onChanged: () => void }> = ({ onChanged }) => {
             </p>
             <div className="rounded-lg bg-surface-sunken p-4">
               <div className="text-xs text-ink-muted mb-1">Setup key</div>
-              <code className="text-base font-mono tracking-wider break-all">{enrolment.secret_formatted}</code>
+              <code className="text-base font-mono break-all">{enrolment.secret_formatted}</code>
               <div className="mt-2">
                 <a href={enrolment.otpauth_uri} className="text-sm text-primary-ink hover:underline">
                   Open in authenticator app
@@ -1407,7 +1407,7 @@ const AccessTab: React.FC<{ onChanged: () => void }> = ({ onChanged }) => {
 
       {admins && (
         <Card className="p-5">
-          <h3 className="font-display font-bold text-lg text-ink mb-1">Administrator accounts</h3>
+          <h3 className="font-display font-semibold text-lg text-ink mb-1">Administrator accounts</h3>
           <p className="text-sm text-ink-muted mb-4">
             {admins.required
               ? 'A second factor is required for administrators on this deployment.'
@@ -1464,7 +1464,7 @@ const AccessTab: React.FC<{ onChanged: () => void }> = ({ onChanged }) => {
       )}
 
       <Card className="p-5">
-        <h3 className="font-display font-bold text-lg text-ink mb-1">Live sessions</h3>
+        <h3 className="font-display font-semibold text-lg text-ink mb-1">Live sessions</h3>
         <p className="text-sm text-ink-muted mb-4">
           Ending a session takes effect within seconds, on every server. This is the first
           containment step in almost every real incident.
@@ -1487,7 +1487,7 @@ const AccessTab: React.FC<{ onChanged: () => void }> = ({ onChanged }) => {
                 <Tr key={s.jti}>
                   <Td>
                     <div className="font-medium text-ink">{s.principal}</div>
-                    {s.is_admin && <Badge variant="coral">administrator</Badge>}
+                    {s.is_admin && <Badge variant="info">administrator</Badge>}
                     {s.is_admin && !s.mfa_satisfied && (
                       <Badge variant="warning" className="ml-1.5">
                         password only
@@ -1522,7 +1522,7 @@ const AccessTab: React.FC<{ onChanged: () => void }> = ({ onChanged }) => {
       </Card>
 
       <Card className="p-5">
-        <h3 className="font-display font-bold text-lg text-ink mb-1">Locked accounts</h3>
+        <h3 className="font-display font-semibold text-lg text-ink mb-1">Locked accounts</h3>
         <p className="text-sm text-ink-muted mb-4">
           Locked after repeated failed sign-ins. Lockouts clear themselves; unlock only when you have
           spoken to the person.
@@ -1613,7 +1613,7 @@ const GovernanceTab: React.FC<{ onChanged: () => void }> = ({ onChanged }) => {
   return (
     <div className="flex flex-col gap-6">
       <Card className="p-5">
-        <h3 className="font-display font-bold text-lg text-ink mb-1">
+        <h3 className="font-display font-semibold text-lg text-ink mb-1">
           Requests from mothers and guardians
         </h3>
         <p className="text-sm text-ink-muted mb-4">
@@ -1644,7 +1644,7 @@ const GovernanceTab: React.FC<{ onChanged: () => void }> = ({ onChanged }) => {
                     <div className="text-ink">{r.requested_by ?? '—'}</div>
                     <div className="text-xs text-ink-muted">{r.subject_identifier}</div>
                   </Td>
-                  <Td className={r.overdue ? 'text-error-600 font-bold' : 'text-ink-muted'}>
+                  <Td className={r.overdue ? 'text-error-600 font-semibold' : 'text-ink-muted'}>
                     {r.overdue ? 'overdue' : `${r.days_remaining ?? '—'} days`}
                   </Td>
                   <Td>
@@ -1675,7 +1675,7 @@ const GovernanceTab: React.FC<{ onChanged: () => void }> = ({ onChanged }) => {
 
       {consent && (
         <Card className="p-5">
-          <h3 className="font-display font-bold text-lg text-ink mb-1">Consent register</h3>
+          <h3 className="font-display font-semibold text-lg text-ink mb-1">Consent register</h3>
           <p className="text-sm text-ink-muted mb-4">
             Notice version <code>{consent.notice_version}</code> · {consent.subjects.mothers} mothers
             and {consent.subjects.children} children registered. A child's consent is given by her
@@ -1715,7 +1715,7 @@ const GovernanceTab: React.FC<{ onChanged: () => void }> = ({ onChanged }) => {
 
       {retention && (
         <Card className="p-5">
-          <h3 className="font-display font-bold text-lg text-ink mb-1">Retention schedule</h3>
+          <h3 className="font-display font-semibold text-lg text-ink mb-1">Retention schedule</h3>
           <p className="text-sm text-ink-muted mb-4">
             Logs must be kept at least {retention.cert_in_log_floor_days} days (CERT-In). Patient
             records are never deleted automatically — they are flagged for a human decision.
@@ -1796,7 +1796,7 @@ const GovernanceTab: React.FC<{ onChanged: () => void }> = ({ onChanged }) => {
       )}
 
       <Card className="p-5">
-        <h3 className="font-display font-bold text-lg text-ink mb-1">
+        <h3 className="font-display font-semibold text-lg text-ink mb-1">
           What data this platform holds
         </h3>
         <p className="text-sm text-ink-muted mb-4">
@@ -1805,11 +1805,11 @@ const GovernanceTab: React.FC<{ onChanged: () => void }> = ({ onChanged }) => {
         </p>
         <div className="flex flex-col gap-3">
           {ropa.map(a => (
-            <details key={a.key} className="rounded-xl border border-border p-4">
+            <details key={a.key} className="rounded-lg border border-border p-4">
               <summary className="cursor-pointer font-semibold text-ink">
                 {a.name}
                 {a.special_category && (
-                  <Badge variant="coral" className="ml-2">
+                  <Badge variant="info" className="ml-2">
                     health data
                   </Badge>
                 )}
@@ -1847,7 +1847,7 @@ const GovernanceTab: React.FC<{ onChanged: () => void }> = ({ onChanged }) => {
 
       {erasures.length > 0 && (
         <Card className="p-5">
-          <h3 className="font-display font-bold text-lg text-ink mb-1">Erasure register</h3>
+          <h3 className="font-display font-semibold text-lg text-ink mb-1">Erasure register</h3>
           <p className="text-sm text-ink-muted mb-4">
             Proof that data was destroyed, kept after the data itself is gone — identifiers, counts
             and a digest, never a copy of what was removed.
@@ -1931,7 +1931,7 @@ const RequestModal: React.FC<{
           <dt className="text-ink-muted">Received</dt>
           <dd className="text-ink">{formatDateTime(request.created_at)}</dd>
           <dt className="text-ink-muted">Due</dt>
-          <dd className={request.overdue ? 'text-error-600 font-bold' : 'text-ink'}>
+          <dd className={request.overdue ? 'text-error-600 font-semibold' : 'text-ink'}>
             {formatDateTime(request.due_at)}
           </dd>
         </dl>

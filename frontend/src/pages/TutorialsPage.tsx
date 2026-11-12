@@ -137,7 +137,7 @@ const TutorialsPage: React.FC = () => {
               <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 border-b border-border pb-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-display text-xl font-extrabold text-ink">{stage.title}</h3>
+                    <h3 className="font-display text-xl font-semibold text-ink">{stage.title}</h3>
                     {stage.is_locked && !isTestPhase(stage) && (
                       <Badge variant="error">
                         <Lock className="size-2.5" /> {t('locked')}
@@ -165,12 +165,12 @@ const TutorialsPage: React.FC = () => {
                     report={reports.find(r => r.test_id === stage.test!.id)}
                   />
                 ) : (
-                  <div className="rounded-xl border border-dashed border-border-strong/60 p-8 text-center text-sm text-ink-faint">
+                  <div className="rounded-lg border border-dashed border-border-control p-8 text-center text-sm text-ink-faint">
                     {t('testNotReady')}
                   </div>
                 )
               ) : filtered.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border-strong/60 p-8 text-center text-sm text-ink-faint">
+                <div className="rounded-lg border border-dashed border-border-control p-8 text-center text-sm text-ink-faint">
                   {t('empty.description')}
                 </div>
               ) : (
@@ -184,15 +184,15 @@ const TutorialsPage: React.FC = () => {
                       className="flex flex-col overflow-hidden"
                     >
                       {/* Thumbnail */}
-                      <div className="group relative flex h-40 items-center justify-center bg-gradient-to-br from-coral-500 to-sage-600 text-white">
-                        <div className="flex size-13 items-center justify-center rounded-full bg-cream-950/40 shadow-md transition-transform group-hover:scale-110">
-                          <Play className="ml-0.5 size-6 fill-white stroke-none" />
-                        </div>
-                        <span className="absolute left-3 top-3 rounded bg-cream-950/60 px-2 py-1 text-[12px] font-bold tracking-wide">
+                      <div className="group relative flex h-40 items-center justify-center bg-gray-900 text-white">
+                        <span className="flex size-12 items-center justify-center rounded-full border-2 border-white/80 transition-colors group-hover:bg-white/15">
+                          <Play className="ml-0.5 size-5 fill-white stroke-none" />
+                        </span>
+                        <span className="absolute left-3 top-3 rounded bg-gray-950/60 px-2 py-1 text-[12px] font-semibold ">
                           {tut.module_number}
                         </span>
                         {tut.is_completed && (
-                          <span className="absolute right-3 top-3 flex items-center gap-1 rounded bg-success-500 px-2 py-1 text-[12px] font-bold">
+                          <span className="absolute right-3 top-3 flex items-center gap-1 rounded bg-success-500 px-2 py-1 text-[12px] font-semibold">
                             <CheckCircle className="size-3" /> {t('completedBadge')}
                           </span>
                         )}
@@ -201,7 +201,7 @@ const TutorialsPage: React.FC = () => {
                       {/* Body */}
                       <div className="flex flex-1 flex-col justify-between p-5">
                         <div>
-                          <h4 className="mb-2 font-display text-base font-bold leading-tight text-ink">{tut.title}</h4>
+                          <h4 className="mb-2 font-display text-base font-semibold leading-tight text-ink">{tut.title}</h4>
                           <p className={cn('text-[13px] leading-snug text-ink-muted', 'line-clamp-2')}>
                             {tut.description}
                           </p>

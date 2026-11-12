@@ -1,4 +1,4 @@
-# Running NurtureHUB with Docker Compose
+# Running EduPoshan with Docker Compose
 
 A self-contained stack: **Postgres + FastAPI backend + nginx-served frontend**.
 The frontend's nginx reverse-proxies `/api` and `/ws` to the backend, so the whole

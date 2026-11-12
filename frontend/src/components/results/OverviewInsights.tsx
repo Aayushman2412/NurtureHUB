@@ -8,7 +8,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import {
   ArrowDown, ArrowRight, ArrowRightLeft, ArrowUp, ArrowUpDown, Award, BookOpenCheck, CheckCircle2, ClipboardCheck, Download, Filter, GraduationCap,
-  Lightbulb, PlayCircle, Search, Sparkles, UserPlus, Users, X,
+  Lightbulb, PlayCircle, Search, UserPlus, Users, X,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Badge, Button, Card, Input, LearnerIdentity, Pagination, useTableLayout } from '../ui';
@@ -173,7 +173,7 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
         className={cn(
           'cursor-pointer select-none pb-2 transition-colors hover:text-ink',
           align === 'center' ? 'text-center' : 'text-left',
-          active && 'text-primary font-bold',
+          active && 'text-primary font-semibold',
           extraClass,
         )}
       >
@@ -280,13 +280,11 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
     <div className="space-y-6">
       {/* Headline */}
       <Card className="overflow-hidden p-0">
-        <div className="bg-gradient-to-r from-coral-50 via-surface to-sage-50 p-5 sm:p-6 dark:from-coral-500/10 dark:via-surface dark:to-sage-500/10">
+        <div className="border-b border-border p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 max-w-3xl">
-              <div className="mb-1 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary-ink">
-                <Sparkles className="size-3.5" /> {t('hero.eyebrow')}
-              </div>
-              <h2 className="font-display text-xl font-extrabold text-ink sm:text-2xl">
+              <div className="mb-1 text-xs font-medium text-ink-muted">{t('hero.eyebrow')}</div>
+              <h2 className="font-display text-xl font-semibold text-ink sm:text-2xl">
                 {lastTest
                   ? t('hero.sentence', {
                     project: data.district_name, n: overall.n, passed: overall.tests[lastTest.id].passed,
@@ -296,7 +294,7 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
               </h2>
               <p className="mt-1 text-sm text-ink-muted">{t('hero.hint')}</p>
               {Object.keys(filters).length > 0 && (
-                <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
+                <div className="mt-3 inline-flex items-center gap-2 rounded-sm border border-amber-300 bg-amber-50 px-3 py-1 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
                   <Filter className="size-3 text-amber-700 dark:text-amber-400" />
                   <span>{t('focus.filteredNotice', { count: users.length, total: data.users.length })}</span>
                   <button
@@ -320,12 +318,12 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
       <KpiRow count={3 + tests.length}>
         <Kpi
           visual={(
-            <span className="flex size-[76px] items-center justify-center rounded-full bg-coral-50 text-coral-600 dark:bg-coral-500/15 dark:text-coral-300">
+            <span className="flex size-[76px] items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
               <Users className="size-8" />
             </span>
           )}
           label={t('kpi.learners')}
-          value={<span className="font-display text-2xl font-extrabold">{overall.n.toLocaleString()}</span>}
+          value={<span className="font-display text-2xl font-semibold">{overall.n.toLocaleString()}</span>}
         />
         <Kpi
           visual={<Ring value={pctOf(overall.finishedVideos, overall.n)} />}
@@ -345,7 +343,7 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
           );
         })}
         <Kpi
-          visual={<Ring value={pctOf(overall.selected, overall.n)} color="var(--color-coral-500)" />}
+          visual={<Ring value={pctOf(overall.selected, overall.n)} color="var(--color-brand-500)" />}
           label={t('kpi.selected')}
           value={<Trans t={t} i18nKey="kpi.nOfM" values={{ n: overall.selected, m: overall.n }} components={{ b: <strong /> }} />}
         />
@@ -409,9 +407,9 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
                       [t('test.passed'), String(s.passed), BAND_COLORS.excellent],
                       [t('test.avgScore'), fmtPct(s.avgScore), toneColor(s.avgScore)],
                     ] as [string, string, string | undefined][]).map(([label, value, color]) => (
-                      <div key={label} className="min-w-0 rounded-xl bg-surface-sunken px-2 py-3">
+                      <div key={label} className="min-w-0 rounded-lg bg-surface-sunken px-2 py-3">
                         <dt className="text-xs font-medium leading-tight text-ink-muted sm:text-sm">{label}</dt>
-                        <dd className="font-display text-xl font-extrabold text-ink sm:text-2xl" style={color ? { color } : undefined}>{value}</dd>
+                        <dd className="font-display text-xl font-semibold text-ink sm:text-2xl" style={color ? { color } : undefined}>{value}</dd>
                       </div>
                     ))}
                   </dl>
@@ -434,17 +432,17 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
       {pair && pair.n > 0 && (
         <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
           <div className="flex min-w-0 items-center gap-4">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-coral-50 text-coral-600 dark:bg-coral-500/15 dark:text-coral-300">
+            <span className="inline-flex shrink-0 text-brand-600 dark:text-brand-300">
               <ArrowRightLeft className="size-5" />
             </span>
             <div className="min-w-0">
-              <div className="font-display text-lg font-bold text-ink">
+              <div className="font-display text-lg font-semibold text-ink">
                 {t('nav.compare', { a: tests[0].label, b: tests[tests.length - 1].label })}
               </div>
               <div className="flex flex-wrap items-center gap-2 text-sm text-ink-muted">
-                <span className="font-bold tabular-nums" style={{ color: TEST_A_COLOR }}>{fmtPct(pair.avgA)}</span>
+                <span className="font-semibold tabular-nums" style={{ color: TEST_A_COLOR }}>{fmtPct(pair.avgA)}</span>
                 <ArrowRight className="size-3.5" />
-                <span className="font-bold tabular-nums" style={{ color: TEST_B_COLOR }}>{fmtPct(pair.avgB)}</span>
+                <span className="font-semibold tabular-nums" style={{ color: TEST_B_COLOR }}>{fmtPct(pair.avgB)}</span>
                 <span>{t('nav.compareTeaser', { n: pair.n, change: signed(pair.change) })}</span>
               </div>
             </div>
@@ -500,9 +498,9 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
               <h4 className="text-sm font-semibold text-ink">{t('scorecard.title', { dim: t(`dim.${dim}`) })}</h4>
               <ToneLegend good={t('scorecard.good')} ok={t('scorecard.ok')} low={t('scorecard.low')} />
             </div>
-            <div className="overflow-x-auto rounded-xl border border-border">
+            <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[40rem] text-sm">
-                <thead className="bg-surface-sunken text-xs uppercase tracking-wide text-ink-muted">
+                <thead className="bg-surface-sunken text-xs text-ink-muted">
                   <tr>
                     <th className="px-3 py-2.5 text-left">{t(`dim.${dim}`)}</th>
                     <th className="px-3 py-2.5 text-center">{t('scorecard.learners')}</th>
@@ -568,7 +566,7 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
                   selectHint={t('compare.clickHint')}
                 />
               </div>
-              <div className="self-center rounded-xl bg-surface-sunken p-4 text-sm leading-relaxed text-ink-muted">
+              <div className="self-center rounded-lg bg-surface-sunken p-4 text-sm leading-relaxed text-ink-muted">
                 <Lightbulb className="mb-2 size-5 text-primary-ink" />
                 {t('compare.selectedExplain')}
               </div>
@@ -586,17 +584,17 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
             <p className="text-sm text-ink">{t('videos.howToRead')}</p>
             <GradientLegend low={t('videos.legendLow')} high={t('videos.legendHigh')} />
           </div>
-          <div className="max-h-[70vh] overflow-auto rounded-xl border border-border">
+          <div className="max-h-[70vh] overflow-auto rounded-lg border border-border">
             <table className="w-max min-w-full border-separate border-spacing-0 text-sm">
               <thead className="sticky top-0 z-[2] bg-surface-sunken text-ink">
                 <tr>
-                  <th rowSpan={2} className="sticky left-0 z-[3] min-w-56 border-b border-r border-border bg-surface-sunken px-3 py-2 text-left align-bottom text-sm font-bold">
+                  <th rowSpan={2} className="sticky left-0 z-[3] min-w-56 border-b border-r border-border bg-surface-sunken px-3 py-2 text-left align-bottom text-sm font-semibold">
                     {t('videos.video')}
                   </th>
                   {videoGroups.map(g => (
                     <th key={g.key} colSpan={2}
-                      className={cn('border-b border-l border-border px-2 pt-2 text-center text-sm font-bold',
-                        g.key === '__all__' && 'bg-coral-50 dark:bg-coral-500/10')}>
+                      className={cn('border-b border-l border-border px-2 pt-2 text-center text-sm font-semibold',
+                        g.key === '__all__' && 'bg-brand-50 dark:bg-brand-500/10')}>
                       <div className="max-w-40 truncate" title={g.label}>{g.label}</div>
                       <div className="text-xs font-semibold text-ink-muted">n = {g.n}</div>
                     </th>
@@ -605,8 +603,8 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
                 <tr>
                   {videoGroups.map(g => (
                     <React.Fragment key={g.key}>
-                      <th className={cn('border-b border-l border-border px-2 pb-1.5 text-xs font-semibold text-ink-muted', g.key === '__all__' && 'bg-coral-50 dark:bg-coral-500/10')}>{t('videos.finishedShort')}</th>
-                      <th className={cn('border-b border-border px-2 pb-1.5 text-xs font-semibold text-ink-muted', g.key === '__all__' && 'bg-coral-50 dark:bg-coral-500/10')}>{t('videos.quizShort')}</th>
+                      <th className={cn('border-b border-l border-border px-2 pb-1.5 text-xs font-semibold text-ink-muted', g.key === '__all__' && 'bg-brand-50 dark:bg-brand-500/10')}>{t('videos.finishedShort')}</th>
+                      <th className={cn('border-b border-border px-2 pb-1.5 text-xs font-semibold text-ink-muted', g.key === '__all__' && 'bg-brand-50 dark:bg-brand-500/10')}>{t('videos.quizShort')}</th>
                     </React.Fragment>
                   ))}
                 </tr>
@@ -695,7 +693,7 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[40rem] text-sm">
-                <thead className="sticky top-0 z-[1] bg-surface text-xs uppercase tracking-wide text-ink-muted">
+                <thead className="sticky top-0 z-[1] bg-surface text-xs text-ink-muted">
                   <tr>
                     {renderSortHeader('rank', '#', 'left', 'w-12')}
                     {renderSortHeader('name', t('top.learnerId'), 'left')}
@@ -728,14 +726,14 @@ const OverviewInsights: React.FC<{ ctx: InsightCtx }> = ({ ctx }) => {
                         );
                       })}
                       {topLayout.show('average') && (
-                        <td className={cn(topLayout.pad, 'text-center font-display font-extrabold tabular-nums text-ink')}>
+                        <td className={cn(topLayout.pad, 'text-center font-display font-semibold tabular-nums text-ink')}>
                           {fmtPct(avgScore)}
                         </td>
                       )}
                       {topLayout.show('f2f') && (
                         <td className={cn(topLayout.pad, 'text-center')}>
                           {u.face_to_face.selected
-                            ? <Badge variant="coral" size="sm">{t('top.selected')}</Badge>
+                            ? <Badge variant="info" size="sm">{t('top.selected')}</Badge>
                             : <span className="text-ink-faint">—</span>}
                         </td>
                       )}

@@ -154,13 +154,13 @@ const RunsPanel: React.FC<RunsPanelProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-border bg-surface p-4">{triggerControls}</div>
+      <div className="rounded-lg border border-border bg-surface p-4">{triggerControls}</div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         {/* Run history */}
         <Card className="xl:col-span-1">
           <CardBody className="space-y-1 p-3">
-            <div className="px-2 pb-2 font-display text-sm font-bold text-ink">
+            <div className="px-2 pb-2 font-display text-sm font-semibold text-ink">
               {t('runs.historyTitle')}
             </div>
             {runs.length === 0 && (
@@ -173,12 +173,12 @@ const RunsPanel: React.FC<RunsPanelProps> = ({
                 className={
                   'w-full rounded-lg border px-3 py-2.5 text-left transition-colors cursor-pointer ' +
                   (selectedRun?.id === run.id
-                    ? 'border-coral-300 bg-coral-50 dark:bg-coral-500/10'
+                    ? 'border-brand-300 bg-brand-50 dark:bg-brand-500/10'
                     : 'border-transparent hover:bg-surface-sunken')
                 }
               >
                 <div className="flex items-center gap-2">
-                  <span className="font-display text-sm font-bold text-ink">#{run.id}</span>
+                  <span className="font-display text-sm font-semibold text-ink">#{run.id}</span>
                   {variantLabels && (
                     <span className="rounded bg-surface-sunken px-1.5 py-0.5 text-[12px] font-semibold text-ink-muted">
                       {variantLabels[run.variant] || run.variant}
@@ -216,7 +216,7 @@ const RunsPanel: React.FC<RunsPanelProps> = ({
               <Card>
                 <CardBody className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-display text-base font-extrabold text-ink">
+                    <span className="font-display text-base font-semibold text-ink">
                       {t('runs.runTitle', { id: selectedRun.id })}
                     </span>
                     <Badge variant={statusBadgeVariant(selectedRun.status)}>
@@ -291,7 +291,7 @@ const RunsPanel: React.FC<RunsPanelProps> = ({
               </Card>
 
               {selectedPaths.size > 0 && (
-                <div className="sticky top-2 z-10 flex items-center gap-3 rounded-xl border border-coral-300 bg-coral-50 px-4 py-2.5 shadow-(--shadow-card) dark:bg-coral-500/10">
+                <div className="sticky top-2 z-10 flex items-center gap-3 rounded-lg border border-brand-300 bg-brand-50 px-4 py-2.5 dark:bg-brand-500/10">
                   <span className="text-sm font-semibold text-ink">
                     {t('runs.selectedCount', { n: selectedPaths.size })}
                   </span>
@@ -330,7 +330,7 @@ const RunsPanel: React.FC<RunsPanelProps> = ({
                         checked={files.every(f => selectedPaths.has(f.path))}
                         onChange={() => toggleSection(files)}
                       />
-                      <span className="font-display text-sm font-bold text-ink">{section}</span>
+                      <span className="font-display text-sm font-semibold text-ink">{section}</span>
                       <span className="text-xs text-ink-muted">({files.length})</span>
                       <span className="ml-auto" />
                       <Button
@@ -391,7 +391,7 @@ const RunsPanel: React.FC<RunsPanelProps> = ({
                     {collapsible && (hiddenCount > 0 || expanded) && (
                       <button
                         type="button"
-                        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border py-2 text-xs font-semibold text-ink-muted hover:border-coral-500 hover:text-coral-600 dark:hover:text-coral-300"
+                        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border py-2 text-xs font-semibold text-ink-muted hover:border-brand-500 hover:text-brand-600 dark:hover:text-brand-300"
                         onClick={() =>
                           setExpandedSections(prev => {
                             const next = new Set(prev);
@@ -440,7 +440,7 @@ const RunsPanel: React.FC<RunsPanelProps> = ({
           <pre
             ref={logRef}
             onScroll={handleLogScroll}
-            className="max-h-[55vh] overflow-auto whitespace-pre-wrap rounded-xl bg-surface-sunken p-4 font-mono text-xs leading-relaxed text-ink"
+            className="max-h-[55vh] overflow-auto whitespace-pre-wrap rounded-lg bg-surface-sunken p-4 font-mono text-xs leading-relaxed text-ink"
           >
             {logText}
           </pre>

@@ -56,7 +56,7 @@ const SelectionAnnouncement: React.FC = () => {
   if (!info) return null;
   const announced = !!info.announced_at;
   return (
-    <Card accent={announced ? 'sage' : 'amber'} className="mb-4 flex flex-wrap items-center gap-4 p-4">
+    <Card accent={announced ? 'success' : 'warning'} className="mb-4 flex flex-wrap items-center gap-4 p-4">
       <Megaphone className="size-5 shrink-0 text-primary-ink" />
       <div className="min-w-0 flex-1 basis-72 text-sm">
         <p className="font-semibold text-ink">

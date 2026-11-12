@@ -43,8 +43,8 @@ const Dropdown: React.FC<DropdownProps> = ({ trigger, items, align = 'left', cla
         <div
           role="menu"
           className={cn(
-            'absolute top-full mt-2 min-w-44 rounded-xl border border-border bg-surface-raised shadow-lg',
-            'py-1.5 z-(--z-dropdown) animate-fade-in',
+            'absolute top-full mt-2 min-w-44 rounded-lg border border-border bg-surface-raised shadow-(--shadow-overlay)',
+            'py-1.5 z-(--z-dropdown) animate-overlay-in',
             align === 'right' ? 'right-0' : 'left-0',
           )}
         >

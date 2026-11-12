@@ -61,7 +61,7 @@ const PanelHeader: React.FC<{
   <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border bg-surface px-4 py-3">
     <div className="flex items-center gap-2">
       {kind === 'section' ? (
-        <Layers className="size-4 text-sage-600 dark:text-sage-300" />
+        <Layers className="size-4 text-success-600 dark:text-success-300" />
       ) : kind === 'info' ? (
         <Info className="size-4 text-info-600" />
       ) : kind === 'matrix' ? (
@@ -69,7 +69,7 @@ const PanelHeader: React.FC<{
       ) : (
         <CircleHelp className="size-4 text-primary-ink" />
       )}
-      <h3 className="font-display text-sm font-bold text-ink">{label}</h3>
+      <h3 className="font-display text-sm font-semibold text-ink">{label}</h3>
     </div>
     <button
       type="button"
@@ -106,7 +106,7 @@ const FormInfoPanel: React.FC<{
   return (
     <div className="space-y-5 p-4">
       <div>
-        <h3 className="font-display text-sm font-bold text-ink">Form overview</h3>
+        <h3 className="font-display text-sm font-semibold text-ink">Form overview</h3>
         <p className="mt-1 text-xs leading-relaxed text-ink-muted">
           Select a card on the canvas to edit it, drag cards to arrange the flow, and use the
           crosshair buttons to connect answers to follow-up steps.
@@ -131,8 +131,8 @@ const FormInfoPanel: React.FC<{
           { label: 'Steps', value: steps },
         ].map(s => (
           <div key={s.label} className="rounded-lg border border-border bg-surface-sunken/50 px-2 py-2.5">
-            <div className="font-display text-lg font-bold text-ink">{s.value}</div>
-            <div className="text-xs font-semibold uppercase tracking-wider text-ink-faint">{s.label}</div>
+            <div className="font-display text-lg font-semibold text-ink">{s.value}</div>
+            <div className="text-xs font-semibold text-ink-faint">{s.label}</div>
           </div>
         ))}
       </div>
@@ -199,7 +199,7 @@ const FormInfoPanel: React.FC<{
           </LegendRow>
           <LegendRow
             swatch={
-              <span className="rounded-full bg-primary px-1.5 py-px text-xs font-extrabold uppercase text-primary-fg">
+              <span className="rounded-sm bg-primary px-1.5 py-px text-xs font-semibold text-primary-fg">
                 Start
               </span>
             }
@@ -301,11 +301,11 @@ const SectionPanel: React.FC<{
                   key={child.id}
                   className={cn(
                     'rounded-lg border bg-surface transition-colors',
-                    expanded ? 'border-border-strong/70 shadow-(--shadow-card)' : 'border-border',
+                    expanded ? 'border-border-strong/70 ' : 'border-border',
                   )}
                 >
                   <div className="flex items-center gap-2 py-2 pl-2.5 pr-1.5">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded bg-surface-sunken text-xs font-bold text-ink-muted">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded bg-surface-sunken text-xs font-semibold text-ink-muted">
                       {i + 1}
                     </span>
                     <button
@@ -416,7 +416,7 @@ const QuestionPanel: React.FC<{
       <PanelHeader label="Question" kind="question" onClose={() => onSelect(null)} />
       <div className="p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <Badge variant="coral">{QUESTION_TYPE_LABELS[node.questionType]}</Badge>
+          <Badge variant="info">{QUESTION_TYPE_LABELS[node.questionType]}</Badge>
           {sections.length > 0 && (
             <select
               className="max-w-[190px] cursor-pointer rounded-md border border-border bg-surface px-2 py-1 text-[12px] font-semibold text-ink-muted hover:border-border-strong"

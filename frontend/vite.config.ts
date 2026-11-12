@@ -21,17 +21,17 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
       manifest: {
-        name: 'NurtureHUB — ICDS Training & Field Assessments',
-        short_name: 'NurtureHUB',
+        name: 'EduPoshan',
+        short_name: 'EduPoshan',
         description:
-          'Training, assessments and mother/child field data collection for ICDS health workers.',
+          'Training, tests and mother and child field records for ICDS health workers.',
         lang: 'en',
         start_url: '/',
         scope: '/',
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#F8F5EF',
-        theme_color: '#E85D4C',
+        background_color: '#F6F8F9',
+        theme_color: '#0F5562',
         categories: ['health', 'education', 'productivity'],
         icons: [
           { src: '/pwa-64x64.png', sizes: '64x64', type: 'image/png' },

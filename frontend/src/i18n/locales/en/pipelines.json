@@ -157,7 +157,7 @@
   },
   "rawdata": {
     "title": "Raw Data",
-    "description": "Generate the pipelines' raw input files straight from the data learners collected in NurtureHUB, then push them into the pipeline inputs with one click.",
+    "description": "Generate the pipelines' raw input files straight from the data learners collected in EduPoshan, then push them into the pipeline inputs with one click.",
     "tab": {
       "crosstabs": "Crosstabs raw data",
       "masd": "MASD raw data"

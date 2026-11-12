@@ -29,7 +29,7 @@ const MasdSplitBar: React.FC<{
   };
 
   return (
-    <div className="space-y-2 rounded-2xl border border-border bg-surface px-3 py-2.5">
+    <div className="space-y-2 rounded-lg border border-border bg-surface px-3 py-2.5">
       <SplitFilterRow<MasdDim>
         mode={state.mode}
         onMode={mode => onChange(s => ({ ...s, mode }))}
@@ -50,7 +50,7 @@ const MasdSplitBar: React.FC<{
           {active.map(([d, v]) => (
             <button key={d} type="button"
               onClick={() => onChange(s => ({ ...s, filters: { ...s.filters, [d]: [] } }))}
-              className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-900 hover:bg-amber-200 dark:bg-amber-500/15 dark:text-amber-300">
+              className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 font-medium text-amber-900 hover:bg-amber-200 dark:bg-amber-500/15 dark:text-amber-300">
               {t(`splitDims.${d}`)}: {v.join(', ')} <X className="size-3" />
             </button>
           ))}

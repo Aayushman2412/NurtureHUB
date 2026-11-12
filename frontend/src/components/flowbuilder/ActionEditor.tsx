@@ -202,7 +202,7 @@ const ActionEditor: React.FC<ActionEditorProps> = ({ action, onChange }) => {
               key={action.url}
               controls
               src={resolveAssetUrl(action.url)}
-              className="w-full rounded-lg border border-border bg-cream-950"
+              className="w-full rounded-lg border border-border bg-gray-950"
             />
           )}
         </>

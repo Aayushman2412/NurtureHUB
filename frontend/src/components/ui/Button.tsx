@@ -6,16 +6,24 @@ export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'dan
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 const base =
-  'inline-flex items-center justify-center gap-2 font-display font-semibold rounded-lg ' +
-  'transition-all duration-150 cursor-pointer select-none whitespace-nowrap ' +
+  'inline-flex items-center justify-center gap-2 rounded-md border font-semibold ' +
+  'transition-colors duration-150 cursor-pointer select-none whitespace-nowrap ' +
   'disabled:opacity-50 disabled:pointer-events-none';
 
+/**
+ * One filled button per view (`primary`). `outline` is the everyday button for
+ * everything else; `secondary` is the tinted step between the two, for a second
+ * action that still matters. Nothing lifts or casts a shadow: the colour change
+ * is the feedback.
+ */
 const variants: Record<ButtonVariant, string> = {
-  primary: 'bg-primary text-primary-fg hover:bg-primary-hover shadow-sm hover:shadow-md active:translate-y-px',
-  secondary: 'bg-sage-600 text-white hover:bg-sage-700 shadow-sm active:translate-y-px dark:bg-sage-500 dark:hover:bg-sage-400 dark:text-sage-950',
-  outline: 'border-2 border-primary text-primary-ink bg-transparent hover:bg-coral-50 dark:hover:bg-coral-950/40',
-  ghost: 'text-ink-muted hover:text-ink hover:bg-surface-sunken',
-  danger: 'bg-error-500 text-white hover:bg-error-600 shadow-sm active:translate-y-px',
+  primary: 'border-transparent bg-primary text-primary-fg hover:bg-primary-hover',
+  secondary:
+    'border-brand-200 bg-brand-50 text-primary-ink hover:bg-brand-100 ' +
+    'dark:border-brand-500/40 dark:bg-brand-500/15 dark:hover:bg-brand-500/25',
+  outline: 'border-border-control bg-surface text-ink hover:bg-surface-sunken',
+  ghost: 'border-transparent text-ink-muted hover:bg-surface-sunken hover:text-ink',
+  danger: 'border-transparent bg-error-500 text-white hover:bg-error-600',
 };
 
 /**
@@ -24,9 +32,9 @@ const variants: Record<ButtonVariant, string> = {
  * for a mouse, a miss-tap for a health worker holding a baby in one hand.
  */
 const sizes: Record<ButtonSize, string> = {
-  sm: 'text-sm px-3 py-1.5 rounded-md min-h-11 sm:min-h-0',
-  md: 'text-sm px-4 py-2.5 min-h-11 sm:min-h-0',
-  lg: 'text-base px-6 py-3',
+  sm: 'text-sm px-3 py-1.5 min-h-11 sm:min-h-0',
+  md: 'text-sm px-4 py-2 min-h-11 sm:min-h-0',
+  lg: 'text-base px-5 py-2.5 min-h-12',
 };
 
 /** Class string for styling non-button elements (e.g. router <Link>) like a Button. */

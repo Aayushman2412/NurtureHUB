@@ -67,8 +67,8 @@ const ImagePicker: React.FC<ImagePickerProps> = ({ url, onChange, small, label }
           disabled={busy}
           onClick={() => inputRef.current?.click()}
           className={cn(
-            'flex items-center gap-1.5 rounded-lg border border-dashed border-border-strong/60 px-2.5 text-ink-muted',
-            'hover:border-coral-500 hover:text-coral-600 cursor-pointer disabled:opacity-50 dark:hover:text-coral-300',
+            'flex items-center gap-1.5 rounded-lg border border-dashed border-border-control px-2.5 text-ink-muted',
+            'hover:border-brand-500 hover:text-brand-600 cursor-pointer disabled:opacity-50 dark:hover:text-brand-300',
             small ? 'h-10 text-[12px]' : 'h-9 text-xs',
           )}
         >
@@ -118,7 +118,7 @@ const TestQuestionEditor: React.FC<Props> = ({
   const canSave = !!value.text.trim() && filled.length >= 2;
 
   return (
-    <div className="rounded-xl border border-coral-500/30 bg-coral-50/40 p-4 dark:bg-coral-500/5">
+    <div className="rounded-lg border border-brand-500/30 bg-brand-50/40 p-4 dark:bg-brand-500/5">
       <div>
         <FieldLabel size="sm">{t('editor.questionText')} *</FieldLabel>
         <textarea
@@ -163,7 +163,7 @@ const TestQuestionEditor: React.FC<Props> = ({
                     onChange={() => set({ correct_answer: label })}
                     className="size-4 accent-success-500"
                   />
-                  <span className="w-4 text-xs font-bold text-ink-muted">{label}</span>
+                  <span className="w-4 text-xs font-semibold text-ink-muted">{label}</span>
                 </label>
                 <Input
                   className="flex-1"
@@ -221,7 +221,7 @@ const TestQuestionEditor: React.FC<Props> = ({
         <p className="mt-1 text-[12px] text-ink-faint">{t('editor.marksHint', { n: defaultMarks })}</p>
       </div>
 
-      {locked && <p className="mt-3 text-[13px] text-warning-700 dark:text-warning-300">{t('editor.lockedNote')}</p>}
+      {locked && <p className="mt-3 text-[13px] text-amber-700 dark:text-amber-300">{t('editor.lockedNote')}</p>}
       {error && <p className="mt-3 text-[13px] text-error-600">{error}</p>}
 
       <div className="mt-4 flex items-center justify-between gap-3">

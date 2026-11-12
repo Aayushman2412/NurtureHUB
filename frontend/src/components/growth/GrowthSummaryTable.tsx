@@ -504,7 +504,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
       </div>
 
       {showControls && (
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl border border-border bg-surface p-3">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-lg border border-border bg-surface p-3">
           <label className="flex items-center gap-2 text-sm text-ink-muted">
             {t('summary.width')}
             <input
@@ -532,7 +532,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
                 type="button"
                 onClick={() => toggleGroup(id)}
                 className={cn(
-                  'rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                  'rounded-sm border px-2.5 py-1 text-xs font-medium transition-colors',
                   hidden.has(id)
                     ? 'border-border bg-surface text-ink-faint line-through'
                     : 'border-primary/30 bg-primary/10 text-primary-ink',
@@ -555,7 +555,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
       )}
 
       {mock && (
-        <div className="flex items-start gap-2 rounded-xl border border-amber-300/70 bg-amber-50 px-3 py-2 text-[13px] text-amber-700">
+        <div className="flex items-start gap-2 rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2 text-[13px] text-amber-700">
           <Info className="mt-0.5 size-4 shrink-0" />
           <span>{t('summary.mockBanner')}</span>
         </div>
@@ -563,11 +563,11 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
 
       {/* cases as columns: one column per case, the measures down the side */}
       {transposed && (
-        <div className="max-h-[75vh] overflow-auto rounded-xl border border-border bg-surface">
+        <div className="max-h-[75vh] overflow-auto rounded-lg border border-border bg-surface">
           <table className="border-collapse text-sm" style={{ width: 'max-content' }}>
             <thead className="sticky top-0 z-30">
               <tr>
-                <th className="sticky left-0 z-10 min-w-36 max-w-44 border-b border-r border-border-strong bg-surface-sunken px-2 py-1.5 text-left text-[12px] font-bold uppercase tracking-wide text-ink-muted">
+                <th className="sticky left-0 z-10 min-w-36 max-w-44 border-b border-r border-border-strong bg-surface-sunken px-2 py-1.5 text-left text-[12px] font-semibold text-ink-muted">
                   {t('summary.measure')}
                 </th>
                 {rows.slice(0, shown).map((r, i) => (
@@ -589,7 +589,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
               {visibleGroups.filter(g => g.id !== 'identity').map(g => (
                 <React.Fragment key={g.id}>
                   <tr>
-                    <td colSpan={1 + Math.min(shown, rows.length)} className="border-b border-border-strong bg-surface-sunken/70 px-2 py-1 text-[12px] font-bold uppercase tracking-wide text-ink-muted">
+                    <td colSpan={1 + Math.min(shown, rows.length)} className="border-b border-border-strong bg-surface-sunken/70 px-2 py-1 text-[12px] font-semibold text-ink-muted">
                       <span className="sticky left-2">{g.title}</span>
                     </td>
                   </tr>
@@ -616,7 +616,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
       )}
 
       {/* table */}
-      <div onScroll={onTableScroll} className={cn('max-h-[70vh] overflow-auto rounded-xl border border-border bg-surface', transposed && 'hidden')}>
+      <div onScroll={onTableScroll} className={cn('max-h-[70vh] overflow-auto rounded-lg border border-border bg-surface', transposed && 'hidden')}>
         <table className="border-collapse text-sm" style={{ tableLayout: 'fixed', width: 'max-content' }}>
           <colgroup>
             {flatCols.map(c => (
@@ -633,7 +633,7 @@ const GrowthSummaryTable: React.FC<Props> = ({ rows, mock, onRowClick, onDownloa
                   colSpan={g.cols.length}
                   title={g.title}
                   className={cn(
-                    'border-b border-r border-border-strong bg-surface-sunken px-2 py-1.5 text-center text-[12px] font-bold uppercase tracking-wide text-ink-muted',
+                    'border-b border-r border-border-strong bg-surface-sunken px-2 py-1.5 text-center text-[12px] font-semibold text-ink-muted',
                     g.id === 'identity' && 'sticky left-0 z-10',
                   )}
                 >

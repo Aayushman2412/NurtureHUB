@@ -1,0 +1,45 @@
+{{- if .Values.ingress.enabled }}
+{{- $full := include "eduposhan.fullname" . }}
+{{/* For clusters that already run a supported Ingress controller. Timeouts and
+     body limits are controller-specific: set them through ingress.annotations. */}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $full }}
+  labels:
+    {{- include "eduposhan.labels" (dict "root" . "component" "routing") | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with .Values.ingress.tlsSecretName }}
+  tls:
+    - hosts:
+        - {{ $.Values.publicHost | quote }}
+      secretName: {{ . }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.publicHost | quote }}
+      http:
+        paths:
+          {{- range $path, $role := dict "/api/admin" "admin" "/uploads" "admin" "/ws" "realtime" "/api" "api" }}
+          - path: {{ $path }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $full }}-{{ $role }}
+                port:
+                  number: 8000
+          {{- end }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $full }}-frontend
+                port:
+                  number: 80
+{{- end }}

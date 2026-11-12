@@ -24,9 +24,9 @@ const SOURCE_COMBOS: VisitSourceCombo[] = ['birth', 'growth', 'growth_bf', 'grow
 export const GrowthLegend: React.FC = () => {
   const { t } = useTranslation('growth');
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-border bg-surface px-4 py-3 text-xs">
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-border bg-surface px-4 py-3 text-xs">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="font-bold text-ink">{t('legend.percentiles')}:</span>
+        <span className="font-semibold text-ink">{t('legend.percentiles')}:</span>
         {PERCENTILE_KEYS.map(key => (
           <span key={key} className="flex items-center gap-1 text-ink-muted">
             <span className="inline-block h-0.5 w-4 rounded" style={{ background: percentileColor(key) }} />
@@ -35,7 +35,7 @@ export const GrowthLegend: React.FC = () => {
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="font-bold text-ink">{t('legend.sources')}:</span>
+        <span className="font-semibold text-ink">{t('legend.sources')}:</span>
         {SOURCE_COMBOS.map(combo => (
           <span key={combo} className="flex items-center gap-1.5 text-ink">
             <span className="inline-block size-3 rounded-full ring-2 ring-white dark:ring-surface" style={{ background: sourceComboColor(combo) }} />
@@ -80,7 +80,7 @@ const GrowthChartGrid: React.FC<GrowthChartGridProps> = ({
         const domains = cohortDomains(cohort, cohortCases);
         return (
           <section key={cohort}>
-            <h2 className="mb-3 font-display text-base font-bold text-ink">
+            <h2 className="mb-3 font-display text-base font-semibold text-ink">
               {t(`cohorts.${cohort}`)}
             </h2>
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-3">

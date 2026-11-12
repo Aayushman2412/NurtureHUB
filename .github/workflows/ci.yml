@@ -48,9 +48,9 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: nurturehub
+          POSTGRES_USER: eduposhan
           POSTGRES_PASSWORD: test_password_ci
-          POSTGRES_DB: nurturehub_test
+          POSTGRES_DB: eduposhan_test
         ports:
           - 5432:5432
         options: >-
@@ -81,7 +81,7 @@ jobs:
       - name: Check for a single Alembic head
         working-directory: backend
         env:
-          ALEMBIC_DATABASE_URL: postgresql://nurturehub:test_password_ci@localhost:5432/nurturehub_test
+          ALEMBIC_DATABASE_URL: postgresql://eduposhan:test_password_ci@localhost:5432/eduposhan_test
         run: |
           heads="$(alembic heads)"
           count="$(printf '%s\n' "$heads" | grep -c . || true)"
@@ -94,7 +94,7 @@ jobs:
       - name: Test Alembic migrations from scratch (upgrade head)
         working-directory: backend
         env:
-          ALEMBIC_DATABASE_URL: postgresql://nurturehub:test_password_ci@localhost:5432/nurturehub_test
+          ALEMBIC_DATABASE_URL: postgresql://eduposhan:test_password_ci@localhost:5432/eduposhan_test
         run: alembic upgrade head
 
       - name: Run Pytest test suite
@@ -102,8 +102,8 @@ jobs:
         env:
           APP_ENV: development
           PYTHONPATH: .
-          DATABASE_URL: postgresql://nurturehub:test_password_ci@localhost:5432/nurturehub_test
-          ALEMBIC_DATABASE_URL: postgresql://nurturehub:test_password_ci@localhost:5432/nurturehub_test
+          DATABASE_URL: postgresql://eduposhan:test_password_ci@localhost:5432/eduposhan_test
+          ALEMBIC_DATABASE_URL: postgresql://eduposhan:test_password_ci@localhost:5432/eduposhan_test
           JWT_SECRET_KEY: test_jwt_secret_ci_environment_key_32_bytes_long
           PHI_ENCRYPTION_KEYS: v1:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY
           PHI_ENCRYPTION_ACTIVE_KEY: v1
@@ -130,7 +130,7 @@ jobs:
           context: ./backend
           file: ./backend/Dockerfile
           push: false
-          tags: nurturehub-backend:test
+          tags: eduposhan-backend:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -140,6 +140,6 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: false
-          tags: nurturehub-frontend:test
+          tags: eduposhan-frontend:test
           cache-from: type=gha
           cache-to: type=gha,mode=max

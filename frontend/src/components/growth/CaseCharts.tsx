@@ -19,7 +19,7 @@ const zTone = (z: number | null) =>
   z == null
     ? 'text-ink-faint'
     : z <= -3 || z >= 3
-      ? 'text-coral-700'
+      ? 'text-brand-700'
       : z <= -2
         ? 'text-amber-600'
         : 'text-ink';
@@ -57,7 +57,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({ title, subtitle, descripti
   return (
     <div className="rounded-lg border border-border bg-surface p-2.5">
       <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="truncate text-[12px] font-bold uppercase tracking-wide text-ink-muted" title={title}>
+        <span className="truncate text-[12px] font-semibold text-ink-muted" title={title}>
           {title}
         </span>
         <span className="flex shrink-0 items-center gap-0.5">
@@ -141,9 +141,9 @@ export const ActivityComparisonChart: React.FC<ActivityChartProps> = ({ groups, 
   const x1 = W - VALUE_W;
 
   const series = [
-    { key: 'ec' as const, label: legend.ec, cls: 'fill-cream-300 dark:fill-cream-700', pick: (b: ActivityBlock) => b.expected },
-    { key: 'ac' as const, label: legend.ac, cls: 'fill-sage-500', pick: (b: ActivityBlock) => b.actual },
-    { key: 'ic' as const, label: legend.ic, cls: 'fill-coral-400', pick: (b: ActivityBlock) => b.incomplete },
+    { key: 'ec' as const, label: legend.ec, cls: 'fill-gray-300 dark:fill-gray-700', pick: (b: ActivityBlock) => b.expected },
+    { key: 'ac' as const, label: legend.ac, cls: 'fill-success-500', pick: (b: ActivityBlock) => b.actual },
+    { key: 'ic' as const, label: legend.ic, cls: 'fill-brand-400', pick: (b: ActivityBlock) => b.incomplete },
   ];
 
   const max = Math.max(1, ...groups.flatMap(g => series.map(s => s.pick(g.block) ?? 0)));
@@ -253,8 +253,8 @@ export const OutcomeDivergingChart: React.FC<OutcomeChartProps> = ({ outcomes, l
     { z: 0, cls: 'stroke-border-strong', dash: '' },
     { z: 2, cls: 'stroke-amber-400/70', dash: '3 3' },
     { z: -2, cls: 'stroke-amber-400/70', dash: '3 3' },
-    { z: 3, cls: 'stroke-coral-400/70', dash: '2 3' },
-    { z: -3, cls: 'stroke-coral-400/70', dash: '2 3' },
+    { z: 3, cls: 'stroke-brand-400/70', dash: '2 3' },
+    { z: -3, cls: 'stroke-brand-400/70', dash: '2 3' },
   ];
 
   return (
@@ -399,8 +399,8 @@ const ZTrendSvg: React.FC<ZTrendProps & { svgRef: React.RefObject<SVGSVGElement 
         { z: 0, cls: 'stroke-border', dash: '' },
         { z: 2, cls: 'stroke-amber-400/70', dash: '3 3' },
         { z: -2, cls: 'stroke-amber-400/70', dash: '3 3' },
-        { z: 3, cls: 'stroke-coral-400/70', dash: '2 3' },
-        { z: -3, cls: 'stroke-coral-400/70', dash: '2 3' },
+        { z: 3, cls: 'stroke-brand-400/70', dash: '2 3' },
+        { z: -3, cls: 'stroke-brand-400/70', dash: '2 3' },
       ].map(l => (
         <g key={l.z}>
           <line x1={PAD.l} x2={W - PAD.r} y1={sy(l.z)} y2={sy(l.z)} className={l.cls} strokeDasharray={l.dash} />

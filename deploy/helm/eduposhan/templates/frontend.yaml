@@ -1,0 +1,98 @@
+{{- $name := printf "%s-frontend" (include "eduposhan.fullname" .) -}}
+{{- $ctx := dict "root" . "component" "frontend" -}}
+{{- $cfg := .Values.frontend -}}
+{{/* The SPA's origin. Cloudflare caches /assets/* (immutable) and revalidates index.html and sw.js. */}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "eduposhan.labels" $ctx | nindent 4 }}
+spec:
+  {{- if not $cfg.autoscaling.enabled }}
+  replicas: {{ $cfg.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "eduposhan.selectorLabels" $ctx | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 25%
+  template:
+    metadata:
+      labels:
+        {{- include "eduposhan.labels" $ctx | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      {{- include "eduposhan.spread" $ctx | nindent 6 }}
+      containers:
+        - name: frontend
+          image: {{ include "eduposhan.image" (dict "root" . "name" "frontend") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 20
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]
+          resources:
+            {{- toYaml $cfg.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "eduposhan.labels" $ctx | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "eduposhan.selectorLabels" $ctx | nindent 4 }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+{{- with $cfg.backendAlias }}
+---
+# The name the SPA's nginx.conf proxies to; answered by the api pods.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ . }}
+  labels:
+    {{- include "eduposhan.labels" (dict "root" $ "component" "api") | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "eduposhan.selectorLabels" (dict "root" $ "component" "api") | nindent 4 }}
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+{{- end }}
+---
+{{ include "eduposhan.hpa" (dict "root" . "role" "frontend" "cfg" $cfg "kind" "Deployment") }}
+---
+{{ include "eduposhan.pdb" (dict "root" . "role" "frontend") }}

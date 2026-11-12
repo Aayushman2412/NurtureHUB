@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  LayoutDashboard, FileText, Video, ClipboardList, LogOut, Shield, MapPin, ChevronDown, Building2, Sun, Moon,
+  LayoutDashboard, FileText, Video, ClipboardList, LogOut, MapPin, ChevronDown, Building2, Sun, Moon,
   MonitorPlay, GraduationCap, Radio, Activity, Table2, FileSpreadsheet, Menu,
   DatabaseZap, Users, ShieldCheck, ChartNoAxesCombined, TrendingDown,
 } from 'lucide-react';
@@ -12,35 +12,52 @@ import { getProjectSlug, onProjectChanged, setProjectSlug, type AdminProject } f
 import { useTheme } from '../../context/ThemeContext';
 import { Avatar, Dropdown } from '../ui';
 import PageGuide from './PageGuide';
+import Logo, { BrandMark } from '../brand/Logo';
 import { cn } from '../../utils/cn';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-const navItems = [
-  { to: '/admin', icon: LayoutDashboard, key: 'dashboard', end: true },
-  { to: '/admin/projects', icon: Building2, key: 'projects', end: false },
-  { to: '/admin/learners', icon: Users, key: 'learners', end: false },
-  { to: '/admin/form-builder', icon: FileText, key: 'formBuilder', end: false },
-  { to: '/admin/tutorials', icon: Video, key: 'tutorials', end: false },
-  { to: '/admin/tutorial-tracking', icon: MonitorPlay, key: 'tutorialTracking', end: false },
-  { to: '/admin/tests', icon: ClipboardList, key: 'testManager', end: false },
-  { to: '/admin/tests', icon: Radio, key: 'liveMonitor', end: false },
-  { to: '/admin/results', icon: GraduationCap, key: 'results', end: false },
-  { to: '/admin/growth', icon: Activity, key: 'growthMonitor', end: false },
-  { to: '/admin/faltering', icon: TrendingDown, key: 'faltering', end: false },
-  { to: '/admin/masd', icon: ChartNoAxesCombined, key: 'masd', end: false },
-  { to: '/admin/data-protection', icon: ShieldCheck, key: 'dataProtection', end: false },
+// The menu in the order the work happens: set up the programme, train the
+// workers, follow their field records, then analyse and protect the data.
+const navGroups = [
+  { key: 'programme', items: [
+    { to: '/admin', icon: LayoutDashboard, key: 'dashboard', end: true },
+    { to: '/admin/projects', icon: Building2, key: 'projects', end: false },
+    { to: '/admin/learners', icon: Users, key: 'learners', end: false },
+  ] },
+  { key: 'training', items: [
+    { to: '/admin/tutorials', icon: Video, key: 'tutorials', end: false },
+    { to: '/admin/tutorial-tracking', icon: MonitorPlay, key: 'tutorialTracking', end: false },
+    { to: '/admin/tests', icon: ClipboardList, key: 'testManager', end: false },
+    { to: '/admin/tests', icon: Radio, key: 'liveMonitor', end: false },
+    { to: '/admin/results', icon: GraduationCap, key: 'results', end: false },
+  ] },
+  { key: 'field', items: [
+    { to: '/admin/form-builder', icon: FileText, key: 'formBuilder', end: false },
+    { to: '/admin/growth', icon: Activity, key: 'growthMonitor', end: false },
+    { to: '/admin/faltering', icon: TrendingDown, key: 'faltering', end: false },
+    { to: '/admin/masd', icon: ChartNoAxesCombined, key: 'masd', end: false },
+  ] },
+  // The analytics pipelines (admin-run crosstabs/MASD), the raw-data generator
+  // that feeds them from the app's own form data, and the data-protection console.
+  { key: 'data', items: [
+    { to: '/admin/database/rawdata', icon: DatabaseZap, key: 'rawData', end: false },
+    { to: '/admin/database/crosstabs', icon: Table2, key: 'crosstabsPipeline', end: false },
+    { to: '/admin/database/masd', icon: FileSpreadsheet, key: 'masdPipeline', end: false },
+    { to: '/admin/data-protection', icon: ShieldCheck, key: 'dataProtection', end: false },
+  ] },
 ] as const;
 
-// "Database" section — the data-analytics pipelines (admin-run crosstabs/MASD)
-// and the raw-data generator that feeds them from the app's own form data.
-const databaseNavItems = [
-  { to: '/admin/database/rawdata', icon: DatabaseZap, key: 'rawData', end: false },
-  { to: '/admin/database/crosstabs', icon: Table2, key: 'crosstabsPipeline', end: false },
-  { to: '/admin/database/masd', icon: FileSpreadsheet, key: 'masdPipeline', end: false },
-] as const;
+// The open page carries a rule on its left edge, like a marked line in a register.
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  cn(
+    'flex items-center gap-2.5 border-l-[3px] py-1.5 pl-[13px] pr-4 text-sm transition-colors',
+    isActive
+      ? 'border-primary bg-brand-50 font-semibold text-primary-ink dark:bg-brand-500/10'
+      : 'border-transparent font-medium text-ink-muted hover:bg-surface-sunken hover:text-ink',
+  );
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
@@ -130,7 +147,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             {project.name}
           </span>
           {project.level === 'state' && (
-            <span className="shrink-0 rounded bg-surface-sunken px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-ink-muted">
+            <span className="shrink-0 rounded bg-surface-sunken px-1.5 py-0.5 text-xs font-semibold text-ink-muted">
               {t('layout.stateBadge')}
             </span>
           )}
@@ -159,13 +176,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       <div
         onClick={() => setSidebarOpen(false)}
         className={cn(
-          'fixed inset-0 z-(--z-sidebar) bg-cream-950/40 backdrop-blur-xs transition-opacity lg:hidden print:hidden',
+          'fixed inset-0 z-(--z-sidebar) bg-gray-950/40 transition-opacity lg:hidden print:hidden',
           sidebarOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
         aria-hidden
       />
 
-      {/* Sidebar — same coral identity as the member app; drawer below lg */}
+      {/* Sidebar — pinned on desktop, a drawer below lg */}
       <aside
         className={cn(
           'fixed inset-y-0 left-0 z-(--z-sidebar) flex w-64 flex-col border-r border-border bg-surface',
@@ -174,20 +191,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         )}
       >
         {/* Header */}
-        <div className="flex items-center gap-3 border-b border-border px-5 py-5">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-coral-400 to-coral-600 text-white">
-            <Shield className="size-5" />
-          </span>
-          <div className="flex-1">
-            <h2 className="font-display text-base font-extrabold leading-tight">NurtureHUB</h2>
-            <span className="text-[12px] font-bold uppercase tracking-wider text-primary-ink">
-              {t('layout.panel')}
-            </span>
-          </div>
+        <div className="flex items-center gap-3 border-b border-border px-4 py-3.5">
+          <Logo className="flex-1" context={t('layout.panel')} />
           <button
             onClick={toggleDarkMode}
             title={t('layout.toggleTheme')}
-            className="flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer"
+            aria-label={t('layout.toggleTheme')}
+            className="flex size-8 cursor-pointer items-center justify-center rounded-md text-ink-muted hover:bg-surface-sunken hover:text-ink"
           >
             {darkMode ? <Sun className="size-4.5" /> : <Moon className="size-4.5" />}
           </button>
@@ -204,7 +214,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             className="w-full"
             trigger={open => (
               <button
-                className="flex w-full items-center gap-2.5 rounded-lg border border-border bg-surface-sunken px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong cursor-pointer"
+                className="flex w-full cursor-pointer items-center gap-2.5 rounded-md border border-border-control bg-surface px-3 py-2 text-[13px] font-semibold text-ink hover:bg-surface-sunken"
               >
                 {selectedProject?.level === 'state'
                   ? <Building2 className="size-4 shrink-0 text-primary-ink" />
@@ -227,48 +237,23 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         </div>
 
         {/* Nav */}
-        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3 pb-4">
-          {navItems.map(item => (
-            <NavLink
-              key={item.key}
-              to={item.to}
-              end={item.end}
-              onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors',
-                  isActive
-                    ? 'bg-coral-50 text-primary-ink dark:bg-coral-500/10'
-                    : 'text-ink-muted hover:bg-surface-sunken hover:text-ink',
-                )
-              }
-            >
-              <item.icon className="size-[18px]" />
-              <span>{t(`layout.nav.${item.key}`)}</span>
-            </NavLink>
-          ))}
-
-          <div className="px-3.5 pb-1 pt-4 text-[12px] font-bold uppercase tracking-wider text-ink-faint">
-            {t('layout.nav.databaseSection')}
-          </div>
-          {databaseNavItems.map(item => (
-            <NavLink
-              key={item.key}
-              to={item.to}
-              end={item.end}
-              onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors',
-                  isActive
-                    ? 'bg-coral-50 text-primary-ink dark:bg-coral-500/10'
-                    : 'text-ink-muted hover:bg-surface-sunken hover:text-ink',
-                )
-              }
-            >
-              <item.icon className="size-[18px]" />
-              <span>{t(`layout.nav.${item.key}`)}</span>
-            </NavLink>
+        <nav className="flex flex-1 flex-col overflow-y-auto pb-4 pt-1" aria-label={t('layout.menu')}>
+          {navGroups.map(group => (
+            <div key={group.key} className="flex flex-col">
+              <div className="px-4 pb-1 pt-4 text-xs font-medium text-ink-faint">{t(`layout.navGroups.${group.key}`)}</div>
+              {group.items.map(item => (
+                <NavLink
+                  key={item.key}
+                  to={item.to}
+                  end={item.end}
+                  onClick={() => setSidebarOpen(false)}
+                  className={navLinkClass}
+                >
+                  <item.icon className="size-4 shrink-0" />
+                  <span className="truncate">{t(`layout.nav.${item.key}`)}</span>
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
 
@@ -282,7 +267,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           <button
             onClick={handleLogout}
             title={t('layout.logout')}
-            className="flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer"
+            aria-label={t('layout.logout')}
+            className="flex size-8 cursor-pointer items-center justify-center rounded-md text-ink-muted hover:bg-surface-sunken hover:text-ink"
           >
             <LogOut className="size-4.5" />
           </button>
@@ -295,28 +281,27 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           <button
             onClick={() => setSidebarOpen(true)}
             aria-label={t('layout.openMenu')}
-            className="flex size-10 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer"
+            className="flex size-10 cursor-pointer items-center justify-center rounded-md text-ink-muted hover:bg-surface-sunken hover:text-ink"
           >
             <Menu className="size-5" />
           </button>
-          <span className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-coral-400 to-coral-600 text-white">
-            <Shield className="size-4" />
-          </span>
+          <BrandMark className="size-7" />
           <div className="min-w-0 flex-1">
-            <span className="block truncate font-display text-sm font-extrabold text-ink">
-              NurtureHUB <span className="text-primary-ink">{t('layout.panel')}</span>
+            <span className="block truncate text-sm font-semibold text-ink">
+              {t('layout.panel')}
             </span>
           </div>
           <PageGuide variant="header" />
           <button
             onClick={toggleDarkMode}
             title={t('layout.toggleTheme')}
-            className="flex size-10 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer"
+            aria-label={t('layout.toggleTheme')}
+            className="flex size-10 cursor-pointer items-center justify-center rounded-md text-ink-muted hover:bg-surface-sunken hover:text-ink"
           >
             {darkMode ? <Sun className="size-4.5" /> : <Moon className="size-4.5" />}
           </button>
         </header>
-        <div className="p-4 sm:p-6 lg:p-8">{children}</div>
+        <div className="mx-auto max-w-[96rem] p-4 sm:p-6 lg:px-8">{children}</div>
       </main>
     </div>
   );

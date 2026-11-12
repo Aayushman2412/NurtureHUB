@@ -155,7 +155,7 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
   const sortHead = (col: QuestionSort, label: string, className = '') => (
     <th className={cn('pb-2', className)}>
       <button type="button" onClick={() => sortBy(col)}
-        className={cn('inline-flex cursor-pointer items-center gap-1 uppercase tracking-wide hover:text-ink', qSort.col === col && 'font-bold text-primary-ink')}>
+        className={cn('inline-flex cursor-pointer items-center gap-1 hover:text-ink', qSort.col === col && 'font-semibold text-primary-ink')}>
         {label}
         {qSort.col === col ? (qSort.asc ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />) : <ArrowUpDown className="size-3 opacity-40" />}
       </button>
@@ -231,20 +231,20 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
     <div className="space-y-6">
       {/* Headline */}
       <Card className="overflow-hidden p-0">
-        <div className="bg-gradient-to-r from-coral-50 via-surface to-sage-50 p-5 sm:p-6 dark:from-coral-500/10 dark:via-surface dark:to-sage-500/10">
+        <div className="border-b border-border p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 max-w-3xl">
-              <div className="mb-1 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary-ink">
+              <div className="mb-1 inline-flex items-center gap-1.5 text-xs font-semibold text-primary-ink">
                 <ClipboardCheck className="size-3.5" /> {test.label}
               </div>
-              <h2 className="font-display text-xl font-extrabold text-ink sm:text-2xl">
+              <h2 className="font-display text-xl font-semibold text-ink sm:text-2xl">
                 {t('testPage.sentence', { passed: s.passed, wrote: s.wrote, pct: Math.round(s.passRate), avg: Math.round(s.avgScore), test: test.label })}
               </h2>
               <p className="mt-1 text-sm text-ink-muted">
                 {t('testPage.meta', { title: test.title, mark: test.passMark, n: questions?.questions.length ?? '—', attempts: test.max_attempts ?? '—' })}
               </p>
               {Object.keys(filters).length > 0 && (
-                <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
+                <div className="mt-3 inline-flex items-center gap-2 rounded-sm border border-amber-300 bg-amber-50 px-3 py-1 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
                   <Filter className="size-3 text-amber-700 dark:text-amber-400" />
                   <span>{t('focus.filteredNotice', { count: users.length, total: data.users.length })}</span>
                   <button
@@ -368,9 +368,9 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
               <h4 className="text-sm font-semibold text-ink">{t('scorecard.title', { dim: t(`dim.${dim}`) })}</h4>
               <ToneLegend good={t('scorecard.good')} ok={t('scorecard.ok')} low={t('scorecard.low')} />
             </div>
-            <div className="overflow-x-auto rounded-xl border border-border">
+            <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[46rem] text-sm">
-                <thead className="bg-surface-sunken text-xs uppercase tracking-wide text-ink-muted">
+                <thead className="bg-surface-sunken text-xs text-ink-muted">
                   <tr>
                     <th className="px-3 py-2.5 text-left">{t(`dim.${dim}`)}</th>
                     <th className="px-3 py-2.5 text-center">{t('test.wrote')}</th>
@@ -482,10 +482,10 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
               <thead className="sticky top-0 z-[1] bg-surface text-xs text-ink-muted">
                 <tr>
                   {sortHead('number', '#', 'w-14 text-left')}
-                  <th className="pb-2 text-left uppercase tracking-wide">{t('questions.question')}</th>
+                  <th className="pb-2 text-left  ">{t('questions.question')}</th>
                   {sortHead('difficulty', t('questions.difficulty'), 'w-28 text-left')}
                   {sortHead('right', t('questions.correctPct'), 'w-32 text-center')}
-                  <th className="w-[30%] pb-2 text-left uppercase tracking-wide">{t('questions.wrongAnswers')}</th>
+                  <th className="w-[30%] pb-2 text-left  ">{t('questions.wrongAnswers')}</th>
                   {sortHead('blank', t('questions.blank'), 'w-20 text-center')}
                 </tr>
               </thead>
@@ -495,7 +495,7 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
                   const wrong = wrongAnswers(q);
                   return (
                     <tr key={q.id} className="border-t border-border align-top">
-                      <td className="py-2.5 text-base font-bold tabular-nums text-ink">Q{q.number}</td>
+                      <td className="py-2.5 text-base font-semibold tabular-nums text-ink">Q{q.number}</td>
                       <td className="py-2.5 pr-4">
                         <div className="text-ink" title={q.text}>{q.text}</div>
                         {q.correct_label && (
@@ -510,7 +510,7 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
                       <td className="py-2.5 pr-2">
                         {level ? (
                           <span className={cn(
-                            'inline-block rounded-full px-2.5 py-0.5 text-sm font-semibold',
+                            'inline-block rounded-sm px-2.5 py-0.5 text-sm font-semibold',
                             level === 'difficult' ? 'bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-300'
                               : level === 'medium' ? 'bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'
                                 : 'bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-300',
@@ -524,7 +524,7 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
                           <ul className="space-y-1">
                             {wrong.map(w => (
                               <li key={w.label} className="flex items-baseline gap-2 text-sm" title={w.text}>
-                                <span className="w-11 shrink-0 text-right font-bold tabular-nums text-error-600">{fmtPct(w.pct)}</span>
+                                <span className="w-11 shrink-0 text-right font-semibold tabular-nums text-error-600">{fmtPct(w.pct)}</span>
                                 <span className="min-w-0 truncate text-ink"><strong>{w.label}</strong> {w.text}</span>
                               </li>
                             ))}
@@ -547,9 +547,9 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
           <div className="mt-8">
             <h4 className="text-base font-semibold text-ink">{t('questions.byLevelTitle', { dim: t(`dim.${dim}`) })}</h4>
             <p className="mb-3 text-sm text-ink">{t('questions.byLevelHint')}</p>
-            <div className="overflow-x-auto rounded-xl border border-border">
+            <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[34rem] text-sm">
-                <thead className="bg-surface-sunken text-xs uppercase tracking-wide text-ink">
+                <thead className="bg-surface-sunken text-xs text-ink">
                   <tr>
                     <th className="px-3 py-2.5 text-left">{t(`dim.${dim}`)}</th>
                     <th className="px-3 py-2.5 text-center">{t('questions.wroteN')}</th>
@@ -571,7 +571,7 @@ const TestInsights: React.FC<{ ctx: InsightCtx; test: ActiveTest }> = ({ ctx, te
                 </thead>
                 <tbody>
                   {levelRows.map(r => (
-                    <tr key={r.key} className={cn('border-t border-border', r.key === '__all__' && 'bg-coral-50/60 font-semibold dark:bg-coral-500/10')}>
+                    <tr key={r.key} className={cn('border-t border-border', r.key === '__all__' && 'bg-brand-50/60 font-semibold dark:bg-brand-500/10')}>
                       <td className="px-3 py-2 font-semibold text-ink">{r.key === '__all__' ? t('videos.everyone') : groupLabel(r.key)}</td>
                       <td className="px-3 py-2 text-center tabular-nums text-ink">{r.writers}</td>
                       <HeatCell value={r.all.pct} className="border-x border-border"
@@ -617,7 +617,7 @@ const LearnerTable: React.FC<{ rows: UserResultRow[]; test: ActiveTest; ranked?:
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[30rem] text-sm">
-        <thead className="text-xs uppercase tracking-wide text-ink-muted">
+        <thead className="text-xs text-ink-muted">
           <tr>
             {ranked && <th className="w-10 pb-2 text-left">#</th>}
             <th className="pb-2 text-left">{t('top.learnerId')}</th>
@@ -637,7 +637,7 @@ const LearnerTable: React.FC<{ rows: UserResultRow[]; test: ActiveTest; ranked?:
                     cadre={u.profile?.cadre_short ?? u.profile?.cadre} email={u.email} />
                 </td>
                 <td className="py-2 text-ink">{u.profile?.block ?? '—'}</td>
-                <td className="py-2 text-center font-display font-extrabold tabular-nums" style={{ color: toneColor(r.best_score ?? 0) }}>
+                <td className="py-2 text-center font-display font-semibold tabular-nums" style={{ color: toneColor(r.best_score ?? 0) }}>
                   {fmtPct(r.best_score ?? 0)}
                 </td>
                 <td className="py-2 text-center tabular-nums text-ink-muted">{r.attempts_count}</td>

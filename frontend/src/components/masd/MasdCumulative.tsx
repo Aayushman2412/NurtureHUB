@@ -129,7 +129,7 @@ const MasdCumulative: React.FC<{ report: MasdReport; split: MasdSplitState; asOf
       </div>
 
       {warning && (
-        <div className="mb-4 flex items-start gap-2 rounded-xl border border-error-200 bg-error-50 px-3 py-2 text-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300">
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-error-200 bg-error-50 px-3 py-2 text-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300">
           <BellRing className="mt-0.5 size-4 shrink-0" />
           {t('cumulative.slipping', { n: warning.days, from: fmt1(warning.from), to: fmt1(warning.to) })}
         </div>
@@ -137,7 +137,7 @@ const MasdCumulative: React.FC<{ report: MasdReport; split: MasdSplitState; asOf
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 [&>*]:min-w-0">
         <div>
-          <h4 className="mb-1 text-base font-bold text-ink">{t('cumulative.adoptions')}</h4>
+          <h4 className="mb-1 text-base font-semibold text-ink">{t('cumulative.adoptions')}</h4>
           <CumulativeChart labels={labels} lines={[
             { key: 'exp', label: t('cumulative.expectedAdoptions'), color: MASD_COLORS.adoption, dashed: true, step: true,
               values: points.map(p => p.d.expected_adoptions) },
@@ -145,7 +145,7 @@ const MasdCumulative: React.FC<{ report: MasdReport; split: MasdSplitState; asOf
           ]} />
         </div>
         <div>
-          <h4 className="mb-1 text-base font-bold text-ink">{t('cumulative.activities')}</h4>
+          <h4 className="mb-1 text-base font-semibold text-ink">{t('cumulative.activities')}</h4>
           <CumulativeChart labels={labels} lines={[
             { key: 'exp', label: t('cumulative.expectedIdeal'), color: MASD_COLORS.activity, dashed: true, step: true,
               values: points.map(p => p.d.expected_activities) },
@@ -156,7 +156,7 @@ const MasdCumulative: React.FC<{ report: MasdReport; split: MasdSplitState; asOf
         </div>
       </div>
 
-      <h4 className="mb-1 mt-6 flex items-center gap-2 text-base font-bold text-ink"><ChartColumn className="size-4" />{t('cumulative.pctTitle')}</h4>
+      <h4 className="mb-1 mt-6 flex items-center gap-2 text-base font-semibold text-ink"><ChartColumn className="size-4" />{t('cumulative.pctTitle')}</h4>
       <p className="mb-2 text-sm text-ink-muted">{t('cumulative.pctSub')}</p>
       <GroupedColumns
         categories={points.map(p => ({ key: p.d.date, label: p.label }))}
@@ -173,7 +173,7 @@ const MasdCumulative: React.FC<{ report: MasdReport; split: MasdSplitState; asOf
 
       {early.length > 0 && (
         <div className="mt-5">
-          <h4 className="mb-1 text-base font-bold text-ink">{t('cumulative.earlyTitle', { n: EARLY_DAYS })}</h4>
+          <h4 className="mb-1 text-base font-semibold text-ink">{t('cumulative.earlyTitle', { n: EARLY_DAYS })}</h4>
           <p className="mb-2 text-sm text-ink-muted">{t('cumulative.earlySub')}</p>
           <div className="flex flex-wrap gap-2">
             {early.map(e => (

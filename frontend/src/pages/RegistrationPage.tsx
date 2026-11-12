@@ -19,8 +19,8 @@ import type { FieldErrors } from '../lib/validation';
 const STEP_KEYS = ['personal', 'work', 'education', 'training'] as const;
 
 const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="mb-4 border-b-2 border-coral-100 pb-2 text-[13px] font-bold uppercase
-                  tracking-wider text-primary-ink dark:border-coral-950">
+  <div className="mb-4 border-b-2 border-brand-100 pb-2 text-[13px] font-semibold 
+                   text-primary-ink dark:border-brand-950">
     {children}
   </div>
 );
@@ -297,7 +297,7 @@ const RegistrationPage: React.FC = () => {
                     error={!!errors.dob} onChange={v => { setDob(v); clearError('dob'); }} />
                 </Field>
                 <Field label={t('fields.ageYears')}>
-                  <div className="rounded-lg border border-border-strong/60 bg-surface-sunken px-3.5 py-2.5 text-sm">
+                  <div className="rounded-lg border border-border-control bg-surface-sunken px-3.5 py-2.5 text-sm">
                     {age === '' ? <span className="text-ink-faint">{t('fields.ageCalculated')}</span> : t('fields.ageValue', { age })}
                   </div>
                 </Field>
@@ -373,7 +373,7 @@ const RegistrationPage: React.FC = () => {
               )}
 
               {locked && (
-                <div className="flex items-start gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm text-ink">
+                <div className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm text-ink">
                   <MapPin className="mt-0.5 size-4 shrink-0 text-primary-ink" />
                   <span>{t('registration.lockedPlace', {
                     project: locked.project.name,
@@ -468,7 +468,7 @@ const RegistrationPage: React.FC = () => {
                 options={internetOptions(t)} />
 
               {/* Personal questions come last (review of 17 Oct 2026), with why they are asked. */}
-              <div className="mt-2 rounded-xl border border-border bg-surface-sunken/60 p-4">
+              <div className="mt-2 rounded-lg border border-border bg-surface-sunken/60 p-4">
                 <p className="mb-3 text-sm leading-relaxed text-ink-muted">{t('registration.personalNote')}</p>
                 <div className="flex flex-col gap-4">
                   <SelectField label={t('fields.maritalStatus')} value={maritalStatus} error={errors.maritalStatus}

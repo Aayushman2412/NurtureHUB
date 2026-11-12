@@ -14,7 +14,7 @@ const ICONS: Record<LearnerActivityEvent['kind'], React.ReactNode> = {
 };
 
 const TONES: Record<LearnerActivityEvent['kind'], string> = {
-  form: 'bg-sage-500/15 text-sage-700 dark:text-sage-300',
+  form: 'bg-success-500/15 text-success-700 dark:text-success-300',
   adoption: 'bg-primary/10 text-primary-ink',
   video: 'bg-surface-sunken text-ink-muted',
   test: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
@@ -87,12 +87,12 @@ const LearnerActivityModal: React.FC<{ learnerId: number | null; name?: string; 
       ) : (
         <div className="flex flex-col gap-4">
           <p className={cn('rounded-lg px-3 py-2 text-sm font-semibold',
-            daysSince != null && daysSince >= 3 ? 'bg-coral-500/10 text-coral-700 dark:text-coral-300' : 'bg-surface-sunken text-ink')}>
+            daysSince != null && daysSince >= 3 ? 'bg-brand-500/10 text-brand-700 dark:text-brand-300' : 'bg-surface-sunken text-ink')}>
             {daysSince === 0 ? t('activity.activeToday') : t('activity.lastActive', { count: daysSince ?? 0 })}
           </p>
           {days.map(([day, events]) => (
             <section key={day}>
-              <h4 className="mb-1.5 text-xs font-bold uppercase tracking-wide text-ink-muted">{day}</h4>
+              <h4 className="mb-1.5 text-xs font-semibold text-ink-muted">{day}</h4>
               <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
                 {events.map((e, i) => (
                   <li key={`${e.kind}-${e.at}-${i}`} className="flex items-start gap-3 px-3 py-2">

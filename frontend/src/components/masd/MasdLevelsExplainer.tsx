@@ -7,7 +7,7 @@ import { DataTable, Th } from './MasdCharts';
 import { fmt1 } from '../../lib/masdDisplay';
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
-const LEVEL_COLORS = ['#2A7F8F', '#E85D4C', '#7C5CBF'];
+const LEVEL_COLORS = ['#2A7F8F', '#C2410C', '#7C5CBF'];
 
 /**
  * The three levels of expected activity side by side, with one made-up
@@ -56,7 +56,7 @@ const MasdLevelsExplainer: React.FC<{ report: MasdReport }> = ({ report }) => {
       {ex && (
         <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2 [&>*]:min-w-0">
           <div>
-            <h4 className="mb-1 text-base font-bold text-ink">{t('levels.exampleTitle')}</h4>
+            <h4 className="mb-1 text-base font-semibold text-ink">{t('levels.exampleTitle')}</h4>
             <p className="mb-2 text-sm text-ink">
               {t('levels.exampleAsked', {
                 n: ex.asked_total,
@@ -77,7 +77,7 @@ const MasdLevelsExplainer: React.FC<{ report: MasdReport }> = ({ report }) => {
             </ul>
           </div>
           <div>
-            <h4 className="mb-2 text-base font-bold text-ink">{t('levels.pictureTitle')}</h4>
+            <h4 className="mb-2 text-base font-semibold text-ink">{t('levels.pictureTitle')}</h4>
             <div className="space-y-3">
               {exNums.map((v, i) => (
                 <div key={i}>

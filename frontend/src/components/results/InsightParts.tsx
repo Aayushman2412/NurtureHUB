@@ -22,11 +22,11 @@ export const Section: React.FC<{
   <Card className={cn('p-5 sm:p-6', className)}>
     <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
       <div className="flex min-w-0 items-start gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-coral-50 text-coral-600 dark:bg-coral-500/15 dark:text-coral-300 [&>svg]:size-5">
+        <span className="inline-flex shrink-0 text-brand-600 dark:text-brand-300">
           {icon}
         </span>
         <div className="min-w-0">
-          <h3 className="font-display text-lg font-bold text-ink">{title}</h3>
+          <h3 className="font-display text-lg font-semibold text-ink">{title}</h3>
           {subtitle && <p className="text-sm text-ink-muted">{subtitle}</p>}
         </div>
       </div>
@@ -42,7 +42,7 @@ export const Chip: React.FC<{ active: boolean; onClick: () => void; children: Re
     onClick={onClick}
     aria-pressed={active}
     className={cn(
-      'cursor-pointer rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
+      'cursor-pointer rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
       active
         ? 'border-primary bg-primary text-primary-fg'
         : 'border-border bg-surface text-ink-muted hover:border-border-strong hover:text-ink',
@@ -132,7 +132,7 @@ export function SplitFilterRow<K extends string = DimensionKey>({ mode, onMode, 
           value={mode}
           onChange={e => onMode(e.target.value as GroupMode)}
           className={cn(
-            'cursor-pointer appearance-none rounded-lg border py-1.5 pl-3 pr-8 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/30',
+            'cursor-pointer appearance-none rounded-lg border py-1.5 pl-3 pr-8 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/30',
             mode === 'filter'
               ? 'border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-300'
               : 'border-border-strong bg-surface text-ink',
@@ -156,22 +156,22 @@ export function SplitFilterRow<K extends string = DimensionKey>({ mode, onMode, 
             aria-haspopup="listbox"
             onClick={() => setOpen(o => (o === item.key ? null : item.key))}
             className={cn(
-              'inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
+              'inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
               count > 0
                 ? 'border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-300'
                 : 'border-border bg-surface text-ink hover:border-border-strong',
             )}
           >
             {item.label}
-            {count > 0 && <span className="rounded-full bg-amber-500 px-1.5 text-xs font-bold text-white">{count}</span>}
+            {count > 0 && <span className="rounded-sm bg-amber-500 px-1.5 text-xs font-semibold text-white">{count}</span>}
             <ChevronDown className="size-3.5" aria-hidden />
           </button>
         );
       })}
 
       {open && (
-        <div className="absolute left-0 top-full z-(--z-dropdown) mt-1.5 w-full max-w-sm overflow-hidden rounded-xl border border-border bg-surface-raised shadow-lg animate-fade-in">
-          <div className="border-b border-border px-3 py-2 text-sm font-bold text-ink">
+        <div className="absolute left-0 top-full z-(--z-dropdown) mt-1.5 w-full max-w-sm overflow-hidden rounded-lg border border-border bg-surface-raised shadow-(--shadow-overlay) animate-overlay-in">
+          <div className="border-b border-border px-3 py-2 text-sm font-semibold text-ink">
             {t('mode.filterTitle', { dim: items.find(i => i.key === open)?.label ?? '' })}
           </div>
           {list.length > 8 && (
@@ -242,7 +242,7 @@ export const ActiveFilterBar: React.FC<{
 
   return (
     <div className={cn(
-      'mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-amber-300 bg-amber-50/90 px-3.5 py-2.5 text-xs sm:text-sm dark:border-amber-500/40 dark:bg-amber-500/10',
+      'mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-amber-300 bg-amber-50/90 px-3.5 py-2.5 text-xs sm:text-sm dark:border-amber-500/40 dark:bg-amber-500/10',
       className,
     )}>
       <div className="flex items-center gap-1.5 font-semibold text-amber-900 dark:text-amber-300">
@@ -253,7 +253,7 @@ export const ActiveFilterBar: React.FC<{
         {entries.map(([d, val]) => (
           <span
             key={d}
-            className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/80 bg-surface px-2.5 py-1 text-xs font-semibold text-ink shadow-xs dark:border-amber-500/40 dark:bg-surface"
+            className="inline-flex items-center gap-1.5 rounded-sm border border-amber-300/80 bg-surface px-2.5 py-1 text-xs font-semibold text-ink shadow-xs dark:border-amber-500/40 dark:bg-surface"
           >
             <span className="font-normal text-ink-muted">{t(`dimSingular.${d}`)}:</span>
             <span>
@@ -314,10 +314,10 @@ export const KpiRow: React.FC<{ count: number; children: React.ReactNode }> = ({
 /** A big plain number where a ring would say nothing (a count, a change). */
 export const BigNumber: React.FC<{ value: React.ReactNode; tone?: 'good' | 'bad' | 'neutral'; icon?: React.ReactNode }> = ({ value, tone = 'neutral', icon }) => (
   <span className={cn(
-    'flex size-[76px] items-center justify-center rounded-full font-display text-2xl font-extrabold',
+    'flex size-[76px] items-center justify-center rounded-full font-display text-2xl font-semibold',
     tone === 'good' && 'bg-success-50 text-success-600 dark:bg-success-500/15',
     tone === 'bad' && 'bg-error-50 text-error-600 dark:bg-error-500/15',
-    tone === 'neutral' && 'bg-coral-50 text-coral-600 dark:bg-coral-500/15 dark:text-coral-300',
+    tone === 'neutral' && 'bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300',
   )}>
     {icon ?? value}
   </span>
@@ -330,7 +330,7 @@ export const ScoreCell: React.FC<{ value: number | null; sub?: string }> = ({ va
   return (
     <td className="px-2 py-1.5 text-center">
       <span
-        className="inline-block min-w-14 rounded-md px-2 py-1 text-sm font-bold tabular-nums"
+        className="inline-block min-w-14 rounded-md px-2 py-1 text-sm font-semibold tabular-nums"
         style={{ background: `color-mix(in srgb, ${c} 16%, transparent)`, color: c }}
       >
         {fmtPct(value)}
@@ -348,7 +348,7 @@ export const HeatCell: React.FC<{ value: number | null; sub?: string; title?: st
   return (
     <td className={cn('px-1.5 py-1 text-center', className)} title={title}>
       <span
-        className="inline-block min-w-12 rounded-md px-1.5 py-1 text-sm font-bold tabular-nums text-ink"
+        className="inline-block min-w-12 rounded-md px-1.5 py-1 text-sm font-semibold tabular-nums text-ink"
         style={{ background: `color-mix(in srgb, ${c} 30%, transparent)`, boxShadow: `inset 0 -3px 0 ${c}` }}
       >
         {fmtPct(value)}
@@ -364,7 +364,7 @@ export const InlineBar: React.FC<{ value: number; note?: string }> = ({ value, n
       <span className="absolute inset-y-0 left-0 rounded-full"
         style={{ width: `${Math.max(0, Math.min(100, value))}%`, background: toneColor(value), transition: 'width 500ms ease' }} />
     </span>
-    <span className="w-11 text-right text-sm font-bold tabular-nums text-ink">{fmtPct(value)}</span>
+    <span className="w-11 text-right text-sm font-semibold tabular-nums text-ink">{fmtPct(value)}</span>
     {note && <span className="hidden text-xs text-ink-muted md:inline">{note}</span>}
   </div>
 );
@@ -444,7 +444,7 @@ export const CountPicker: React.FC<{
               onClick={() => onDir(d)}
               className={cn(
                 'cursor-pointer rounded-md px-3 py-1 text-sm font-semibold transition-colors',
-                dir === d ? 'bg-surface text-primary-ink shadow-(--shadow-card)' : 'text-ink-muted hover:text-ink',
+                dir === d ? 'bg-surface text-primary-ink ' : 'text-ink-muted hover:text-ink',
               )}
             >
               {t(`pick.${d}`)}
@@ -461,7 +461,7 @@ export const CountPicker: React.FC<{
           placeholder={t('pick.all')}
           onChange={e => { const raw = e.target.value.replace(/[^0-9]/g, ''); setDraft(raw); commit(raw); }}
           onBlur={() => setDraft(n === 'all' ? '' : String(n))}
-          className="w-16 rounded-lg border border-border bg-surface px-2 py-1 text-center text-sm font-bold text-ink focus:border-primary focus:outline-none"
+          className="w-16 rounded-lg border border-border bg-surface px-2 py-1 text-center text-sm font-semibold text-ink focus:border-primary focus:outline-none"
           aria-label={t('pick.howMany')}
         />
       </label>
@@ -474,7 +474,7 @@ export const CountPicker: React.FC<{
 /** 1st gold, 2nd–3rd light gold, the rest grey. */
 export const RankBadge: React.FC<{ rank: number }> = ({ rank }) => (
   <span className={cn(
-    'flex size-7 items-center justify-center rounded-full text-xs font-bold',
+    'flex size-7 items-center justify-center rounded-full text-xs font-semibold',
     rank === 1 ? 'bg-amber-500 text-white'
       : rank <= 3 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-500'
         : 'bg-surface-sunken text-ink-muted',
@@ -488,7 +488,7 @@ export const SubNav: React.FC<{
   onChange: (key: string) => void;
   label: string;
 }> = ({ items, value, onChange, label }) => (
-  <nav aria-label={label} className="grid grid-cols-2 gap-1.5 rounded-2xl border border-border bg-surface-sunken p-1.5 sm:flex sm:flex-wrap sm:gap-2">
+  <nav aria-label={label} className="grid grid-cols-2 gap-1.5 rounded-lg border border-border bg-surface-sunken p-1.5 sm:flex sm:flex-wrap sm:gap-2">
     {items.map(item => {
       const active = item.key === value;
       return (
@@ -498,8 +498,8 @@ export const SubNav: React.FC<{
           aria-current={active ? 'page' : undefined}
           onClick={() => onChange(item.key)}
           className={cn(
-            'inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-center text-sm font-semibold transition-colors sm:whitespace-nowrap sm:px-4 [&>svg]:size-4 [&>svg]:shrink-0',
-            active ? 'bg-surface text-primary-ink shadow-(--shadow-card)' : 'text-ink-muted hover:text-ink',
+            'inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-center text-sm font-semibold transition-colors sm:whitespace-nowrap sm:px-4 [&>svg]:size-4 [&>svg]:shrink-0',
+            active ? 'bg-surface text-primary-ink ' : 'text-ink-muted hover:text-ink',
           )}
         >
           {item.icon}

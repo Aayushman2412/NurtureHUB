@@ -242,7 +242,7 @@ const MasdSettingsModal: React.FC<{
     >
       <div className="space-y-8">
         <section>
-          <h3 className="font-display text-base font-bold text-ink">{t('settings.targets')}</h3>
+          <h3 className="font-display text-base font-semibold text-ink">{t('settings.targets')}</h3>
           <p className="mb-3 text-sm text-ink-muted">
             {targetsDefault ? t('settings.targetsDefault') : t('settings.targetsHint')}
           </p>
@@ -294,13 +294,13 @@ const MasdSettingsModal: React.FC<{
                       <td className="px-2 py-1.5 text-center tabular-nums">
                         {c?.fu == null ? <span className="text-ink-muted">{t('settings.notOpen')}</span> : (
                           <>
-                            <div className="font-bold text-ink">{t('baseline.days', { n: c.fu })}</div>
+                            <div className="font-semibold text-ink">{t('baseline.days', { n: c.fu })}</div>
                             <div className="text-xs text-ink-muted">{t('settings.afterBufferN', { n: c.fuRaw ?? 0 })}</div>
                           </>
                         )}
                       </td>
-                      <td className="px-2 py-1.5 text-center text-base font-bold tabular-nums text-ink">{c?.fu != null ? c.community.total : '—'}</td>
-                      <td className="px-2 py-1.5 text-center text-base font-bold tabular-nums text-ink">{c?.fu != null ? c.nurse.total : '—'}</td>
+                      <td className="px-2 py-1.5 text-center text-base font-semibold tabular-nums text-ink">{c?.fu != null ? c.community.total : '—'}</td>
+                      <td className="px-2 py-1.5 text-center text-base font-semibold tabular-nums text-ink">{c?.fu != null ? c.nurse.total : '—'}</td>
                       <td className="py-1.5 pl-1">
                         <Button variant="ghost" size="sm" aria-label={t('settings.remove')} title={t('settings.remove')}
                           onClick={() => setRows(list => list.filter((_, j) => j !== i))}>
@@ -310,14 +310,14 @@ const MasdSettingsModal: React.FC<{
                     </tr>
                   );
                 })}
-                <tr className="border-t-2 border-border-strong bg-coral-50/60 dark:bg-coral-500/10">
-                  <td className="py-2 pl-1 pr-2 font-bold text-ink" colSpan={3}>{t('settings.totalAsOf', { date: reportDate })}</td>
+                <tr className="border-t-2 border-border-strong bg-brand-50/60 dark:bg-brand-500/10">
+                  <td className="py-2 pl-1 pr-2 font-semibold text-ink" colSpan={3}>{t('settings.totalAsOf', { date: reportDate })}</td>
                   {TARGET_KEYS.map(k => (
-                    <td key={k} className="px-1 py-2 text-center text-base font-bold tabular-nums text-ink">{askedTotal(k)}</td>
+                    <td key={k} className="px-1 py-2 text-center text-base font-semibold tabular-nums text-ink">{askedTotal(k)}</td>
                   ))}
                   <td />
-                  <td className="px-2 py-2 text-center text-lg font-extrabold tabular-nums text-coral-700 dark:text-coral-300">{totalCommunity}</td>
-                  <td className="px-2 py-2 text-center text-lg font-extrabold tabular-nums text-coral-700 dark:text-coral-300">{totalNurse}</td>
+                  <td className="px-2 py-2 text-center text-lg font-semibold tabular-nums text-brand-700 dark:text-brand-300">{totalCommunity}</td>
+                  <td className="px-2 py-2 text-center text-lg font-semibold tabular-nums text-brand-700 dark:text-brand-300">{totalNurse}</td>
                   <td />
                 </tr>
               </tbody>
@@ -333,7 +333,7 @@ const MasdSettingsModal: React.FC<{
         </section>
 
         <section>
-          <h3 className="font-display text-base font-bold text-ink">{t('settings.batches')}</h3>
+          <h3 className="font-display text-base font-semibold text-ink">{t('settings.batches')}</h3>
           <p className="mb-3 text-sm text-ink-muted">{t('settings.batchesHint')}</p>
           {batches.length > 0 && (
             <div className="space-y-2">
@@ -401,7 +401,7 @@ const MasdSettingsModal: React.FC<{
         </section>
 
         <section>
-          <h3 className="font-display text-base font-bold text-ink">{t('settings.calendar')}</h3>
+          <h3 className="font-display text-base font-semibold text-ink">{t('settings.calendar')}</h3>
           <p className="mb-3 text-sm text-ink-muted">{t('settings.calendarHint')}</p>
           <div className="max-w-xs">
             <Field label={t('settings.trainingNoBatch')}><DateInput value={training} onChange={setTraining} /></Field>
@@ -409,7 +409,7 @@ const MasdSettingsModal: React.FC<{
         </section>
 
         <section>
-          <h3 className="font-display text-base font-bold text-ink">{t('settings.benchmarks')}</h3>
+          <h3 className="font-display text-base font-semibold text-ink">{t('settings.benchmarks')}</h3>
           <p className="mb-3 text-sm text-ink-muted">{isDefault ? t('settings.defaultBench') : t('settings.benchHint')}</p>
           <div className="max-w-md">
             <Field label={t('settings.benchLabel')}>

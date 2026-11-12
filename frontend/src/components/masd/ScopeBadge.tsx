@@ -13,7 +13,7 @@ const ScopeBadge: React.FC<{ split: MasdSplitState; splits?: boolean }> = ({ spl
   const { t } = useTranslation('masd');
   const active = (Object.entries(split.filters) as [MasdDim, string[]][]).filter(([, v]) => v.length);
   if (!splits && !active.length) return null;
-  const pill = 'inline-flex items-center gap-1 rounded-full bg-success-50 px-2 py-0.5 text-xs font-semibold text-success-700 dark:bg-success-500/15 dark:text-success-300';
+  const pill = 'inline-flex items-center gap-1 rounded-sm bg-success-50 px-2 py-0.5 text-xs font-semibold text-success-700 dark:bg-success-500/15 dark:text-success-300';
   return (
     <span className="ml-2 inline-flex flex-wrap items-center gap-1 align-middle">
       {splits && (

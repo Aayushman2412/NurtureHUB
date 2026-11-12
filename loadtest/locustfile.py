@@ -1,4 +1,4 @@
-"""NurtureHUB load-test scenarios (Locust).
+"""EduPoshan load-test scenarios (Locust).
 
 Two user classes, selected with the standard locust class picker
 (`locust ... JourneyUser` / `ExamHerdUser`) or run together with weights:
@@ -96,7 +96,7 @@ HERD_BARRIER = Barrier(config.HERD_SIZE, config.HERD_MAX_WAIT, config.HERD_LEAD)
 # ---------------------------------------------------------------------------
 # shared client behavior
 # ---------------------------------------------------------------------------
-class NurtureHubUser(FastHttpUser):
+class EduPoshanUser(FastHttpUser):
     abstract = True
     host = config.HOST
     network_timeout = 60.0
@@ -246,7 +246,7 @@ class NurtureHubUser(FastHttpUser):
 # ---------------------------------------------------------------------------
 # scenario 1: the full learner journey (ramp profile)
 # ---------------------------------------------------------------------------
-class JourneyUser(NurtureHubUser):
+class JourneyUser(EduPoshanUser):
     weight = 1
 
     @task
@@ -400,7 +400,7 @@ class JourneyUser(NurtureHubUser):
 # ---------------------------------------------------------------------------
 # scenario 2: thundering-herd exam submit
 # ---------------------------------------------------------------------------
-class ExamHerdUser(NurtureHubUser):
+class ExamHerdUser(EduPoshanUser):
     # run.py always selects exactly one class by name, so weight only matters
     # if both classes are run together (don't — the herd barrier expects a
     # homogeneous cohort).

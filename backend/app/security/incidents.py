@@ -61,7 +61,7 @@ def _aware(moment):
 
 
 CUSTODY_PARTIES = {
-    "nurturehub": "NurtureHUB / Spoken Tutorial (this system)",
+    "nurturehub": "EduPoshan / Spoken Tutorial (this system)",
     "state_govt": "State Government counterparty",
     "shared": "Shared system or joint process",
     "third_party": "Third-party processor or vendor",
@@ -370,7 +370,7 @@ def custody_evidence(db, incident, window_hours: int = 24) -> dict:
         "audit_events_in_window": sum(int(a[2] or 0) for a in actors),
         "note": (
             "Custody follows the system the action executed in. Actions listed here executed "
-            "inside NurtureHUB. Records exported to a file left this system's custody at the "
+            "inside EduPoshan. Records exported to a file left this system's custody at the "
             "moment of export - custody of that copy follows the holder of the file."
         ),
     }
@@ -382,7 +382,7 @@ def custody_evidence(db, incident, window_hours: int = 24) -> dict:
 
 
 def _subject_line(incident) -> str:
-    return f"[{incident.reference}] Personal data breach notification - NurtureHUB ({incident.severity.upper()})"
+    return f"[{incident.reference}] Personal data breach notification - EduPoshan ({incident.severity.upper()})"
 
 
 def render_notification(incident, authority: str, organisation: Optional[str] = None) -> str:
@@ -404,7 +404,7 @@ def render_notification(incident, authority: str, organisation: Optional[str] = 
     facts = f"""
 Reference               : {incident.reference}
 Reporting entity        : {org}
-Platform                : NurtureHUB ({settings.PUBLIC_BASE_URL or 'production deployment'})
+Platform                : EduPoshan ({settings.PUBLIC_BASE_URL or 'production deployment'})
 Incident title          : {incident.title}
 Severity                : {incident.severity.upper()}
 Time of occurrence      : {occurred.isoformat() if occurred else 'Under investigation'}
@@ -477,7 +477,7 @@ Subject: {heading} of personal data breach under section 8(6), Digital Personal 
 
 Sir/Madam,
 
-{org}, in its capacity as Data Fiduciary for the NurtureHUB platform, gives intimation of a
+{org}, in its capacity as Data Fiduciary for the EduPoshan platform, gives intimation of a
 personal data breach under section 8(6) of the Digital Personal Data Protection Act, 2023.
 
 {facts}
@@ -495,12 +495,12 @@ Contact for further information
 """
 
     if authority == "data_principals":
-        return f"""Subject: An important notice about your information held by NurtureHUB
+        return f"""Subject: An important notice about your information held by EduPoshan
 
 Namaste,
 
 We are writing to tell you about a problem with the information we hold about you and your
-child through the NurtureHUB programme. We are telling you because you have a right to know.
+child through the EduPoshan programme. We are telling you because you have a right to know.
 
 What happened
 {summary}
@@ -516,7 +516,7 @@ What we have done
 
 What you can do
 You do not need to do anything to keep using the programme. If you receive a call or message
-asking for your details and claiming to be from NurtureHUB or the health department, please do
+asking for your details and claiming to be from EduPoshan or the health department, please do
 not share anything, and tell your health worker.
 
 If you have questions, or if you want to know what information we hold about you, or want it
@@ -533,11 +533,11 @@ We are sorry this happened.
 
     if authority == "mou_counterparty":
         return f"""To: Government of Maharashtra - designated nodal officer
-Subject: Notification of a data incident under the NurtureHUB MOU data-privacy clause - {incident.reference}
+Subject: Notification of a data incident under the EduPoshan MOU data-privacy clause - {incident.reference}
 
 Sir/Madam,
 
-We notify you of a data incident affecting the NurtureHUB platform, in accordance with the
+We notify you of a data incident affecting the EduPoshan platform, in accordance with the
 data-privacy clause of the Memorandum of Understanding between our organisations.
 
 {facts}

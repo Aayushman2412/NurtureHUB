@@ -1,17 +1,17 @@
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Baby, BookOpen, CalendarClock, ClipboardCheck, HeartPulse, Sparkles, TrendingUp, Users } from 'lucide-react';
+import { Baby, BookOpen, CalendarClock, ClipboardCheck, HeartPulse, TrendingUp, Users } from 'lucide-react';
 import type { MasdReport } from '../../api/masd';
 import { Section } from '../results/InsightParts';
 import { CumulativeChart } from './MasdCharts';
 import { byGrain, fmt1, MASD_COLORS, rateTone } from '../../lib/masdDisplay';
 
 const Fact: React.FC<{ icon: React.ReactNode; big: string; color?: string; title: string; text: string }> = ({ icon, big, color, title, text }) => (
-  <div className="flex gap-4 rounded-2xl border border-border bg-surface p-5">
-    <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-coral-50 text-coral-600 dark:bg-coral-500/15 dark:text-coral-300 [&>svg]:size-6">{icon}</span>
+  <div className="flex gap-4 rounded-lg border border-border bg-surface p-5">
+    <span className="inline-flex shrink-0 text-brand-600 dark:text-brand-300">{icon}</span>
     <div className="min-w-0">
-      <div className="font-display text-3xl font-extrabold tabular-nums" style={color ? { color } : undefined}>{big}</div>
-      <div className="mt-0.5 text-base font-bold text-ink">{title}</div>
+      <div className="font-display text-3xl font-semibold tabular-nums" style={color ? { color } : undefined}>{big}</div>
+      <div className="mt-0.5 text-base font-semibold text-ink">{title}</div>
       <p className="mt-1 text-sm leading-relaxed text-ink">{text}</p>
     </div>
   </div>
@@ -33,8 +33,8 @@ const MasdGlance: React.FC<{ report: MasdReport; onMore: () => void }> = ({ repo
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-border bg-surface p-5">
-        <h2 className="flex items-center gap-2 font-display text-xl font-extrabold text-ink"><Sparkles className="size-5 text-coral-600" />{t('glance.title', { name: report.project.name })}</h2>
+      <div className="rounded-lg border border-border bg-surface p-5">
+        <h2 className="flex items-center gap-2 font-display text-xl font-semibold text-ink"><BookOpen className="size-5 text-brand-600" />{t('glance.title', { name: report.project.name })}</h2>
         <p className="mt-2 max-w-4xl text-base leading-relaxed text-ink">{t('glance.intro')}</p>
       </div>
 
@@ -67,8 +67,8 @@ const MasdGlance: React.FC<{ report: MasdReport; onMore: () => void }> = ({ repo
       <Section icon={<BookOpen />} title={t('glance.wordsTitle')}>
         <dl className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {(['learner', 'adoption', 'types', 'tranche', 'forms', 'levels', 'dyad', 'visits'] as const).map(k => (
-            <div key={k} className="rounded-xl bg-surface-sunken p-3">
-              <dt className="text-sm font-bold text-ink">{t(`glance.words.${k}.term`)}</dt>
+            <div key={k} className="rounded-lg bg-surface-sunken p-3">
+              <dt className="text-sm font-semibold text-ink">{t(`glance.words.${k}.term`)}</dt>
               <dd className="mt-0.5 text-sm text-ink">{t(`glance.words.${k}.meaning`)}</dd>
             </div>
           ))}

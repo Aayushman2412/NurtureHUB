@@ -1,7 +1,7 @@
 """MASD — Member Activity Summary Dashboard.
 
 The analysts' district report (adoption target fulfilment, activity intensity,
-and malnutrition outcomes against NFHS) computed inside NurtureHUB from the
+and malnutrition outcomes against NFHS) computed inside EduPoshan from the
 app's own data, instead of by scripts over downloaded exports.
 
   rules.py        the programme rules (ideal activities, targets, bands)

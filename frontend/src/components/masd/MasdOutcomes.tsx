@@ -18,7 +18,7 @@ import { cn } from '../../utils/cn';
 const BANDS: Band[] = ['lt6', 'm6_11'];
 /** Birth, adoption and last visit, always in this order and these colours
  *  (review of 7 Oct 2026): blue, orange, green. */
-const VISIT_COLORS = { bv: '#3B6EA8', av: '#E8892B', lv: '#2F9E56' } as const;
+const VISIT_COLORS = { bv: '#3B6EA8', av: '#E8892B', lv: '#228049' } as const;
 type Visit = keyof typeof VISIT_COLORS;
 
 const signed = (v: number | null | undefined, unit = '') => (v == null ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(1)}${unit}`);
@@ -143,7 +143,7 @@ const MasdOutcomes: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({
   const cmp = report.comparison;
 
   const bvToggle = (
-    <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border px-3 py-1.5 text-sm font-medium text-ink">
+    <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-ink">
       <input type="checkbox" className="size-4 accent-(--primary)" checked={showBv} onChange={e => setShowBv(e.target.checked)} />
       {t('outcomes.showBv')}
     </label>
@@ -346,7 +346,7 @@ const MasdOutcomes: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({
             };
             return (
               <div key={band} className="space-y-3">
-                <h4 className="font-display text-base font-bold text-ink">
+                <h4 className="font-display text-base font-semibold text-ink">
                   {t(`bands.${band}`)} <span className="text-sm font-normal text-ink-muted">· {t('outcomes.typesOf', { types: band === 'lt6' ? t('bands.lt6Types') : t('bands.m6_11Types') })}</span>
                 </h4>
                 <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2 [&>*]:min-w-0">
@@ -374,7 +374,7 @@ const MasdOutcomes: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({
             })));
             return (
               <div key={band}>
-                <h4 className="mb-1 font-display text-base font-bold text-ink">{t(`bands.${band}`)}</h4>
+                <h4 className="mb-1 font-display text-base font-semibold text-ink">{t(`bands.${band}`)}</h4>
                 <p className="mb-3 text-xs text-ink-muted">{t('outcomes.complianceRule', { visits: c.rule.min_visits, days: c.rule.min_follow_up_days })}</p>
                 <GroupedColumns
                   categories={cats}

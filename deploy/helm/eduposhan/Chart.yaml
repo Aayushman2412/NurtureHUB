@@ -1,0 +1,11 @@
+apiVersion: v2
+name: eduposhan
+description: >-
+  EduPoshan on Kubernetes. One backend image in four roles (api, realtime,
+  admin, worker), the SPA, and a migration Job that runs before every release.
+  Design: deploy/scale/ARCHITECTURE_300K.md.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+kubeVersion: ">=1.29.0-0"
+keywords: [fastapi, react, postgres, gateway-api]

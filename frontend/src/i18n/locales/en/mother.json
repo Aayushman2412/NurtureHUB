@@ -155,7 +155,7 @@
     "toastSuccess": "Registered {{name}} ({{uid}}).",
     "toastFail": "Failed to register. Please try again.",
     "adoptionType": "This adoption is",
-    "adoptionTypeHint": "Choose what the mother is on the day you adopt her. NurtureHUB also works it out from the dates you enter; if the two differ, it is flagged for you and your batch monitor to check.",
+    "adoptionTypeHint": "Choose what the mother is on the day you adopt her. EduPoshan also works it out from the dates you enter; if the two differ, it is flagged for you and your batch monitor to check.",
     "adoptionTypes": {
       "anc": "Pregnant",
       "pnc_lt5": "Delivered: baby under {{pncM}} months",

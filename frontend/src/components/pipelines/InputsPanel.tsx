@@ -136,11 +136,11 @@ const InputsPanel: React.FC<InputsPanelProps> = ({
     return (
       <section className="space-y-3">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-sunken">
+          <span className="inline-flex shrink-0">
             {icon}
           </span>
           <div className="min-w-0 flex-1">
-            <h3 className="font-display text-sm font-bold text-ink">
+            <h3 className="font-display text-sm font-semibold text-ink">
               {title} <span className="font-normal text-ink-muted">({count})</span>
             </h3>
             <p className="text-xs text-ink-muted">{description}</p>
@@ -188,10 +188,10 @@ const InputsPanel: React.FC<InputsPanelProps> = ({
   return (
     <div className="space-y-6">
       {/* Whole-workspace shortcut: one zip, auto-sorted into the slots below. */}
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface-sunken p-4">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface-sunken p-4">
         <FileArchive className="size-5 shrink-0 text-primary-ink" />
         <div className="min-w-0 flex-1">
-          <div className="font-display text-sm font-bold text-ink">{t('inputs.bulkZipTitle')}</div>
+          <div className="font-display text-sm font-semibold text-ink">{t('inputs.bulkZipTitle')}</div>
           <p className="text-xs text-ink-muted">{t('inputs.bulkZipDescription')}</p>
         </div>
         <Button
@@ -231,10 +231,10 @@ const InputsPanel: React.FC<InputsPanelProps> = ({
           questions: the zip is the archive (re-uploadable, byte-identical),
           the workbook is for reading and cross-checking in one place. */}
       {files.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-4">
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-4">
           <Download className="size-5 shrink-0 text-primary-ink" />
           <div className="min-w-0 flex-1">
-            <div className="font-display text-sm font-bold text-ink">
+            <div className="font-display text-sm font-semibold text-ink">
               {t('inputs.downloadTitle')}{' '}
               <span className="font-normal text-ink-muted">({files.length})</span>
             </div>
@@ -247,7 +247,7 @@ const InputsPanel: React.FC<InputsPanelProps> = ({
 
       {/* Only appears once something is ticked, so the default view stays calm. */}
       {selectedPaths.length > 0 && (
-        <div className="sticky top-2 z-10 flex flex-wrap items-center gap-3 rounded-xl border border-primary/40 bg-primary-soft p-3 shadow-sm">
+        <div className="sticky top-2 z-10 flex flex-wrap items-center gap-3 rounded-lg border border-primary/40 bg-primary-soft p-3 ">
           <span className="min-w-0 flex-1 text-sm font-semibold text-ink">
             {t('inputs.selectedCount', { count: selectedPaths.length })}
           </span>
@@ -284,11 +284,11 @@ const InputsPanel: React.FC<InputsPanelProps> = ({
 
       {other.length > 0 && (
         <section className="space-y-2">
-          <h3 className="font-display text-sm font-bold text-ink">
+          <h3 className="font-display text-sm font-semibold text-ink">
             {t('inputs.otherTitle')} <span className="font-normal text-ink-muted">({other.length})</span>
           </h3>
           <p className="text-xs text-ink-muted">{t('inputs.otherDescription')}</p>
-          <div className="rounded-xl border border-border bg-surface p-3">
+          <div className="rounded-lg border border-border bg-surface p-3">
             {other.map(file => (
               <div key={file.path} className="flex items-center gap-2 py-1 text-sm">
                 <input

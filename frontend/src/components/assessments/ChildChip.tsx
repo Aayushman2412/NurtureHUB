@@ -24,8 +24,8 @@ const ChildChip: React.FC<ChildChipProps> = ({ name, uid, ageDays, ageMonths, cl
   return (
     <span
       className={cn(
-        'inline-flex max-w-full items-center gap-1.5 rounded-full bg-coral-50 px-3 py-1 text-xs font-semibold',
-        'text-coral-700 dark:bg-coral-500/10 dark:text-coral-300',
+        'inline-flex max-w-full items-center gap-1.5 rounded-sm bg-brand-50 px-3 py-1 text-xs font-semibold',
+        'text-brand-700 dark:bg-brand-500/10 dark:text-brand-300',
         className,
       )}
     >

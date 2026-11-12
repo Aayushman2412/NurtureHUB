@@ -25,7 +25,7 @@ const MobileInput: React.FC<{
     <div
       className={cn(
         'flex items-stretch overflow-hidden rounded-lg border bg-surface transition-colors focus-within:ring-2 focus-within:ring-primary/30',
-        error ? 'border-error-500' : 'border-border-strong/60 focus-within:border-primary',
+        error ? 'border-error-500' : 'border-border-control focus-within:border-primary',
         disabled && 'opacity-60',
       )}
     >
@@ -44,7 +44,7 @@ const MobileInput: React.FC<{
         disabled={disabled}
         autoFocus={autoFocus}
         aria-invalid={error || undefined}
-        className="min-w-0 flex-1 bg-transparent px-3.5 py-2.5 text-base tracking-wide text-ink outline-none placeholder:text-ink-faint"
+        className="min-w-0 flex-1 bg-transparent px-3.5 py-2.5 text-base text-ink outline-none placeholder:text-ink-faint"
       />
     </div>
   );

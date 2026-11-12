@@ -10,7 +10,7 @@ const Pct: React.FC<{ z: number | null | undefined }> = ({ z }) => {
   const pct = percentileOf(z);
   const tone = toneOf(z);
   return pct == null || !tone ? <span className="text-ink-faint">—</span>
-    : <span className={cn('font-bold tabular-nums', TONE_CLASSES[tone].text)}>P{pct}</span>;
+    : <span className={cn('font-semibold tabular-nums', TONE_CLASSES[tone].text)}>P{pct}</span>;
 };
 
 /**
@@ -25,9 +25,9 @@ const GrowthVisitTable: React.FC<{ visits: GrowthVisitDetail[]; className?: stri
     .sort((a, b) => (a.date < b.date ? 1 : -1));
   if (measured.length === 0) return null;
   return (
-    <div className={cn('overflow-x-auto rounded-xl border border-border bg-surface', className)}>
+    <div className={cn('overflow-x-auto rounded-lg border border-border bg-surface', className)}>
       <table className="w-full text-sm">
-        <caption className="px-3 pt-2.5 text-left font-display text-sm font-bold text-ink">{t('visitTable.title')}</caption>
+        <caption className="px-3 pt-2.5 text-left font-display text-sm font-semibold text-ink">{t('visitTable.title')}</caption>
         <thead>
           <tr className="text-left text-xs text-ink-muted">
             <th className="px-3 py-2 font-semibold">{t('visitTable.date')}</th>

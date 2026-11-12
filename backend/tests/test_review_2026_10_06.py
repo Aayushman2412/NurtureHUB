@@ -332,7 +332,7 @@ def test_support_team_shows_monitor_and_trainers(world):
     assert my_support_team(current_user=c, db=db)["batch"] is None
 
 
-# ── Entries that must not happen in NurtureHUB ──────────────────────────────
+# ── Entries that must not happen in EduPoshan ──────────────────────────────
 
 
 def test_dates_that_contradict_each_other_are_refused(world):

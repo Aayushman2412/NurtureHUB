@@ -24,7 +24,7 @@ const CaseLine: React.FC<{ c: CaseRow; asOf: string }> = ({ c, asOf }) => {
         <span className={cn('mt-1.5 size-3.5 shrink-0 rounded-full', tone.dot)} aria-hidden />
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-baseline justify-between gap-x-3">
-            <span className="truncate font-display text-base font-bold text-ink">{c.mother_name}</span>
+            <span className="truncate font-display text-base font-semibold text-ink">{c.mother_name}</span>
             {/* Adopted in pregnancy and the baby since born: the baby says it. */}
             {c.type && c.type !== 'unknown' && !(c.type === 'anc' && c.children.length > 0) && (
               <span className="text-xs text-ink-muted">{t(`field.type.${c.type}`)}</span>
@@ -51,7 +51,7 @@ const CaseLine: React.FC<{ c: CaseRow; asOf: string }> = ({ c, asOf }) => {
             <Link
               key={k.id}
               to={`/babies/${k.id}`}
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-sm font-semibold text-ink hover:border-border-strong"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-sm font-semibold text-ink hover:border-border-strong"
             >
               <Baby className="size-4 text-ink-muted" />
               {k.name || t('field.baby')}
@@ -69,9 +69,9 @@ const CaseLine: React.FC<{ c: CaseRow; asOf: string }> = ({ c, asOf }) => {
 const PlainLine: React.FC<{ m: MotherListItem }> = ({ m }) => {
   const { t } = useTranslation('dashboard');
   return (
-    <Link to={`/mothers/${m.id}`} className="flex items-center gap-3 rounded-xl border border-border bg-surface p-4 hover:bg-surface-sunken/60">
+    <Link to={`/mothers/${m.id}`} className="flex items-center gap-3 rounded-lg border border-border bg-surface p-4 hover:bg-surface-sunken/60">
       <span className="min-w-0 flex-1">
-        <span className="block truncate font-display text-base font-bold text-ink">{m.mother_name}</span>
+        <span className="block truncate font-display text-base font-semibold text-ink">{m.mother_name}</span>
         <span className="block text-sm text-ink-muted">
           {m.adoption_type && m.adoption_type !== 'unknown' ? t(`field.type.${m.adoption_type}`) : m.mother_uid}
         </span>
@@ -118,7 +118,7 @@ const MothersListPage: React.FC = () => {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="font-display text-2xl font-extrabold text-ink">{t('field.list.title')}</h1>
+        <h1 className="font-display text-2xl font-semibold text-ink">{t('field.list.title')}</h1>
         {count > 0 && <span className="text-sm font-semibold text-ink-muted">{t('field.list.count', { count })}</span>}
       </div>
       <Link to="/mothers/new" className={buttonClasses('primary', 'lg', 'w-full min-h-14')}>
@@ -129,7 +129,7 @@ const MothersListPage: React.FC = () => {
         <Card key={item.id} className="flex items-center gap-3 border-dashed p-4">
           <CloudUpload className="size-5 shrink-0 text-amber-600" />
           <div className="min-w-0 flex-1">
-            <div className="truncate font-display font-bold text-ink">
+            <div className="truncate font-display font-semibold text-ink">
               {item.label || t('list.pendingUnnamed', { ns: 'mother', defaultValue: 'New registration' })}
             </div>
             <div className="text-xs text-ink-muted">{t('pendingSyncHint', { ns: 'offline' })}</div>

@@ -47,10 +47,10 @@ const OptionCard: React.FC<OptionCardProps> = ({
         onClick={onToggle}
         aria-pressed={selected}
         className={cn(
-          'flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 bg-surface px-3.5 py-2 text-left transition-colors',
+          'flex min-h-14 cursor-pointer items-center gap-3 rounded-lg border-2 bg-surface px-3.5 py-2 text-left transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
           layout === 'chip' && 'justify-center px-2 text-center',
-          selected ? 'border-primary bg-coral-50 dark:bg-coral-500/10' : 'border-border hover:border-border-strong',
+          selected ? 'border-primary bg-brand-50 dark:bg-brand-500/10' : 'border-border hover:border-border-strong',
         )}
       >
         {layout === 'row' && (
@@ -61,7 +61,7 @@ const OptionCard: React.FC<OptionCardProps> = ({
         )}
         <span className="flex min-w-0 flex-col items-start gap-1">
           <span className="text-sm font-semibold leading-snug text-ink">{option.label}</span>
-          {selected && verdictDef && <VerdictChip def={verdictDef} className="animate-fade-in" />}
+          {selected && verdictDef && <VerdictChip def={verdictDef} className="animate-overlay-in" />}
         </span>
       </button>
     );
@@ -73,11 +73,11 @@ const OptionCard: React.FC<OptionCardProps> = ({
       onClick={onToggle}
       aria-pressed={selected}
       className={cn(
-        'group relative flex cursor-pointer flex-col overflow-hidden rounded-xl border-2 bg-surface text-left',
-        'transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border-2 bg-surface text-left',
+        'transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         selected
-          ? 'border-primary shadow-md ring-2 ring-primary/25'
-          : 'border-border hover:-translate-y-0.5 hover:border-border-strong hover:shadow-md',
+          ? 'border-primary ring-2 ring-primary/25'
+          : 'border-border hover:border-border-strong ',
       )}
     >
       {media ? (
@@ -91,9 +91,9 @@ const OptionCard: React.FC<OptionCardProps> = ({
       ) : (
         <div
           aria-hidden
-          className="flex aspect-[4/3] w-full items-center justify-center bg-gradient-to-br from-coral-50 to-cream-200 dark:from-coral-950/50 dark:to-cream-900"
+          className="flex aspect-[4/3] w-full items-center justify-center bg-surface-sunken"
         >
-          <span className="font-display text-4xl font-bold text-coral-300 dark:text-coral-800">
+          <span className="font-display text-4xl font-semibold text-brand-300 dark:text-brand-800">
             {initial}
           </span>
         </div>
@@ -102,7 +102,7 @@ const OptionCard: React.FC<OptionCardProps> = ({
       <div className="flex flex-1 flex-col items-start gap-1.5 p-3">
         <span className="text-sm font-semibold leading-snug text-ink">{option.label}</span>
         {selected && verdictDef && (
-          <VerdictChip def={verdictDef} className="animate-fade-in" />
+          <VerdictChip def={verdictDef} className="animate-overlay-in" />
         )}
       </div>
 
@@ -110,8 +110,8 @@ const OptionCard: React.FC<OptionCardProps> = ({
       <span
         aria-hidden
         className={cn(
-          'absolute right-2 top-2 flex size-6 items-center justify-center rounded-full shadow-sm',
-          'transition-all duration-150',
+          'absolute right-2 top-2 flex size-6 items-center justify-center rounded-full ',
+          'transition-colors duration-150',
           selected ? 'scale-100 bg-primary text-primary-fg opacity-100' : 'scale-50 opacity-0',
         )}
       >

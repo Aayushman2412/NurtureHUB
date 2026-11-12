@@ -5,9 +5,9 @@
   },
   "welcome": {
     "districtEyebrow": "{{district}} ज़िला",
-    "defaultEyebrow": "फिर से स्वागत है",
+    "defaultEyebrow": "प्रशिक्षण",
     "nameFallback": "स्वास्थ्य कार्यकर्ता",
-    "subtitle": "आपने {{total}} में से {{completed}} वीडियो पाठ पूरे कर लिए हैं। बढ़िया काम जारी रखें!",
+    "subtitle": "{{total}} में से {{completed}} वीडियो पाठ पूरे।",
     "overall": "समग्र",
     "progress": "प्रगति"
   },

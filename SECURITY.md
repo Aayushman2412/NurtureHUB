@@ -1,4 +1,4 @@
-# Data protection in NurtureHUB
+# Data protection in EduPoshan
 
 This document exists because of one clause in the Maharashtra MOU:
 
@@ -16,14 +16,14 @@ system an incident happened in, who did what and from where, and that the record
 proving it has not been edited. A platform that cannot do that cannot honour the
 clause no matter how securely it is written.
 
-What follows is what NurtureHUB does about that, and — just as importantly —
+What follows is what EduPoshan does about that, and — just as importantly —
 what it does not.
 
 ---
 
 ## 1. What is at stake
 
-NurtureHUB holds, for each family in the programme:
+EduPoshan holds, for each family in the programme:
 
 | Data | About whom |
 |---|---|

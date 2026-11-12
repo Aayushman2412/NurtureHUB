@@ -45,15 +45,15 @@ const TrainingRings: React.FC<{
   const fmt = (v: number | null) => (v == null ? '—' : `${Math.round(v)}%`);
 
   const rings = [
-    { key: 'videos', icon: <Video className="size-4" />, value: pct(done, tutorials.length), main: `${done}/${tutorials.length}`, tone: 'text-coral-500' },
-    { key: 'watched', icon: <PlayCircle className="size-4" />, value: watchPct, main: `${watchPct}%`, tone: 'text-sage-500' },
+    { key: 'videos', icon: <Video className="size-4" />, value: pct(done, tutorials.length), main: `${done}/${tutorials.length}`, tone: 'text-brand-500' },
+    { key: 'watched', icon: <PlayCircle className="size-4" />, value: watchPct, main: `${watchPct}%`, tone: 'text-success-500' },
     { key: 'quizzes', icon: <ClipboardCheck className="size-4" />, value: pct(quizDone, quizzes.length), main: quizzes.length ? `${quizDone}/${quizzes.length}` : '—', tone: 'text-primary-ink' },
     {
       key: 'tests', icon: <Award className="size-4" />,
       // The ring fills to the latest score: the screening test once taken.
       value: scores.screening ?? scores.formative ?? 0,
       main: (
-        <span className="flex flex-col text-[10.5px] font-bold leading-tight">
+        <span className="flex flex-col text-[10.5px] font-semibold leading-tight">
           <span>{t('rings.ft')} {fmt(scores.formative)}</span>
           <span>{t('rings.st')} {fmt(scores.screening)}</span>
         </span>
@@ -66,7 +66,7 @@ const TrainingRings: React.FC<{
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {rings.map(r => (
         <Link key={r.key} to={links[r.key as keyof typeof links] ?? '/tutorials'}
-          className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface p-3 text-center transition-colors hover:border-border-strong active:bg-surface-sunken sm:flex-row sm:gap-3 sm:text-left">
+          className="flex flex-col items-center gap-2 rounded-lg border border-border bg-surface p-3 text-center transition-colors hover:border-border-strong active:bg-surface-sunken sm:flex-row sm:gap-3 sm:text-left">
           <ProgressRing
             value={r.value} size={64} strokeWidth={7} className={cn('shrink-0', r.tone)}
             label={typeof r.main === 'string' ? <span className="text-[13px] tabular-nums">{r.main}</span> : r.main}

@@ -525,10 +525,10 @@ const AssessmentRunnerPage: React.FC = () => {
     return (
       <div className="mx-auto max-w-2xl">
         <Card className="p-8 text-center">
-          <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-500">
+          <div className="inline-flex shrink-0 text-amber-600 dark:text-amber-500">
             <Lock className="size-6" aria-hidden />
           </div>
-          <h3 className="mt-4 font-display text-lg font-bold text-ink">{t('runner.lockedTitle')}</h3>
+          <h3 className="mt-4 font-display text-lg font-semibold text-ink">{t('runner.lockedTitle')}</h3>
           <p className="mx-auto mt-2 max-w-md text-sm text-ink-muted">
             {t('runner.cfLockedBody', { min: CF_MIN_AGE_DAYS })}
           </p>
@@ -598,7 +598,7 @@ const AssessmentRunnerPage: React.FC = () => {
       <style>{runnerStyles}</style>
 
       {/* Sticky top area: child + form identity, exit, progress */}
-      <div className="sticky top-0 z-10 -mx-5 -mt-5 mb-6 border-b border-border bg-background/90 px-5 pb-3 pt-4 backdrop-blur-md sm:-mx-6 sm:-mt-6 sm:px-6">
+      <div className="sticky top-0 z-10 -mx-5 -mt-5 mb-6 border-b border-border bg-background px-5 pb-3 pt-4 sm:-mx-6 sm:-mt-6 sm:px-6">
         <div className="mx-auto flex max-w-2xl flex-col gap-2.5">
           <div className="flex items-center justify-between gap-3">
             {/* Back lives up here, always in the same place (review of 30 Oct
@@ -614,7 +614,7 @@ const AssessmentRunnerPage: React.FC = () => {
               <ArrowLeft className="size-5" />
             </button>
             <div className="min-w-0 flex-1">
-              <div className="truncate font-display text-sm font-bold text-ink">
+              <div className="truncate font-display text-sm font-semibold text-ink">
                 {definition.title}
               </div>
               <div className="truncate text-xs text-ink-muted">
@@ -647,7 +647,7 @@ const AssessmentRunnerPage: React.FC = () => {
       <div className="mx-auto w-full max-w-2xl pb-6">
         {reviewing ? (
           <Card className="p-5 sm:p-6">
-            <h2 className="flex items-center gap-2 font-display text-xl font-bold text-ink">
+            <h2 className="flex items-center gap-2 font-display text-xl font-semibold text-ink">
               <ListChecks className="size-5 text-primary-ink" />{t('runner.reviewTitle')}
             </h2>
             <p className="mt-1 text-sm text-ink-muted">{t('runner.reviewHint')}</p>
@@ -662,7 +662,7 @@ const AssessmentRunnerPage: React.FC = () => {
                   <li key={step.id}>
                     <button type="button" onClick={() => editStep(i)}
                       className="flex w-full cursor-pointer items-start gap-3 py-3 text-left hover:bg-surface-sunken/60">
-                      <span className="mt-0.5 w-7 shrink-0 text-right text-sm font-bold tabular-nums text-ink-muted">{numberOf.get(step.id)}.</span>
+                      <span className="mt-0.5 w-7 shrink-0 text-right text-sm font-semibold tabular-nums text-ink-muted">{numberOf.get(step.id)}.</span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-semibold text-ink">{title}</span>
                         <span className={required && !done ? 'block text-sm font-semibold text-error-600 dark:text-error-400' : 'block text-sm text-ink-muted'}>
@@ -682,7 +682,7 @@ const AssessmentRunnerPage: React.FC = () => {
         <>
         {current.sectionId && (
           <div className="mb-3 flex justify-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-sage-100 px-3 py-1 text-xs font-semibold text-sage-700 dark:bg-sage-500/15 dark:text-sage-300">
+            <span className="inline-flex items-center gap-1.5 rounded-sm bg-success-100 px-3 py-1 text-xs font-semibold text-success-700 dark:bg-success-500/15 dark:text-success-300">
               <Layers className="size-3.5" aria-hidden />
               {t('runner.sectionBanner', { title: current.sectionTitle })}
             </span>
@@ -703,7 +703,7 @@ const AssessmentRunnerPage: React.FC = () => {
 
             {current.kind === 'matrix' && (
               <>
-                <h2 className="text-balance text-center font-display text-xl font-bold text-ink sm:text-2xl">
+                <h2 className="text-balance text-center font-display text-xl font-semibold text-ink sm:text-2xl">
                   {current.matrix.title}
                 </h2>
                 {current.matrix.helpText && (
@@ -728,7 +728,7 @@ const AssessmentRunnerPage: React.FC = () => {
                   q.questionType === 'number' ? numberFlagState(answer?.value ?? '', q.numeric) : null;
                 return (
                   <>
-                    <h2 className="text-balance text-center font-display text-xl font-bold text-ink sm:text-2xl">
+                    <h2 className="text-balance text-center font-display text-xl font-semibold text-ink sm:text-2xl">
                       {q.title}
                     </h2>
                     {qDisplay.helpText && q.helpText && (
@@ -746,7 +746,7 @@ const AssessmentRunnerPage: React.FC = () => {
                             alt=""
                             className={
                               q.media!.length === 1
-                                ? 'max-h-64 w-auto max-w-full rounded-xl border border-border object-contain'
+                                ? 'max-h-64 w-auto max-w-full rounded-lg border border-border object-contain'
                                 : 'h-32 w-auto max-w-full rounded-lg border border-border object-contain sm:h-40'
                             }
                           />
@@ -831,7 +831,7 @@ const AssessmentRunnerPage: React.FC = () => {
 
       {/* Footer controls: fixed at the bottom of the screen, so Next never
           moves while the options above it change (review of 30 Oct 2026). */}
-      <div className="sticky bottom-0 z-10 -mx-5 border-t border-border bg-background/95 px-5 py-3 backdrop-blur-md sm:-mx-6 sm:px-6">
+      <div className="sticky bottom-0 z-10 -mx-5 border-t border-border bg-background px-5 py-3 sm:-mx-6 sm:px-6">
         <div className="mx-auto flex w-full max-w-2xl items-center gap-2 sm:gap-3">
           {!editingSubmitted && (
             <Button

@@ -188,7 +188,7 @@ const ResultsInsights: React.FC<{ data: ResultsData }> = ({ data }) => {
           them, so they stay in sight. Solid, not frosted: a blur behind a
           sticky bar repaints the whole page on every scroll, which crawls on
           a district-office laptop that is also screen-sharing. */}
-      <div className="space-y-2.5 rounded-2xl border border-border bg-surface p-2 shadow-(--shadow-card) sm:sticky sm:top-[3.75rem] sm:z-20 lg:top-2">
+      <div className="space-y-2.5 rounded-lg border border-border bg-surface p-2 sm:sticky sm:top-[3.75rem] sm:z-20 lg:top-2">
         <SubNav items={pages} value={current} onChange={setView} label={t('nav.label')} />
         {dims.length > 0 && (
           <div className="space-y-2 px-1.5 pb-1">

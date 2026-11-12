@@ -1,0 +1,202 @@
+# EduPoshan on Kubernetes — deploy/scale/ARCHITECTURE_300K.md explains the shape.
+# Sizes are the Phase 1 starting point; re-tune them from the load test.
+
+image:
+  registry: ghcr.io/aayushman2412/nurturehub   # CI pushes backend:sha-* and frontend:sha-* here
+  tag: ""                                      # REQUIRED: the sha-<commit> tag CI pushed. Never "latest".
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+fullnameOverride: ""
+
+# The host the platform is served at. It feeds ALLOWED_HOSTS, CORS_ORIGINS and
+# PUBLIC_BASE_URL, and every probe sends it as the Host header: with
+# ALLOWED_HOSTS set, a probe arriving as "Host: <pod-ip>" is answered 400 and
+# the pod never becomes ready (the same trap the compose healthcheck works around).
+publicHost: ""
+extraAllowedHosts: []
+
+# An EXISTING Secret, created out of band (External Secrets / Vault / kubectl).
+# The chart never stores a value. Keys it expects — see README.md:
+#   DATABASE_URL (through PgBouncer), DIRECT_DATABASE_URL (the primary, for the
+#   migration Job), JWT_SECRET_KEY, AUDIT_HMAC_KEY, PHI_ENCRYPTION_KEYS,
+#   PHI_ENCRYPTION_ACTIVE_KEY, PHI_INDEX_KEY, REDIS_URL, RATE_LIMIT_STORAGE_URI,
+#   SMTP_USER, SMTP_PASSWORD, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
+secret:
+  name: eduposhan-env
+
+# Non-secret settings for every backend pod. An empty value is left out, so
+# the app's own default applies. The role switches (RUN_MIGRATIONS_ON_START,
+# RUN_BACKGROUND_TASKS, OWNS_PIPELINE_RUNS) are set per role by the templates —
+# do not put them here.
+env:
+  APP_ENV: production
+  SEED_DEMO_DATA: "false"
+  RAW_EXPORT_MOCK: "false"
+  ALLOW_DEV_ADMIN: "false"
+  ENABLE_API_DOCS: "false"
+  SERVE_LOCAL_UPLOADS: "false"
+  HSTS_ENABLED: "true"
+  # Behind Cloudflare: the edge overwrites cf-connecting-ip on every request,
+  # while X-Forwarded-For's left-most hop is whatever the client sent.
+  TRUST_PROXY_HEADERS: "true"
+  CLIENT_IP_HEADER: cf-connecting-ip
+  # Pools stay small: PgBouncer multiplexes them (48 api pods x 10 = 480 clients).
+  DB_POOL_SIZE: "10"
+  DB_MAX_OVERFLOW: "5"
+  # Sized for a hall behind one address; guessing is stopped per account.
+  RATE_LIMIT_LOGIN: 6000/minute
+  RATE_LIMIT_OTP: 3000/minute
+  RATE_LIMIT_REGISTER: 3000/hour
+  ORG_LEGAL_NAME: ""
+  DPO_NAME: ""
+  DPO_EMAIL: ""       # production refuses to boot without a real one
+  DPO_PHONE: ""
+
+media:
+  # Learner photos and form media must live in object storage once there is
+  # more than one pod — otherwise a photo lands on whichever pod took the upload.
+  r2:
+    bucket: ""
+    publicBaseUrl: ""   # e.g. https://media.<domain> (add it to the SPA's CSP img-src/media-src)
+  allowLocalUploads: false   # true only for a single-pod trial
+
+storageClassName: ""   # empty = the cluster default
+auditSpool:
+  size: 1Gi            # one volume per backend pod; holds audit events only while the DB is unreachable
+
+# Seconds a pod keeps serving after it is told to stop, so the Gateway stops
+# sending it new requests before it closes the door.
+preStopSleepSeconds: 10
+
+api:
+  replicas: 4            # used only when autoscaling is off
+  uvicornWorkers: 1      # one process per pod: probes and CPU autoscaling see the truth
+  gracefulShutdownSeconds: 25
+  terminationGracePeriodSeconds: 45
+  readOnlyRootFilesystem: true
+  resources:
+    requests: { cpu: "1", memory: 768Mi }
+    limits: { cpu: "2", memory: 1536Mi }
+  autoscaling:
+    enabled: true
+    minReplicas: 4
+    maxReplicas: 48
+    targetCPUUtilizationPercentage: 65
+  nodeSelector: {}
+  tolerations: []
+
+realtime:
+  replicas: 2
+  uvicornWorkers: 1
+  gracefulShutdownSeconds: 20
+  terminationGracePeriodSeconds: 40
+  readOnlyRootFilesystem: true
+  resources:
+    requests: { cpu: 500m, memory: 768Mi }
+    limits: { cpu: "2", memory: 2Gi }
+  autoscaling:
+    enabled: true
+    minReplicas: 2       # raise BEFORE an exam (values-exam-day.yaml): open sockets never move
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 60
+    # Scale-down removes the highest-numbered pods, which hold sockets: wait
+    # out a quiet spell mid-exam instead of dropping candidates into reconnects.
+    scaleDownStabilizationSeconds: 1800
+  nodeSelector: {}
+  tolerations: []
+
+admin:
+  replicas: 1            # owns the pipeline volume; must stay 1 until pipelines become jobs
+  uvicornWorkers: 2      # a long export must not block the other admin screens
+  gracefulShutdownSeconds: 60
+  terminationGracePeriodSeconds: 90
+  readOnlyRootFilesystem: false   # pipeline scripts write beside themselves
+  pipelineDataSize: 100Gi
+  uploadsSize: 20Gi      # form-builder media until R2 holds it
+  resources:
+    requests: { cpu: "2", memory: 4Gi }
+    limits: { cpu: "4", memory: 8Gi }
+  autoscaling:
+    enabled: false
+  nodeSelector: {}
+  tolerations: []
+
+worker:
+  replicas: 1            # 2 is safe with REDIS_URL set (leases pick one); exactly 1 without
+  terminationGracePeriodSeconds: 30
+  readOnlyRootFilesystem: true
+  resources:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits: { cpu: "1", memory: 1Gi }
+  autoscaling:
+    enabled: false
+  nodeSelector: {}
+  tolerations: []
+
+migrate:
+  activeDeadlineSeconds: 1800
+  resources:
+    requests: { cpu: 500m, memory: 512Mi }
+    limits: { cpu: "2", memory: 2Gi }
+
+frontend:
+  replicas: 2
+  # The SPA's nginx proxies /api to "backend:8000" and resolves that name at
+  # start-up; this Service answers it. The Gateway routes /api directly, so
+  # it is a fallback — but without it nginx refuses to start. Empty = skip.
+  backendAlias: backend
+  resources:
+    requests: { cpu: 100m, memory: 64Mi }
+    limits: { cpu: 500m, memory: 256Mi }
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+
+# Routing. Gateway API is the default: ingress-nginx was retired by the
+# Kubernetes project in March 2026. The Gateway itself (listeners, TLS) belongs
+# to the cluster; this chart only attaches an HTTPRoute to it.
+gateway:
+  enabled: true
+  parentRefs: []          # e.g. [{ name: public, namespace: gateway-system, sectionName: https }]
+  timeouts:
+    api: 60s
+    admin: 600s           # crosstabs runs and multi-hundred-MB downloads
+    websocket: 0s         # zero disables the deadline: a socket lives for the whole exam
+ingress:
+  enabled: false          # a classic Ingress, for clusters with a supported controller
+  className: ""
+  annotations: {}
+  tlsSecretName: ""
+
+networkPolicy:
+  enabled: false
+  # Labels of the namespace the Gateway's proxies run in.
+  gatewayNamespaceLabels:
+    kubernetes.io/metadata.name: gateway-system
+
+# In-cluster PgBouncer in front of a managed Postgres. With CloudNativePG use
+# its Pooler instead (deploy/k8s/cloudnativepg.yaml).
+pgbouncer:
+  enabled: false
+  image:
+    repository: edoburu/pgbouncer   # the image docker-compose.scale.yml uses
+    tag: ""                         # REQUIRED when enabled: pin a version you have verified
+  replicas: 2
+  serverHost: ""                    # the primary's address
+  serverPort: 5432
+  database: eduposhan
+  serverTlsSslmode: prefer          # managed databases usually want "require"
+  maxClientConn: 2000
+  defaultPoolSize: 40
+  # Secret holding userlist.txt (SCRAM verifiers, as deploy/pgbouncer/userlist.txt.example)
+  userlistSecret: eduposhan-pgbouncer-userlist
+  resources:
+    requests: { cpu: 250m, memory: 64Mi }
+    limits: { cpu: "1", memory: 256Mi }
+
+# Postgres inside the cluster is NOT part of this chart: deploy/k8s/cloudnativepg.yaml
+# is applied once, beforehand. The migration hook runs before any of this
+# release's resources exist, and `helm uninstall` must never reach the data.

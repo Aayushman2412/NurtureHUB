@@ -70,7 +70,7 @@ const ColumnEditor: React.FC<{
   return (
     <div className="rounded-lg border border-border bg-surface">
       <div className="flex items-center gap-2 py-2 pl-2.5 pr-1.5">
-        <span className="flex size-5 shrink-0 items-center justify-center rounded bg-surface-sunken text-xs font-bold text-ink-muted">
+        <span className="flex size-5 shrink-0 items-center justify-center rounded bg-surface-sunken text-xs font-semibold text-ink-muted">
           {index + 1}
         </span>
         <button type="button" onClick={() => setOpen(o => !o)} className="min-w-0 flex-1 cursor-pointer text-left">

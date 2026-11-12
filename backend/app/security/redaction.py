@@ -198,7 +198,7 @@ def install_log_redaction() -> None:
     root = logging.getLogger()
     for handler in root.handlers:
         handler.addFilter(filt)
-    for name in ("uvicorn", "uvicorn.error", "uvicorn.access", "nurturehub"):
+    for name in ("uvicorn", "uvicorn.error", "uvicorn.access", "eduposhan"):
         for handler in logging.getLogger(name).handlers:
             handler.addFilter(filt)
     _installed = True

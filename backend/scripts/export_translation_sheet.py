@@ -1,5 +1,5 @@
 """
-Export every sentence NurtureHUB shows people into one Excel workbook for
+Export every sentence EduPoshan shows people into one Excel workbook for
 language review: English, the Hindi we use today, and Marathi — pre-filled from
 scripts/translation_drafts/mr.json when drafts exist, otherwise empty.
 
@@ -25,7 +25,7 @@ rows, but must not edit IDs.
 
 Usage (from backend/):
   venv-win/Scripts/python.exe -m scripts.export_translation_sheet
-  venv-win/Scripts/python.exe -m scripts.export_translation_sheet --out ../NurtureHUB_language_review.xlsx
+  venv-win/Scripts/python.exe -m scripts.export_translation_sheet --out ../EduPoshan_language_review.xlsx
   venv-win/Scripts/python.exe -m scripts.export_translation_sheet --no-forms   # no database
 """
 from __future__ import annotations
@@ -84,18 +84,18 @@ AREAS: Dict[str, Tuple[str, str]] = {
 # each of these is still present in the file named in `where`.
 BACKEND_STRINGS: List[Tuple[str, str, str, str]] = [
     ("server:email.otp.subject", "Verification email - subject (app/utils.py)",
-     "NurtureHUB verification code: {otp}", "{otp} is the 6-digit code."),
+     "EduPoshan verification code: {otp}", "{otp} is the 6-digit code."),
     ("server:email.otp.text", "Verification email - plain text (app/utils.py)",
-     "Your verification code for NurtureHUB is {otp}. It will expire in {minutes} minutes.", ""),
+     "Your verification code for EduPoshan is {otp}. It will expire in {minutes} minutes.", ""),
     ("server:email.otp.heading", "Verification email - heading (app/utils.py)",
-     "NurtureHUB Verification Code", ""),
+     "EduPoshan Verification Code", ""),
     ("server:email.otp.greeting", "Verification email (app/utils.py)", "Hello,", ""),
     ("server:email.otp.intro", "Verification email (app/utils.py)",
-     "Thank you for using NurtureHUB. Please use the following One-Time Password (OTP) to verify your account:", ""),
+     "Thank you for using EduPoshan. Please use the following One-Time Password (OTP) to verify your account:", ""),
     ("server:email.otp.expiry", "Verification email (app/utils.py)",
      "This code will expire in {minutes} minutes. If you did not request this, you can safely ignore this email.", ""),
     ("server:email.otp.footer", "Verification email (app/utils.py)",
-     "NurtureHUB - Assessment & Training Platform", ""),
+     "EduPoshan - Training and field records", ""),
     ("server:notification.tutorialCompleted.title", "Notification after finishing a video (app/routers/tutorials.py)",
      "Tutorial Completed", ""),
     ("server:notification.tutorialCompleted.body", "Notification after finishing a video (app/routers/tutorials.py)",
@@ -371,10 +371,10 @@ def _write_readme(wb: Workbook, counts: Dict[str, int]) -> None:
     ws.column_dimensions["A"].width = 4
     ws.column_dimensions["B"].width = 110
     lines: List[Tuple[str, str]] = [
-        ("title", "NurtureHUB - language review"),
+        ("title", "EduPoshan - language review"),
         ("", ""),
         ("h", "What this file is"),
-        ("p", "Every sentence NurtureHUB shows: the words on its screens, the assessment forms "
+        ("p", "Every sentence EduPoshan shows: the words on its screens, the assessment forms "
               "(each question, each answer choice and each coaching message), and the messages "
               "and the email it sends. Each row is one sentence, with the English, the Hindi and "
               "the Marathi side by side."),
@@ -429,7 +429,7 @@ def _write_readme(wb: Workbook, counts: Dict[str, int]) -> None:
     lines += [
         ("", ""),
         ("h", "मराठीत थोडक्यात"),
-        ("p", "या फाइलमध्ये NurtureHUB मधील प्रत्येक वाक्य आहे - स्क्रीनवरील मजकूर, मूल्यांकन फॉर्ममधील "
+        ("p", "या फाइलमध्ये EduPoshan मधील प्रत्येक वाक्य आहे - स्क्रीनवरील मजकूर, मूल्यांकन फॉर्ममधील "
               "प्रश्न, उत्तरांचे पर्याय आणि समुपदेशन संदेश, तसेच प्रणालीकडून पाठवले जाणारे संदेश. प्रत्येक "
               "ओळीत ते वाक्य कुठे दिसते, कोणत्या प्रकारचा मजकूर आहे (शीर्षक, प्रश्न, उत्तराचा पर्याय, "
               "बटण…) आणि ते कोणत्या प्रश्नाचा भाग आहे हे दिले आहे. पिवळ्या स्तंभातील मराठी मसुदा चुकीचा "
@@ -438,7 +438,7 @@ def _write_readme(wb: Workbook, counts: Dict[str, int]) -> None:
               "शब्द दुरुस्त केल्यास तो सगळीकडे बदलला जाईल."),
         ("", ""),
         ("h", "हिंदी में संक्षेप में"),
-        ("p", "इस फ़ाइल में NurtureHUB की हर पंक्ति है - स्क्रीन का पाठ, मूल्यांकन फ़ॉर्म के प्रश्न, उत्तर के "
+        ("p", "इस फ़ाइल में EduPoshan की हर पंक्ति है - स्क्रीन का पाठ, मूल्यांकन फ़ॉर्म के प्रश्न, उत्तर के "
               "विकल्प और परामर्श संदेश, और सिस्टम से भेजे जाने वाले संदेश। हर पंक्ति में लिखा है कि वह कहाँ "
               "दिखती है, किस तरह का पाठ है (शीर्षक, प्रश्न, उत्तर का विकल्प, बटन…) और किस प्रश्न का हिस्सा "
               "है। स्क्रीन वाली शीट्स में हिंदी ठीक हो तो कुछ न करें; सुधार चाहिए तो 'Hindi - correction' "
@@ -447,7 +447,7 @@ def _write_readme(wb: Workbook, counts: Dict[str, int]) -> None:
               "वैसी ही रहने दें।"),
         ("", ""),
         ("p", "Thank you - once we get this back, the corrections and the translations go into "
-              "NurtureHUB."),
+              "EduPoshan."),
     ]
     r = 1
     for kind, text in lines:
@@ -465,8 +465,8 @@ def _write_readme(wb: Workbook, counts: Dict[str, int]) -> None:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Export every NurtureHUB sentence for language review.")
-    ap.add_argument("--out", default=str(REPO / "NurtureHUB_language_review.xlsx"))
+    ap = argparse.ArgumentParser(description="Export every EduPoshan sentence for language review.")
+    ap.add_argument("--out", default=str(REPO / "EduPoshan_language_review.xlsx"))
     ap.add_argument("--marathi-drafts", default=str(MARATHI_DRAFTS),
                     help="JSON of row ID -> Marathi draft to pre-fill (default: scripts/translation_drafts/mr.json)")
     ap.add_argument("--hindi-drafts", default=str(HINDI_DRAFTS),

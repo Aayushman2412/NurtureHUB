@@ -4,7 +4,7 @@ Revision ID: 7a1c4e2d9b60
 Revises: 3c7d1e9a4b52
 Create Date: 2026-10-23 18:00:00
 
-The care prompts NurtureHUB sends about a learner's cases — a baby faltering
+The care prompts EduPoshan sends about a learner's cases — a baby faltering
 after a growth check, the day's visits, an escalation to the batch monitor —
 one row per prompt, so none is ever sent twice. Empty to begin with.
 """

@@ -346,14 +346,14 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
       {/* Interaction hints */}
       {nodeCount > 0 && !connect && (
-        <div className="pointer-events-none absolute bottom-4 left-4 z-20 hidden rounded-lg border border-border bg-surface/90 px-3 py-1.5 text-[12px] text-ink-faint shadow-sm backdrop-blur-sm lg:block">
+        <div className="pointer-events-none absolute bottom-4 left-4 z-20 hidden rounded-lg border border-border bg-surface px-3 py-1.5 text-[12px] text-ink-faint shadow-sm lg:block">
           {tool === 'select' ? 'Drag: select' : 'Drag: pan'} · V/H: switch tool · Space / middle-drag: pan ·
           Ctrl+C/V: copy &amp; paste · Del: delete · Ctrl+Z: undo
         </div>
       )}
 
       {/* Tool switcher: what a plain left-drag does */}
-      <div className="absolute bottom-4 right-40 z-20 flex items-center gap-0.5 rounded-lg border border-border bg-surface p-1 shadow-(--shadow-card)">
+      <div className="absolute bottom-4 right-40 z-20 flex items-center gap-0.5 rounded-lg border border-border bg-surface p-1 ">
         <button
           type="button"
           title="Select tool — drag a box to multi-select (V)"
@@ -384,19 +384,19 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
       {/* Connect-mode hint */}
       {connect && (
-        <div className="pointer-events-none absolute left-1/2 top-4 z-20 -translate-x-1/2 animate-fade-in">
-          <span className="flex items-center gap-2 whitespace-nowrap rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-fg shadow-lg">
+        <div className="pointer-events-none absolute left-1/2 top-4 z-20 -translate-x-1/2 animate-overlay-in">
+          <span className="flex items-center gap-2 whitespace-nowrap rounded-sm bg-primary px-4 py-2 text-sm font-semibold text-primary-fg shadow-(--shadow-overlay)">
             <MousePointerClick className="size-4" /> Click a card to connect — Esc to cancel
           </span>
         </div>
       )}
 
       {/* Zoom controls */}
-      <div className="absolute bottom-4 right-4 z-20 flex items-center gap-0.5 rounded-lg border border-border bg-surface p-1 shadow-(--shadow-card)">
+      <div className="absolute bottom-4 right-4 z-20 flex items-center gap-0.5 rounded-lg border border-border bg-surface p-1 ">
         <button type="button" title="Zoom out" onClick={() => zoomBy(1 / 1.2)} className={zoomBtn}>
           <Minus className="size-3.5" />
         </button>
-        <span className="w-11 text-center text-[12px] font-bold tabular-nums text-ink-muted">
+        <span className="w-11 text-center text-[12px] font-semibold tabular-nums text-ink-muted">
           {Math.round(view.zoom * 100)}%
         </span>
         <button type="button" title="Zoom in" onClick={() => zoomBy(1.2)} className={zoomBtn}>

@@ -1,10 +1,10 @@
 {
   "brand": {
-    "name": "NurtureHUB",
-    "tagline": "ICDS Training Platform"
+    "name": "EduPoshan",
+    "tagline": "ICDS training and field records"
   },
   "footer": {
-    "rights": "© 2026 NurtureHUB. All rights reserved.",
+    "rights": "© 2026 EduPoshan. All rights reserved.",
     "privacy": "Privacy Policy",
     "terms": "Terms"
   },
@@ -13,8 +13,8 @@
     "select": "Select language"
   },
   "theme": {
-    "light": "Switch to Light Mode",
-    "dark": "Switch to Dark Mode",
+    "light": "Switch to light mode",
+    "dark": "Switch to dark mode",
     "label": "Theme"
   },
   "layout": {
@@ -39,5 +39,7 @@
   },
   "combo": {
     "notInList": "Not in the list — “{{text}}” will be saved as typed."
-  }
+  },
+  "back": "Back",
+  "close": "Close"
 }

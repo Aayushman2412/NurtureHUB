@@ -81,7 +81,7 @@ const AccountTab: React.FC = () => {
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-2">
-        <h4 className="flex items-center gap-2 text-sm font-bold text-ink"><Smartphone className="size-4" />{t('account.mobile')}</h4>
+        <h4 className="flex items-center gap-2 text-sm font-semibold text-ink"><Smartphone className="size-4" />{t('account.mobile')}</h4>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="font-semibold tabular-nums text-ink">{user?.phone ? `+91 ${user.phone}` : t('account.noMobile')}</span>
           {user?.phone && (user.phone_verified
@@ -92,7 +92,7 @@ const AccountTab: React.FC = () => {
       </section>
 
       <section className="flex flex-col gap-2 border-t border-border pt-5">
-        <h4 className="flex items-center gap-2 text-sm font-bold text-ink"><Mail className="size-4" />{t('account.email')}</h4>
+        <h4 className="flex items-center gap-2 text-sm font-semibold text-ink"><Mail className="size-4" />{t('account.email')}</h4>
         {!placeholder ? (
           <p className="text-sm text-ink">{user?.email}</p>
         ) : (
@@ -128,7 +128,7 @@ const AccountTab: React.FC = () => {
       </section>
 
       <form onSubmit={changePassword} className="flex flex-col gap-3 border-t border-border pt-5">
-        <h4 className="flex items-center gap-2 text-sm font-bold text-ink"><KeyRound className="size-4" />{t('account.password')}</h4>
+        <h4 className="flex items-center gap-2 text-sm font-semibold text-ink"><KeyRound className="size-4" />{t('account.password')}</h4>
         {user?.password_weak && (
           <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
             {t('account.weak')}

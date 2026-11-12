@@ -44,6 +44,17 @@ from app.models import (
 )
 from app.seed_forms import FORM_SPECS, ensure_form_definitions
 
+# Marker written into exported form templates. Templates exported before the
+# rename carry the legacy marker and must stay importable.
+FORM_TEMPLATE_FORMAT = "eduposhan-form-template"
+LEGACY_FORM_TEMPLATE_FORMATS = frozenset({"nurturehub-form-template"})
+
+
+def is_form_template_format(marker: object) -> bool:
+    """True for the current marker and for markers from before the rename."""
+    return marker == FORM_TEMPLATE_FORMAT or marker in LEGACY_FORM_TEMPLATE_FORMATS
+
+
 router = APIRouter(prefix="/api/admin", tags=["admin-forms"], dependencies=[Depends(get_current_admin)])
 
 UPLOADS_SUBDIR = "form_assets"
@@ -560,7 +571,7 @@ def download_form_catalog(project: Optional[str] = None, db: Session = Depends(g
     buffer = io.BytesIO()
     wb.save(buffer)
     buffer.seek(0)
-    filename = f"nurturehub_form_questions_{(pd.slug if pd else 'default')}_{today.strftime('%d%m%y')}.xlsx"
+    filename = f"eduposhan_form_questions_{(pd.slug if pd else 'default')}_{today.strftime('%d%m%y')}.xlsx"
     return StreamingResponse(
         buffer,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1046,7 +1057,7 @@ def export_form(form_key: str, version: Optional[int] = None, db: Session = Depe
         manifest_rows.append([where, kind, url, status, bundled_as])
 
     envelope = {
-        "format": "nurturehub-form-template",
+        "format": FORM_TEMPLATE_FORMAT,
         "formatVersion": 1,
         "exportedAt": datetime.now(timezone.utc).isoformat(),
         "form_key": definition.form_key,

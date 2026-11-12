@@ -40,7 +40,7 @@ const StatusBadge: React.FC<{ status: string; t: TFunction }> = ({ status, t }) 
     started: { variant: 'success', icon: <Activity className="size-3" /> },
     not_started: { variant: 'neutral', icon: <Clock className="size-3" /> },
     submitted: { variant: 'info', icon: <CheckCircle className="size-3" /> },
-    auto_submitted: { variant: 'coral', icon: <SkipForward className="size-3" /> },
+    auto_submitted: { variant: 'info', icon: <SkipForward className="size-3" /> },
     disconnected: { variant: 'error', icon: <WifiOff className="size-3" /> },
   };
   const key = config[status] ? status : 'active';
@@ -64,7 +64,7 @@ const RiskIndicator: React.FC<{ score: number; t: TFunction }> = ({ score, t }) 
           style={{ width: `${Math.min(100, Math.max(0, score))}%` }}
         />
       </div>
-      <span className={cn('text-xs font-bold tabular-nums', text)}>{score}</span>
+      <span className={cn('text-xs font-semibold tabular-nums', text)}>{score}</span>
     </div>
   );
 };
@@ -276,7 +276,7 @@ const AdminLiveMonitorPage: React.FC = () => {
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/30" />
             <Radio className="relative size-8 text-primary-ink" />
           </div>
-          <h3 className="font-display text-lg font-bold text-ink">{t('loading.title')}</h3>
+          <h3 className="font-display text-lg font-semibold text-ink">{t('loading.title')}</h3>
           <p className="text-sm text-ink-muted">{t('loading.subtitle')}</p>
         </Card>
       </div>
@@ -303,11 +303,11 @@ const AdminLiveMonitorPage: React.FC = () => {
 
   const statTiles = [
     { icon: <Users />, label: t('stats.totalCandidates'), value: stats?.total_candidates ?? candidateList.length, tone: 'neutral' as const },
-    { icon: <Activity />, label: t('stats.activeNow'), value: stats?.active ?? 0, tone: 'sage' as const },
-    { icon: <AlertTriangle />, label: t('stats.highRisk'), value: stats?.high_risk ?? 0, tone: 'coral' as const },
-    { icon: <Flag />, label: t('stats.flagged'), value: stats?.flagged ?? 0, tone: 'amber' as const },
-    { icon: <TrendingUp />, label: t('stats.avgProgress'), value: `${stats?.avg_progress ?? 0}%`, tone: 'sage' as const },
-    { icon: <Target />, label: t('stats.avgAccuracy'), value: `${stats?.avg_accuracy ?? 0}%`, tone: 'coral' as const },
+    { icon: <Activity />, label: t('stats.activeNow'), value: stats?.active ?? 0, tone: 'neutral' as const },
+    { icon: <AlertTriangle />, label: t('stats.highRisk'), value: stats?.high_risk ?? 0, tone: (stats?.high_risk ? 'danger' : 'neutral') as 'danger' | 'neutral' },
+    { icon: <Flag />, label: t('stats.flagged'), value: stats?.flagged ?? 0, tone: (stats?.flagged ? 'warning' : 'neutral') as 'warning' | 'neutral' },
+    { icon: <TrendingUp />, label: t('stats.avgProgress'), value: `${stats?.avg_progress ?? 0}%`, tone: 'neutral' as const },
+    { icon: <Target />, label: t('stats.avgAccuracy'), value: `${stats?.avg_accuracy ?? 0}%`, tone: 'neutral' as const },
   ];
 
   return (
@@ -318,7 +318,7 @@ const AdminLiveMonitorPage: React.FC = () => {
         title={
           <span className="inline-flex items-center gap-3">
             {testInfo?.test_title || t('header.titleFallback')}
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-coral-50 px-2.5 py-0.5 text-xs font-semibold text-coral-600 dark:bg-coral-500/15 dark:text-coral-300">
+            <span className="inline-flex items-center gap-1.5 rounded-sm bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
               <Radio className={cn('size-3.5', isConnected && 'animate-pulse')} /> {t('header.live')}
             </span>
           </span>
@@ -354,7 +354,7 @@ const AdminLiveMonitorPage: React.FC = () => {
 
       {/* ── Reconnect banner (non-blocking) ── */}
       {!isConnected && (
-        <div className="flex items-center gap-2 rounded-xl border border-error-500/25 bg-error-50 px-4 py-2.5 text-sm text-error-600 dark:bg-error-500/10">
+        <div className="flex items-center gap-2 rounded-lg border border-error-500/25 bg-error-50 px-4 py-2.5 text-sm text-error-600 dark:bg-error-500/10">
           <WifiOff className="size-4 shrink-0" />
           <span>{error || t('reconnectBanner')}</span>
         </div>
@@ -475,7 +475,7 @@ const AdminLiveMonitorPage: React.FC = () => {
             <Card
               key={candidate.session_id}
               interactive
-              accent={candidate.risk_score >= 50 ? 'coral' : undefined}
+              accent={candidate.risk_score >= 50 ? 'danger' : undefined}
               className={cn(
                 'flex flex-col gap-4 p-5',
                 candidate.is_flagged && 'ring-1 ring-amber-400/60',
@@ -657,7 +657,7 @@ const AdminLiveMonitorPage: React.FC = () => {
         title={
           selectedCandidate ? (
             <div className="flex flex-col">
-              <span className="font-display text-lg font-bold text-ink">{selectedCandidate.user_name}</span>
+              <span className="font-display text-lg font-semibold text-ink">{selectedCandidate.user_name}</span>
               <span className="text-sm font-normal text-ink-muted">{selectedCandidate.user_email}</span>
             </div>
           ) : undefined
@@ -705,7 +705,7 @@ const AdminLiveMonitorPage: React.FC = () => {
 
               {/* Progress Stats */}
               <section>
-                <h4 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">{t('detail.progress')}</h4>
+                <h4 className="mb-3 font-display text-sm font-semibold text-ink-faint">{t('detail.progress')}</h4>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {[
                     { label: t('detail.stats.questionsAttempted'), value: `${selectedCandidate.questions_attempted} / ${selectedCandidate.total_questions}` },
@@ -719,7 +719,7 @@ const AdminLiveMonitorPage: React.FC = () => {
                   ].map(stat => (
                     <div key={stat.label} className="rounded-lg bg-surface-sunken p-3">
                       <div className="text-xs text-ink-muted">{stat.label}</div>
-                      <div className={cn('mt-0.5 font-display text-lg font-bold text-ink', stat.className)}>{stat.value}</div>
+                      <div className={cn('mt-0.5 font-display text-lg font-semibold text-ink', stat.className)}>{stat.value}</div>
                     </div>
                   ))}
                 </div>
@@ -727,7 +727,7 @@ const AdminLiveMonitorPage: React.FC = () => {
 
               {/* Behavioral Alerts */}
               <section>
-                <h4 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">{t('detail.behavioralIndicators')}</h4>
+                <h4 className="mb-3 font-display text-sm font-semibold text-ink-faint">{t('detail.behavioralIndicators')}</h4>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                   <div className={cn(
                     'flex items-center gap-2 rounded-lg border border-border bg-surface-sunken px-3 py-2 text-sm',
@@ -756,7 +756,7 @@ const AdminLiveMonitorPage: React.FC = () => {
               {/* Suspicious Flags */}
               {detailData?.suspicious_flags?.length > 0 && (
                 <section>
-                  <h4 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">{t('detail.suspiciousFlags')}</h4>
+                  <h4 className="mb-3 font-display text-sm font-semibold text-ink-faint">{t('detail.suspiciousFlags')}</h4>
                   <div className="flex flex-col gap-2">
                     {detailData.suspicious_flags.map((f: any) => (
                       <div
@@ -781,7 +781,7 @@ const AdminLiveMonitorPage: React.FC = () => {
               {/* Event Timeline */}
               {detailData?.events?.length > 0 && (
                 <section>
-                  <h4 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">{t('detail.activityTimeline')}</h4>
+                  <h4 className="mb-3 font-display text-sm font-semibold text-ink-faint">{t('detail.activityTimeline')}</h4>
                   <div className="flex flex-col gap-2 border-l-2 border-border pl-4">
                     {detailData.events.slice(-30).reverse().map((e: any, i: number) => (
                       <div key={e.id || i} className="relative flex items-center gap-2 text-sm">
@@ -798,7 +798,7 @@ const AdminLiveMonitorPage: React.FC = () => {
               {/* Admin Actions History */}
               {detailData?.admin_actions?.length > 0 && (
                 <section>
-                  <h4 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-ink-faint">{t('detail.adminActions')}</h4>
+                  <h4 className="mb-3 font-display text-sm font-semibold text-ink-faint">{t('detail.adminActions')}</h4>
                   <div className="flex flex-col gap-2">
                     {detailData.admin_actions.map((a: any) => (
                       <div key={a.id} className="flex items-start gap-2.5 rounded-lg bg-surface-sunken p-3">

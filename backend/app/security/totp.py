@@ -72,7 +72,7 @@ def verify(secret: str, submitted: str, last_step: int = None, window: int = DEF
     return None
 
 
-def provisioning_uri(secret: str, account: str, issuer: str = "NurtureHUB") -> str:
+def provisioning_uri(secret: str, account: str, issuer: str = "EduPoshan") -> str:
     """otpauth:// URI an authenticator app scans (or opens when tapped on mobile)."""
     label = quote(f"{issuer}:{account}", safe="")
     return (

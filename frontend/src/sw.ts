@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 /**
- * NurtureHUB service worker (injectManifest — built by vite-plugin-pwa).
+ * EduPoshan service worker (injectManifest — built by vite-plugin-pwa).
  *
  * Responsibilities:
  *  - Precache the app shell so the whole SPA opens with no network.
@@ -152,7 +152,7 @@ self.addEventListener('push', event => {
   } catch {
     payload = { body: event.data?.text() };
   }
-  const title = payload.title || 'NurtureHUB';
+  const title = payload.title || 'EduPoshan';
   event.waitUntil(
     self.registration.showNotification(title, {
       body: payload.body || '',

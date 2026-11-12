@@ -108,7 +108,7 @@ const MasdActivity: React.FC<{ report: MasdReport; split: MasdSplitState }> = ({
             const all = pairRates(total, p);
             return (
               <div key={p.key}>
-                <h4 className="text-base font-bold text-ink">{t(`activity.pair.${p.key}`)}</h4>
+                <h4 className="text-base font-semibold text-ink">{t(`activity.pair.${p.key}`)}</h4>
                 <p className="mb-2 text-xs text-ink-muted">
                   {t('activity.pairAll', {
                     x: t(`activities.${p.x}`), xv: fmt1(all.x), xd: all.xDone.toLocaleString(), xe: all.xDue.toLocaleString(),

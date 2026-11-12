@@ -323,7 +323,7 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
               <button
                 type="button"
                 onClick={() => setBulkOpen(o => !o)}
-                className="inline-flex items-center gap-1.5 text-[12px] font-bold text-primary-ink hover:underline cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary-ink hover:underline cursor-pointer"
               >
                 <ClipboardPaste className="size-3.5" />
                 {bulkOpen ? 'Hide paste box' : 'Paste a list'}
@@ -333,7 +333,7 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
           </div>
 
           {bulkOpen && (
-            <div className="mb-2 rounded-lg border border-dashed border-border-strong/60 p-3">
+            <div className="mb-2 rounded-lg border border-dashed border-border-control p-3">
               <textarea
                 rows={5}
                 className={cn(inputClasses(), 'resize-y font-mono text-xs')}
@@ -349,7 +349,7 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
                   type="button"
                   disabled={!bulkText.trim()}
                   onClick={() => addPastedOptions(bulkText)}
-                  className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Add {parseOptionLabels(bulkText).length} option(s)
                 </button>

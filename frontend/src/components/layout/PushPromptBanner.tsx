@@ -36,7 +36,7 @@ const PushPromptBanner: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-coral-200 bg-coral-50 px-4 py-2.5 dark:border-coral-500/30 dark:bg-coral-500/10 print:hidden">
+    <div className="flex flex-wrap items-center gap-3 border-b border-brand-200 bg-brand-50 px-4 py-2.5 dark:border-brand-500/30 dark:bg-brand-500/10 print:hidden">
       <BellRing className="size-4.5 shrink-0 text-primary-ink" />
       <span className="min-w-0 flex-1 text-[13px] font-semibold text-ink">
         {t('pushPrompt')}

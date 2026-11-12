@@ -156,11 +156,11 @@ const SaveVersionDialog: React.FC<Props> = ({
 
         {/* What the builder itself detected — recorded with the version. */}
         <div className="rounded-lg border border-border bg-surface-sunken/60 p-3">
-          <div className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-muted">
+          <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-ink-muted">
             <ListChecks className="size-3.5" />
             {t('saveVersion.detected')}
             {detectedChanges.length > 0 && (
-              <span className="rounded-full bg-primary/10 px-1.5 text-xs font-bold text-primary-ink">
+              <span className="rounded-sm bg-primary/10 px-1.5 text-xs font-semibold text-primary-ink">
                 {detectedChanges.length}
               </span>
             )}

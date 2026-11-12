@@ -76,28 +76,22 @@ const FormCard: React.FC<{ summary: FormDefinitionSummary; onEdit: () => void }>
       onClick={onEdit}
       className={cn(
         'relative flex flex-col overflow-hidden',
-        isFlow && 'bg-gradient-to-br from-coral-50/70 via-surface to-surface dark:from-coral-500/10 dark:via-surface dark:to-surface',
+        // The canvas forms are the field forms; a rule marks them apart.
+        isFlow && 'border-l-[3px] border-l-brand-600',
       )}
     >
-      {/* Gradient accent bar for the flagship canvas forms */}
-      {isFlow && (
-        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-coral-400 via-coral-500 to-amber-500" aria-hidden />
-      )}
 
       <div className="flex flex-1 flex-col p-5">
         <div className="mb-3 flex items-start justify-between gap-3">
           <span
             className={cn(
-              'flex size-11 shrink-0 items-center justify-center rounded-xl',
-              isFlow
-                ? 'bg-gradient-to-br from-coral-400 to-coral-600 text-white shadow-(--shadow-glow)'
-                : 'bg-coral-50 text-primary-ink dark:bg-coral-500/10',
+              'inline-flex shrink-0 text-primary-ink',
             )}
           >
-            <Icon className="size-5.5" />
+            <Icon className="size-5" />
           </span>
           {isFlow ? (
-            <Badge variant="coral">
+            <Badge variant="info">
               <Workflow className="size-3" /> Canvas designer
             </Badge>
           ) : (
@@ -107,12 +101,12 @@ const FormCard: React.FC<{ summary: FormDefinitionSummary; onEdit: () => void }>
           )}
         </div>
 
-        <h3 className="font-display text-base font-bold text-ink">{summary.title}</h3>
+        <h3 className="font-display text-base font-semibold text-ink">{summary.title}</h3>
         <p className="mt-1 flex-1 text-[13px] leading-relaxed text-ink-muted">{meta?.blurb}</p>
 
         <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-3.5">
           <div className="min-w-0 text-[12px] text-ink-faint">
-            <span className="font-bold text-ink-muted">
+            <span className="font-semibold text-ink-muted">
               {summary.version_count ?? 1} {(summary.version_count ?? 1) === 1 ? 'version' : 'versions'}
             </span>
             {' · '}

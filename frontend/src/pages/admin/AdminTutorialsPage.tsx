@@ -400,7 +400,7 @@ const AdminTutorialsPage: React.FC = () => {
     ws['!cols'] = SHEET_HEADERS.map(h => ({ wch: Math.max(h.length + 4, 16) }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Tutorials');
-    XLSX.writeFile(wb, 'nurturehub_tutorials_template.xlsx');
+    XLSX.writeFile(wb, 'eduposhan_tutorials_template.xlsx');
   };
 
   /** A worked example, not just headers — the two-row-per-video shape is the
@@ -418,7 +418,7 @@ const AdminTutorialsPage: React.FC = () => {
     ws['!cols'] = QUIZ_SHEET_HEADERS.map(h => ({ wch: Math.max(h.length + 4, 18) }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Quiz');
-    XLSX.writeFile(wb, 'nurturehub_quiz_template.xlsx');
+    XLSX.writeFile(wb, 'eduposhan_quiz_template.xlsx');
   };
 
   /** Export every quiz in the project in the upload sheet's own columns, so it
@@ -432,7 +432,7 @@ const AdminTutorialsPage: React.FC = () => {
       ws['!cols'] = QUIZ_SHEET_HEADERS.map(h => ({ wch: Math.max(h.length + 4, 18) }));
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Quiz');
-      XLSX.writeFile(wb, `nurturehub_quiz_${getProjectSlug() ?? 'project'}.xlsx`);
+      XLSX.writeFile(wb, `eduposhan_quiz_${getProjectSlug() ?? 'project'}.xlsx`);
     } finally {
       setQuizSheetBusy(false);
     }
@@ -557,8 +557,8 @@ const AdminTutorialsPage: React.FC = () => {
   const previewPlayer = (extraClass = '') => (
     <Card className={`p-5 ${extraClass}`}>
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 font-display font-bold text-ink">
-          <Play className="size-4 text-coral-600 dark:text-coral-300" /> {t('preview.title')}
+        <h3 className="flex items-center gap-2 font-display font-semibold text-ink">
+          <Play className="size-4 text-brand-600 dark:text-brand-300" /> {t('preview.title')}
         </h3>
         <button
           className={iconBtn}
@@ -635,7 +635,7 @@ const AdminTutorialsPage: React.FC = () => {
               onClick={() => setExpandedStage(expandedStage === stage.id ? null : stage.id)}
             >
               <div className="min-w-0 flex-1">
-                <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-coral-600 dark:text-coral-300">
+                <span className="flex items-center gap-1 text-xs font-semibold text-brand-600 dark:text-brand-300">
                   {stage.stage_type === 'test' && <FileText className="size-3" />}
                   {t('stage.phaseLabel', { n: stageIdx + 1 })}
                   {stage.stage_type === 'test' ? t('stage.testPhaseSuffix') : ''}
@@ -685,7 +685,7 @@ const AdminTutorialsPage: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    <h3 className="mt-0.5 font-display text-lg font-bold text-ink">{stage.title}</h3>
+                    <h3 className="mt-0.5 font-display text-lg font-semibold text-ink">{stage.title}</h3>
                     <p className="text-sm text-ink-muted">{stage.description}</p>
                     {(stage.starts_on || stage.finish_by) && (
                       <p className="text-xs font-semibold text-ink">
@@ -779,9 +779,9 @@ const AdminTutorialsPage: React.FC = () => {
             {expandedStage === stage.id && (
               <div className="flex flex-col gap-3 border-t border-border p-5">
                 {stage.tutorials.map(tut => (
-                  <div key={tut.id} className="rounded-xl border border-border bg-surface-sunken/40 p-4">
+                  <div key={tut.id} className="rounded-lg border border-border bg-surface-sunken/40 p-4">
                     <div className="flex items-center gap-3">
-                      <Video className="size-4 shrink-0 text-coral-600 dark:text-coral-300" />
+                      <Video className="size-4 shrink-0 text-brand-600 dark:text-brand-300" />
                       <div className="flex-1 min-w-0">
                         <span className="block truncate font-semibold text-ink">{tut.title}</span>
                         <span className="text-xs text-ink-faint">
@@ -921,8 +921,8 @@ const AdminTutorialsPage: React.FC = () => {
 
                 {/* Add tutorial */}
                 {showAddTutorial === stage.id ? (
-                  <div className="rounded-xl border border-coral-500/30 bg-coral-50/50 p-4 dark:bg-coral-500/5">
-                    <h4 className="mb-3 font-bold text-coral-700 dark:text-coral-300">{t('addTutorial.heading')}</h4>
+                  <div className="rounded-lg border border-brand-500/30 bg-brand-50/50 p-4 dark:bg-brand-500/5">
+                    <h4 className="mb-3 font-semibold text-brand-700 dark:text-brand-300">{t('addTutorial.heading')}</h4>
                     {editGrid(
                       <>
                         <div>
@@ -1022,7 +1022,7 @@ const AdminTutorialsPage: React.FC = () => {
                   </div>
                 ) : stage.stage_type !== 'test' ? (
                   <button
-                    className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong/60 py-3 text-sm font-semibold text-ink-muted hover:border-coral-500 hover:text-coral-600 cursor-pointer dark:hover:text-coral-300"
+                    className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border-control py-3 text-sm font-semibold text-ink-muted hover:border-brand-500 hover:text-brand-600 cursor-pointer dark:hover:text-brand-300"
                     onClick={() => setShowAddTutorial(stage.id)}
                   >
                     <Plus className="size-4" /> {t('tutorial.addToPhase')}
@@ -1176,10 +1176,10 @@ const AdminTutorialsPage: React.FC = () => {
         {bulkResult && (
           <div
             className={cn(
-              'mt-3 rounded-xl border p-3.5 text-sm',
+              'mt-3 rounded-lg border p-3.5 text-sm',
               bulkResult.errors.length === 0
                 ? 'border-success-500/30 bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-300'
-                : 'border-warning-500/30 bg-warning-50 text-ink dark:bg-warning-500/10',
+                : 'border-amber-500/30 bg-amber-50 text-ink dark:bg-amber-500/10',
             )}
           >
             <span className="flex items-center gap-2 font-semibold">
@@ -1192,7 +1192,7 @@ const AdminTutorialsPage: React.FC = () => {
             </span>
             {bulkResult.errors.length > 0 && (
               <div className="mt-2">
-                <span className="text-xs font-bold uppercase tracking-wide text-ink-muted">
+                <span className="text-xs font-semibold text-ink-muted">
                   {t('bulk.errorsTitle', { n: bulkResult.errors.length })}
                 </span>
                 <ul className="mt-1 max-h-40 space-y-1 overflow-y-auto text-[13px] text-ink-muted">
@@ -1208,10 +1208,10 @@ const AdminTutorialsPage: React.FC = () => {
         )}
 
         {/* Fixed schema, so the admin knows exactly what to prepare */}
-        <h4 className="mt-4 mb-2 text-sm font-bold text-ink">{t('bulk.schemaTitle')}</h4>
-        <div className="overflow-x-auto rounded-xl border border-border">
+        <h4 className="mt-4 mb-2 text-sm font-semibold text-ink">{t('bulk.schemaTitle')}</h4>
+        <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full min-w-[560px] text-left text-[13px]">
-            <thead className="bg-surface-sunken text-xs uppercase tracking-wide text-ink-muted">
+            <thead className="bg-surface-sunken text-xs text-ink-muted">
               <tr>
                 <th className="px-3 py-2">{t('bulk.colColumn')}</th>
                 <th className="px-3 py-2">{t('bulk.colRequired')}</th>
@@ -1226,7 +1226,7 @@ const AdminTutorialsPage: React.FC = () => {
                   </td>
                   <td className="px-3 py-2">
                     {SHEET_REQUIRED.has(key) ? (
-                      <span className="font-semibold text-coral-600 dark:text-coral-300">{t('bulk.required')}</span>
+                      <span className="font-semibold text-brand-600 dark:text-brand-300">{t('bulk.required')}</span>
                     ) : (
                       <span className="text-ink-faint">{t('bulk.optional')}</span>
                     )}
@@ -1286,12 +1286,12 @@ const AdminTutorialsPage: React.FC = () => {
       >
         <p className="mt-0 text-[13px] text-ink-muted">{t('quizSheet.intro')}</p>
 
-        <div className="mt-3 overflow-x-auto rounded-xl border border-border">
+        <div className="mt-3 overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-left text-xs">
             <thead className="bg-surface-sunken">
               <tr>
                 {QUIZ_SHEET_HEADERS.map(h => (
-                  <th key={h} className="whitespace-nowrap px-2.5 py-2 font-bold text-ink">{h}</th>
+                  <th key={h} className="whitespace-nowrap px-2.5 py-2 font-semibold text-ink">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -1370,7 +1370,7 @@ const AdminTutorialsPage: React.FC = () => {
       >
         <p className="mt-0 text-[13px] text-ink-muted">{t('quiz.intro')}</p>
         {quizQuestions.map((q, qi) => (
-          <div key={qi} className="mt-4 rounded-xl border border-border p-4">
+          <div key={qi} className="mt-4 rounded-lg border border-border p-4">
             <div className="mb-2 flex items-center justify-between">
               <strong className="text-sm text-ink">{t('quiz.questionLabel', { n: qi + 1 })}</strong>
               <button
@@ -1422,7 +1422,7 @@ const AdminTutorialsPage: React.FC = () => {
           </div>
         ))}
         <button
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong/60 py-3 text-sm font-semibold text-ink-muted hover:border-coral-500 hover:text-coral-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 dark:hover:text-coral-300"
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border-control py-3 text-sm font-semibold text-ink-muted hover:border-brand-500 hover:text-brand-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 dark:hover:text-brand-300"
           onClick={() => setQuizQuestions(qs => [...qs, emptyQuestion()])}
           disabled={quizQuestions.length >= 5}
         >

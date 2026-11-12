@@ -1,7 +1,7 @@
-"""NurtureHUB data-protection layer.
+"""EduPoshan data-protection layer.
 
 Everything in this package exists to satisfy one operational requirement: when
-patient (mother/child) medical records are handled by this system, NurtureHUB
+patient (mother/child) medical records are handled by this system, EduPoshan
 must be able to demonstrate — with evidence — what happened, who did it, from
 where, and under whose control. That is the standard the Maharashtra MOU sets:
 breach responsibility follows *custody, control and technical system*, and on

@@ -1,5 +1,5 @@
 """
-Admin API routes for NurtureHUB.
+Admin API routes for EduPoshan.
 Provides admin login, district management, form config, tutorial/stage management,
 test management, and results export.
 All content endpoints are scoped per program district.
@@ -46,7 +46,7 @@ router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(ge
 # ──────────────────────────────────────────────
 # Administrator credentials
 # ──────────────────────────────────────────────
-# These used to be literals here — admin@nurturehub.org / admin123 — which meant
+# These used to be literals here — admin@eduposhan.org / admin123 — which meant
 # every deployment of this code shipped with a publicly-known password to the
 # full patient database. They now come from configuration:
 #
@@ -56,7 +56,7 @@ router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(ge
 #                              database, then must be unset
 #
 # See app/config.py:Settings.validate_production.
-DEV_ADMIN_EMAIL = "admin@nurturehub.org"
+DEV_ADMIN_EMAIL = "admin@eduposhan.org"
 
 
 def _dev_admin_active() -> bool:
@@ -270,7 +270,7 @@ def admin_login(request: Request, credentials: AdminLoginRequest, db: Session = 
         # production — Settings.validate_production refuses to boot with
         # ALLOW_DEV_ADMIN enabled.
         authenticated = True
-        admin_name = (user.full_name if user else None) or "NurtureHUB Admin (development)"
+        admin_name = (user.full_name if user else None) or "EduPoshan Admin (development)"
         user_id = user.id if user else None
 
     if not authenticated:
@@ -4048,7 +4048,7 @@ def download_test_answers(
     readme = wb.active
     readme.title = "Read me"
     for row in (
-        ["NurtureHUB — test answers", f"{pd.name} · {datetime.now(_IST).strftime('%d %b %Y %H:%M')} IST"],
+        ["EduPoshan — test answers", f"{pd.name} · {datetime.now(_IST).strftime('%d %b %Y %H:%M')} IST"],
         [],
         ["Answers", "One row per learner who wrote the test, one column per question: the option they picked on their FIRST attempt (blank = left unanswered)."],
         ["Scored", "The same grid marked 1 = right, 0 = wrong, blank = unanswered. Sum a row for the learner's first-attempt marks; average a column for the question's % right."],

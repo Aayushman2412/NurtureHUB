@@ -1,4 +1,4 @@
-"""Candidate proctoring WebSocket client speaking the exact NurtureHUB protocol.
+"""Candidate proctoring WebSocket client speaking the exact EduPoshan protocol.
 
 Protocol (backend/app/event_processor.py, frontend useTestEventEmitter.ts):
   client -> server: {"type": <TYPE>, "timestamp": ISO8601, "sequence": int, "payload": {...}}

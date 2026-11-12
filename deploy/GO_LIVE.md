@@ -56,7 +56,7 @@ a placeholder value the app **refuses to start**.
 
 ### On item 1
 
-`DPO_EMAIL` must not be left as `privacy@nurturehub.org`. The app checks for that
+`DPO_EMAIL` must not be left as the placeholder `privacy@example.org`. The app checks for that
 exact placeholder and refuses to boot. The DPDP Act requires a published, reachable
 contact for data-principal requests, so a shared alias nobody monitors is not
 sufficient — a person has to actually answer it.
@@ -119,7 +119,7 @@ jump to *Rollback*.
 ### Step 1 — Pull the code
 
 ```bash
-cd /path/to/NurtureHUB
+cd /path/to/EduPoshan
 git pull
 ```
 

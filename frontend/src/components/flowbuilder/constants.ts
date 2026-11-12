@@ -48,7 +48,7 @@ export const EDGE_COLORS = {
   default: 'var(--color-ink-faint)',
   green: '#10b981', // emerald-500
   red: '#f43f5e', // rose-500
-  neutral: 'var(--color-coral-400)',
+  neutral: 'var(--color-brand-400)',
 } as const;
 
 /**

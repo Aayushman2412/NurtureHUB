@@ -1,0 +1,7 @@
+{{- include "eduposhan.validate" . -}}
+{{/* /api/* except admin: the health workers' traffic. */}}
+{{ include "eduposhan.backend" (dict "root" . "role" "api" "cfg" .Values.api) }}
+---
+{{ include "eduposhan.hpa" (dict "root" . "role" "api" "cfg" .Values.api "kind" "StatefulSet") }}
+---
+{{ include "eduposhan.pdb" (dict "root" . "role" "api") }}

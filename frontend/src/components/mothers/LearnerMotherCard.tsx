@@ -27,7 +27,7 @@ const Meta: React.FC<{ icon: React.ReactNode; label: string; value: React.ReactN
       {icon}
     </span>
     <div className="min-w-0">
-      <div className="text-[12px] font-semibold uppercase tracking-wider text-ink-faint">{label}</div>
+      <div className="text-[12px] font-semibold text-ink-faint">{label}</div>
       <div className="truncate text-sm font-semibold text-ink">{value || '—'}</div>
     </div>
   </div>
@@ -43,17 +43,17 @@ const LearnerMotherCard: React.FC<LearnerMotherCardProps> = ({ mother, showProte
   const district = user?.program_district?.name || user?.district || '';
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-(--shadow-card)">
+    <div className="overflow-hidden rounded-lg border border-border bg-surface ">
       {/* Banner: mother identity + registering health worker.
           On a phone this stacks. Kept as one flex row, the avatar and the
           action squeezed the identity block down to min-content and the
           worker's name rendered one word per line. */}
-      <div className="flex flex-col gap-4 bg-gradient-to-br from-coral-50 to-sage-100/60 px-5 py-5 dark:from-coral-500/10 dark:to-sage-500/10 sm:flex-row sm:flex-wrap sm:items-center sm:px-6">
+      <div className="flex flex-col gap-4 border-b border-border bg-surface-sunken px-5 py-5 sm:flex-row sm:flex-wrap sm:items-center sm:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
           <Avatar name={mother.mother_name} size="lg" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <h2 className="font-display text-lg font-extrabold text-ink sm:text-xl">{mother.mother_name}</h2>
+              <h2 className="font-display text-lg font-semibold text-ink sm:text-xl">{mother.mother_name}</h2>
               <Badge variant="neutral">{mother.mother_uid}</Badge>
               {mother.gestational_weeks != null && (
                 <Badge variant="info">{t('detail.weeks', { n: mother.gestational_weeks })}</Badge>

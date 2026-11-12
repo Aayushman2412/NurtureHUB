@@ -385,7 +385,7 @@ def catalog_rows(form_title: str, schema: dict) -> List[Dict[str, Any]]:
 # ── Workbook ─────────────────────────────────────────────────────────────────
 
 README = [
-    ("What this is", "Every question NurtureHUB asks, form by form, in the order a learner meets it, with the rules that govern each one."),
+    ("What this is", "Every question EduPoshan asks, form by form, in the order a learner meets it, with the rules that govern each one."),
     ("Why", "Review each question and flag the variables that change from project to project (places, facilities, cadres) — "
             "the flagged list becomes the ready reckoner for setting up a new project."),
     ("Limits (blocks the entry)", "A value outside this range cannot be saved."),
@@ -414,7 +414,7 @@ def build_workbook(forms: List[dict], project_name: str, generated_on: str):
 
     ws = wb.active
     ws.title = "Read me"
-    ws.append(["NurtureHUB — every form question", f"{project_name} · {generated_on}"])
+    ws.append(["EduPoshan — every form question", f"{project_name} · {generated_on}"])
     ws["A1"].font = Font(bold=True, size=14)
     ws.append([])
     for k, v in README:

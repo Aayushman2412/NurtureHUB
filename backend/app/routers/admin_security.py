@@ -459,7 +459,7 @@ def export_audit(
     db.commit()
 
     buffer.seek(0)
-    filename = f"nurturehub-audit-{_now().strftime('%Y%m%d-%H%M%S')}.csv"
+    filename = f"eduposhan-audit-{_now().strftime('%Y%m%d-%H%M%S')}.csv"
     return StreamingResponse(
         iter([buffer.getvalue()]),
         media_type="text/csv",

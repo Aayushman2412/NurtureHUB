@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import contextvars
 import hashlib
+import ipaddress
 import uuid
 from dataclasses import dataclass, field
 from typing import Optional
@@ -128,11 +129,39 @@ def client_ip(request) -> Optional[str]:
     actions in the audit trail.
     """
     if settings.TRUST_PROXY_HEADERS:
-        xff = request.headers.get("x-forwarded-for")
-        if xff:
-            return xff.split(",")[0].strip()[:64]
+        forwarded = forwarded_client(request.headers)
+        if forwarded:
+            return forwarded[:64]
     peer = getattr(request, "client", None)
     return peer.host[:64] if peer and peer.host else None
+
+
+def forwarded_client(headers) -> Optional[str]:
+    """The client address a trusted proxy reported, or None to use the peer.
+
+    Shared by the audit trail and the rate limiter so the two can never disagree
+    about who a caller is. With CLIENT_IP_HEADER set (behind Cloudflare,
+    "cf-connecting-ip") only that header counts: the edge overwrites it on every
+    request, whereas it merely *appends* to an X-Forwarded-For the client sent,
+    so the left-most hop there is the client's own claim. A request without the
+    header did not come through the edge, so it gets no forwarded address at all
+    rather than a fallback to the forgeable one.
+
+    Whatever is reported must parse as an IP address. Anything else is a forgery
+    or a misconfiguration, and accepting it would let a caller write free text
+    into the audit trail's source address and mint a fresh rate-limit bucket per
+    request. The edge header only protects anything if the origin accepts
+    traffic from the edge alone (deploy/helm/eduposhan/README.md).
+    """
+    header = settings.CLIENT_IP_HEADER.strip().lower()
+    if header:
+        reported = headers.get(header) or ""
+    else:
+        reported = (headers.get("x-forwarded-for") or "").split(",")[0]
+    try:
+        return str(ipaddress.ip_address(reported.strip()))
+    except ValueError:
+        return None
 
 
 def device_fingerprint(request) -> Optional[str]:

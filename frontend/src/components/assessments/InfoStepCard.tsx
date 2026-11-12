@@ -41,11 +41,11 @@ const InfoStepCard: React.FC<InfoStepCardProps> = ({ node }) => {
     <div>
       <div className="mb-4 flex items-center gap-2 text-primary-ink">
         <Info className="size-5" aria-hidden />
-        <span className="text-[12px] font-bold uppercase tracking-wider">{t('runner.infoBadge')}</span>
+        <span className="text-[12px] font-semibold  ">{t('runner.infoBadge')}</span>
       </div>
 
       {node.title.trim() && (
-        <h2 className="text-balance font-display text-xl font-bold text-ink sm:text-2xl">{node.title}</h2>
+        <h2 className="text-balance font-display text-xl font-semibold text-ink sm:text-2xl">{node.title}</h2>
       )}
       {node.body.trim() && (
         <p className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed text-ink-muted">{node.body}</p>
@@ -60,7 +60,7 @@ const InfoStepCard: React.FC<InfoStepCardProps> = ({ node }) => {
               alt=""
               className={
                 node.media.length === 1
-                  ? 'max-h-72 w-auto max-w-full rounded-xl border border-border object-contain'
+                  ? 'max-h-72 w-auto max-w-full rounded-lg border border-border object-contain'
                   : 'h-36 w-auto max-w-full rounded-lg border border-border object-contain sm:h-44'
               }
             />
@@ -101,7 +101,7 @@ const InfoStepCard: React.FC<InfoStepCardProps> = ({ node }) => {
       )}
 
       {(a.type === 'notify' || a.type === 'info') && a.message.trim() && (
-        <div className="mt-4 flex gap-3 rounded-lg bg-coral-50 px-4 py-3 dark:bg-coral-500/10">
+        <div className="mt-4 flex gap-3 rounded-lg bg-brand-50 px-4 py-3 dark:bg-brand-500/10">
           <span className="mt-0.5 shrink-0 text-primary-ink" aria-hidden>
             {a.type === 'notify' ? <Bell className="size-4.5" /> : <Info className="size-4.5" />}
           </span>
@@ -110,7 +110,7 @@ const InfoStepCard: React.FC<InfoStepCardProps> = ({ node }) => {
       )}
 
       {a.type === 'youtube' && !embed && isSafeHttpUrl(a.url) && (
-        <div className="mt-4 flex gap-3 rounded-lg bg-coral-50 px-4 py-3 dark:bg-coral-500/10">
+        <div className="mt-4 flex gap-3 rounded-lg bg-brand-50 px-4 py-3 dark:bg-brand-500/10">
           <span className="mt-0.5 shrink-0 text-primary-ink" aria-hidden>
             <Link2 className="size-4.5" />
           </span>

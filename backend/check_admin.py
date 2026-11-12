@@ -5,7 +5,7 @@ from app.models import User
 from app.auth import verify_password
 
 def main():
-    parser = argparse.ArgumentParser(description="Check admin status in NurtureHUB.")
+    parser = argparse.ArgumentParser(description="Check admin status in EduPoshan.")
     parser.add_argument("email", nargs="?", default="ruqaiya@edupyramids.org", help="Admin email to check")
     parser.add_argument("password", nargs="?", default=None, help="Password to verify against (optional)")
 

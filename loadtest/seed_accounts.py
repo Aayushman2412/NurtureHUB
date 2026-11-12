@@ -17,7 +17,7 @@ import psycopg2
 
 DB_URL = os.environ.get(
     "NH_LOADTEST_DB",
-    "postgresql://postgres:756824@localhost/nurturehub_loadtest",
+    "postgresql://postgres:756824@localhost/eduposhan_loadtest",
 )
 TEMPLATE_EMAIL = os.environ.get("NH_TEMPLATE_EMAIL", "ayushman2412@gmail.com")
 EMAIL_LIKE = "loadtest_%@nhload.org"

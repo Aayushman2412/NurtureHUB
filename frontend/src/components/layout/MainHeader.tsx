@@ -15,7 +15,7 @@ interface MainHeaderProps {
 }
 
 const iconBtn =
-  'flex size-9.5 items-center justify-center rounded-full text-ink-muted transition-colors ' +
+  'flex size-10 items-center justify-center rounded-md text-ink-muted transition-colors ' +
   'hover:bg-surface-sunken hover:text-ink cursor-pointer';
 
 const MainHeader: React.FC<MainHeaderProps> = ({
@@ -30,7 +30,7 @@ const MainHeader: React.FC<MainHeaderProps> = ({
   const [syncSheetOpen, setSyncSheetOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-(--z-dropdown) flex items-center justify-between gap-2 border-b border-border bg-surface/85 px-4 py-3 backdrop-blur-md sm:gap-4 sm:px-5 print:hidden">
+    <header className="sticky top-0 z-(--z-dropdown) flex items-center justify-between gap-2 border-b border-border bg-surface px-4 py-3 sm:gap-4 sm:px-5 print:hidden">
       {/* Left: hamburger (mobile) + title. `min-w-0` + `truncate` make the TITLE
           the thing that gives way when space runs out — without them the flex
           row cannot shrink and it pushes the controls off a phone screen. */}
@@ -38,7 +38,7 @@ const MainHeader: React.FC<MainHeaderProps> = ({
         <button onClick={onToggleSidebar} className={`${iconBtn} shrink-0 lg:hidden`} aria-label={t('app:header.toggleMenu')}>
           <Menu className="size-6" />
         </button>
-        <h1 className="truncate font-display text-lg font-bold text-ink sm:text-xl">{title}</h1>
+        <h1 className="truncate font-display text-lg font-semibold text-ink sm:text-xl">{title}</h1>
       </div>
 
       {/* Right: actions — never shrinks, they are all tap targets. (The avatar
@@ -57,7 +57,7 @@ const MainHeader: React.FC<MainHeaderProps> = ({
               <CloudOff className="size-5 text-amber-600" />
             )}
             {pendingCount > 0 && (
-              <span className="absolute right-0.5 top-0.5 flex size-4.5 items-center justify-center rounded-full bg-amber-500 text-[12px] font-bold text-white ring-2 ring-surface">
+              <span className="absolute right-0.5 top-0.5 flex size-4.5 items-center justify-center rounded-full bg-amber-500 text-[12px] font-semibold text-white ring-2 ring-surface">
                 {pendingCount > 9 ? '9+' : pendingCount}
               </span>
             )}
@@ -72,7 +72,7 @@ const MainHeader: React.FC<MainHeaderProps> = ({
             an unlabelled sun/moon is not obviously "light or dark"). */}
         <button
           onClick={toggleDarkMode}
-          className="inline-flex size-9.5 cursor-pointer items-center justify-center rounded-full border border-border bg-surface text-sm font-semibold text-ink-muted transition-colors hover:text-ink sm:size-auto sm:gap-1.5 sm:px-3 sm:py-1.5"
+          className="inline-flex size-10 cursor-pointer items-center justify-center rounded-md text-sm font-medium text-ink-muted transition-colors hover:bg-surface-sunken hover:text-ink sm:size-auto sm:gap-1.5 sm:px-3 sm:py-2"
           title={darkMode ? t('common:theme.light') : t('common:theme.dark')}
           aria-label={darkMode ? t('common:theme.light') : t('common:theme.dark')}
         >
@@ -83,7 +83,7 @@ const MainHeader: React.FC<MainHeaderProps> = ({
         <button onClick={onToggleNotifs} className={`${iconBtn} relative`} title={t('app:header.notifications')}>
           <Bell className="size-5" />
           {unreadNotifsCount > 0 && (
-            <span className="absolute right-1 top-1 flex size-4.5 items-center justify-center rounded-full bg-error-500 text-[12px] font-bold text-white ring-2 ring-surface">
+            <span className="absolute right-1 top-1 flex size-4.5 items-center justify-center rounded-full bg-error-500 text-[12px] font-semibold text-white ring-2 ring-surface">
               {unreadNotifsCount > 9 ? '9+' : unreadNotifsCount}
             </span>
           )}

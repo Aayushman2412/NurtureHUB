@@ -1,15 +1,14 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
 
-export type BadgeVariant = 'success' | 'error' | 'warning' | 'info' | 'neutral' | 'coral';
+export type BadgeVariant = 'success' | 'error' | 'warning' | 'info' | 'neutral';
 
 const variants: Record<BadgeVariant, string> = {
-  success: 'bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500',
-  error: 'bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-500',
-  warning: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-500',
-  info: 'bg-info-50 text-info-600 dark:bg-info-500/15 dark:text-info-500',
-  neutral: 'bg-surface-sunken text-ink-muted',
-  coral: 'bg-coral-50 text-coral-700 dark:bg-coral-500/15 dark:text-coral-300',
+  success: 'border-success-200 bg-success-50 text-success-700 dark:border-success-500/30 dark:bg-success-500/15 dark:text-success-300',
+  error: 'border-error-200 bg-error-50 text-error-600 dark:border-error-500/30 dark:bg-error-500/15 dark:text-error-300',
+  warning: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300',
+  info: 'border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/15 dark:text-brand-300',
+  neutral: 'border-border bg-surface-sunken text-ink-muted',
 };
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -17,11 +16,12 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   size?: 'sm' | 'md';
 }
 
+/** A small rectangular tag carrying one status word. */
 const Badge: React.FC<BadgeProps> = ({ variant = 'neutral', size = 'sm', className, children, ...rest }) => (
   <span
     className={cn(
-      'inline-flex items-center gap-1 rounded-full font-semibold whitespace-nowrap',
-      size === 'sm' ? 'text-[12px] px-2.5 py-0.5' : 'text-xs px-3 py-1',
+      'inline-flex items-center gap-1 rounded-sm border font-medium whitespace-nowrap',
+      size === 'sm' ? 'px-1.5 py-px text-[12px]' : 'px-2 py-0.5 text-xs',
       variants[variant],
       className,
     )}

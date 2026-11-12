@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   BookOpen, CalendarRange, CalendarX2, ChartColumn, FileSpreadsheet, Gauge, HeartPulse, IdCard, LayoutDashboard, Presentation,
-  Settings2, Sparkles, TriangleAlert, Users,
+  Settings2, FileText, TriangleAlert, Users,
 } from 'lucide-react';
 import { downloadMasd, getMasdProjects, getMasdReport, type MasdProject, type MasdReport } from '../../api/masd';
 import { useToast } from '../../context/ToastContext';
@@ -44,7 +44,7 @@ const fmtDate = (iso: string | null) =>
 /**
  * MASD — Member Activity Summary Dashboard. The analysts' district report
  * (adoption target fulfilment, activity intensity, malnutrition outcomes vs
- * NFHS) computed live from NurtureHUB's records, with the same report as a
+ * NFHS) computed live from EduPoshan's records, with the same report as a
  * PowerPoint or Excel download.
  */
 const AdminMasdPage: React.FC = () => {
@@ -125,7 +125,7 @@ const AdminMasdPage: React.FC = () => {
   };
 
   const navItems = useMemo(() => [
-    { key: 'glance', label: t('views.glance'), icon: <Sparkles /> },
+    { key: 'glance', label: t('views.glance'), icon: <FileText /> },
     { key: 'overview', label: t('views.overview'), icon: <LayoutDashboard /> },
     { key: 'descriptives', label: t('views.descriptives'), icon: <IdCard /> },
     { key: 'expected', label: t('views.expected'), icon: <Gauge /> },
@@ -147,7 +147,7 @@ const AdminMasdPage: React.FC = () => {
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="font-display text-2xl font-extrabold text-ink">{t('title')}</h1>
+          <h1 className="font-display text-2xl font-semibold text-ink">{t('title')}</h1>
           <p className="mt-1 max-w-3xl text-sm text-ink-muted">{t('description')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -165,7 +165,7 @@ const AdminMasdPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-surface p-4">
+      <div className="rounded-lg border border-border bg-surface p-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <SelectField
             label={t('project')}
@@ -218,7 +218,7 @@ const AdminMasdPage: React.FC = () => {
         <>
           {/* Frozen at the top while the page scrolls, like every dashboard's
               controls (review of 3 Oct 2026). */}
-          <div className="rounded-2xl bg-background py-1 sm:sticky sm:top-[3.75rem] sm:z-20 lg:top-2">
+          <div className="rounded-lg bg-background py-1 sm:sticky sm:top-[3.75rem] sm:z-20 lg:top-2">
             <SubNav items={navItems} value={view} onChange={v => setView(v as View)} label={t('views.label')} />
             {SPLIT_VIEWS.includes(view) && (
               <div className="mt-2">

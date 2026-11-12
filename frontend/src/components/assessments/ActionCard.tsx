@@ -27,7 +27,7 @@ const Callout: React.FC<{ icon: React.ReactNode; children: React.ReactNode }> = 
   icon,
   children,
 }) => (
-  <div className="mt-4 flex gap-3 rounded-lg bg-coral-50 px-4 py-3 dark:bg-coral-500/10">
+  <div className="mt-4 flex gap-3 rounded-lg bg-brand-50 px-4 py-3 dark:bg-brand-500/10">
     <span className="mt-0.5 shrink-0 text-primary-ink" aria-hidden>
       {icon}
     </span>
@@ -111,10 +111,10 @@ const ActionCard: React.FC<ActionCardProps> = ({ item, index, verdictDef = null 
 
   return (
     <Card className="p-5">
-      <div className="text-[12px] font-bold uppercase tracking-wider text-ink-faint">
+      <div className="text-[12px] font-semibold text-ink-faint">
         {t('plan.stepN', { n: index + 1 })}
       </div>
-      <h4 className="mt-1 font-display font-bold leading-snug text-ink">{item.question}</h4>
+      <h4 className="mt-1 font-display font-semibold leading-snug text-ink">{item.question}</h4>
       <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
         <span className="text-ink-muted">{t('plan.youChose')}</span>
         <span className="font-semibold text-ink">{item.optionLabel}</span>

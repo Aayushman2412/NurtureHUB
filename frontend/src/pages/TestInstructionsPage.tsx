@@ -26,7 +26,7 @@ interface Test {
 const Spec: React.FC<{ label: string; icon: React.ReactNode; value: string }> = ({ label, icon, value }) => (
   <div className="flex flex-col gap-1">
     <span className="text-xs font-medium text-ink-faint">{label}</span>
-    <div className="flex items-center gap-2 text-lg font-bold text-ink">
+    <div className="flex items-center gap-2 text-lg font-semibold text-ink">
       <span className="text-primary-ink">{icon}</span>
       <span>{value}</span>
     </div>
@@ -99,12 +99,12 @@ const TestInstructionsPage: React.FC = () => {
       </div>
 
       <Card className="p-8 sm:p-9">
-        <span className="text-xs font-bold uppercase tracking-wider text-primary-ink">{t('instructions.eyebrow')}</span>
-        <h2 className="mt-1 mb-4 font-display text-3xl font-extrabold text-ink">{test.title}</h2>
+        <span className="text-xs font-semibold text-primary-ink">{t('instructions.eyebrow')}</span>
+        <h2 className="mt-1 mb-4 font-display text-3xl font-semibold text-ink">{test.title}</h2>
         <p className="mb-8 text-[15px] leading-relaxed text-ink-muted">{test.description}</p>
 
         {/* Specs */}
-        <div className="mb-8 grid grid-cols-1 gap-5 rounded-xl border border-border bg-surface-sunken p-5 sm:grid-cols-3">
+        <div className="mb-8 grid grid-cols-1 gap-5 rounded-lg border border-border bg-surface-sunken p-5 sm:grid-cols-3">
           <Spec
             label={t('instructions.specQuestionsLabel')}
             icon={<HelpCircle className="size-[18px]" />}
@@ -124,7 +124,7 @@ const TestInstructionsPage: React.FC = () => {
 
         {/* Guidelines */}
         <div className="mb-9 flex flex-col gap-4">
-          <h4 className="font-display text-base font-bold text-ink">{t('instructions.guidelinesTitle')}</h4>
+          <h4 className="font-display text-base font-semibold text-ink">{t('instructions.guidelinesTitle')}</h4>
           <ul className="flex list-disc flex-col gap-3 pl-5 text-sm leading-relaxed text-ink-muted">
             <li>{t('instructions.guidelines.network')}</li>
             <li>

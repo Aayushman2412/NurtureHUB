@@ -5,9 +5,9 @@
   },
   "welcome": {
     "districtEyebrow": "{{district}} District",
-    "defaultEyebrow": "Welcome back",
+    "defaultEyebrow": "Training",
     "nameFallback": "Healthcare Worker",
-    "subtitle": "You have completed {{completed}} of {{total}} video lessons. Keep up the good work!",
+    "subtitle": "{{completed}} of {{total}} video lessons completed.",
     "overall": "Overall",
     "progress": "Progress"
   },

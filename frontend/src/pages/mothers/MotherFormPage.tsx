@@ -45,7 +45,7 @@ const PAGES: readonly (readonly string[])[] = [
 
 const ReadOnly: React.FC<{ label: string; value: string; hint: string; error?: string }> = ({ label, value, hint, error }) => (
   <Field label={label} error={error}>
-    <div className="rounded-lg border border-border-strong/60 bg-surface-sunken px-3.5 py-2.5 text-sm">
+    <div className="rounded-lg border border-border-control bg-surface-sunken px-3.5 py-2.5 text-sm">
       {value ? value : <span className="text-ink-faint">{hint}</span>}
     </div>
   </Field>
@@ -330,10 +330,10 @@ const MotherFormPage: React.FC = () => {
           <ArrowLeft className="size-5" />
         </button>
         <div className="min-w-0 flex-1">
-          <p className="font-display text-lg font-bold text-ink">{t(editId != null ? 'form.editTitle' : 'form.title')}</p>
+          <p className="font-display text-lg font-semibold text-ink">{t(editId != null ? 'form.editTitle' : 'form.title')}</p>
           <div className="mt-1 flex items-center gap-2">
             <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-sunken">
-              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${((step + 1) / PAGES.length) * 100}%` }} />
+              <div className="h-full rounded-full bg-primary transition-colors" style={{ width: `${((step + 1) / PAGES.length) * 100}%` }} />
             </div>
             <span className="shrink-0 text-xs font-semibold tabular-nums text-ink-muted">{t('form.pageOf', { n: step + 1, of: PAGES.length })}</span>
           </div>
@@ -349,8 +349,8 @@ const MotherFormPage: React.FC = () => {
                   <label
                     key={k}
                     className={cn(
-                      'flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 px-4 py-3 text-base font-semibold transition-colors',
-                      declaredType === k ? 'border-primary bg-coral-50 text-ink dark:bg-coral-500/10' : 'border-border text-ink hover:border-border-strong',
+                      'flex min-h-14 cursor-pointer items-center gap-3 rounded-lg border-2 px-4 py-3 text-base font-semibold transition-colors',
+                      declaredType === k ? 'border-primary bg-brand-50 text-ink dark:bg-brand-500/10' : 'border-border text-ink hover:border-border-strong',
                     )}
                   >
                     <input type="radio" name="declared_adoption_type" value={k} checked={declaredType === k} className="sr-only"

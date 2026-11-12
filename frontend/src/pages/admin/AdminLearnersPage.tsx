@@ -19,7 +19,7 @@ import LearnerActivityModal from '../../components/admin/LearnerActivityModal';
 const PAGE_SIZE = 100;
 
 /**
- * A fresh trial address: `test.<mmdd>.<4 random>@nurturehub.org`. Random rather
+ * A fresh trial address: `test.<mmdd>.<4 random>@eduposhan.org`. Random rather
  * than sequential so two admins creating accounts minutes apart never collide.
  *
  * The domain must be a normal one. Reserved TLDs (`.test`, `.invalid`,
@@ -31,7 +31,7 @@ const suggestTestEmail = (): string => {
   const now = new Date();
   const stamp = `${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
   const rand = Math.random().toString(36).slice(2, 6);
-  return `test.${stamp}.${rand}@nurturehub.org`;
+  return `test.${stamp}.${rand}@eduposhan.org`;
 };
 
 /** A readable throwaway password that always satisfies the server's policy.
@@ -371,7 +371,7 @@ const AdminLearnersPage: React.FC = () => {
                   </Td>
                   <Td className="font-semibold text-ink">
                     {learner.full_name || <span className="text-ink-faint">{t('learners.noName')}</span>}
-                    {learner.is_admin && <Badge variant="coral" className="ml-2">{t('learners.adminBadge')}</Badge>}
+                    {learner.is_admin && <Badge variant="info" className="ml-2">{t('learners.adminBadge')}</Badge>}
                     <span className="block text-[12px] font-normal text-ink-faint">ID {learner.id}</span>
                   </Td>
                   <Td className="whitespace-nowrap tabular-nums text-ink">{learner.phone || <span className="text-ink-faint">—</span>}</Td>
@@ -577,7 +577,7 @@ const AdminLearnersPage: React.FC = () => {
             <Alert variant="success" title={t('learners.createdBanner')}>
               {t('learners.createdNote')}
             </Alert>
-            <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-xl bg-surface-sunken p-4 text-sm">
+            <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-lg bg-surface-sunken p-4 text-sm">
               <dt className="font-semibold text-ink-muted">{t('learners.fieldEmail')}</dt>
               <dd className="font-mono break-all text-ink">{created.email}</dd>
               <dt className="font-semibold text-ink-muted">{t('learners.fieldPassword')}</dt>

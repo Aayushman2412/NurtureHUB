@@ -93,7 +93,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
       <div
         onClick={onClose}
         className={cn(
-          'fixed inset-0 z-(--z-modal-backdrop) bg-cream-950/40 backdrop-blur-xs transition-opacity print:hidden',
+          'fixed inset-0 z-(--z-modal-backdrop) bg-gray-950/40 transition-opacity print:hidden',
           isOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
         aria-hidden
@@ -101,7 +101,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
 
       <aside
         className={cn(
-          'fixed inset-y-0 right-0 z-(--z-modal) flex w-[min(360px,90vw)] flex-col border-l border-border bg-surface shadow-2xl',
+          'fixed inset-y-0 right-0 z-(--z-modal) flex w-[min(360px,90vw)] flex-col border-l border-border bg-surface shadow-(--shadow-overlay)',
           'transition-transform duration-300 print:hidden',
           isOpen ? 'translate-x-0' : 'translate-x-full',
         )}
@@ -110,7 +110,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
         <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
           <div className="flex items-center gap-2">
             <Bell className="size-5 text-primary-ink" />
-            <span className="font-display font-bold">{t('notifications.title')}</span>
+            <span className="font-display font-semibold">{t('notifications.title')}</span>
           </div>
           <div className="flex items-center gap-2">
             {notifications.some(n => !n.is_read) && (
@@ -162,10 +162,10 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
                     }
                   }}
                   className={cn(
-                    'w-full rounded-xl border p-3.5 text-left transition-colors',
+                    'w-full rounded-lg border p-3.5 text-left transition-colors',
                     n.is_read
                       ? 'border-border bg-surface'
-                      : 'cursor-pointer border-primary/30 bg-coral-50 hover:bg-coral-100 dark:bg-coral-500/10 dark:hover:bg-coral-500/15',
+                      : 'cursor-pointer border-primary/30 bg-brand-50 hover:bg-brand-100 dark:bg-brand-500/10 dark:hover:bg-brand-500/15',
                     n.link && 'cursor-pointer',
                   )}
                 >

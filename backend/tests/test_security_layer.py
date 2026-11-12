@@ -1,6 +1,6 @@
 """The data-protection layer's load-bearing claims, tested rather than asserted.
 
-Every claim NurtureHUB makes under the MOU's data-privacy clause reduces to one
+Every claim EduPoshan makes under the MOU's data-privacy clause reduces to one
 of the things checked here:
 
   * identifiers really are ciphertext in the database, and still readable by the app
@@ -422,7 +422,7 @@ class TestRedaction:
 class TestPasswordPolicy:
     @pytest.mark.parametrize("bad", [
         "123456", "password", "admin123", "qwerty123", "Passw0rd",
-        "aaaaaaaaaaaa", "1234567890ab", "nurturehub",
+        "aaaaaaaaaaaa", "1234567890ab", "nurturehub", "nurturehub123", "eduposhan", "eduposhan123",
     ])
     def test_rejects_what_attackers_try_first(self, bad):
         with pytest.raises(passwords.PasswordPolicyError):
@@ -491,10 +491,10 @@ class TestTotp:
 
     def test_provisioning_uri_is_well_formed(self):
         secret = totp.generate_secret()
-        uri = totp.provisioning_uri(secret, "admin@example.org", "NurtureHUB")
+        uri = totp.provisioning_uri(secret, "admin@example.org", "EduPoshan")
         assert uri.startswith("otpauth://totp/")
         assert f"secret={secret}" in uri
-        assert "issuer=NurtureHUB" in uri
+        assert "issuer=EduPoshan" in uri
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -711,13 +711,13 @@ class TestProductionGuard:
         base = dict(
             APP_ENV="production",
             JWT_SECRET_KEY="a" * 40,
-            DATABASE_URL="postgresql://u:p@db/nurturehub",
+            DATABASE_URL="postgresql://u:p@db/eduposhan",
             SMTP_USER="a@b.org",
             SMTP_PASSWORD="x",
             AUDIT_HMAC_KEY="b" * 40,
             PHI_ENCRYPTION_KEYS=f"v1:{_TEST_KEY}",
             PHI_INDEX_KEY="c" * 40,
-            ALLOWED_HOSTS="nurturehub.example.org",
+            ALLOWED_HOSTS="eduposhan.example.org",
             SEED_DEMO_DATA=False,
             RAW_EXPORT_MOCK=False,
             ALLOW_DEV_ADMIN=False,
@@ -739,6 +739,8 @@ class TestProductionGuard:
         ({"SEED_DEMO_DATA": True}, "SEED_DEMO_DATA"),
         ({"RAW_EXPORT_MOCK": True}, "RAW_EXPORT_MOCK"),
         ({"DPO_EMAIL": "privacy@nurturehub.org"}, "DPO_EMAIL"),
+        ({"DPO_EMAIL": "privacy@example.org"}, "DPO_EMAIL"),
+        ({"DPO_EMAIL": ""}, "DPO_EMAIL"),
     ])
     def test_refuses_to_boot_without_a_control(self, override, expected):
         """Booting without one of these means the platform cannot honestly claim

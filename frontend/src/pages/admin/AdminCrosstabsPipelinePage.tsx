@@ -229,11 +229,11 @@ const AdminCrosstabsPipelinePage: React.FC = () => {
           triggerControls={
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="flex size-9 items-center justify-center rounded-lg bg-coral-50 dark:bg-coral-500/10">
+                <span className="inline-flex shrink-0">
                   <Table2 className="size-4.5 text-primary-ink" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="font-display text-sm font-bold text-ink">
+                  <div className="font-display text-sm font-semibold text-ink">
                     {t('crosstabs.runTitle', { project: projectName })}
                   </div>
                   <div className="text-xs text-ink-muted">{t('crosstabs.runHint')}</div>

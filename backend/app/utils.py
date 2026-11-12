@@ -3,6 +3,7 @@ import logging
 import string
 import smtplib
 import ssl
+from email.utils import formataddr
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from app.config import settings
@@ -30,29 +31,43 @@ def _mask_email(email: str) -> str:
     return email
 
 
+# The live server's docker-compose.yml still passes this as the default sender:
+# its checkout carries a local edit to that file, so the file can only change
+# together with a merge on the server. Until then, read it as "not configured".
+_LEGACY_DEFAULT_SENDER = "NurtureHUB <noreply@nurturehub.org>"
+
+
+def sender_address() -> str:
+    """The From header: SMTP_FROM when configured, else the app name on the SMTP login."""
+    configured = (settings.SMTP_FROM or "").strip()
+    if configured and configured != _LEGACY_DEFAULT_SENDER:
+        return configured
+    return formataddr((settings.APP_NAME, settings.SMTP_USER or "noreply@localhost"))
+
+
 def _build_otp_message(to_email: str, otp: str) -> MIMEMultipart:
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"NurtureHUB verification code: {otp}"
-    msg["From"] = settings.SMTP_FROM
+    msg["Subject"] = f"EduPoshan verification code: {otp}"
+    msg["From"] = sender_address()
     msg["To"] = to_email
 
     text = (
-        f"Your verification code for NurtureHUB is {otp}. "
+        f"Your verification code for EduPoshan is {otp}. "
         f"It will expire in {settings.OTP_EXPIRE_MINUTES} minutes."
     )
     html = f"""
     <html>
-      <body style="font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; color: #3A100B; background-color: #FEF5F3;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #FDE7E2; border-radius: 12px; padding: 32px;">
-          <h2 style="color: #D14432; text-align: center; margin-top: 0;">NurtureHUB Verification Code</h2>
+      <body style="font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; color: #0F151A; background-color: #F3F5F7;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #D0D7DC; border-radius: 6px; padding: 32px;">
+          <h2 style="color: #0F5562; text-align: center; margin-top: 0;">EduPoshan Verification Code</h2>
           <p>Hello,</p>
-          <p>Thank you for using NurtureHUB. Please use the following One-Time Password (OTP) to verify your account:</p>
+          <p>Thank you for using EduPoshan. Please use the following One-Time Password (OTP) to verify your account:</p>
           <div style="text-align: center; margin: 32px 0;">
-            <span style="font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #8A2A1D; background-color: #FEF5F3; padding: 14px 26px; border-radius: 10px; border: 1px solid #FACCC2;">{otp}</span>
+            <span style="font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #0E3A43; background-color: #EEF7F8; padding: 14px 26px; border-radius: 4px; border: 1px solid #AEDADF;">{otp}</span>
           </div>
           <p>This code will expire in {settings.OTP_EXPIRE_MINUTES} minutes. If you did not request this, you can safely ignore this email.</p>
-          <hr style="border: 0; border-top: 1px solid #FDE7E2; margin: 32px 0;" />
-          <p style="font-size: 12px; color: #A98A82; text-align: center;">NurtureHUB · Assessment &amp; Training Platform</p>
+          <hr style="border: 0; border-top: 1px solid #D0D7DC; margin: 32px 0;" />
+          <p style="font-size: 12px; color: #55616B; text-align: center;">EduPoshan · Training and field records</p>
         </div>
       </body>
     </html>
@@ -132,7 +147,7 @@ def send_otp_email(to_email: str, otp: str) -> None:
     # Dev convenience: surface the code in the server log. Never in production.
     if not settings.is_production:
         print("\n" + "=" * 50)
-        print(f"  >>> NURTUREHUB VERIFICATION OTP: {otp} <<<  ")
+        print(f"  >>> EDUPOSHAN VERIFICATION OTP: {otp} <<<  ")
         print(f"  Sent to: {to_email}")
         print("=" * 50 + "\n")
 

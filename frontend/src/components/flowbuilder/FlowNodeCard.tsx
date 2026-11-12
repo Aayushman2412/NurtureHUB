@@ -18,8 +18,8 @@ import { cn } from '../../utils/cn';
 import { GRID, NODE_W, nodeTitle, truncate, verdictEdgeColor } from './constants';
 
 const TYPE_BADGES: Record<QuestionType, { label: string; icon: React.FC<{ className?: string }>; classes: string }> = {
-  single: { label: 'Single', icon: CircleDot, classes: 'bg-coral-50 text-coral-700 dark:bg-coral-500/15 dark:text-coral-300' },
-  multi: { label: 'Multi', icon: CheckSquare, classes: 'bg-sage-100 text-sage-700 dark:bg-sage-500/15 dark:text-sage-300' },
+  single: { label: 'Single', icon: CircleDot, classes: 'bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300' },
+  multi: { label: 'Multi', icon: CheckSquare, classes: 'bg-success-100 text-success-700 dark:bg-success-500/15 dark:text-success-300' },
   text: { label: 'Text', icon: AlignLeft, classes: 'bg-surface-sunken text-ink-muted' },
   date: { label: 'Date', icon: Calendar, classes: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-500' },
   number: { label: 'Number', icon: Hash, classes: 'bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500' },
@@ -170,22 +170,22 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
       {/* Stacked-paper backdrop for sections */}
       {isSection && (
         <>
-          <div className="absolute inset-x-3 -bottom-2.5 top-3 rounded-xl border border-border bg-surface-sunken/70" aria-hidden />
-          <div className="absolute inset-x-1.5 -bottom-1.5 top-1.5 rounded-xl border border-border bg-surface" aria-hidden />
+          <div className="absolute inset-x-3 -bottom-2.5 top-3 rounded-lg border border-border bg-surface-sunken/70" aria-hidden />
+          <div className="absolute inset-x-1.5 -bottom-1.5 top-1.5 rounded-lg border border-border bg-surface" aria-hidden />
         </>
       )}
 
       <div
         className={cn(
-          'relative rounded-xl border bg-surface shadow-(--shadow-card) transition-[box-shadow,border-color] duration-150',
+          'relative rounded-lg border bg-surface transition-[box-shadow,border-color] duration-150',
           selected
-            ? 'border-primary ring-2 ring-primary/40 shadow-(--shadow-card-hover)'
+            ? 'border-primary ring-2 ring-primary/40 '
             : 'border-border hover:border-border-strong',
           connectTargetable && 'hover:border-primary hover:ring-2 hover:ring-primary/40',
         )}
       >
         {isStart && (
-          <span className="absolute -top-2.5 left-3 rounded-full bg-primary px-2 py-0.5 text-xs font-extrabold uppercase tracking-wider text-primary-fg shadow-sm">
+          <span className="absolute -top-2.5 left-3 rounded-sm bg-primary px-2 py-0.5 text-xs font-semibold text-primary-fg ">
             Start
           </span>
         )}
@@ -193,17 +193,17 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
         <div className="px-3.5 pb-3 pt-3.5">
           <div className="mb-1.5 flex items-center gap-1.5">
             {isSection && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-sage-100 px-2 py-0.5 text-xs font-bold text-sage-700 dark:bg-sage-500/15 dark:text-sage-300">
+              <span className="inline-flex items-center gap-1 rounded-sm bg-success-100 px-2 py-0.5 text-xs font-semibold text-success-700 dark:bg-success-500/15 dark:text-success-300">
                 <Layers className="size-3" /> Section
               </span>
             )}
             {info && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-info-50 px-2 py-0.5 text-xs font-bold text-info-600 dark:bg-coral-500/15 dark:text-coral-300">
+              <span className="inline-flex items-center gap-1 rounded-sm bg-info-50 px-2 py-0.5 text-xs font-semibold text-info-600 dark:bg-brand-500/15 dark:text-brand-300">
                 <Info className="size-3" /> Info block
               </span>
             )}
             {matrix && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700 dark:bg-amber-500/15 dark:text-amber-500">
+              <span className="inline-flex items-center gap-1 rounded-sm bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-500">
                 <Table className="size-3" /> Matrix
               </span>
             )}
@@ -212,7 +212,7 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
                 const badge = TYPE_BADGES[question.questionType];
                 const Icon = badge.icon;
                 return (
-                  <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold', badge.classes)}>
+                  <span className={cn('inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-semibold', badge.classes)}>
                     <Icon className="size-3" /> {badge.label}
                   </span>
                 );
@@ -242,7 +242,7 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
                 <DotMini key={o.id} verdict={o.verdict} />
               ))}
               {question.options.length > 8 && (
-                <span className="text-xs font-bold text-ink-muted">+{question.options.length - 8}</span>
+                <span className="text-xs font-semibold text-ink-muted">+{question.options.length - 8}</span>
               )}
               <span className="ml-1 text-[12px] text-ink-muted">
                 {question.options.length} option{question.options.length === 1 ? '' : 's'}
@@ -278,7 +278,7 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
           )}
 
           {endsHere && (
-            <div className="mt-1.5 flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-ink-muted">
+            <div className="mt-1.5 flex items-center gap-1 text-xs font-semibold text-ink-muted">
               <Flag className="size-3" /> Ends form
             </div>
           )}
@@ -289,7 +289,7 @@ const FlowNodeCard: React.FC<FlowNodeCardProps> = ({
       {!connectMode && (
         <div
           className={cn(
-            'absolute -top-3.5 right-2 z-10 flex items-center gap-0.5 rounded-lg border border-border bg-surface p-0.5 shadow-md transition-opacity duration-100',
+            'absolute -top-3.5 right-2 z-10 flex items-center gap-0.5 rounded-lg border border-border bg-surface p-0.5 transition-opacity duration-100',
             selected
               ? 'opacity-100'
               : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100',

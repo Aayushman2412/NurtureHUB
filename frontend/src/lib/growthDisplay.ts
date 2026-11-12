@@ -84,7 +84,7 @@ const contrast = (a: [number, number, number], b: [number, number, number]): num
 };
 
 const WHITE: [number, number, number] = [255, 255, 255];
-const DARK_INK: [number, number, number] = [38, 34, 28]; // --color-cream-900
+const DARK_INK: [number, number, number] = [38, 34, 28]; // --color-gray-900
 
 /**
  * Whether white text beats the dark ink on this fill.

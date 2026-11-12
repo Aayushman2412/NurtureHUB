@@ -18,7 +18,7 @@
         },
         "learner": {
           "term": "Learner",
-          "meaning": "A health worker registered on NurtureHUB (ASHA, ANM, AWW, Staff Nurse …)."
+          "meaning": "A health worker registered on EduPoshan (ASHA, ANM, AWW, Staff Nurse …)."
         },
         "f2f": {
           "term": "F2F",
@@ -54,7 +54,7 @@
       "terms": {
         "userId": {
           "term": "User ID",
-          "meaning": "The learner's unique number on NurtureHUB — the surest way to find a learner. Type it in any search box."
+          "meaning": "The learner's unique number on EduPoshan — the surest way to find a learner. Type it in any search box."
         },
         "verified": {
           "term": "Verified",
@@ -402,7 +402,7 @@
         },
         "declared": {
           "term": "Declared vs worked-out type",
-          "meaning": "The learner chooses the adoption type at registration; NurtureHUB also works it out from the dates. A difference is flagged for the learner and their batch monitor."
+          "meaning": "The learner chooses the adoption type at registration; EduPoshan also works it out from the dates. A difference is flagged for the learner and their batch monitor."
         },
         "pace": {
           "term": "Cumulative expected",
@@ -442,7 +442,7 @@
         },
         "crosstabs": {
           "term": "Crosstabs raw data",
-          "meaning": "The nine CSV files the crosstabs pipeline reads, built from NurtureHUB's forms."
+          "meaning": "The nine CSV files the crosstabs pipeline reads, built from EduPoshan's forms."
         },
         "ingest": {
           "term": "Ingest",

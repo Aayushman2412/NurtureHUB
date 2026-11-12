@@ -5,7 +5,7 @@
  * target fulfilment, the share of EXPECTED activity done (against the targets
  * in force at each learner's follow-up, and within their own cases), the
  * pregnancies that need following up, and malnutrition outcomes against NFHS —
- * computed by the backend (app/masd/) from NurtureHUB's own records.
+ * computed by the backend (app/masd/) from EduPoshan's own records.
  * These types mirror app/masd/engine.py; every number arrives computed, the
  * page only draws.
  */

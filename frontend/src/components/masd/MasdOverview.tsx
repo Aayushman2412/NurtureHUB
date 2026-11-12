@@ -34,7 +34,7 @@ const MasdOverview: React.FC<{
           label={t('kpi.nilMedian')}
           value={nilMedian == null ? t('kpi.nilDaysSub') : t('kpi.nilMedianSub', { q1: nil.q1, q3: nil.q3 })}
         />
-        <button type="button" onClick={onOpenFlags} className="cursor-pointer rounded-xl text-left transition hover:ring-2 hover:ring-coral-300">
+        <button type="button" onClick={onOpenFlags} className="cursor-pointer rounded-lg text-left transition hover:ring-2 hover:ring-brand-300">
           <Kpi
             visual={<BigNumber value={flags.edd_passed.toLocaleString()} tone={flags.edd_passed ? 'bad' : 'good'} />}
             label={t('kpi.overdue')}
@@ -66,11 +66,11 @@ const MasdOverview: React.FC<{
           <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
             <div className="rounded-lg bg-surface-sunken p-3">
               <dt className="text-xs text-ink-muted">{t('overview.zeroAdoptions')}</dt>
-              <dd className="text-lg font-bold tabular-nums text-ink">{s.zero_adoptions}</dd>
+              <dd className="text-lg font-semibold tabular-nums text-ink">{s.zero_adoptions}</dd>
             </div>
             <div className="rounded-lg bg-surface-sunken p-3">
               <dt className="text-xs text-ink-muted">{t('overview.adoptedNoActivity')}</dt>
-              <dd className="text-lg font-bold tabular-nums text-ink">{s.adopted_no_activity ?? s.no_activity - s.zero_adoptions}</dd>
+              <dd className="text-lg font-semibold tabular-nums text-ink">{s.adopted_no_activity ?? s.no_activity - s.zero_adoptions}</dd>
             </div>
           </dl>
           <p className="mt-2 text-xs text-ink-muted">{t('overview.exclusiveNote', { n: s.learners })}</p>
@@ -124,7 +124,7 @@ const MasdOverview: React.FC<{
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-1">
                       {a.reasons.map(r => (
-                        <span key={r} className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-500">
+                        <span key={r} className="rounded-sm bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-500">
                           {t(`attention.reasons.${r}`)}
                         </span>
                       ))}

@@ -1,6 +1,6 @@
-# NurtureHUB load & stress testing
+# EduPoshan load & stress testing
 
-A [Locust](https://locust.io) framework that drives the **real** NurtureHUB learner
+A [Locust](https://locust.io) framework that drives the **real** EduPoshan learner
 journey — login → tutorials (watch beats, complete, quiz) → tests (start → live
 proctoring WebSocket event stream → bulk submit → results) → mother + child
 registration — plus the 15s notification poll every authenticated page runs.
@@ -23,7 +23,7 @@ users of steady-state request rate**. 200 VUs ≈ 10,000 real users of aggregate
 | file | purpose |
 |------|---------|
 | `locustfile.py` | the two user classes + the herd barrier |
-| `ws_client.py` | candidate proctoring WebSocket client (exact NurtureHUB protocol) |
+| `ws_client.py` | candidate proctoring WebSocket client (exact EduPoshan protocol) |
 | `config.py` | all knobs, env-overridable (`NH_*`) |
 | `seed_accounts.py` | bulk-create / reset load-test accounts (guarded to `loadtest_%@nhload.org`) |
 | `setup_env.py` | admin API: activate tests + inflate question counts |
@@ -39,7 +39,7 @@ python -m venv venv-win
 venv-win/Scripts/pip install -r requirements.txt
 
 # create a dedicated DB and 5000 accounts (never point at prod)
-createdb nurturehub_loadtest
+createdb eduposhan_loadtest
 # start the backend against it once so migrations+seed run, then:
 python seed_accounts.py --count 5000
 ```

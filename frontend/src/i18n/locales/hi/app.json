@@ -14,7 +14,7 @@
     "tests": "टेस्ट",
     "results": "टेस्ट का परिणाम",
     "profile": "प्रोफ़ाइल सेटिंग्स",
-    "default": "NurtureHUB",
+    "default": "EduPoshan",
     "mothers": "गोद लिए केस",
     "growth": "वृद्धि निगरानी",
     "baby": "शिशु"
@@ -38,15 +38,15 @@
   },
   "install": {
     "button": "ऐप डाउनलोड करें",
-    "helpTitle": "इस डिवाइस पर NurtureHUB इंस्टॉल करें",
-    "helpIntro": "NurtureHUB सीधे ब्राउज़र से इंस्टॉल होता है — ऐप स्टोर से डाउनलोड करने की ज़रूरत नहीं।",
+    "helpTitle": "इस डिवाइस पर EduPoshan इंस्टॉल करें",
+    "helpIntro": "EduPoshan सीधे ब्राउज़र से इंस्टॉल होता है — ऐप स्टोर से डाउनलोड करने की ज़रूरत नहीं।",
     "iosStep1": "Safari की टूलबार में Share बटन दबाएँ।",
     "iosStep2": "नीचे स्क्रॉल करके \"Add to Home Screen\" चुनें।",
-    "iosStep3": "Add दबाएँ — अब NurtureHUB किसी भी ऐप की तरह खुलेगा।",
+    "iosStep3": "Add दबाएँ — अब EduPoshan किसी भी ऐप की तरह खुलेगा।",
     "otherStep1": "ब्राउज़र मेन्यू खोलें (Chrome में ⋮, Edge में ···)।",
     "otherStep2": "\"Install app\" या \"Add to Home screen\" चुनें।",
-    "otherStep3": "पुष्टि करें — NurtureHUB अपनी अलग विंडो में खुलेगा।",
-    "benefits": "इंस्टॉल करने पर NurtureHUB तुरंत खुलता है, बिना इंटरनेट भी चलता है, और सूचनाएँ भेज सकता है।",
+    "otherStep3": "पुष्टि करें — EduPoshan अपनी अलग विंडो में खुलेगा।",
+    "benefits": "इंस्टॉल करने पर EduPoshan तुरंत खुलता है, बिना इंटरनेट भी चलता है, और सूचनाएँ भेज सकता है।",
     "gotIt": "समझ गए"
   },
   "locked": {

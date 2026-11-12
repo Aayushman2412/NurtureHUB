@@ -729,7 +729,7 @@ def seed_learners_for_district(db: Session, district_slug: str, count: int = 300
         f2f = FaceToFaceSelection(
             user_id=user.id,
             program_district_id=pd.id,
-            uploaded_by="admin@nurturehub.org",
+            uploaded_by="admin@eduposhan.org",
             notified=True,
             selected_at=now - timedelta(days=random.randint(1, 4)),
         )

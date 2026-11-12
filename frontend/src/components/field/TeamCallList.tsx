@@ -55,9 +55,9 @@ const TeamCallList: React.FC = () => {
 
   return (
     <Card className="flex flex-col gap-3 p-4">
-      <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
+      <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-ink">
         <PhoneCall className="size-5 text-primary-ink" />{t('field.team.title')}
-        {toCall.length > 0 && <span className="rounded-full bg-error-50 px-2 py-0.5 text-sm font-bold text-error-700 dark:bg-error-500/15 dark:text-error-300">{toCall.length}</span>}
+        {toCall.length > 0 && <span className="rounded-sm bg-error-50 px-2 py-0.5 text-sm font-semibold text-error-700 dark:bg-error-500/15 dark:text-error-300">{toCall.length}</span>}
       </h2>
       {toCall.length === 0 && !all ? (
         <p className="flex items-center gap-2 text-sm font-semibold text-success-600 dark:text-success-500">

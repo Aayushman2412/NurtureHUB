@@ -1,5 +1,10 @@
 # Live testing at scale — 6,000 candidates at once
 
+> Beyond one server: the 300,000-worker design (Kubernetes, CDN, HA Postgres)
+> is in [`deploy/scale/ARCHITECTURE_300K.md`](scale/ARCHITECTURE_300K.md) and
+> [`deploy/helm/eduposhan/`](helm/eduposhan/README.md). This runbook remains
+> the procedure for the docker-compose stack on narmada.
+
 The runbook for running a formative/screening test with thousands of candidates
 signing in and writing at the same time, with admins watching all of them live.
 

@@ -141,10 +141,10 @@ const ResultsPage: React.FC = () => {
       <Card className="p-4 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-primary-ink">
+            <span className="text-xs font-semibold text-primary-ink">
               {t('results.reportEyebrow', { n: attempt.attempt_number })}
             </span>
-            <h2 className="mt-1 mb-2 font-display text-2xl font-extrabold text-ink sm:text-3xl">{test_title}</h2>
+            <h2 className="mt-1 mb-2 font-display text-2xl font-semibold text-ink sm:text-3xl">{test_title}</h2>
             <p className="text-sm text-ink-muted">
               {t('results.submittedOn', {
                 date: new Date(attempt.submitted_at).toLocaleDateString('en-GB'),
@@ -158,7 +158,7 @@ const ResultsPage: React.FC = () => {
               <span className="block text-xs text-ink-faint">{t('results.score')}</span>
               <span
                 className={cn(
-                  'font-display text-4xl font-extrabold leading-none',
+                  'font-display text-4xl font-semibold leading-none',
                   attempt.is_passed ? 'text-success-600' : 'text-error-600',
                 )}
               >
@@ -172,7 +172,7 @@ const ResultsPage: React.FC = () => {
         </div>
 
         {/* Stats */}
-        <div className="mt-7 grid grid-cols-1 gap-5 rounded-xl border border-border bg-surface-sunken p-5 sm:grid-cols-3">
+        <div className="mt-7 grid grid-cols-1 gap-5 rounded-lg border border-border bg-surface-sunken p-5 sm:grid-cols-3">
           <StatItem
             icon={<Award className="size-5" />}
             label={t('results.breakdownLabel')}
@@ -197,7 +197,7 @@ const ResultsPage: React.FC = () => {
       {/* Score by topic, with what to watch again */}
       {report && topicNames.length > 0 && (
         <Card className="p-4 sm:p-6">
-          <h3 className="mb-3 font-display text-lg font-bold text-ink">{t('topics.title')}</h3>
+          <h3 className="mb-3 font-display text-lg font-semibold text-ink">{t('topics.title')}</h3>
           <TestTopicsCard report={report} showTitle={false} />
         </Card>
       )}
@@ -209,16 +209,16 @@ const ResultsPage: React.FC = () => {
         <Card className="flex items-start gap-3 p-4 sm:p-6">
           <Lock className="mt-0.5 size-5 shrink-0 text-ink-muted" />
           <div>
-            <h3 className="font-display text-lg font-bold text-ink">{t('results.answerReview')}</h3>
+            <h3 className="font-display text-lg font-semibold text-ink">{t('results.answerReview')}</h3>
             <p className="mt-1 text-sm text-ink-muted">{t('results.answersHeld')}</p>
           </div>
         </Card>
       ) : (
       <div className="flex flex-col gap-6">
-        <h3 className="font-display text-xl font-bold text-ink">{t('results.answerReview')}</h3>
+        <h3 className="font-display text-xl font-semibold text-ink">{t('results.answerReview')}</h3>
 
         {/* The filters stay in view while scrolling the questions (19 Oct 2026). */}
-        <div className="sticky top-[3.75rem] z-20 -mx-5 flex flex-wrap items-center gap-3 border-b border-border bg-background/95 px-5 py-2 backdrop-blur-md sm:-mx-6 sm:px-6 print-hidden">
+        <div className="sticky top-[3.75rem] z-20 -mx-5 flex flex-wrap items-center gap-3 border-b border-border bg-background px-5 py-2 sm:-mx-6 sm:px-6 print-hidden">
           {topicNames.length > 0 && (
             <label className="flex items-center gap-2 text-sm text-ink-muted">
               {t('topics.filterTopic')}
@@ -239,7 +239,7 @@ const ResultsPage: React.FC = () => {
         </div>
 
         {shown.length === 0 && (
-          <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-ink-faint">{t('topics.noneMatch')}</p>
+          <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-ink-faint">{t('topics.noneMatch')}</p>
         )}
 
         {shown.map(({ ans, n }) => (
@@ -255,7 +255,7 @@ const ResultsPage: React.FC = () => {
             )}
           >
             <div className="mb-4 flex items-center justify-between">
-              <span className="font-display text-base font-extrabold text-primary-ink">
+              <span className="font-display text-base font-semibold text-primary-ink">
                 {t('common.question', { n })}
                 {ans.topic && <span className="ml-2 align-middle text-xs font-semibold text-ink-muted">· {ans.topic}</span>}
               </span>
@@ -299,7 +299,7 @@ const ResultsPage: React.FC = () => {
                   >
                     <span
                       className={cn(
-                        'flex size-6 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold',
+                        'flex size-6 shrink-0 items-center justify-center rounded-full border-2 text-xs font-semibold',
                         isCorrect
                           ? 'border-success-500 bg-success-500 text-white'
                           : isSelected

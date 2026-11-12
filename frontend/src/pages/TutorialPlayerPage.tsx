@@ -184,7 +184,7 @@ const TutorialPlayerPage: React.FC = () => {
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[3fr_1.2fr]">
         {/* Player + info */}
         <div className="flex flex-col gap-5">
-          <div className="relative aspect-video overflow-hidden rounded-2xl bg-black shadow-lg">
+          <div className="relative aspect-video overflow-hidden rounded-lg bg-black ">
             <TrackedVideoPlayer
               key={currentTutorial.id}
               videoUrl={currentTutorial.video_url}
@@ -203,17 +203,17 @@ const TutorialPlayerPage: React.FC = () => {
               <span>{t('player.watched')}</span>
               <span>{Math.round(watchPct)}%</span>
             </div>
-            <ProgressBar value={watchPct} tone={watchPct >= 90 ? 'sage' : 'coral'} />
+            <ProgressBar value={watchPct} tone={watchPct >= 90 ? 'success' : 'brand'} />
           </Card>
 
           <Card className="p-6">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-primary-ink">
+              <span className="text-xs font-semibold text-primary-ink">
                 {currentTutorial.module_number} • {t('player.videoLesson')}
               </span>
               <div className="flex items-center gap-2">
                 {currentTutorial.quiz_available && (
-                  <Badge variant="coral">
+                  <Badge variant="info">
                     <HelpCircle className="size-3" /> {t('player.quizAfterVideo')}
                   </Badge>
                 )}
@@ -237,7 +237,7 @@ const TutorialPlayerPage: React.FC = () => {
               </div>
             </div>
 
-            <h2 className="mb-3 font-display text-2xl font-extrabold text-ink">{currentTutorial.title}</h2>
+            <h2 className="mb-3 font-display text-2xl font-semibold text-ink">{currentTutorial.title}</h2>
             <p className="text-[15px] leading-relaxed text-ink-muted">{currentTutorial.description}</p>
 
             <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-t border-border pt-4 text-[13px] text-ink-faint">
@@ -254,14 +254,14 @@ const TutorialPlayerPage: React.FC = () => {
 
         {/* Playlist */}
         <Card className="flex max-h-[72vh] flex-col p-5">
-          <h3 className="mb-4 border-b border-border pb-3 font-display text-lg font-bold text-ink">{t('player.playlist')}</h3>
+          <h3 className="mb-4 border-b border-border pb-3 font-display text-lg font-semibold text-ink">{t('player.playlist')}</h3>
 
           <div className="flex flex-1 flex-col gap-4 overflow-y-auto">
             {stages
               .filter((stg) => stg.tutorials.length > 0)
               .map((stg) => (
                 <div key={stg.id}>
-                  <h4 className="mb-2 flex justify-between text-[13px] font-bold uppercase tracking-wider text-ink-faint">
+                  <h4 className="mb-2 flex justify-between text-[13px] font-semibold text-ink-faint">
                     <span>{stg.title.split(':')[0]}</span>
                     {stg.is_locked && <Lock className="size-3" />}
                   </h4>
@@ -276,7 +276,7 @@ const TutorialPlayerPage: React.FC = () => {
                           className={cn(
                             'flex w-full items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors',
                             isPlaying
-                              ? 'border-primary/40 bg-coral-50 text-primary-ink dark:bg-coral-500/10'
+                              ? 'border-primary/40 bg-brand-50 text-primary-ink dark:bg-brand-500/10'
                               : 'border-transparent text-ink hover:bg-surface-sunken',
                           )}
                         >

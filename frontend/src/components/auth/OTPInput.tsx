@@ -99,8 +99,8 @@ const OTPInput: React.FC<OTPInputProps> = ({ length = 6, onComplete }) => {
           onKeyDown={(e) => handleKeyDown(e, i)}
           onPaste={handlePaste}
           aria-label={t('otp.digitAria', { n: i + 1 })}
-          className="h-14 w-12 rounded-lg border-2 border-border-strong/60 bg-surface text-center
-                     font-display text-2xl font-bold text-ink shadow-xs outline-none
+          className="h-14 w-12 rounded-lg border-2 border-border-control bg-surface text-center
+                     font-display text-2xl font-semibold text-ink outline-none
                      transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
         />
       ))}

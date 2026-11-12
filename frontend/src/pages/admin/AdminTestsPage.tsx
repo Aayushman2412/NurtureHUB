@@ -21,7 +21,7 @@ import {
   OPTION_LABELS, addQuestion, deleteQuestion as apiDeleteQuestion, emptyQuestionDraft, listPhases,
   moveQuestion, saveQuestion, type AdminPhase, type AdminQuestion,
 } from '../../api/adminTests';
-import { SUCCESS_500, ERROR_500, CREAM_100, INK_900 } from '../../utils/brandColors';
+import { SUCCESS_500, ERROR_500, GRAY_100, INK } from '../../utils/brandColors';
 
 type Question = AdminQuestion;
 
@@ -246,7 +246,7 @@ const AdminTestsPage: React.FC = () => {
     ws['!cols'] = QUESTION_SHEET_HEADERS.map(h => ({ wch: Math.max(h.length + 4, 16) }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Questions');
-    XLSX.writeFile(wb, 'nurturehub_test_questions_template.xlsx');
+    XLSX.writeFile(wb, 'eduposhan_test_questions_template.xlsx');
   };
 
   const createTest = () => {
@@ -334,7 +334,7 @@ const AdminTestsPage: React.FC = () => {
     const wsData = [headers, ...rows];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    // Color-code cells with the warm-human brand palette (brandColors.ts)
+    // Color-code cells with the status colours (brandColors.ts)
     for (let rowIdx = 1; rowIdx <= rows.length; rowIdx++) {
       for (let colIdx = 1; colIdx <= resultData.questions.length; colIdx++) {
         const cellRef = XLSX.utils.encode_cell({ r: rowIdx, c: colIdx });
@@ -346,7 +346,7 @@ const AdminTestsPage: React.FC = () => {
           } else if (val === 'wrong') {
             cell.s = { fill: { fgColor: { rgb: hex(ERROR_500) } }, font: { color: { rgb: 'FFFFFF' }, bold: true } };
           } else if (val === 'unattempted') {
-            cell.s = { fill: { fgColor: { rgb: hex(CREAM_100) } }, font: { color: { rgb: hex(INK_900) }, bold: true } };
+            cell.s = { fill: { fgColor: { rgb: hex(GRAY_100) } }, font: { color: { rgb: hex(INK) }, bold: true } };
           }
         }
       }
@@ -574,7 +574,7 @@ const AdminTestsPage: React.FC = () => {
             >
               <div>
                 <div className="mb-1 flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-coral-600 dark:text-coral-300">
+                  <span className="text-xs font-semibold text-brand-600 dark:text-brand-300">
                     {t('card.phase', { n: test.stage_id })}
                     {phaseSuffix(phases[test.stage_id - 1]?.title)}
                   </span>
@@ -585,7 +585,7 @@ const AdminTestsPage: React.FC = () => {
                   )}
                   {statusBadge(test.status)}
                 </div>
-                <h3 className="font-display text-lg font-bold text-ink">{test.title}</h3>
+                <h3 className="font-display text-lg font-semibold text-ink">{test.title}</h3>
                 <p className="text-sm text-ink-muted">{test.description}</p>
                 <span className="text-xs text-ink-faint">
                   {t('card.meta', {
@@ -740,8 +740,8 @@ const AdminTestsPage: React.FC = () => {
 
                 {/* Randomisation. Presentation only — marking matches on the
                     option itself, so a shuffled paper scores identically. */}
-                <div className="mt-3 flex flex-wrap items-center gap-5 rounded-xl border border-border bg-surface-sunken px-4 py-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">
+                <div className="mt-3 flex flex-wrap items-center gap-5 rounded-lg border border-border bg-surface-sunken px-4 py-3">
+                  <span className="text-xs font-semibold text-ink-muted">
                     {t('shuffle.heading')}
                   </span>
                   <Checkbox
@@ -760,9 +760,9 @@ const AdminTestsPage: React.FC = () => {
                 {/* The answer review opens only when released: a group may sit
                     the same paper again later (review of 19 Oct 2026). Scores
                     and topic-wise feedback show either way. */}
-                <div className={cn('mt-2 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border px-4 py-3',
+                <div className={cn('mt-2 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border px-4 py-3',
                   test.answers_released ? 'border-success-500/40 bg-success-50 dark:bg-success-500/10' : 'border-border bg-surface-sunken')}>
-                  <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">
+                  <span className="text-xs font-semibold text-ink-muted">
                     {t('answers.heading')}
                   </span>
                   <Checkbox
@@ -849,7 +849,7 @@ const AdminTestsPage: React.FC = () => {
                     {/* Select-all + batch actions. Reviewing a 100-question
                         paper happens in batches, and one request per question
                         would leave the paper half-changed if the tab closes. */}
-                    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface-sunken px-3 py-2">
+                    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface-sunken px-3 py-2">
                       <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
                         <input
                           type="checkbox"
@@ -947,7 +947,7 @@ const AdminTestsPage: React.FC = () => {
                           subtopics={distinct(test.questions.map(x => x.subtopic))}
                         />
                       ) : (
-                        <div key={q.id} className="rounded-xl border border-border p-3">
+                        <div key={q.id} className="rounded-lg border border-border p-3">
                           <div className="flex items-start gap-3">
                             <input
                               type="checkbox"
@@ -956,7 +956,7 @@ const AdminTestsPage: React.FC = () => {
                               onChange={() => toggleQuestion(test.id, q.id)}
                               aria-label={t('bulk.selectOne')}
                             />
-                            <span className="mt-0.5 w-6 shrink-0 text-center text-xs font-bold text-ink-faint">
+                            <span className="mt-0.5 w-6 shrink-0 text-center text-xs font-semibold text-ink-faint">
                               {idx + 1}
                             </span>
                             <div className="min-w-0 flex-1">
@@ -986,7 +986,7 @@ const AdminTestsPage: React.FC = () => {
                                       key={label}
                                       className={cn(
                                         'flex items-center gap-1',
-                                        q.correct_answer === label && 'font-bold text-success-600 dark:text-success-400',
+                                        q.correct_answer === label && 'font-semibold text-success-600 dark:text-success-400',
                                       )}
                                     >
                                       <span className="font-mono">{label}.</span>
@@ -1041,7 +1041,7 @@ const AdminTestsPage: React.FC = () => {
                     expand chevron, where a mistimed tap on a phone opened the
                     delete confirm instead of the card — so it lives down here,
                     labelled, behind a deliberate scroll. */}
-                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-error-500/30 bg-error-50/60 p-3.5 dark:bg-error-500/5">
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-error-500/30 bg-error-50/60 p-3.5 dark:bg-error-500/5">
                   <p className="text-xs leading-snug text-ink-muted">{t('danger.deleteHint')}</p>
                   <Button
                     variant="danger"
@@ -1171,7 +1171,7 @@ const AdminTestsPage: React.FC = () => {
             </p>
             <button
               type="button"
-              className="flex items-start gap-3 rounded-xl border border-border p-3 text-left hover:border-primary hover:bg-surface-sunken"
+              className="flex items-start gap-3 rounded-lg border border-border p-3 text-left hover:border-primary hover:bg-surface-sunken"
               onClick={() => void sendQuestions(pendingUpload.testId, pendingUpload.questions, 'append')}
             >
               <PlusCircle className="mt-0.5 size-5 shrink-0 text-success-600" />
@@ -1186,7 +1186,7 @@ const AdminTestsPage: React.FC = () => {
             </button>
             <button
               type="button"
-              className="flex items-start gap-3 rounded-xl border border-border p-3 text-left hover:border-error-500 hover:bg-error-50 dark:hover:bg-error-500/10"
+              className="flex items-start gap-3 rounded-lg border border-border p-3 text-left hover:border-error-500 hover:bg-error-50 dark:hover:bg-error-500/10"
               onClick={() => void sendQuestions(pendingUpload.testId, pendingUpload.questions, 'replace')}
             >
               <Layers className="mt-0.5 size-5 shrink-0 text-error-600" />
@@ -1227,7 +1227,7 @@ const AdminTestsPage: React.FC = () => {
             </p>
 
             <section>
-              <h4 className="m-0 mb-1 font-display text-sm font-bold text-ink">
+              <h4 className="m-0 mb-1 font-display text-sm font-semibold text-ink">
                 {t('duplicates.withinTitle')}{' '}
                 <span className="font-normal text-ink-muted">({duplicates.within.length})</span>
               </h4>
@@ -1237,7 +1237,7 @@ const AdminTestsPage: React.FC = () => {
                   {t('duplicates.none')}
                 </p>
               ) : duplicates.within.map((group, i) => (
-                <div key={`w${i}`} className="mb-2 rounded-xl border border-border p-3">
+                <div key={`w${i}`} className="mb-2 rounded-lg border border-border p-3">
                   <p className="m-0 text-sm font-semibold text-ink">{group.text}</p>
                   <p className="m-0 mt-1 text-xs text-ink-muted">
                     {t('duplicates.timesIn', {
@@ -1255,7 +1255,7 @@ const AdminTestsPage: React.FC = () => {
             </section>
 
             <section>
-              <h4 className="m-0 mb-1 font-display text-sm font-bold text-ink">
+              <h4 className="m-0 mb-1 font-display text-sm font-semibold text-ink">
                 {t('duplicates.acrossTitle')}{' '}
                 <span className="font-normal text-ink-muted">({duplicates.across.length})</span>
               </h4>
@@ -1265,7 +1265,7 @@ const AdminTestsPage: React.FC = () => {
                   {t('duplicates.none')}
                 </p>
               ) : duplicates.across.map((group, i) => (
-                <div key={`a${i}`} className="mb-2 rounded-xl border border-warning-500/40 bg-warning-50 p-3 dark:bg-warning-500/10">
+                <div key={`a${i}`} className="mb-2 rounded-lg border border-amber-500/40 bg-amber-50 p-3 dark:bg-amber-500/10">
                   <p className="m-0 text-sm font-semibold text-ink">{group.text}</p>
                   <p className="m-0 mt-1 text-xs text-ink-muted">
                     {group.test_types.map(tt => t(`testType.${tt}`, { defaultValue: tt })).join(' + ')}
@@ -1365,7 +1365,7 @@ const AdminTestsPage: React.FC = () => {
                         <Td key={q.id} className="p-1 text-center">
                           <span
                             className={cn(
-                              'flex size-7 items-center justify-center rounded-md text-xs font-bold mx-auto',
+                              'flex size-7 items-center justify-center rounded-md text-xs font-semibold mx-auto',
                               resultCellClass(val),
                             )}
                           >
@@ -1374,10 +1374,10 @@ const AdminTestsPage: React.FC = () => {
                         </Td>
                       );
                     })}
-                    <Td className="text-center font-bold text-success-600">{r.total_correct}</Td>
-                    <Td className="text-center font-bold text-error-600">{r.total_wrong}</Td>
-                    <Td className="text-center font-bold text-ink-muted">{r.total_unattempted}</Td>
-                    <Td className="text-center font-extrabold">{r.score_pct}%</Td>
+                    <Td className="text-center font-semibold text-success-600">{r.total_correct}</Td>
+                    <Td className="text-center font-semibold text-error-600">{r.total_wrong}</Td>
+                    <Td className="text-center font-semibold text-ink-muted">{r.total_unattempted}</Td>
+                    <Td className="text-center font-semibold">{r.score_pct}%</Td>
                   </Tr>
                 ))}
               </TBody>

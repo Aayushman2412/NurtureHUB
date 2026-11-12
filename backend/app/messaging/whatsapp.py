@@ -52,7 +52,7 @@ def send_otp(mobile: str, code: str) -> None:
         if settings.is_production:
             raise WhatsAppDeliveryError("WhatsApp is not configured.")
         print("\n" + "=" * 50)
-        print(f"  >>> NURTUREHUB WHATSAPP OTP: {code} <<<  (dev only — WhatsApp not configured)")
+        print(f"  >>> EDUPOSHAN WHATSAPP OTP: {code} <<<  (dev only — WhatsApp not configured)")
         print(f"  To: ******{mobile[-4:]}")
         print("=" * 50 + "\n")
         return

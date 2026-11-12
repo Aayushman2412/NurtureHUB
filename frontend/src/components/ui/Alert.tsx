@@ -4,22 +4,26 @@ import { cn } from '../../utils/cn';
 
 type AlertVariant = 'info' | 'warning' | 'success' | 'error';
 
-const styles: Record<AlertVariant, { box: string; icon: React.ReactNode }> = {
+const styles: Record<AlertVariant, { box: string; icon: React.ReactNode; iconTone: string }> = {
   info: {
-    box: 'bg-info-50 border-info-500/30 text-info-600 dark:bg-info-500/10 dark:text-info-500',
+    box: 'border-brand-200 border-l-brand-600 bg-brand-50 dark:border-brand-500/30 dark:border-l-brand-400 dark:bg-brand-500/10',
     icon: <Info className="size-5" />,
+    iconTone: 'text-brand-700 dark:text-brand-300',
   },
   warning: {
-    box: 'bg-amber-50 border-amber-500/40 text-amber-700 dark:bg-amber-500/10 dark:text-amber-500',
+    box: 'border-amber-200 border-l-amber-500 bg-amber-50 dark:border-amber-500/30 dark:border-l-amber-400 dark:bg-amber-500/10',
     icon: <AlertTriangle className="size-5" />,
+    iconTone: 'text-amber-700 dark:text-amber-300',
   },
   success: {
-    box: 'bg-success-50 border-success-500/30 text-success-600 dark:bg-success-500/10 dark:text-success-500',
+    box: 'border-success-200 border-l-success-500 bg-success-50 dark:border-success-500/30 dark:border-l-success-400 dark:bg-success-500/10',
     icon: <CheckCircle2 className="size-5" />,
+    iconTone: 'text-success-600 dark:text-success-300',
   },
   error: {
-    box: 'bg-error-50 border-error-500/30 text-error-600 dark:bg-error-500/10 dark:text-error-500',
+    box: 'border-error-200 border-l-error-500 bg-error-50 dark:border-error-500/30 dark:border-l-error-400 dark:bg-error-500/10',
     icon: <XCircle className="size-5" />,
+    iconTone: 'text-error-600 dark:text-error-300',
   },
 };
 
@@ -30,13 +34,14 @@ export interface AlertProps {
   className?: string;
 }
 
+/** A note with a status rule on its left edge. The icon and the title carry the meaning, not the tint alone. */
 const Alert: React.FC<AlertProps> = ({ variant = 'info', title, children, className }) => {
   const s = styles[variant];
   return (
-    <div role="alert" className={cn('flex gap-3 rounded-xl border px-4 py-3.5', s.box, className)}>
-      <span className="shrink-0 mt-0.5" aria-hidden>{s.icon}</span>
-      <div className="text-sm">
-        {title && <div className="font-bold mb-0.5">{title}</div>}
+    <div role="alert" className={cn('flex gap-3 rounded-md border border-l-[3px] px-4 py-3', s.box, className)}>
+      <span className={cn('mt-0.5 shrink-0', s.iconTone)} aria-hidden>{s.icon}</span>
+      <div className="min-w-0 text-sm">
+        {title && <div className="mb-0.5 font-semibold text-ink">{title}</div>}
         <div className="text-ink-muted [&_strong]:text-ink">{children}</div>
       </div>
     </div>

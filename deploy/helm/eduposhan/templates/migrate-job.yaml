@@ -1,0 +1,81 @@
+{{- $ctx := dict "root" . "component" "migrate" -}}
+{{/*
+`alembic upgrade head` + seed, once, before every rollout. Argo CD runs Helm
+hooks as PreSync. A failed Job stops the release before any pod changes; it is
+kept so its log can be read, and replaced by the next attempt.
+*/}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "eduposhan.fullname" . }}-migrate
+  labels:
+    {{- include "eduposhan.labels" $ctx | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: {{ .Values.migrate.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "eduposhan.labels" $ctx | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      # Hooks run before the release's own resources exist, the chart's
+      # ServiceAccount included — so the namespace default, with no token.
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: {{ include "eduposhan.image" (dict "root" . "name" "backend") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "-m", "app.migrate"]
+          env:
+            {{- include "eduposhan.backendEnv" . | nindent 12 }}
+            # Straight to the primary, never through PgBouncer: the advisory
+            # lock and the DDL need a real session. These override envFrom.
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.name }}
+                  key: DIRECT_DATABASE_URL
+            - name: ALEMBIC_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.name }}
+                  key: DIRECT_DATABASE_URL
+          envFrom:
+            - secretRef:
+                name: {{ .Values.secret.name }}
+          resources:
+            {{- toYaml .Values.migrate.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: audit-spool
+              mountPath: /data/audit_spool
+            - name: uploads
+              mountPath: /app/uploads
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: audit-spool
+          emptyDir: {}
+        - name: uploads
+          emptyDir: {}

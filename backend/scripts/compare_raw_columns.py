@@ -1,21 +1,21 @@
 """
-NurtureHUB vs the earlier raw data files: which variables each side has.
+EduPoshan vs the earlier raw data files: which variables each side has.
 
 The analysts' pipelines read raw files in the layout of the earlier platform's
-exports (Database → Raw Data reproduces them from NurtureHUB). Asked on
+exports (Database → Raw Data reproduces them from EduPoshan). Asked on
 5 Oct 2026 for a side-by-side: for every column of those files, whether
-NurtureHUB fills it — and every NurtureHUB question the files have no column
+EduPoshan fills it — and every EduPoshan question the files have no column
 for — so the team can decide what each side needs.
 
 How it is worked out, so the answer is evidence rather than opinion:
-  * "Not in NurtureHUB": the generator writes a fixed NULL for the column
+  * "Not in EduPoshan": the generator writes a fixed NULL for the column
     (read from its code), or — where a generator builds rows in loops — the
     column stays empty even over the mock dataset, where every answer of every
-    form is filled. No NurtureHUB question feeds it.
-  * "Filled by NurtureHUB": the column carries a value over the mock dataset.
+    form is filled. No EduPoshan question feeds it.
+  * "Filled by EduPoshan": the column carries a value over the mock dataset.
   * "Filled when answered": mapped in the code, but empty in the test data —
     optional or "Other, please specify" answers.
-  * "NurtureHUB only": a form question whose variable name the generators never
+  * "EduPoshan only": a form question whose variable name the generators never
     read.
 
 Usage (from backend/):
@@ -53,7 +53,7 @@ FILES = [
     ("MASD learner file", gen_masd),
 ]
 
-# Which raw file(s) each form feeds — for the "NurtureHUB only" sheet.
+# Which raw file(s) each form feeds — for the "EduPoshan only" sheet.
 FEEDS = {
     "learner_registration": "MASD learner file",
     "mother_registration": "Mother registration",
@@ -104,18 +104,18 @@ def column_status(ds):
             if SYSTEM.match(col.strip()):
                 status = "Record ID / bookkeeping"
             elif nulls is not None and (i + 1) in nulls:
-                status = "Not in NurtureHUB"
+                status = "Not in EduPoshan"
             elif filled:
-                status = "Filled by NurtureHUB"
+                status = "Filled by EduPoshan"
             elif nulls is not None:
                 status = "Filled when answered"
             else:
-                status = "Not in NurtureHUB"
+                status = "Not in EduPoshan"
             out.append((name, i + 1, col, status, filled, len(rows)))
     return out
 
 
-def nurturehub_only():
+def eduposhan_only():
     source = "\n".join(inspect.getsource(m) for _, m in FILES)
     source += "\n" + inspect.getsource(__import__("app.rawdata.common", fromlist=["x"]))
     rows = []
@@ -135,12 +135,12 @@ def nurturehub_only():
 def build(out: Path) -> None:
     ds = mock_dataset("Ujjain", "UJ")
     cols = column_status(ds)
-    only_nh = nurturehub_only()
+    only_nh = eduposhan_only()
 
     wb = Workbook()
     head_font, head_fill = Font(bold=True, color="FFFFFF"), PatternFill("solid", fgColor="1F2937")
-    fills = {"Filled by NurtureHUB": "DCFCE7", "Filled when answered": "FEF3C7",
-             "Not in NurtureHUB": "FEE2E2", "Record ID / bookkeeping": "F3F4F6"}
+    fills = {"Filled by EduPoshan": "DCFCE7", "Filled when answered": "FEF3C7",
+             "Not in EduPoshan": "FEE2E2", "Record ID / bookkeeping": "F3F4F6"}
 
     def header(ws, cells, widths):
         ws.append(cells)
@@ -151,35 +151,35 @@ def build(out: Path) -> None:
 
     s = wb.active
     s.title = "Summary"
-    s.append(["NurtureHUB vs the earlier raw data files — which variables each side has"])
+    s.append(["EduPoshan vs the earlier raw data files — which variables each side has"])
     s["A1"].font = Font(bold=True, size=13)
-    s.append(["Green = NurtureHUB fills the column · Yellow = filled when that (optional / 'Other') answer is given · "
-              "Red = no NurtureHUB question feeds it · 'NurtureHUB only' = questions the files have no column for."])
+    s.append(["Green = EduPoshan fills the column · Yellow = filled when that (optional / 'Other') answer is given · "
+              "Red = no EduPoshan question feeds it · 'EduPoshan only' = questions the files have no column for."])
     s.append([])
-    kinds = ("Filled by NurtureHUB", "Filled when answered", "Not in NurtureHUB", "Record ID / bookkeeping")
+    kinds = ("Filled by EduPoshan", "Filled when answered", "Not in EduPoshan", "Record ID / bookkeeping")
     header(s, ["Raw file", "Columns", *kinds], [34, 10, 20, 20, 18, 22])
     for name, _ in FILES:
         mine = [c for c in cols if c[0] == name]
         s.append([name, len(mine)] + [sum(1 for c in mine if c[3] == k) for k in kinds])
     s.append(["All files", len(cols)] + [sum(1 for c in cols if c[3] == k) for k in kinds])
     s.append([])
-    s.append(["NurtureHUB questions with no column in the files", len(only_nh)])
+    s.append(["EduPoshan questions with no column in the files", len(only_nh)])
 
     a = wb.create_sheet("Columns of the raw files")
-    header(a, ["Raw file", "#", "Column", "In NurtureHUB?", "Rows filled (mock)", "Rows"], [32, 5, 60, 26, 16, 8])
+    header(a, ["Raw file", "#", "Column", "In EduPoshan?", "Rows filled (mock)", "Rows"], [32, 5, 60, 26, 16, 8])
     for r in cols:
         a.append(list(r))
         a.cell(a.max_row, 4).fill = PatternFill("solid", fgColor=fills[r[3]])
     a.freeze_panes = "A2"
     a.auto_filter.ref = f"A1:F{a.max_row}"
 
-    b = wb.create_sheet("Not in NurtureHUB")
+    b = wb.create_sheet("Not in EduPoshan")
     header(b, ["Raw file", "#", "Column"], [32, 5, 70])
     for r in cols:
-        if r[3] == "Not in NurtureHUB":
+        if r[3] == "Not in EduPoshan":
             b.append([r[0], r[1], r[2]])
 
-    c = wb.create_sheet("NurtureHUB only")
+    c = wb.create_sheet("EduPoshan only")
     header(c, ["Form", "Would feed", "Variable", "Question", "Item"], [30, 30, 30, 70, 14])
     for r in only_nh:
         c.append(list(r))
@@ -189,8 +189,8 @@ def build(out: Path) -> None:
                 cell.alignment = Alignment(wrap_text=True, vertical="top")
     wb.save(out)
     print(f"wrote {out}: {len(cols)} columns, "
-          f"{sum(1 for x in cols if x[3] == 'Not in NurtureHUB')} not in NurtureHUB, "
-          f"{len(only_nh)} NurtureHUB-only questions")
+          f"{sum(1 for x in cols if x[3] == 'Not in EduPoshan')} not in EduPoshan, "
+          f"{len(only_nh)} EduPoshan-only questions")
 
 
 if __name__ == "__main__":

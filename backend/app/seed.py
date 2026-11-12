@@ -190,8 +190,8 @@ def _seed_program_districts_and_users(db: Session):
             role="Anganwadi Supervisor",
         ),
         User(
-            email="admin@nurturehub.org", password_hash=pwd_hash,
-            full_name="NurtureHUB Admin", is_verified=True, is_admin=True,
+            email="admin@eduposhan.org", password_hash=pwd_hash,
+            full_name="EduPoshan Admin", is_verified=True, is_admin=True,
             avatar_initials="AD", role="Administrator",
         ),
     ])

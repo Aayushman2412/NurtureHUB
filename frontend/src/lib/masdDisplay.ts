@@ -3,18 +3,18 @@ import { toneColor } from './resultsInsights';
 
 export const MASD_COLORS = {
   adoption: '#2A7F8F',
-  activity: '#E85D4C',
-  then: '#A8A29E',
+  activity: '#C2410C',
+  then: '#9FAAB3',
   anc: '#7C5CBF',
   protein: '#E0A11B',
   gm: '#2A7F8F',
-  bf: '#E85D4C',
+  bf: '#C2410C',
   cf: '#5C9E3C',
-  pnc_lt5: '#E85D4C',
+  pnc_lt5: '#C2410C',
   pnc_ge5: '#2A7F8F',
-  unknown: '#A8A29E',
+  unknown: '#9FAAB3',
   mtfl: '#2A7F8F',
-  other: '#E85D4C',
+  other: '#C2410C',
 } as const;
 
 /** Rates in this report: green ≥80, amber 60–79, red below (as in the analysts' deck). */

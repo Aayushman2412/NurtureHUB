@@ -14,10 +14,10 @@ export interface TabsProps<T extends string = string> {
   className?: string;
 }
 
-/** Controlled tab bar with a coral active indicator. */
+/** Controlled tab bar: a rule under the row, a heavier brand rule under the open tab. */
 function Tabs<T extends string = string>({ value, onChange, items, className }: TabsProps<T>) {
   return (
-    <div role="tablist" className={cn('flex gap-1 border-b border-border overflow-x-auto', className)}>
+    <div role="tablist" className={cn('flex gap-1 overflow-x-auto border-b border-border', className)}>
       {items.map(item => {
         const active = item.value === value;
         return (
@@ -27,11 +27,11 @@ function Tabs<T extends string = string>({ value, onChange, items, className }: 
             aria-selected={active}
             onClick={() => onChange(item.value)}
             className={cn(
-              'inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold whitespace-nowrap cursor-pointer',
-              'border-b-2 -mb-px transition-colors',
+              'inline-flex cursor-pointer items-center gap-2 whitespace-nowrap px-3.5 py-2.5 text-sm',
+              '-mb-px border-b-2 transition-colors',
               active
-                ? 'border-primary text-primary-ink'
-                : 'border-transparent text-ink-muted hover:text-ink',
+                ? 'border-primary font-semibold text-primary-ink'
+                : 'border-transparent font-medium text-ink-muted hover:border-border-strong hover:text-ink',
             )}
           >
             {item.icon}

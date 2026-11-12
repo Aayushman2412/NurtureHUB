@@ -97,7 +97,7 @@ const WorkDetailsTab: React.FC<WorkDetailsTabProps> = ({
       onChange={v => onChange('internetWorkplace', v)} placeholder={t('placeholders.selectOne')}
       options={internetOptions(t)} />
 
-    <h4 className="mt-2 border-b border-border pb-1.5 text-[13px] font-bold uppercase tracking-wider text-primary-ink">
+    <h4 className="mt-2 border-b border-border pb-1.5 text-[13px] font-semibold text-primary-ink">
       {t('registration.sectionTraining')}
     </h4>
     {TRAINING_KEYS.map(key => (

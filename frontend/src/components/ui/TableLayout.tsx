@@ -75,12 +75,12 @@ export function useTableLayout(tableKey: string, groups: LayoutGroup[], extra?: 
         >
           <SlidersHorizontal className="size-4" />
           {t('layout.button')}
-          {hidden.size > 0 && <span className="text-xs font-bold">({t('layout.hiddenN', { n: hidden.size })})</span>}
+          {hidden.size > 0 && <span className="text-xs font-semibold">({t('layout.hiddenN', { n: hidden.size })})</span>}
         </button>
         {extra}
       </div>
       {open && (
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-xl border border-border bg-surface p-3">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-lg border border-border bg-surface p-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-semibold text-ink">{t('layout.columns')}</span>
             {groups.map(g => (
@@ -90,7 +90,7 @@ export function useTableLayout(tableKey: string, groups: LayoutGroup[], extra?: 
                 aria-pressed={!hidden.has(g.id)}
                 onClick={() => toggle(g.id)}
                 className={cn(
-                  'cursor-pointer rounded-full border px-2.5 py-1 text-sm font-medium transition-colors',
+                  'cursor-pointer rounded-md border px-2.5 py-1 text-sm font-medium transition-colors',
                   hidden.has(g.id)
                     ? 'border-border bg-surface text-ink-muted line-through'
                     : 'border-primary/30 bg-primary/10 text-primary-ink',

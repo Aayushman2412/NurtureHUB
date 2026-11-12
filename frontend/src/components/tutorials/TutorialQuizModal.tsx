@@ -113,7 +113,7 @@ const TutorialQuizModal: React.FC<TutorialQuizModalProps> = ({
       {result ? (
         <div className="py-4 text-center">
           <CheckCircle className="mx-auto mb-3 size-12 text-success-500" />
-          <h3 className="font-display text-xl font-extrabold text-ink">{t('quiz.submittedTitle')}</h3>
+          <h3 className="font-display text-xl font-semibold text-ink">{t('quiz.submittedTitle')}</h3>
           <p className="mt-2 text-ink-muted">
             <Trans
               t={t}
@@ -144,11 +144,11 @@ const TutorialQuizModal: React.FC<TutorialQuizModalProps> = ({
                         className={cn(
                           'flex w-full items-center gap-2.5 rounded-lg border-2 px-3.5 py-2.5 text-left text-sm transition-colors',
                           selected
-                            ? 'border-primary bg-coral-50 text-ink dark:bg-coral-500/15'
+                            ? 'border-primary bg-brand-50 text-ink dark:bg-brand-500/15'
                             : 'border-border bg-surface text-ink hover:bg-surface-sunken'
                         )}
                       >
-                        <span className={cn('min-w-4 font-bold', selected ? 'text-primary-ink' : 'text-ink-faint')}>
+                        <span className={cn('min-w-4 font-semibold', selected ? 'text-primary-ink' : 'text-ink-faint')}>
                           {opt.label}
                         </span>
                         <span>{opt.text}</span>

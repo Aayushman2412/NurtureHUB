@@ -1,6 +1,7 @@
 export { default as Button, buttonClasses } from './Button';
 export type { ButtonVariant, ButtonSize } from './Button';
 export { default as Card, CardHeader, CardBody, CardFooter } from './Card';
+export type { CardAccent, CardProps } from './Card';
 export { default as Input, inputClasses } from './Input';
 export { default as NumberInput } from './NumberInput';
 export type { NumberInputProps } from './NumberInput';
@@ -31,8 +32,8 @@ export { Spinner, PageLoader } from './Spinner';
 export { default as Avatar } from './Avatar';
 export { ProgressBar, ProgressRing } from './Progress';
 export { default as StatCard } from './StatCard';
-export { default as WelcomeBanner } from './WelcomeBanner';
-export type { WelcomeBannerProps } from './WelcomeBanner';
+export { default as Figures } from './Figures';
+export type { Figure, FiguresProps } from './Figures';
 export { Field, FieldLabel } from './Field';
 export type { FieldProps, FieldLabelProps } from './Field';
 export { default as Divider } from './Divider';

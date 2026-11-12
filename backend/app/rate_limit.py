@@ -31,6 +31,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from app.config import settings
+from app.security.context import forwarded_client
 
 
 def client_key(request):
@@ -38,16 +39,19 @@ def client_key(request):
 
     Behind a trusted reverse proxy every request's direct peer is the proxy, so
     keying on request.client.host puts ALL users in one bucket. When
-    TRUST_PROXY_HEADERS is set, key on the left-most X-Forwarded-For hop (the
-    real client) instead. Only trust the header when a proxy you control sets
-    it — otherwise clients can spoof it to dodge limits. The bundled host nginx
+    TRUST_PROXY_HEADERS is set, key on the address the proxy reported instead
+    (`security/context.py:forwarded_client`, shared with the audit trail): the
+    CLIENT_IP_HEADER the edge overwrites (Cloudflare: cf-connecting-ip) when
+    one is configured, else the left-most X-Forwarded-For hop — and only if it
+    parses as an IP. Only trust these where a proxy you control sets them —
+    otherwise clients can spoof them to dodge limits. The bundled host nginx
     config sets `X-Forwarded-For $remote_addr`, which replaces anything the
     client sent rather than appending to it.
     """
     if settings.TRUST_PROXY_HEADERS:
-        xff = request.headers.get("x-forwarded-for")
-        if xff:
-            return xff.split(",")[0].strip()
+        forwarded = forwarded_client(request.headers)
+        if forwarded:
+            return forwarded
     return get_remote_address(request)
 
 
@@ -75,8 +79,22 @@ def principal_key(request):
     return f"ip:{client_key(request)}"
 
 
-limiter = Limiter(
-    key_func=client_key,
-    storage_uri=settings.RATE_LIMIT_STORAGE_URI,
-    enabled=settings.RATE_LIMIT_ENABLED,
-)
+def build_limiter(storage_uri: str) -> Limiter:
+    """The application limiter over `storage_uri`.
+
+    `in_memory_fallback_enabled`: when shared storage (Redis) is unreachable,
+    slowapi counts in this process instead and probes Redis again with backoff.
+    Without it every limited route — sign-in, OTP, exports — answers 500 for as
+    long as Redis is down, which turns a cache outage into a sign-in outage. The
+    fallback ceilings are per process (N pods = N x the limit), which is what
+    the memory:// default already is and is fine for flood ceilings.
+    """
+    return Limiter(
+        key_func=client_key,
+        storage_uri=storage_uri,
+        enabled=settings.RATE_LIMIT_ENABLED,
+        in_memory_fallback_enabled=True,
+    )
+
+
+limiter = build_limiter(settings.RATE_LIMIT_STORAGE_URI)

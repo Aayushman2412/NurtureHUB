@@ -24,15 +24,15 @@ const STEP_KEYS = ['birth', 'delivery'] as const;
 
 const ReadOnly: React.FC<{ label: string; value: string; hint: string }> = ({ label, value, hint }) => (
   <Field label={label}>
-    <div className="rounded-lg border border-border-strong/60 bg-surface-sunken px-3.5 py-2.5 text-sm">
+    <div className="rounded-lg border border-border-control bg-surface-sunken px-3.5 py-2.5 text-sm">
       {value ? value : <span className="text-ink-faint">{hint}</span>}
     </div>
   </Field>
 );
 
 const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="mb-4 border-b-2 border-coral-100 pb-2 text-[13px] font-bold uppercase tracking-wider
-                  text-primary-ink dark:border-coral-950">{children}</div>
+  <div className="mb-4 border-b-2 border-brand-100 pb-2 text-[13px] font-semibold  
+                  text-primary-ink dark:border-brand-950">{children}</div>
 );
 
 const YesNo: React.FC<{ name: string; value: string; onChange: (v: string) => void }> = ({ name, value, onChange }) => {

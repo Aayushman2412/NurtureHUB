@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Plus, Trash2, Edit3, Save, X, MapPin, Users, CheckCircle2, Building2, Link2, Rocket,
+  Plus, Trash2, Edit3, Save, X, MapPin, Users, CheckCircle2, Building2, Link2, Play,
 } from 'lucide-react';
 import {
   Badge, Button, Card, Checkbox, EmptyState, FieldLabel, Input, Modal, PageHeader,
@@ -139,9 +139,9 @@ const AdminProjectsPage: React.FC = () => {
     <Card key={project.id} className={cn('p-4', nested && 'border-dashed')}>
       <div className="flex items-start gap-3">
         <span className={cn(
-          'flex size-9 shrink-0 items-center justify-center rounded-xl',
+          'flex size-9 shrink-0 items-center justify-center rounded-lg',
           project.level === 'state'
-            ? 'bg-coral-100 text-coral-700 dark:bg-coral-500/15 dark:text-coral-300'
+            ? 'bg-brand-100 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300'
             : 'bg-surface-sunken text-ink-muted',
         )}>
           {project.level === 'state' ? <Building2 className="size-4.5" /> : <MapPin className="size-4.5" />}
@@ -161,8 +161,8 @@ const AdminProjectsPage: React.FC = () => {
           ) : (
             <>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-display font-bold text-ink">{project.name}</span>
-                <Badge variant={project.level === 'state' ? 'coral' : 'neutral'} size="sm">
+                <span className="font-display font-semibold text-ink">{project.name}</span>
+                <Badge variant={project.level === 'state' ? 'info' : 'neutral'} size="sm">
                   {t(project.level === 'state' ? 'projects.levelState' : 'projects.levelDistrict')}
                 </Badge>
                 {project.code && (
@@ -200,7 +200,7 @@ const AdminProjectsPage: React.FC = () => {
               size="sm" variant="ghost" title={t('setup.buttonTitle')}
               onClick={() => setSetupProjectId(project.id)}
             >
-              <Rocket className="size-4" />
+              <Play className="size-4" />
             </Button>
             {project.parent_id && (
               <Button
@@ -208,7 +208,7 @@ const AdminProjectsPage: React.FC = () => {
                 title={t(project.inherits_content ? 'projects.useOwnContent' : 'projects.useStateContent')}
                 onClick={() => void handleToggleInherit(project)}
               >
-                <Link2 className={cn('size-4', project.inherits_content && 'text-coral-600 dark:text-coral-300')} />
+                <Link2 className={cn('size-4', project.inherits_content && 'text-brand-600 dark:text-brand-300')} />
               </Button>
             )}
             <Button size="sm" variant="ghost" title={t('projects.rename')}
@@ -255,7 +255,7 @@ const AdminProjectsPage: React.FC = () => {
               children.map(child => card(child, true))
             )}
             <button
-              className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong/60 py-2.5 text-[13px] font-semibold text-ink-muted hover:border-coral-500 hover:text-coral-600 cursor-pointer dark:hover:text-coral-300"
+              className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border-control py-2.5 text-[13px] font-semibold text-ink-muted hover:border-brand-500 hover:text-brand-600 cursor-pointer dark:hover:text-brand-300"
               onClick={() => openAdd({ level: 'district', parentId: state.id, parentName: state.name })}
             >
               <Plus className="size-4" /> {t('projects.addDistrictTo', { name: state.name })}
@@ -267,7 +267,7 @@ const AdminProjectsPage: React.FC = () => {
       {/* Standalone districts */}
       {groups.standalone.length > 0 && (
         <div className="flex flex-col gap-2">
-          <span className="text-[12px] font-bold uppercase tracking-wider text-ink-faint">
+          <span className="text-[12px] font-semibold text-ink-faint">
             {t('projects.standaloneHeading')}
           </span>
           {groups.standalone.map(project => card(project, false))}

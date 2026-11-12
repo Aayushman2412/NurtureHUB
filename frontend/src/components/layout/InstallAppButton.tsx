@@ -13,7 +13,7 @@ interface InstallAppButtonProps {
 }
 
 /**
- * "Download the app" — installs NurtureHUB as a PWA on phone, laptop or desktop.
+ * "Download the app" — installs EduPoshan as a PWA on phone, laptop or desktop.
  *
  * Chromium (Android/desktop Chrome & Edge) gets the real install prompt. iOS
  * Safari has no such API, so it gets the Share-sheet instructions. Anything

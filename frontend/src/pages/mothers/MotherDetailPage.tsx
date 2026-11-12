@@ -101,13 +101,13 @@ const MotherDetailPage: React.FC = () => {
       />
 
       {params.get('done') === '1' && (
-        <p className="flex items-center gap-2 rounded-xl bg-success-50 px-4 py-3 font-semibold text-success-600 dark:bg-success-500/15 dark:text-success-500">
+        <p className="flex items-center gap-2 rounded-lg bg-success-50 px-4 py-3 font-semibold text-success-600 dark:bg-success-500/15 dark:text-success-500">
           <CircleCheck className="size-5 shrink-0" />{tf('field.baby.visitDone')}
         </p>
       )}
 
       {row && (
-        <p className={cn('flex items-center gap-2.5 rounded-xl px-4 py-3 font-semibold', TONE_CLASSES[row.status].soft, TONE_CLASSES[row.status].text)}>
+        <p className={cn('flex items-center gap-2.5 rounded-lg px-4 py-3 font-semibold', TONE_CLASSES[row.status].soft, TONE_CLASSES[row.status].text)}>
           <span className={cn('size-3.5 shrink-0 rounded-full', TONE_CLASSES[row.status].dot)} aria-hidden />
           {tf(`field.rowStatus.${row.status}`)} — {tf(`field.reason.${row.reason}`, { defaultValue: tf('field.reason.low') })}
         </p>
@@ -119,7 +119,7 @@ const MotherDetailPage: React.FC = () => {
           or tomorrow). */}
       {mother.adoption_date && (
         <Card className="p-4">
-          <h2 className="mb-2 flex items-center gap-2 font-display text-base font-bold text-ink">
+          <h2 className="mb-2 flex items-center gap-2 font-display text-base font-semibold text-ink">
             <CalendarDays className="size-5 text-primary-ink" />{tf('field.mother.visits')}
           </h2>
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
@@ -143,13 +143,13 @@ const MotherDetailPage: React.FC = () => {
 
       {(finish || motherNow.length > 0) && (
         <section className="flex flex-col gap-2.5">
-          <h2 className="font-display text-lg font-bold text-ink">{tf('field.mother.doNow')}</h2>
+          <h2 className="font-display text-lg font-semibold text-ink">{tf('field.mother.doNow')}</h2>
           {finish && (
             <Link
               to={finish.missing === 'protein'
                 ? formRunUrl('protein', motherId, null, flowString('reg', finish.then))
                 : `/mothers/${motherId}/children/new?flow=reg`}
-              className="flex min-h-14 items-center gap-3 rounded-xl border border-dashed border-amber-500/60 bg-surface p-3.5 hover:bg-surface-sunken"
+              className="flex min-h-14 items-center gap-3 rounded-lg border border-dashed border-amber-500/60 bg-surface p-3.5 hover:bg-surface-sunken"
             >
               <span className="min-w-0 flex-1 font-semibold text-amber-700 dark:text-amber-400">{tf(`field.finish.${finish.missing}`)}</span>
               <ChevronRight className="size-5 shrink-0 text-ink-muted" />
@@ -161,9 +161,9 @@ const MotherDetailPage: React.FC = () => {
 
       {/* Babies */}
       <section className="flex flex-col gap-2.5">
-        <h2 className="font-display text-lg font-bold text-ink">{tf('field.mother.babies')}</h2>
+        <h2 className="font-display text-lg font-semibold text-ink">{tf('field.mother.babies')}</h2>
         {pendingChildren.map(item => (
-          <div key={item.id} className="flex items-center gap-3 rounded-xl border border-dashed border-border p-3">
+          <div key={item.id} className="flex items-center gap-3 rounded-lg border border-dashed border-border p-3">
             <CloudUpload className="size-5 shrink-0 text-amber-600" />
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-semibold text-ink">{item.label}</div>
@@ -175,13 +175,13 @@ const MotherDetailPage: React.FC = () => {
           const st = statusOf(c.id);
           const visit = babyNow(c.id);
           return (
-            <div key={c.id} className="flex min-h-16 items-center gap-3 rounded-xl border border-border bg-surface p-3.5 shadow-(--shadow-card)">
+            <div key={c.id} className="flex min-h-16 items-center gap-3 rounded-lg border border-border bg-surface p-3.5 ">
             <Link to={`/babies/${c.id}`} className="flex min-w-0 flex-1 items-center gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-coral-50 text-primary-ink dark:bg-coral-500/10">
+              <span className="inline-flex shrink-0 text-primary-ink">
                 <Baby className="size-5" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-display text-base font-bold text-ink">{c.child_name || tf('field.baby')}</span>
+                <span className="block truncate font-display text-base font-semibold text-ink">{c.child_name || tf('field.baby')}</span>
                 <span className={cn('flex items-center gap-1.5 text-sm font-semibold', TONE_CLASSES[st].text)}>
                   <span className={cn('size-2.5 rounded-full', TONE_CLASSES[st].dot)} aria-hidden />{tf(`field.short.${st}`)}
                 </span>
@@ -207,8 +207,8 @@ const MotherDetailPage: React.FC = () => {
 
       {/* Her own forms */}
       <section className="flex flex-col gap-2.5">
-        <h2 className="font-display text-lg font-bold text-ink">{tf('field.mother.forms')}</h2>
-        <div className="flex flex-col divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+        <h2 className="font-display text-lg font-semibold text-ink">{tf('field.mother.forms')}</h2>
+        <div className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
           {(pregnant ? (['anc', 'protein'] as const) : (['protein'] as const)).map(f => (
             <Link key={f} to={formRunUrl(f, motherId, null)} className="flex min-h-14 items-center gap-3 px-4 py-3 font-semibold text-ink hover:bg-surface-sunken">
               <FileText className="size-5 text-primary-ink" />
@@ -245,7 +245,7 @@ const MotherDetailPage: React.FC = () => {
         <>
           <LearnerMotherCard mother={mother} showProteinAction={false} />
           <Card className="p-5">
-            <h3 className="mb-3 font-display text-lg font-bold text-ink">{t('detail.clinical')}</h3>
+            <h3 className="mb-3 font-display text-lg font-semibold text-ink">{t('detail.clinical')}</h3>
             <Row label={t('detail.rowAge')} value={mother.mother_age ? t('detail.ageValue', { n: mother.mother_age }) : null} />
             <Row label={t('detail.rowWeightHeight')} value={mother.weight && mother.height ? t('detail.weightHeightValue', { weight: mother.weight, height: mother.height }) : null} />
             <Row label={t('detail.rowLmp')} value={mother.lmp} />

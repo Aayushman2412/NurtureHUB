@@ -135,11 +135,11 @@ const buildRows = (visits: GrowthVisitDetail[]): Row[] => {
 
 /** Verdict ink that stays legible on a tinted cell in BOTH themes: a dark
  *  brand shade on the light tint, a light one on the dark-composited tint. */
-export const GREEN_INK = 'text-sage-800 dark:text-sage-300';
-export const RED_INK = 'text-coral-800 dark:text-coral-300';
+export const GREEN_INK = 'text-success-800 dark:text-success-300';
+export const RED_INK = 'text-brand-800 dark:text-brand-300';
 
 const TH_BASE =
-  'whitespace-nowrap border-b border-r border-border-strong bg-surface-sunken px-3 py-2 text-[12px] font-bold uppercase tracking-wide text-ink-muted';
+  'whitespace-nowrap border-b border-r border-border-strong bg-surface-sunken px-3 py-2 text-[12px] font-semibold text-ink-muted';
 const TD_BASE = 'whitespace-nowrap border-r border-border-strong px-3 py-2';
 
 const VisitSummaryTable: React.FC<{ visits: GrowthVisitDetail[] }> = ({ visits }) => {
@@ -175,7 +175,7 @@ const VisitSummaryTable: React.FC<{ visits: GrowthVisitDetail[] }> = ({ visits }
 
               <th className={cn(TH_BASE, 'text-left')}>{t('casePage.forms')}</th>
               <th className={cn(TH_BASE, 'text-center text-success-600')} title={t('casePage.legendGreen')}>✓</th>
-              <th className={cn(TH_BASE, 'text-center text-coral-700')} title={t('casePage.legendRed')}>✕</th>
+              <th className={cn(TH_BASE, 'text-center text-brand-700')} title={t('casePage.legendRed')}>✕</th>
 
               <th className={cn(TH_BASE, 'text-center')}>{t('casePage.weightKg')}</th>
               <th className={cn(TH_BASE, 'text-center')} title={t('summary.wfaz')}>WFAz</th>
@@ -213,13 +213,13 @@ const VisitSummaryTable: React.FC<{ visits: GrowthVisitDetail[] }> = ({ visits }
                       and the ink colours flip with the theme (a fixed dark
                       green would vanish on the dark-composited tint). */}
                   <td
-                    className={cn(TD_BASE, 'text-center font-bold tabular-nums', GREEN_INK)}
+                    className={cn(TD_BASE, 'text-center font-semibold tabular-nums', GREEN_INK)}
                     style={{ backgroundColor: row.green > 0 ? lapCellFill('green', true) : undefined }}
                   >
                     {row.green || '—'}
                   </td>
                   <td
-                    className={cn(TD_BASE, 'text-center font-bold tabular-nums', RED_INK)}
+                    className={cn(TD_BASE, 'text-center font-semibold tabular-nums', RED_INK)}
                     style={{ backgroundColor: row.red > 0 ? lapCellFill('red', true) : undefined }}
                   >
                     {row.red || '—'}

@@ -54,7 +54,7 @@ from app.config import settings
 from app.security import context as ctx
 from app.security.redaction import redact
 
-logger = logging.getLogger("nurturehub.audit")
+logger = logging.getLogger("eduposhan.audit")
 
 # ── Actions ──────────────────────────────────────────────────────────────────
 # A closed vocabulary keeps the trail queryable. Add here rather than passing

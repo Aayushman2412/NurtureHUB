@@ -32,7 +32,7 @@ export const Ring: React.FC<{
           strokeDasharray={`${(v / 100) * c} ${c}`}
           style={{ transition: 'stroke-dasharray 600ms ease' }} />
       </svg>
-      <div className="absolute inset-0 flex items-center justify-center font-display text-lg font-extrabold text-ink">
+      <div className="absolute inset-0 flex items-center justify-center font-display text-lg font-semibold text-ink">
         {children ?? fmtPct(v)}
       </div>
     </div>
@@ -96,7 +96,7 @@ export const Donut: React.FC<{
           })}
         </svg>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-          <div className="font-display text-3xl font-extrabold leading-none text-ink">{centerValue}</div>
+          <div className="font-display text-3xl font-semibold leading-none text-ink">{centerValue}</div>
           <div className="mt-1 max-w-[8rem] text-sm text-ink-muted">{centerLabel}</div>
         </div>
       </div>
@@ -180,7 +180,7 @@ export const BarList: React.FC<{
             )}
           </span>
           <span className="whitespace-nowrap text-right">
-            <span className="text-base font-bold tabular-nums text-ink">{row.display}</span>
+            <span className="text-base font-semibold tabular-nums text-ink">{row.display}</span>
             {row.sub && <span className="ml-1.5 text-xs text-ink-muted">{row.sub}</span>}
           </span>
         </button>
@@ -214,7 +214,7 @@ export const StackedBar: React.FC<{
           return (
             <div
               key={p.key}
-              className={cn(divided && 'flex items-center justify-center overflow-hidden text-[11px] font-bold text-white',
+              className={cn(divided && 'flex items-center justify-center overflow-hidden text-[11px] font-semibold text-white',
                 divided && i < shown.length - 1 && 'border-r-2 border-surface')}
               style={{ width: `${share}%`, background: p.color, transition: 'width 500ms ease' }}
               title={`${p.label}: ${p.value} (${fmtPct(share)})`}
@@ -261,10 +261,10 @@ export const Histogram: React.FC<{
     <div>
       <div className="relative flex h-60 items-end gap-1 border-b-2 border-border-strong pt-7 sm:gap-1.5">
         {bars.map(b => {
-          const color = b.hi < passMark - 20 ? '#DC2F2F' : b.hi < passMark ? '#F59E0B' : '#2F9E56';
+          const color = b.hi < passMark - 20 ? '#C62828' : b.hi < passMark ? '#C28100' : '#228049';
           return (
             <div key={b.label} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end" title={countLabel(b.count, b.label)}>
-              <span className="mb-1 text-sm font-bold tabular-nums text-ink">{b.count > 0 ? fmtPct(b.pct) : ''}</span>
+              <span className="mb-1 text-sm font-semibold tabular-nums text-ink">{b.count > 0 ? fmtPct(b.pct) : ''}</span>
               <span
                 className="w-full rounded-t-md"
                 style={{ height: `${(b.pct / max) * 100}%`, minHeight: b.count > 0 ? 4 : 0, background: color, transition: 'height 500ms ease' }}
@@ -276,7 +276,7 @@ export const Histogram: React.FC<{
           className="pointer-events-none absolute -top-1 bottom-0 border-l-2 border-dashed border-ink/70"
           style={{ left: `${linePct}%` }}
         >
-          <span className="absolute -top-1 left-1.5 whitespace-nowrap rounded bg-surface px-1.5 text-xs font-bold text-ink shadow-xs">
+          <span className="absolute -top-1 left-1.5 whitespace-nowrap rounded bg-surface px-1.5 text-xs font-semibold text-ink ">
             {passLabel}
           </span>
         </span>
@@ -347,13 +347,13 @@ export const PairedBars: React.FC<{
                     <span className="absolute inset-y-0 left-0 rounded-full"
                       style={{ width: `${Math.max(0, Math.min(100, v))}%`, background: c, transition: 'width 500ms ease' }} />
                   </span>
-                  <span className="w-11 text-right text-sm font-bold tabular-nums text-ink">{fmtPct(v)}</span>
+                  <span className="w-11 text-right text-sm font-semibold tabular-nums text-ink">{fmtPct(v)}</span>
                 </span>
               ))}
             </span>
             <span
               className={cn(
-                'justify-self-end rounded-full px-2 py-0.5 text-xs font-bold tabular-nums',
+                'justify-self-end rounded-sm px-2 py-0.5 text-xs font-semibold tabular-nums',
                 Math.abs(change) < 1 ? 'bg-surface-sunken text-ink-muted'
                   : change > 0 ? 'bg-success-50 text-success-600 dark:bg-success-500/15'
                     : 'bg-error-50 text-error-600 dark:bg-error-500/15',
@@ -417,7 +417,7 @@ export const HeatGrid: React.FC<{
                   style={{ background: n > 0 ? `color-mix(in srgb, ${color} ${Math.round(18 + strength * 82)}%, transparent)` : 'var(--color-surface-sunken)' }}
                 >
                   {n > 0 && <>
-                    <span className="text-base font-extrabold leading-tight">{fmtPct(total ? (n / total) * 100 : 0)}</span>
+                    <span className="text-base font-semibold leading-tight">{fmtPct(total ? (n / total) * 100 : 0)}</span>
                     <span className="text-xs font-semibold leading-tight opacity-90">{n}</span>
                   </>}
                 </div>
@@ -452,17 +452,17 @@ export const Journey: React.FC<{
       return (
         // Phones: label on its own line, bar beneath it; wider: one row.
         <li key={s.key} className="grid grid-cols-[1.75rem_1fr] items-center gap-x-3 gap-y-1 sm:grid-cols-[1.75rem_minmax(8rem,14rem)_1fr] sm:gap-y-0">
-          <span className="flex size-7 items-center justify-center rounded-full bg-surface-sunken text-xs font-bold text-ink-muted [&>svg]:size-3.5">
+          <span className="inline-flex shrink-0 text-xs text-ink-muted">
             {s.icon ?? i + 1}
           </span>
           <span className="text-sm font-medium text-ink">{s.label}</span>
           <span className="col-start-2 flex min-w-0 items-center gap-3 sm:col-start-auto">
             <span className="relative h-7 min-w-0 flex-1 rounded-lg bg-surface-sunken">
               <span
-                className="absolute inset-y-0 left-0 flex items-center rounded-lg px-2 text-xs font-bold text-white"
+                className="absolute inset-y-0 left-0 flex items-center rounded-lg px-2 text-xs font-semibold text-white"
                 style={{
                   width: `${Math.max(share, 4)}%`,
-                  background: `linear-gradient(90deg, var(--color-coral-500), var(--color-coral-400))`,
+                  background: 'var(--color-brand-500)',
                   transition: 'width 600ms ease',
                 }}
               >

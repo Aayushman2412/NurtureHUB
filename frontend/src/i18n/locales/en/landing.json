@@ -1,44 +1,31 @@
 {
   "nav": {
-    "badge": "ICDS Professional Portal",
-    "goToApp": "Go to App",
-    "signIn": "Sign In",
+    "badge": "ICDS training and field records",
+    "goToApp": "Open EduPoshan",
+    "signIn": "Sign in",
     "register": "Register"
   },
-  "hero": {
-    "eyebrow": "Nurturing skills, elevating communities",
-    "title": "Grow the skills that help<hl> children thrive</hl>",
-    "subtitle": "NurtureHUB is the training & assessment home for ICDS professionals — standardized tutorials, fair assessments, and a clear record of your growth.",
-    "ctaContinue": "Continue your journey",
-    "ctaStart": "Start learning today",
-    "haveAccount": "I already have an account"
+  "intro": {
+    "lead": "Training, tests and field records for ICDS health workers: video lessons and a test for each training phase, and a register of the mothers and babies each worker follows up, with growth checks against WHO standards.",
+    "register": "Register as a health worker"
   },
-  "features": {
-    "training": {
-      "title": "Structured Training",
-      "body": "Standardized video modules built for ICDS & Anganwadi workflows — learn at your own pace, stage by stage."
+  "uses": {
+    "title": "Who uses it",
+    "worker": {
+      "title": "Health workers",
+      "body": "Watch the training videos, take the tests, register mothers, and record each baby's weight, length and feeding on home visits."
     },
-    "assessments": {
-      "title": "Assessments & Badges",
-      "body": "Knowledge checks after every phase verify learning and earn official milestone badges for your profile."
-    },
-    "growth": {
-      "title": "Growth Tracking",
-      "body": "A personal dashboard monitors progress, unlocks new stages, and keeps your development on course."
-    }
-  },
-  "stats": {
-    "frontline": {
-      "value": "Frontline first",
-      "label": "Built for Anganwadi workers, helpers & supervisors"
+    "monitor": {
+      "title": "Batch monitors",
+      "body": "See which workers in the batch have late visits or missing forms, and follow up by phone or WhatsApp."
     },
     "district": {
-      "value": "District-aware",
-      "label": "Content and cohorts organized by your district"
-    },
-    "official": {
-      "value": "Officially recognized",
-      "label": "Progress and badges your department can trust"
+      "title": "Programme teams",
+      "body": "Follow training and adoptions district by district, find babies who are not growing well, run tests and export the records."
     }
+  },
+  "footer": {
+    "note": "For ICDS programme staff and health workers.",
+    "privacy": "Privacy notice and your rights"
   }
 }

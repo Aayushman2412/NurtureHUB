@@ -71,8 +71,8 @@ const TestPhaseCard: React.FC<{
     <Card locked={test.is_locked && attempts.length === 0} className={`flex flex-col gap-4 p-4 sm:p-6 ${test.is_passed ? 'border-success-500' : ''}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <span className="text-xs font-bold uppercase tracking-wider text-primary-ink">{typeLabel}</span>
-          <h4 className="mt-0.5 font-display text-lg font-bold leading-tight text-ink">{test.title}</h4>
+          <span className="text-xs font-semibold text-primary-ink">{typeLabel}</span>
+          <h4 className="mt-0.5 font-display text-lg font-semibold leading-tight text-ink">{test.title}</h4>
           {test.description && <p className="mt-1 text-[13px] leading-snug text-ink-muted">{test.description}</p>}
         </div>
         {test.is_passed ? (
@@ -137,7 +137,7 @@ const TestPhaseCard: React.FC<{
 
       {attempts.length > 0 && (
         <div className="border-t border-border pt-3">
-          <h5 className="mb-2 text-sm font-bold text-ink">{t('list.yourAttempts')}</h5>
+          <h5 className="mb-2 text-sm font-semibold text-ink">{t('list.yourAttempts')}</h5>
           <ul className="flex flex-col gap-2">
             {attempts.map(att => (
               <li key={att.id}>
@@ -147,7 +147,7 @@ const TestPhaseCard: React.FC<{
                   className="flex w-full cursor-pointer flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border bg-surface px-3 py-2 text-left text-[13px] transition-colors hover:border-border-strong"
                 >
                   <span className="font-semibold text-ink">{t('list.attemptNumber', { n: att.attempt_number })}</span>
-                  <span className={`font-bold ${att.is_passed ? 'text-success-600' : 'text-error-600'}`}>{att.score.toFixed(0)}%</span>
+                  <span className={`font-semibold ${att.is_passed ? 'text-success-600' : 'text-error-600'}`}>{att.score.toFixed(0)}%</span>
                   <Badge variant={att.is_passed ? 'success' : 'error'} size="sm">{att.is_passed ? t('list.pass') : t('list.fail')}</Badge>
                   <span className="text-ink-muted">{new Date(att.submitted_at).toLocaleDateString('en-GB')}</span>
                   <span className="ml-auto inline-flex items-center gap-1 font-semibold text-primary-ink"><Eye className="size-3.5" />{t('list.review')}</span>
@@ -160,7 +160,7 @@ const TestPhaseCard: React.FC<{
 
       {report && (
         <div className="border-t border-border pt-3">
-          <h5 className="mb-2 text-sm font-bold text-ink">{t('topics.title')}</h5>
+          <h5 className="mb-2 text-sm font-semibold text-ink">{t('topics.title')}</h5>
           <TestTopicsCard report={report} showTitle={false} />
         </div>
       )}

@@ -17,7 +17,7 @@ const Change: React.FC<{ value: number | null; unit?: string; lowerIsBetter?: bo
   const good = lowerIsBetter ? value < 0 : value > 0;
   return (
     <span className={cn(
-      'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums',
+      'inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-semibold tabular-nums',
       Math.abs(value) < 1 ? 'bg-surface-sunken text-ink-muted'
         : good ? 'bg-success-50 text-success-600 dark:bg-success-500/15' : 'bg-error-50 text-error-600 dark:bg-error-500/15',
     )}>

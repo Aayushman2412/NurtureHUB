@@ -321,7 +321,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
               key={`lbl-${p.key}`}
               x={M.left + PLOT_W + 5}
               y={Math.max(M.top + 8, Math.min(M.top + PLOT_H, p.labelY + 3.5))}
-              className="text-[13px] font-bold"
+              className="text-[13px] font-semibold"
               fill={percentileColor(p.key)}
             >
               {t(`percentiles.${p.key}`)}
@@ -367,7 +367,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
                       x={sx(p.x)}
                       y={sy(p.y) + 22}
                       textAnchor="middle"
-                      className="stroke-surface text-[14px] font-bold"
+                      className="stroke-surface text-[14px] font-semibold"
                       fill={label.color}
                       strokeWidth={3.5}
                       paintOrder="stroke"
@@ -437,7 +437,7 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
                 className="inline-block size-2.5 rounded-full"
                 style={{ background: sourceComboColor(hover.point.combo) }}
               />
-              <span className="font-bold text-ink">{hover.point.case.child.name}</span>
+              <span className="font-semibold text-ink">{hover.point.case.child.name}</span>
             </div>
             <div className="space-y-0.5 text-ink-muted">
               <div>{t('tooltip.source')}: {t(`sources.${hover.point.combo}`)}</div>
@@ -485,10 +485,10 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
   };
 
   return (
-    <div className={cn('rounded-xl border border-border bg-surface shadow-(--shadow-card)', compact ? 'px-2.5 pb-1.5 pt-2' : 'p-4')}>
+    <div className={cn('rounded-lg border border-border bg-surface ', compact ? 'px-2.5 pb-1.5 pt-2' : 'p-4')}>
       <div className={cn('flex items-start justify-between gap-2', compact ? 'mb-0' : 'mb-2')}>
         <div>
-          <h3 className="font-display text-sm font-bold text-ink">{title}</h3>
+          <h3 className="font-display text-sm font-semibold text-ink">{title}</h3>
           {subtitle && <p className="text-xs text-ink-muted">{subtitle}</p>}
         </div>
         <div className="flex shrink-0 gap-1">
@@ -524,12 +524,12 @@ const GrowthChart: React.FC<GrowthChartProps> = ({
           onClick={() => setExpanded(false)}
         >
           <div
-            className="max-h-[92vh] w-full max-w-5xl overflow-auto rounded-2xl border border-border bg-surface p-5 shadow-(--shadow-hover)"
+            className="max-h-[92vh] w-full max-w-5xl overflow-auto rounded-lg border border-border bg-surface p-5 shadow-(--shadow-hover)"
             onClick={e => e.stopPropagation()}
           >
             <div className="mb-3 flex items-start justify-between gap-2">
               <div>
-                <h3 className="font-display text-lg font-bold text-ink">{title}</h3>
+                <h3 className="font-display text-lg font-semibold text-ink">{title}</h3>
                 {subtitle && <p className="text-sm text-ink-muted">{subtitle}</p>}
               </div>
               <div className="flex shrink-0 gap-1">

@@ -1,4 +1,4 @@
-"""Alembic migration environment for NurtureHUB.
+"""Alembic migration environment for EduPoshan.
 
 The database URL is sourced from the application settings (``app.config``) so
 migrations always target the same database the app uses. Set ``ALEMBIC_DATABASE_URL``

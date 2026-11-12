@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   ListChecks,
   Plus,
-  Sparkles,
 } from 'lucide-react';
 import { Alert, Badge, Button, Card, PageLoader, ProgressRing } from '../../components/ui';
 import { cn } from '../../utils/cn';
@@ -25,7 +24,6 @@ import {
   resolveVerdicts,
 } from '../../lib/flowTypes';
 import ActionCard from '../../components/assessments/ActionCard';
-import ConfettiBurst from '../../components/assessments/ConfettiBurst';
 import { nextInFlow, parseFlow } from '../../lib/careFlow';
 import { formatDisplayDate } from '../../components/assessments/flowRunner';
 
@@ -151,8 +149,6 @@ const AssessmentPlanPage: React.FC = () => {
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
-      {allGreen && !isDraft && <ConfettiBurst />}
-
       {isDraft && (
         <Alert variant="warning" title={t('plan.draftNotice')}>
           <button
@@ -165,14 +161,8 @@ const AssessmentPlanPage: React.FC = () => {
         </Alert>
       )}
 
-      {/* Celebration / score header */}
-      <Card className="relative overflow-hidden p-6 sm:p-8">
-        {allGreen && (
-          <Sparkles
-            aria-hidden
-            className="absolute right-5 top-5 size-6 animate-pulse text-amber-500"
-          />
-        )}
+      {/* Score header */}
+      <Card accent={allGreen ? 'success' : undefined} className="relative overflow-hidden p-6 sm:p-8">
         <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:gap-6 sm:text-left">
           {/* A form with no LAP verdicts has nothing to score — "0 of 0 as per
               LAP" meant nothing to the reader (review of 30 Oct 2026). */}
@@ -193,7 +183,7 @@ const AssessmentPlanPage: React.FC = () => {
             <CheckCircle2 aria-hidden className="size-14 shrink-0 text-success-500" />
           )}
           <div className="min-w-0">
-            <h2 className="font-display text-xl font-bold text-ink sm:text-2xl">
+            <h2 className="font-display text-xl font-semibold text-ink sm:text-2xl">
               {denom > 0 ? t('plan.scoreTitle', { green: summary.green, total: denom }) : t('plan.savedTitle')}
             </h2>
             <p className="mt-1 text-sm text-ink-muted">
@@ -203,7 +193,7 @@ const AssessmentPlanPage: React.FC = () => {
             </p>
             {allGreen ? (
               <p className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-success-600 dark:text-success-500">
-                <Sparkles className="size-4" aria-hidden />
+                <CheckCircle2 className="size-4" aria-hidden />
                 {t('plan.allGreen')}
               </p>
             ) : (
@@ -220,7 +210,7 @@ const AssessmentPlanPage: React.FC = () => {
       {/* Computed protein-intake totals (protein form only) */}
       {summary.protein && (
         <Card className="p-5">
-          <h3 className="font-display text-lg font-bold text-ink">{t('plan.proteinTitle')}</h3>
+          <h3 className="font-display text-lg font-semibold text-ink">{t('plan.proteinTitle')}</h3>
           <p className="mt-0.5 text-sm text-ink-muted">{t('plan.proteinSub')}</p>
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {(
@@ -237,13 +227,13 @@ const AssessmentPlanPage: React.FC = () => {
                 <div
                   key={key}
                   className={cn(
-                    'rounded-xl border px-3 py-3 text-center',
+                    'rounded-lg border px-3 py-3 text-center',
                     flagged
                       ? 'border-error-500/50 bg-error-50 dark:bg-error-500/10'
                       : 'border-border bg-surface-sunken/50',
                   )}
                 >
-                  <div className={cn('font-display text-xl font-extrabold', flagged ? 'text-error-600' : 'text-ink')}>
+                  <div className={cn('font-display text-xl font-semibold', flagged ? 'text-error-600' : 'text-ink')}>
                     {grams}g
                   </div>
                   <div className="mt-0.5 text-[12px] font-semibold leading-snug text-ink-muted">
@@ -273,7 +263,7 @@ const AssessmentPlanPage: React.FC = () => {
           <section>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="size-5 text-success-500" aria-hidden />
-              <h3 className="font-display text-lg font-bold text-ink">{t('plan.doingWellTitle')}</h3>
+              <h3 className="font-display text-lg font-semibold text-ink">{t('plan.doingWellTitle')}</h3>
               <Badge variant="success">{doingWell.length}</Badge>
             </div>
             <p className="mt-1 text-sm text-ink-muted">{t('plan.doingWellSub')}</p>
@@ -299,7 +289,7 @@ const AssessmentPlanPage: React.FC = () => {
           <section>
             <div className="flex items-center gap-2">
               <AlertCircle className="size-5 text-error-500" aria-hidden />
-              <h3 className="font-display text-lg font-bold text-ink">
+              <h3 className="font-display text-lg font-semibold text-ink">
                 {t('plan.needsAttentionTitle')}
               </h3>
               <Badge variant="error">{actions.length + reviewItems.length}</Badge>
@@ -325,7 +315,7 @@ const AssessmentPlanPage: React.FC = () => {
                   <Card className="p-5">
                     <div className="flex items-center gap-2">
                       <ListChecks className="size-5 text-error-500" aria-hidden />
-                      <h3 className="font-display font-bold text-ink">{t('plan.reviewTitle')}</h3>
+                      <h3 className="font-display font-semibold text-ink">{t('plan.reviewTitle')}</h3>
                       <Badge variant="error">{reviewItems.length}</Badge>
                     </div>
                     <p className="mt-1 text-sm text-ink-muted">{t('plan.reviewSub')}</p>
@@ -353,7 +343,7 @@ const AssessmentPlanPage: React.FC = () => {
 
       {/* Footer navigation */}
       {nextStep ? (
-        <div className="sticky bottom-0 z-10 -mx-5 border-t border-border bg-surface/95 px-5 py-3 backdrop-blur sm:mx-0 sm:rounded-xl sm:border">
+        <div className="sticky bottom-0 z-10 -mx-5 border-t border-border bg-surface px-5 py-3 sm:mx-0 sm:rounded-lg sm:border">
           <Button size="lg" fullWidth onClick={() => navigate(nextInFlow(flow, resp.mother_id ?? 0, resp.child_id ?? null), { replace: true })}
             iconRight={<ArrowRight className="size-5" />}>
             {t(`flow.next.${nextStep}`)}

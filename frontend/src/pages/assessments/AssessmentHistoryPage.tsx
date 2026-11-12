@@ -177,17 +177,17 @@ const AssessmentHistoryPage: React.FC = () => {
 
       {cfLocked ? (
         <Card className="p-8 text-center">
-          <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-500">
+          <div className="inline-flex shrink-0 text-amber-600 dark:text-amber-500">
             <Lock className="size-6" aria-hidden />
           </div>
-          <h3 className="mt-4 font-display text-lg font-bold text-ink">{t('history.lockedTitle')}</h3>
+          <h3 className="mt-4 font-display text-lg font-semibold text-ink">{t('history.lockedTitle')}</h3>
           <p className="mx-auto mt-2 max-w-md text-sm text-ink-muted">
             {child!.age_days == null
               ? t('history.lockedNoDob', { min: CF_MIN_AGE_DAYS })
               : t('history.lockedBody', { min: CF_MIN_AGE_DAYS })}
           </p>
           {cfRemaining != null && (
-            <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-sm font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-500">
+            <span className="mt-4 inline-flex items-center gap-1.5 rounded-sm bg-amber-50 px-3.5 py-1.5 text-sm font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-500">
               <CalendarDays className="size-4" aria-hidden />
               {t('history.lockedRemaining', { days: cfRemaining })}
             </span>
@@ -213,7 +213,7 @@ const AssessmentHistoryPage: React.FC = () => {
                read one variable at a time across visits instead of re-parsing a
                card each time. Rules only between rows — no full grid. */
             <div className="flex flex-col gap-3">
-              <h3 className="font-display text-sm font-bold uppercase tracking-wider text-ink-muted">
+              <h3 className="font-display text-sm font-semibold text-ink-muted">
                 {t('history.responsesTitle')}
               </h3>
               {/* Phone: the same row, stacked. Five columns need 34rem, so on a
@@ -322,7 +322,7 @@ const AssessmentHistoryPage: React.FC = () => {
               <Card className="hidden overflow-x-auto p-0 md:block">
                 <table className="w-full min-w-[34rem] border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-border text-[12px] uppercase tracking-wide text-ink-muted">
+                    <tr className="border-b border-border text-[12px] text-ink-muted">
                       <th className="px-4 py-2.5 text-left font-semibold">{t('history.colDate')}</th>
                       <th className="px-3 py-2.5 text-left font-semibold">{t('history.colStatus')}</th>
                       {scored ? (

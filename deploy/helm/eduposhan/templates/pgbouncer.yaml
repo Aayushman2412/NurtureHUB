@@ -1,0 +1,108 @@
+{{- if .Values.pgbouncer.enabled }}
+{{- $pg := .Values.pgbouncer }}
+{{- $name := printf "%s-pgbouncer" (include "eduposhan.fullname" .) }}
+{{- $ctx := dict "root" . "component" "pgbouncer" }}
+{{- $tag := required "pgbouncer.image.tag is required: pin a version you have verified" $pg.image.tag }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "eduposhan.labels" $ctx | nindent 4 }}
+data:
+  # The shape of deploy/pgbouncer/pgbouncer.ini, pointed at the primary.
+  pgbouncer.ini: |
+    [databases]
+    {{ $pg.database }} = host={{ required "pgbouncer.serverHost is required" $pg.serverHost }} port={{ $pg.serverPort }} dbname={{ $pg.database }}
+
+    [pgbouncer]
+    listen_addr = 0.0.0.0
+    listen_port = 6432
+    auth_type = scram-sha-256
+    auth_file = /etc/pgbouncer/userlist.txt
+    pool_mode = transaction
+    max_client_conn = {{ $pg.maxClientConn }}
+    default_pool_size = {{ $pg.defaultPoolSize }}
+    min_pool_size = 5
+    reserve_pool_size = 10
+    reserve_pool_timeout = 3
+    server_idle_timeout = 300
+    server_tls_sslmode = {{ $pg.serverTlsSslmode }}
+    ignore_startup_parameters = extra_float_digits
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "eduposhan.labels" $ctx | nindent 4 }}
+spec:
+  replicas: {{ $pg.replicas }}
+  selector:
+    matchLabels:
+      {{- include "eduposhan.selectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "eduposhan.labels" $ctx | nindent 8 }}
+      annotations:
+        # Restart on a settings change; the file is read only at start-up.
+        checksum/config: {{ toJson $pg | sha256sum }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      {{- include "eduposhan.spread" $ctx | nindent 6 }}
+      containers:
+        - name: pgbouncer
+          image: {{ printf "%s:%s" $pg.image.repository $tag }}
+          ports:
+            - name: pgbouncer
+              containerPort: 6432
+          readinessProbe:
+            tcpSocket:
+              port: pgbouncer
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: pgbouncer
+            periodSeconds: 15
+          resources:
+            {{- toYaml $pg.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - name: config
+              mountPath: /etc/pgbouncer/pgbouncer.ini
+              subPath: pgbouncer.ini
+              readOnly: true
+            - name: userlist
+              mountPath: /etc/pgbouncer/userlist.txt
+              subPath: userlist.txt
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $name }}
+        - name: userlist
+          secret:
+            secretName: {{ $pg.userlistSecret }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "eduposhan.labels" $ctx | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "eduposhan.selectorLabels" $ctx | nindent 4 }}
+  ports:
+    - name: pgbouncer
+      port: 6432
+      targetPort: pgbouncer
+---
+{{ include "eduposhan.pdb" (dict "root" . "role" "pgbouncer") }}
+{{- end }}

@@ -437,7 +437,7 @@ const AdminResultsPage: React.FC = () => {
                     </Td>
                   )}
                   {learnersLayout.show('videos') && <Td className={cn('whitespace-nowrap text-center', learnersLayout.pad)}>
-                    <div className="font-bold text-ink">
+                    <div className="font-semibold text-ink">
                       {u.summary.tutorials_completed}/{u.summary.total_tutorials}
                     </div>
                     <div className="text-xs text-ink-muted">
@@ -446,7 +446,7 @@ const AdminResultsPage: React.FC = () => {
                   </Td>}
                   {learnersLayout.show('score') && (
                     <Td className={cn('text-center', learnersLayout.pad)}>
-                      <span className={cn('font-display font-extrabold', scoreColor(u.summary.performance_score))}>
+                      <span className={cn('font-display font-semibold', scoreColor(u.summary.performance_score))}>
                         {u.summary.performance_score}
                       </span>
                       <span className="text-xs text-ink-muted">{t('table.outOf100')}</span>
@@ -460,7 +460,7 @@ const AdminResultsPage: React.FC = () => {
                     const riskAlert = r.was_flagged || r.max_risk_score >= 50;
                     return (
                       <Td key={test.id} className={cn('whitespace-nowrap text-center', learnersLayout.pad)}>
-                        <div className={cn('font-bold', r.is_passed ? 'text-success-600' : 'text-error-600')}>
+                        <div className={cn('font-semibold', r.is_passed ? 'text-success-600' : 'text-error-600')}>
                           {r.best_score !== null ? `${Math.round(r.best_score)}%` : '—'} {r.is_passed ? '✓' : '✗'}
                         </div>
                         <div className={cn('text-xs', riskAlert ? 'text-error-600' : 'text-ink-muted')}>
@@ -482,7 +482,7 @@ const AdminResultsPage: React.FC = () => {
                   {learnersLayout.show('f2f') && (
                     <Td className={cn('text-center', learnersLayout.pad)}>
                       {u.face_to_face.selected ? (
-                        <Badge variant="coral" size="sm">{t('status.selected')}</Badge>
+                        <Badge variant="info" size="sm">{t('status.selected')}</Badge>
                       ) : (
                         <span className="text-sm text-ink-muted">—</span>
                       )}
@@ -627,7 +627,7 @@ const AdminResultsPage: React.FC = () => {
                   </Td>
                   <Td className="text-ink">
                     {sel.profile?.is_batch_monitor
-                      ? <Badge variant="coral" size="sm">{t('selectionTable.isMonitor')}</Badge>
+                      ? <Badge variant="info" size="sm">{t('selectionTable.isMonitor')}</Badge>
                       : sel.profile?.batch_monitor ?? <span className="text-ink-muted">—</span>}
                   </Td>
                   <Td>{sel.notified ? <span className="text-success-600">{t('selectionTable.yes')}</span> : t('selectionTable.no')}</Td>

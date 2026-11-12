@@ -65,7 +65,7 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ media, onChange, label = 'Ima
           >
             <img src={resolveAssetUrl(m.url)} alt="" className="size-full object-cover" />
             {m.type === 'gif' && (
-              <span className="absolute bottom-0.5 left-0.5 rounded bg-cream-950/70 px-1 text-xs font-bold text-white">
+              <span className="absolute bottom-0.5 left-0.5 rounded bg-gray-950/70 px-1 text-xs font-semibold text-white">
                 GIF
               </span>
             )}
@@ -73,7 +73,7 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ media, onChange, label = 'Ima
               type="button"
               title="Remove image"
               onClick={() => onChange(media.filter((_, mi) => mi !== i))}
-              className="absolute right-0.5 top-0.5 hidden size-4.5 items-center justify-center rounded-full bg-cream-950/70 text-white group-hover:flex cursor-pointer"
+              className="absolute right-0.5 top-0.5 hidden size-4.5 items-center justify-center rounded-full bg-gray-950/70 text-white group-hover:flex cursor-pointer"
             >
               <X className="size-3" />
             </button>
@@ -120,7 +120,7 @@ const MediaPicker: React.FC<MediaPickerProps> = ({ media, onChange, label = 'Ima
             type="button"
             title="Add image URL"
             onClick={addUrl}
-            className="flex size-9.5 shrink-0 items-center justify-center rounded-lg border border-border-strong/60 text-ink-muted hover:border-primary hover:text-primary-ink cursor-pointer"
+            className="flex size-9.5 shrink-0 items-center justify-center rounded-lg border border-border-control text-ink-muted hover:border-primary hover:text-primary-ink cursor-pointer"
           >
             <Plus className="size-4" />
           </button>

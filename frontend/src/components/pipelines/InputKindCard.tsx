@@ -50,11 +50,11 @@ const InputKindCard: React.FC<InputKindCardProps> = ({
   const allSelected = present && selectedHere === paths.length;
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
+    <div className="rounded-lg border border-border bg-surface p-4">
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-display text-sm font-bold text-ink">{kind.label}</span>
+            <span className="font-display text-sm font-semibold text-ink">{kind.label}</span>
             {kind.required
               ? <Badge variant={present ? 'success' : 'error'} size="sm">
                   {present ? t('inputs.present') : t('inputs.missing')}

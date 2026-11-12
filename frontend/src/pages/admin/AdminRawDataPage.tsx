@@ -24,7 +24,7 @@ import { formatBytes } from '../../components/pipelines/helpers';
 interface PipelineProject { code: string; name: string; analysis_level?: string }
 
 /** Database → Raw Data: generate the pipelines' raw input files from the data
- *  learners collected in NurtureHUB, then ingest them into the pipeline
+ *  learners collected in EduPoshan, then ingest them into the pipeline
  *  inputs with one click (manual upload stays available on the pipeline pages). */
 const AdminRawDataPage: React.FC = () => {
   const { t } = useTranslation('pipelines');
@@ -146,9 +146,9 @@ const AdminRawDataPage: React.FC = () => {
       {/* The learning side's raw data, in the same place (review of 5 Oct 2026). */}
       <Card>
         <CardBody className="flex flex-wrap items-center gap-3 p-5">
-          <ClipboardList className="size-5 shrink-0 text-coral-600 dark:text-coral-300" />
+          <ClipboardList className="size-5 shrink-0 text-brand-600 dark:text-brand-300" />
           <div className="min-w-0 flex-1">
-            <div className="font-display text-sm font-bold text-ink">{t('rawdata.learning.title')}</div>
+            <div className="font-display text-sm font-semibold text-ink">{t('rawdata.learning.title')}</div>
             <p className="text-[13px] text-ink-muted">{t('rawdata.learning.hint')}</p>
           </div>
           <Button
@@ -208,8 +208,8 @@ const AdminRawDataPage: React.FC = () => {
       <Card>
         <CardBody className="space-y-4 p-5">
           <div className="flex flex-wrap items-center gap-2">
-            <Database className="size-4 text-coral-600 dark:text-coral-300" />
-            <span className="font-display text-sm font-bold text-ink">
+            <Database className="size-4 text-brand-600 dark:text-brand-300" />
+            <span className="font-display text-sm font-semibold text-ink">
               {t('rawdata.currentSet')}
             </span>
             <span className="ml-auto" />
@@ -248,7 +248,7 @@ const AdminRawDataPage: React.FC = () => {
 
           {/* Only once something is ticked, so the default view stays calm. */}
           {selectedPaths.length > 0 && (
-            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/40 bg-primary-soft p-3">
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-primary/40 bg-primary-soft p-3">
               <span className="min-w-0 flex-1 text-sm font-semibold text-ink">
                 {t('rawdata.selectedCount', { count: selectedPaths.length })}
               </span>

@@ -236,15 +236,15 @@ const AdminTutorialTrackingPage: React.FC = () => {
         <div className="space-y-3">
           {/* What each number means (review of 19 Oct 2026: "this is the only
               thing which is not self-explanatory ... remember that"). */}
-          <div className="grid gap-x-6 gap-y-1.5 rounded-xl border border-border bg-surface-sunken/60 px-4 py-3 text-[13px] text-ink-muted md:grid-cols-2">
-            <p><span className="font-bold text-ink">{t('tracking.legend.videoTitle')}</span> {t('tracking.legend.video')}</p>
-            <p><span className="font-bold text-ink">{t('tracking.legend.quizTitle')}</span> {t('tracking.legend.quiz')}</p>
+          <div className="grid gap-x-6 gap-y-1.5 rounded-lg border border-border bg-surface-sunken/60 px-4 py-3 text-[13px] text-ink-muted md:grid-cols-2">
+            <p><span className="font-semibold text-ink">{t('tracking.legend.videoTitle')}</span> {t('tracking.legend.video')}</p>
+            <p><span className="font-semibold text-ink">{t('tracking.legend.quizTitle')}</span> {t('tracking.legend.quiz')}</p>
             <p>
-              <span className="font-bold text-ink">{t('tracking.legend.quizzesTitle')}</span>{' '}
+              <span className="font-semibold text-ink">{t('tracking.legend.quizzesTitle')}</span>{' '}
               <CheckCircle2 className="mb-0.5 inline size-3 text-success-600" /> {t('tracking.legend.answered')}{' · '}
               <SkipForward className="mb-0.5 inline size-3 text-error-600" /> {t('tracking.legend.skipped')}
             </p>
-            <p><span className="font-bold text-ink">{t('tracking.legend.accuracyTitle')}</span> {t('tracking.legend.accuracy')}</p>
+            <p><span className="font-semibold text-ink">{t('tracking.legend.accuracyTitle')}</span> {t('tracking.legend.accuracy')}</p>
           </div>
           <Table
             density="compact"
@@ -277,7 +277,7 @@ const AdminTutorialTrackingPage: React.FC = () => {
                     const pct = p?.watch_pct || 0;
                     return (
                       <Td key={tut.id} className="whitespace-nowrap text-center">
-                        <div className={`font-bold ${pctColorClass(pct)}`}>{Math.round(pct)}%</div>
+                        <div className={`font-semibold ${pctColorClass(pct)}`}>{Math.round(pct)}%</div>
                         <div className="text-xs text-ink-faint">
                           {fmtWatchTime(p?.watch_time_seconds || 0)}
                           {tut.has_quiz && <> • {t('tracking.quizShort')} {p ? quizCell(p, tut, t) : t('tracking.pending')}</>}
@@ -285,7 +285,7 @@ const AdminTutorialTrackingPage: React.FC = () => {
                       </Td>
                     );
                   })}
-                  <Td className="text-center font-bold text-ink">{u.summary.avg_watch_pct}%</Td>
+                  <Td className="text-center font-semibold text-ink">{u.summary.avg_watch_pct}%</Td>
                   <Td className="whitespace-nowrap text-center text-[0.8125rem]">
                     <span className="text-success-600" title={t('tracking.answered')}>
                       <CheckCircle2 className="mb-0.5 inline size-3" /> {u.summary.quizzes_completed}
@@ -297,7 +297,7 @@ const AdminTutorialTrackingPage: React.FC = () => {
                     <div className="text-xs text-ink-faint">{t('tracking.accuracy', { n: u.summary.quiz_accuracy_pct })}</div>
                   </Td>
                   <Td className="text-center">
-                    <span className={`font-display text-base font-extrabold ${scoreColorClass(u.summary.performance_score)}`}>
+                    <span className={`font-display text-base font-semibold ${scoreColorClass(u.summary.performance_score)}`}>
                       {u.summary.performance_score}
                     </span>
                     <span className="text-xs text-ink-faint"> {t('tracking.outOf100')}</span>

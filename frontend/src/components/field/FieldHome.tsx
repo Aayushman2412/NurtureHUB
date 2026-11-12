@@ -22,16 +22,26 @@ const Section: React.FC<{ icon: React.ReactNode; title: string; count?: number; 
   icon, title, count, children,
 }) => (
   <section className="flex flex-col gap-2.5">
-    <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
+    <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-ink">
       {icon}
       <span>{title}</span>
       {count != null && count > 0 && (
-        <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-sm font-bold tabular-nums text-ink-muted">{count}</span>
+        <span className="rounded-sm bg-surface-sunken px-2 py-0.5 text-sm font-semibold tabular-nums text-ink-muted">{count}</span>
       )}
     </h2>
     {children}
   </section>
 );
+
+/** The rows of one section: a single ruled panel, like a page of a register. */
+const RowList: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+    {children}
+  </div>
+);
+
+const moreButton =
+  'flex min-h-11 cursor-pointer items-center justify-center gap-1 rounded-md text-sm font-semibold text-primary-ink hover:bg-surface-sunken';
 
 /** A baby to see within 2 days: the reason in red or yellow; the row opens
  *  the baby, "Start" opens the visit. */
@@ -39,12 +49,12 @@ const UrgentRow: React.FC<{ u: UrgentBaby }> = ({ u }) => {
   const { t } = useTranslation('dashboard');
   const tone = TONE_CLASSES[u.status];
   return (
-    <div className={cn('flex items-center gap-3 rounded-xl border bg-surface p-3 shadow-(--shadow-card) ring-1', tone.ring,
-      u.status === 'red' ? 'border-error-500/50' : 'border-amber-500/50')}>
+    <div className={cn('flex items-center gap-3 border-l-[3px] px-3.5 py-3',
+      u.status === 'red' ? 'border-l-error-500' : 'border-l-amber-500')}>
       <Link to={`/babies/${u.child_id}`} className="flex min-w-0 flex-1 items-start gap-2.5">
         <AlertTriangle className={cn('mt-0.5 size-5 shrink-0', tone.text)} />
         <span className="min-w-0">
-          <span className="block font-display text-base font-bold leading-snug text-ink">
+          <span className="block font-display text-base font-semibold leading-snug text-ink">
             {t('field.urgent.see', { name: u.child_name || t('field.baby'), count: u.see_within_days })}
           </span>
           <span className={cn('block text-sm font-semibold', tone.text)}>{t(`field.reason.${u.reasons[0] ?? 'low_wfa'}`)}</span>
@@ -63,7 +73,7 @@ const AdoptRow: React.FC<{ type: string; target: number; adopted: number; more: 
   const { t } = useTranslation('dashboard');
   const dots = Math.max(target, adopted);
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-surface-sunken/70 px-3.5 py-3">
+    <div className="flex items-center gap-3 rounded-lg bg-surface-sunken/70 px-3.5 py-3">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-ink">{t(`field.adopt.${type}`)}</p>
         {dots <= 12 ? (
@@ -77,9 +87,9 @@ const AdoptRow: React.FC<{ type: string; target: number; adopted: number; more: 
         )}
       </div>
       {more > 0 ? (
-        <span className="shrink-0 text-right text-sm font-bold text-primary-ink">{t('field.adopt.more', { count: more })}</span>
+        <span className="shrink-0 text-right text-sm font-semibold text-primary-ink">{t('field.adopt.more', { count: more })}</span>
       ) : (
-        <span className="flex shrink-0 items-center gap-1 text-sm font-bold text-success-600 dark:text-success-500">
+        <span className="flex shrink-0 items-center gap-1 text-sm font-semibold text-success-600 dark:text-success-500">
           <Check className="size-4" />{t('field.adopt.done')}
         </span>
       )}
@@ -123,7 +133,7 @@ const FieldHome: React.FC = () => {
       <header className="flex flex-col gap-4">
         <div>
           <p className="text-sm text-ink-muted">{todayLabel}</p>
-          <h1 className="font-display text-2xl font-extrabold text-ink">
+          <h1 className="font-display text-2xl font-semibold text-ink">
             {firstName ? t('field.hello', { name: firstName }) : t('field.helloNoName')}
           </h1>
         </div>
@@ -156,11 +166,12 @@ const FieldHome: React.FC = () => {
           {(view.unfinished.length > 0 || view.drafts.length > 0) && (
             <Section icon={<ClipboardList className="size-5 text-amber-600" />} title={t('field.unfinished.title')}
               count={view.unfinished.length + view.drafts.length}>
+              <RowList>
               {view.unfinished.map(u => (
                 <Link key={`u${u.child_id}`} to={visitUrl(u.mother_id, u.child_id, u.pending)}
-                  className="flex min-h-16 items-center gap-3 rounded-xl border-2 border-amber-500/60 bg-surface p-3.5 shadow-(--shadow-card) hover:bg-surface-sunken">
+                  className="flex min-h-16 items-center gap-3 border-l-[3px] border-l-amber-500 px-3.5 py-3 hover:bg-surface-sunken">
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-display text-base font-bold text-ink">{u.child_name || t('field.baby')}</span>
+                    <span className="block truncate font-display text-base font-semibold text-ink">{u.child_name || t('field.baby')}</span>
                     <span className="block text-sm text-success-600 dark:text-success-500">{t('field.unfinished.done', { forms: formNames(u.done, t) })}</span>
                     <span className="block text-sm font-semibold text-amber-700 dark:text-amber-400">{t('field.unfinished.left', { forms: formNames(u.pending, t) })}</span>
                   </span>
@@ -171,9 +182,9 @@ const FieldHome: React.FC = () => {
               ))}
               {view.drafts.map(d => (
                 <Link key={`d${d.response_id}`} to={`${formRunUrl(d.form, d.mother_id, d.child_id)}?responseId=${d.response_id}`}
-                  className="flex min-h-14 items-center gap-3 rounded-xl border border-dashed border-amber-500/60 bg-surface p-3.5 hover:bg-surface-sunken">
+                  className="flex min-h-14 items-center gap-3 border-l-[3px] border-l-amber-500 px-3.5 py-3 hover:bg-surface-sunken">
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-display text-base font-bold text-ink">{d.child_name || d.mother_name}</span>
+                    <span className="block truncate font-display text-base font-semibold text-ink">{d.child_name || d.mother_name}</span>
                     <span className="block text-sm text-amber-700 dark:text-amber-400">
                       {t('field.unfinished.draft', { form: t(`field.form.${d.form}`), date: shortDay(d.saved_on) })}
                     </span>
@@ -181,24 +192,24 @@ const FieldHome: React.FC = () => {
                   <ChevronRight className="size-5 shrink-0 text-ink-muted" />
                 </Link>
               ))}
+              </RowList>
             </Section>
           )}
 
           {view.urgent.length > 0 && (
             <Section icon={<AlertTriangle className="size-5 text-error-600" />} title={t('field.urgent.title')} count={view.urgent.length}>
-              {view.urgent.map(u => <UrgentRow key={u.child_id} u={u} />)}
+              <RowList>{view.urgent.map(u => <UrgentRow key={u.child_id} u={u} />)}</RowList>
             </Section>
           )}
 
           <Section icon={<ClipboardList className="size-5 text-primary-ink" />} title={t('field.visits.title')} count={visits.length}>
-            {visits.length ? shownVisits.map(g => <VisitRow key={`${g.mother_id}-${g.child_id ?? 'm'}`} g={g} />) : (
-              <p className="flex items-center gap-2 rounded-xl bg-success-50 px-4 py-3 text-sm font-semibold text-success-600 dark:bg-success-500/15 dark:text-success-500">
+            {visits.length ? <RowList>{shownVisits.map(g => <VisitRow key={`${g.mother_id}-${g.child_id ?? 'm'}`} g={g} />)}</RowList> : (
+              <p className="flex items-center gap-2 rounded-lg border border-border border-l-[3px] border-l-success-500 bg-surface px-4 py-3 text-sm font-semibold text-ink">
                 <Check className="size-5 shrink-0" />{nothingToday ? t('field.visits.allDone') : t('field.visits.none')}
               </p>
             )}
             {visits.length > FIRST_VISITS && (
-              <button type="button" onClick={() => setAllVisits(v => !v)}
-                className="flex min-h-11 items-center justify-center gap-1 rounded-xl border border-border bg-surface text-sm font-semibold text-primary-ink">
+              <button type="button" onClick={() => setAllVisits(v => !v)} className={moreButton}>
                 <ChevronDown className={cn('size-4 transition-transform', allVisits && 'rotate-180')} />
                 {allVisits ? t('field.visits.fewer') : t('field.visits.more', { count: visits.length - FIRST_VISITS })}
               </button>
@@ -206,25 +217,26 @@ const FieldHome: React.FC = () => {
           </Section>
 
           {view.finish.length > 0 && (
-            <Section icon={<HeartHandshake className="size-5 text-amber-600" />} title={t('field.finish.title')} count={view.finish.length}>
+            <Section icon={<HeartHandshake className="size-5 text-ink-muted" />} title={t('field.finish.title')} count={view.finish.length}>
+              <RowList>
               {(allFinish ? view.finish : view.finish.slice(0, FIRST_VISITS)).map(f => (
                 <Link
                   key={f.mother_id}
                   to={f.missing === 'protein'
                     ? formRunUrl('protein', f.mother_id, null, flowString('reg', f.then))
                     : `/mothers/${f.mother_id}/children/new?flow=reg`}
-                  className="flex min-h-14 items-center gap-3 rounded-xl border border-dashed border-amber-500/60 bg-surface p-3.5 hover:bg-surface-sunken"
+                  className="flex min-h-14 items-center gap-3 border-l-[3px] border-l-amber-500 px-3.5 py-3 hover:bg-surface-sunken"
                 >
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-display text-base font-bold text-ink">{f.mother_name}</span>
+                    <span className="block truncate font-display text-base font-semibold text-ink">{f.mother_name}</span>
                     <span className="block text-sm text-amber-700 dark:text-amber-400">{t(`field.finish.${f.missing}`)}</span>
                   </span>
                   <ChevronRight className="size-5 shrink-0 text-ink-muted" />
                 </Link>
               ))}
+              </RowList>
               {view.finish.length > FIRST_VISITS && (
-                <button type="button" onClick={() => setAllFinish(v => !v)}
-                  className="flex min-h-11 items-center justify-center gap-1 rounded-xl border border-border bg-surface text-sm font-semibold text-primary-ink">
+                <button type="button" onClick={() => setAllFinish(v => !v)} className={moreButton}>
                   <ChevronDown className={cn('size-4 transition-transform', allFinish && 'rotate-180')} />
                   {allFinish ? t('field.visits.fewer') : t('field.finish.more', { count: view.finish.length - FIRST_VISITS })}
                 </button>
@@ -233,7 +245,7 @@ const FieldHome: React.FC = () => {
           )}
 
           {view.targets.length > 0 && (
-            <Section icon={<UsersRound className="size-5 text-sage-600" />} title={t('field.adopt.title')}>
+            <Section icon={<UsersRound className="size-5 text-success-600" />} title={t('field.adopt.title')}>
               {view.targets.map(x => <AdoptRow key={x.type} {...x} />)}
             </Section>
           )}
@@ -243,7 +255,7 @@ const FieldHome: React.FC = () => {
               <Card className="divide-y divide-border">
                 {view.week.map(day => (
                   <div key={day.date} className="px-4 py-3">
-                    <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-muted">{shortDay(day.date)}</p>
+                    <p className="mb-1 text-xs font-semibold text-ink-muted">{shortDay(day.date)}</p>
                     <ul className="flex flex-col gap-1">
                       {day.items.map(g => {
                         const who = whoLine(g, t);
@@ -268,13 +280,13 @@ const FieldHome: React.FC = () => {
 
           <div className="flex flex-col gap-2">
             {view.done_this_week > 0 && (
-              <p className="flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
+              <p className="flex items-center gap-2 rounded-lg bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
                 <Star className="size-5 shrink-0 fill-amber-400 text-amber-500" />
                 {t('field.doneThisWeek', { count: view.done_this_week })}
               </p>
             )}
             {view.nil_days != null && view.nil_days > 7 && (
-              <p className="rounded-xl bg-error-50 px-4 py-3 text-sm font-semibold text-error-700 dark:bg-error-500/15 dark:text-error-300">
+              <p className="rounded-lg bg-error-50 px-4 py-3 text-sm font-semibold text-error-700 dark:bg-error-500/15 dark:text-error-300">
                 {t('field.quiet', { count: view.nil_days })}
               </p>
             )}
@@ -282,7 +294,7 @@ const FieldHome: React.FC = () => {
         </>
       )}
 
-      <nav className="flex flex-col divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+      <nav className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
         <Link to="/mothers" className="flex min-h-14 items-center gap-3 px-4 py-3 font-semibold text-ink hover:bg-surface-sunken">
           <UsersRound className="size-5 text-primary-ink" /><span className="flex-1">{t('field.allMothers')}</span><ChevronRight className="size-5 text-ink-muted" />
         </Link>

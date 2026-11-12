@@ -233,17 +233,17 @@ const AdminGrowthMonitorPage: React.FC = () => {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-2xl font-extrabold text-ink">{t('admin.title')}</h1>
+        <h1 className="font-display text-2xl font-semibold text-ink">{t('admin.title')}</h1>
         <p className="mt-1 text-sm text-ink-muted">{t('admin.description')}</p>
       </div>
 
       {/* Implausibly high protein totals — flagged to the team at submit time
           and listed here so they can be worked through. */}
       {alerts.length > 0 && (
-        <div className="rounded-xl border border-error-500/40 bg-error-50 p-4 dark:bg-error-500/10">
+        <div className="rounded-lg border border-error-500/40 bg-error-50 p-4 dark:bg-error-500/10">
           <div className="flex items-center gap-2">
             <AlertTriangle className="size-4.5 shrink-0 text-error-600" />
-            <h2 className="font-display text-sm font-bold text-ink">
+            <h2 className="font-display text-sm font-semibold text-ink">
               {t('admin.proteinAlertsTitle', { count: alerts.length })}
             </h2>
           </div>
@@ -264,7 +264,7 @@ const AdminGrowthMonitorPage: React.FC = () => {
       )}
 
       {/* filters — apply to both the table and the charts */}
-      <div className="rounded-xl border border-border bg-surface p-4">
+      <div className="rounded-lg border border-border bg-surface p-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <SelectField
             label={t('admin.district')}

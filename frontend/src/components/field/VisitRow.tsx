@@ -15,16 +15,18 @@ const VisitRow: React.FC<{ g: TaskGroup }> = ({ g }) => {
   return (
     <Link
       to={visitUrl(g.mother_id, g.child_id, g.forms.map(f => f.key))}
-      className="flex min-h-16 items-center gap-3 rounded-xl border border-border bg-surface p-3.5 shadow-(--shadow-card) transition-colors hover:border-border-strong active:bg-surface-sunken"
+      className={cn(
+        'flex min-h-16 items-center gap-3 border-l-[3px] px-3.5 py-3 transition-colors hover:bg-surface-sunken active:bg-surface-sunken',
+        late ? 'border-l-error-500' : 'border-l-amber-500',
+      )}
     >
-      <span className={cn('size-3 shrink-0 rounded-full', late ? 'bg-error-500' : 'bg-amber-500')} aria-hidden />
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-baseline gap-x-2">
-          <span className="truncate font-display text-base font-bold text-ink">{who.name}</span>
+          <span className="truncate font-display text-base font-semibold text-ink">{who.name}</span>
           <span className="text-xs text-ink-muted">{who.sub}</span>
         </span>
         <span className="block text-sm text-ink">{formNames(g.forms.map(f => f.key), t)}</span>
-        <span className={cn('text-xs font-bold', late ? 'text-error-600 dark:text-error-400' : 'text-amber-700 dark:text-amber-400')}>
+        <span className={cn('text-xs font-semibold', late ? 'text-error-600 dark:text-error-400' : 'text-amber-700 dark:text-amber-400')}>
           {late ? (g.late_days <= 30 ? t('field.lateBy', { count: g.late_days }) : t('field.late')) : t('field.dueToday')}
         </span>
       </span>

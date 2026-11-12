@@ -44,7 +44,7 @@ const PageGuide: React.FC<{ variant: 'sidebar' | 'header' }> = ({ variant }) => 
         title={t('button')}
         aria-label={t('button')}
         className={cn(
-          'inline-flex cursor-pointer items-center gap-2 rounded-xl font-semibold transition-colors',
+          'inline-flex cursor-pointer items-center gap-2 rounded-lg font-semibold transition-colors',
           variant === 'sidebar'
             ? 'w-full border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary-ink hover:bg-primary/15'
             : 'size-10 justify-center text-primary-ink hover:bg-surface-sunken',
@@ -69,10 +69,10 @@ const PageGuide: React.FC<{ variant: 'sidebar' | 'header' }> = ({ variant }) => 
         )}
       >
         <p className="mb-4 text-base text-ink">{t(`pages.${page}.intro`)}</p>
-        <dl className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+        <dl className="divide-y divide-border overflow-hidden rounded-lg border border-border">
           {terms.map(x => (
             <div key={x.term} className="grid gap-1 px-4 py-3 sm:grid-cols-[13rem_1fr] sm:gap-4">
-              <dt className="font-bold text-ink">{x.term}</dt>
+              <dt className="font-semibold text-ink">{x.term}</dt>
               <dd className="text-ink">{x.meaning}</dd>
             </div>
           ))}
