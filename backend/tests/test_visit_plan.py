@@ -297,6 +297,29 @@ def test_a_postnatal_mother_without_her_baby_is_not_planned_as_a_pregnancy(world
     assert {"mother_id": m.id, "mother_name": "Kavita", "missing": "baby", "then": ["protein"]} in view["finish"]
 
 
+def test_the_protein_form_is_asked_once_in_the_visit_not_again_to_finish(world):
+    """A pregnancy adopted today with nothing filled: her day-0 visit carries
+    AF + PF, so no "finish registration: protein" row as well. One adopted 3
+    days ago with only AF filled has no visit today: the finish row stays."""
+    from app import fieldplan
+
+    db, worker = world["db"], world["worker"]
+    new = models.Mother(mother_uid="T-M4", registered_by_user_id=worker.id, mother_name="Rekha",
+                        adoption_date=TODAY, lmp=TODAY - timedelta(days=140))
+    partial = models.Mother(mother_uid="T-M5", registered_by_user_id=worker.id, mother_name="Lata",
+                            adoption_date=TODAY - timedelta(days=3), lmp=TODAY - timedelta(days=143))
+    db.add_all([new, partial])
+    db.flush()
+    db.add(_mother_form("antenatal", partial.id, worker.id, TODAY - timedelta(days=3)))
+    db.commit()
+    view = fieldplan.today_view(db, worker)
+    visit = next(g for g in view["today"] if g["mother_id"] == new.id)
+    assert [f["key"] for f in visit["forms"]] == ["anc", "protein"]
+    assert all(f["mother_id"] != new.id for f in view["finish"])
+    assert all(g["mother_id"] != partial.id for g in view["today"])
+    assert {"mother_id": partial.id, "mother_name": "Lata", "missing": "protein", "then": []} in view["finish"]
+
+
 def test_another_learners_baby_is_refused_with_404(world):
     from fastapi import HTTPException
     from app.routers.visits import child_visit_plan

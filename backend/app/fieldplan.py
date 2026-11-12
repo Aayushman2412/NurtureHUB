@@ -293,12 +293,17 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
         # The November 2026 protocol asks it of every mother again (PF on day
         # 0 of each bucket) — docs/visit-protocol-2026-11.md.
         protein_asked = new_protocol or mtype != "pnc_ge5"
+        # The November protocol puts PF on the visit itself (day 0 of every
+        # bucket): when the visit due now already asks for it, a "finish:
+        # protein" row would ask a second time.
+        pf_in_visit = new_protocol and any(
+            i["key"] == "protein" and date.fromisoformat(i["due_on"]) <= as_of for i in plan.get(m.id, []))
         if new_protocol and not kids and m.declared_adoption_type in visit_plan.POSTNATAL_TYPES:
             # Day 0 there is MF → ChF → CG → BF → PF: the baby first, her
             # protein form after it.
             finish.append({"mother_id": m.id, "mother_name": m.mother_name, "missing": "baby",
                            "then": ["protein"] if m.id not in protein_done else []})
-        elif protein_asked and m.id not in protein_done:
+        elif protein_asked and m.id not in protein_done and not pf_in_visit:
             finish.append({"mother_id": m.id, "mother_name": m.mother_name, "missing": "protein",
                            "then": ["baby"] if delivered and not kids else []})
         elif delivered and not kids:
