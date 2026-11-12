@@ -17,7 +17,14 @@ faltering — even 60 to 59 means the baby has not gained"): the weight went
 down, or the weight-for-age percentile fell. One rule, shared with the
 worker's "see within 2 days" prompt (app/fieldplan.baby_status). A single fall
 can be a measurement error — the list shows both percentiles so the monitor
-can look at the visits before acting.
+can look at the visits before acting. A baby whose weight-for-age trend is
+"faltering" by the visit protocol of Nov 2026 (app/growth_priority.py: WAZ
+fell by more than 0.67 since a check 14+ days before, or the newborn rule) is
+listed as faltering too, so the learner's "My babies' growth" and this page
+agree.
+
+Every case carries its priority (tier and score, app/growth_priority.py); the
+list is ordered by it, refer-today first, and can be narrowed to tiers.
 Real measurements only: the demo layer never reaches this list.
 """
 from __future__ import annotations
@@ -28,7 +35,11 @@ from typing import Any, Dict, Iterable, List, Optional
 
 from sqlalchemy.orm import Session
 
+from app import growth_priority as GP
 from app import models
+
+# Tier filter values: the tier numbers, and "none" for not flagged by the score.
+TIER_KEYS = ("1", "2", "3", "none")
 
 # (key, label, metric, grade index in Z_CATEGORY_NAMES) — the order of the
 # filter chips and of the spreadsheet's "Why" column.
@@ -43,7 +54,8 @@ CONDITIONS = [
     # programme wants it seen ("it's still mild underweight — bring the baby
     # as close to the median as possible", 19 Oct 2026).
     ("mild", "Mild underweight", "wfaz", 1),
-    ("faltering", "Faltering (weight or weight-for-age percentile fell since the last visit)", None, None),
+    ("faltering", "Faltering (weight or weight-for-age percentile fell since the last visit, or "
+                  "weight-for-age z fell by more than 0.67 over 14+ days)", None, None),
 ]
 CONDITION_KEYS = [c[0] for c in CONDITIONS]
 LABELS = {c[0]: c[1] for c in CONDITIONS}
@@ -53,9 +65,18 @@ def _measured(visits: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return [v for v in visits if v.get("weight")]
 
 
-def _flags(row: Dict[str, Any], case: Dict[str, Any]) -> tuple[List[str], Optional[float], Dict[str, Any]]:
+def tier_key(priority: Optional[Dict[str, Any]]) -> str:
+    tier = (priority or {}).get("tier")
+    return str(tier) if tier else "none"
+
+
+def _flags(row: Dict[str, Any], case: Dict[str, Any],
+           assessed: Optional[Dict[str, Any]] = None) -> tuple[List[str], Optional[float], Dict[str, Any]]:
     from app.fieldplan import baby_status
     from app.routers.growth import Z_CATEGORY_NAMES
+
+    if assessed is None:
+        assessed = GP.assess(case)
 
     flags: List[str] = []
     cats = row.get("categories") or {}
@@ -69,7 +90,7 @@ def _flags(row: Dict[str, Any], case: Dict[str, Any]) -> tuple[List[str], Option
     if len(weighed) >= 2:
         change = round((weighed[-1]["weight"] - weighed[-2]["weight"]) * 1000)   # grams
     st = baby_status(case)
-    if {"weight_fell", "not_gaining"} & set(st["reasons"]):
+    if {"weight_fell", "not_gaining"} & set(st["reasons"]) or (assessed and "faltering" in assessed["groups"]):
         flags.append("faltering")
     pct = {"now": ((st.get("latest") or {}).get("wfa") or {}).get("pct"),
            "before": (st.get("previous") or {}).get("wfa_pct")}
@@ -127,7 +148,8 @@ def build(db: Session, district_slug: Optional[str]) -> Dict[str, Any]:
         case = by_id.get(row["case_id"])
         if case is None:
             continue
-        flags, change, pct = _flags(row, case)
+        assessed = GP.assess(case)
+        flags, change, pct = _flags(row, case, assessed)
         if not flags:
             continue
         ids = row.get("ids") or {}
@@ -159,10 +181,16 @@ def build(db: Session, district_slug: Optional[str]) -> Dict[str, Any]:
             "wfa_pct": pct["now"], "wfa_pct_before": pct["before"],
             "z": {m: (row["outcomes"].get(m) or {}).get("lv") for m in ("wfaz", "hfaz", "wfhz")},
             "categories": {m: (row["categories"].get(m) or {}).get("lv") for m in ("wfaz", "hfaz", "wfhz")},
+            "priority": ({"tier": assessed["priority"]["tier"], "score": assessed["priority"]["score"]}
+                         if assessed else None),
+            "trend": ({"group": assessed["trend"]["group"], "change": assessed["trend"].get("change")}
+                      if assessed else None),
         })
-    # The most serious first: severe grades, then moderate, then faltering only.
+    # The most urgent first by the priority score (tier, then score); within
+    # the same score the most serious grade, then by who looks after the case.
     rank = {k: i for i, k in enumerate(CONDITION_KEYS)}
-    out.sort(key=lambda r: (min(rank[f] for f in r["flags"]), (r["monitor"] or {}).get("name") or "~",
+    out.sort(key=lambda r: (GP.sort_key(r["priority"]), min(rank[f] for f in r["flags"]),
+                            (r["monitor"] or {}).get("name") or "~",
                             r["learner"]["name"] or "", r["mother"]["name"] or ""))
     return {"rows": out, "conditions": [{"key": k, "label": lbl} for k, lbl, _m, _g in CONDITIONS]}
 
@@ -171,11 +199,14 @@ def apply_filters(rows: Iterable[Dict[str, Any]], *, conditions: Optional[List[s
                   monitor_id: Optional[int] = None, no_monitor: bool = False, batch: Optional[str] = None,
                   block: Optional[str] = None, cadre: Optional[str] = None,
                   department: Optional[str] = None,
-                  learner_id: Optional[int] = None) -> List[Dict[str, Any]]:
+                  learner_id: Optional[int] = None,
+                  tiers: Optional[List[str]] = None) -> List[Dict[str, Any]]:
     keep = set(conditions or CONDITION_KEYS)
     out = []
     for r in rows:
         if not keep.intersection(r["flags"]):
+            continue
+        if tiers and tier_key(r.get("priority")) not in tiers:
             continue
         if no_monitor and r["monitor"]:
             continue
@@ -197,6 +228,9 @@ def apply_filters(rows: Iterable[Dict[str, Any]], *, conditions: Optional[List[s
 
 _COLUMNS = [
     ("Why listed", lambda r: "; ".join(LABELS[f] for f in r["flags"])),
+    ("Priority", lambda r: GP.TIER_WORDS.get((r.get("priority") or {}).get("tier"), GP.NOT_FLAGGED_WORDS)),
+    ("Priority score", lambda r: (r.get("priority") or {}).get("score")),
+    ("Weight-for-age trend", lambda r: GP.TREND_WORDS.get((r.get("trend") or {}).get("group"), "")),
     ("Batch monitor", lambda r: (r["monitor"] or {}).get("name") or "—"),
     ("F2F batch", lambda r: r["batch"] or "—"),
     ("Learner", lambda r: r["learner"]["name"]),
@@ -263,11 +297,13 @@ def xlsx(rows: List[Dict[str, Any]], *, project: Optional[str], conditions: List
             cell.alignment = wrap
         for ri, r in enumerate(items, start=5):
             severe = any(f in ("suw", "sam", "sst") for f in r["flags"])
+            refer = (r.get("priority") or {}).get("tier") == GP.TIER_REFER
             for ci, (_head, get) in enumerate(_COLUMNS, start=1):
                 cell = ws.cell(row=ri, column=ci, value=get(r))
-                if ci == 1 and severe:
+                if (ci == 1 and severe) or (ci == 2 and refer):
                     cell.fill = severe_fill
-        widths = [34, 22, 12, 22, 10, 14, 16, 16, 22, 16, 16, 18, 16, 6, 10, 12, 8, 10, 12, 10, 7, 7, 7, 24, 18, 22]
+        widths = [34, 20, 9, 18, 22, 12, 22, 10, 14, 16, 16, 22, 16, 16, 18, 16, 6, 10, 12, 8, 10, 12, 10, 7, 7, 7,
+                  24, 18, 22]
         for ci, w in enumerate(widths, start=1):
             ws.column_dimensions[get_column_letter(ci)].width = w
         ws.freeze_panes = "B5"

@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app import entry_checks, models, storage, projects
+from app import entry_checks, growth_entry_checks, models, storage, projects
 from app.dependencies import get_verified_user, require_phi_access
 from app.security import phi
 from app.notify import create_notification
@@ -88,12 +88,17 @@ class ResponseCreate(BaseModel):
     # replay a request whose response was lost — the same key returns the
     # already-created row instead of inserting a duplicate.
     client_ref: Optional[str] = Field(default=None, max_length=64)
+    # Growth check: the measurement-check flags the learner confirmed as right
+    # after being asked to measure again (app/growth_entry_checks.py). Unknown
+    # codes are ignored; the flags themselves are always recomputed here.
+    confirmed_checks: List[str] = Field(default_factory=list, max_length=20)
 
 
 class ResponseUpdate(BaseModel):
     assessment_date: date
     status: str = "draft"
     answers: List[AnswerIn] = Field(default_factory=list)
+    confirmed_checks: List[str] = Field(default_factory=list, max_length=20)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -977,6 +982,16 @@ def get_response(
     return _serialize_detail(response, child, mother)
 
 
+def _with_entry_checks(db: Session, summary: Dict[str, Any], child: Optional[models.Child], on: date,
+                       answers: List[Dict[str, Any]], confirmed: List[str],
+                       exclude_response_id: Optional[int] = None) -> Dict[str, Any]:
+    """A submitted growth check carries its measurement-check flags (and which
+    the learner confirmed) in summary_json — recorded, never refused."""
+    checks = growth_entry_checks.for_answers(db, child, on, answers, exclude_response_id=exclude_response_id,
+                                             confirmed=confirmed)
+    return {**summary, "entry_checks": checks} if checks else summary
+
+
 def _care_prompt(db: Session, child_id: int, user: models.User) -> None:
     """A growth check just came in: "see this baby within 2 days" when the
     weight fell or stopped rising (launch review of 19 Oct 2026). Separate
@@ -1019,6 +1034,8 @@ def update_response(
         answers, summary, actions = _snapshot_answers(schema, data.answers)
     if enforce and response.form_key == GROWTH_FORM_KEY:
         entry_checks.birth_weight(child, data.assessment_date, answers)
+        summary = _with_entry_checks(db, summary, child, data.assessment_date, answers, data.confirmed_checks,
+                                     exclude_response_id=response.id)
     response.assessment_date = data.assessment_date
     response.status = new_status
     response.definition_version = version_number
@@ -1182,6 +1199,7 @@ def create_response(
         answers, summary, actions = _snapshot_answers(schema, data.answers)
     if data.status == "submitted" and form_key == GROWTH_FORM_KEY:
         entry_checks.birth_weight(child, data.assessment_date, answers)
+        summary = _with_entry_checks(db, summary, child, data.assessment_date, answers, data.confirmed_checks)
     response = models.FormResponse(
         form_key=form_key,
         definition_version=version_number,
