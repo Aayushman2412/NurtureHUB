@@ -207,6 +207,25 @@ def test_today_follows_the_new_protocol(world):
     assert (child.mother_id, child.id) in week                         # days 2, 3, 5, 7 are this week
 
 
+def test_this_week_stops_at_seven_days_like_the_legacy_plan(world):
+    """Today's check of the pregnancy done, her next visit is 15 days away: not
+    "this week" (engine.field_plan stops at 7 days too) — it is still the
+    case's next visit on the line list."""
+    from app import fieldplan
+
+    db, worker, anc = world["db"], world["worker"], world["anc"]
+    db.add_all([_mother_form("antenatal", anc.id, worker.id, TODAY),
+                _mother_form("mother_protein_intake", anc.id, worker.id, TODAY)])
+    db.commit()
+    view = fieldplan.today_view(db, worker)
+    assert all(g["mother_id"] != anc.id for g in view["today"])
+    week_ends = (TODAY + timedelta(days=fieldplan.WEEK_DAYS)).isoformat()
+    assert view["week"] and all(day["date"] <= week_ends for day in view["week"])
+    assert all(g["mother_id"] != anc.id for day in view["week"] for g in day["items"])
+    row = next(c for c in view["cases"] if c["mother_id"] == anc.id)
+    assert row["next"]["due_on"] == (TODAY + timedelta(days=15)).isoformat()
+
+
 def test_a_visit_begun_today_is_carried_on(world):
     from app import fieldplan
 

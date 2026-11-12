@@ -242,6 +242,7 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
     today: List[Dict[str, Any]] = []
     finish: List[Dict[str, Any]] = []
     week: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    week_ends = as_of + timedelta(days=WEEK_DAYS)
     cases: List[Dict[str, Any]] = []
 
     for m in mothers:
@@ -325,7 +326,13 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
             g["late_days"] = max(g["late_days"], item["late_days"])
             g["due_on"] = min(g["due_on"], item["due_on"])
         for (when, _kid), g in groups.items():
-            (today.append(g) if when == "today" else week[when].append(g))
+            if when == "today":
+                today.append(g)
+            elif date.fromisoformat(when) <= week_ends:
+                # "This week" is the next 7 days, where engine.field_plan stops
+                # too; the November protocol's next visit may be further off,
+                # and stays the case's next visit on the line list below.
+                week[when].append(g)
 
         # The line list row: worst status of the babies, then late visits.
         status, reason = GREEN, "all_done"
