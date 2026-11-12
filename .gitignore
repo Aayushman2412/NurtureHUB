@@ -65,3 +65,6 @@ tools/
 
 # Generated language-review workbooks (regenerate with scripts.export_translation_sheet)
 NurtureHUB_language_review*.xlsx
+
+# Review workbooks and recordings handed over in meetings: local only, never committed.
+review_*/
