@@ -37,6 +37,7 @@ const AssessmentPlanPage = lazy(() => import('./pages/assessments/AssessmentPlan
 const GrowthChartsPage = lazy(() => import('./pages/growth/GrowthChartsPage'));
 const MyCasePage = lazy(() => import('./pages/growth/MyCasePage'));
 const BabyPage = lazy(() => import('./pages/field/BabyPage'));
+const DeliveryCheckPage = lazy(() => import('./pages/field/DeliveryCheckPage'));
 
 // Layout
 import { PageLoader } from './components/ui';
@@ -222,6 +223,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/mothers/:id/edit" element={<AdoptionsRoute><MotherFormPage /></AdoptionsRoute>} />
 
         {/* Child Registration (nested under a mother) */}
+        <Route path="/mothers/:motherId/delivery" element={<AdoptionsRoute><DeliveryCheckPage /></AdoptionsRoute>} />
         <Route path="/mothers/:motherId/children/new" element={<AdoptionsRoute><ChildFormPage /></AdoptionsRoute>} />
         <Route path="/mothers/:motherId/children/:childId" element={<AdoptionsRoute><ChildFormPage /></AdoptionsRoute>} />
 

@@ -31,8 +31,11 @@ export const whoLine = (
     ? { name: g.child_name || t('field.baby'), sub: t('field.motherIs', { mother: g.mother_name }) }
     : { name: g.mother_name, sub: t('field.motherWord') };
 
-/** The first form of a visit, carrying the rest so they follow one after another. */
-export const visitUrl = (motherId: number, childId: number | null, forms: FormCode[]) => {
+/** The first form of a visit, carrying the rest so they follow one after another.
+ *  A pregnancy visit from 35 weeks (November 2026 protocol) first asks "Has
+ *  the delivery happened?" — `askDelivery` opens that question instead. */
+export const visitUrl = (motherId: number, childId: number | null, forms: FormCode[], askDelivery = false) => {
+  if (askDelivery && childId == null) return `/mothers/${motherId}/delivery?forms=${sortForms(forms).join('.')}`;
   const [first, ...rest] = sortForms(forms);
   return formRunUrl(first, motherId, childId, flowString('visit', rest));
 };

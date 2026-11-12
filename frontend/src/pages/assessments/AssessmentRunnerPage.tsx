@@ -22,6 +22,9 @@ import {
 } from '../../offline/submit';
 import { vaultClear, vaultKey, vaultLoad, vaultSave } from '../../offline/answerVault';
 import { flowString, nextInFlow, parseFlow } from '../../lib/careFlow';
+import { usesNewProtocol, withoutQuestions } from '../../lib/visitProtocol';
+import { getChildVisitPlan } from '../../api/visits';
+import { useAuth } from '../../context/AuthContext';
 import { proteinStatusOption } from '../../lib/autoAnswers';
 import type { FlowOption, FlowSchema, FormDefinition, FormKey, MatrixAnswer } from '../../lib/flowTypes';
 import {
@@ -89,6 +92,9 @@ const AssessmentRunnerPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { t, i18n } = useTranslation('assessments');
   const { showToast } = useToast();
+  const { user } = useAuth();
+  /** Breastfeeding points that dropped out and are not asked (November 2026 protocol). */
+  const [hiddenCount, setHiddenCount] = useState(0);
 
   const validKey = isFlowFormKey(keyParam ?? '');
   const formKey = (keyParam ?? 'breastfeeding') as FormKey;
@@ -145,13 +151,25 @@ const AssessmentRunnerPage: React.FC = () => {
     let cancelled = false;
     setLoading(true);
     setLoadError(false);
+    // November 2026 protocol: a breastfeeding question answered green in two
+    // back-to-back forms is not shown again (docs/visit-protocol-2026-11.md).
+    const wantsPlan = formKey === 'breastfeeding' && !isMother && usesNewProtocol(user);
     Promise.all([
       getFormDefinition(formKey),
       isMother ? getMother(motherId) : getChild(motherId, childId),
       resumeId != null ? getResponse(resumeId) : Promise.resolve(null),
+      wantsPlan ? getChildVisitPlan(childId).catch(() => null) : Promise.resolve(null),
     ])
-      .then(async ([def, subject, resp]) => {
+      .then(async ([loaded, subject, resp, plan]) => {
         if (cancelled) return;
+        const hidden = plan?.bf?.hidden_questions ?? [];
+        const def = hidden.length && loaded.builder_type === 'flow'
+          ? { ...loaded, schema_json: withoutQuestions(loaded.schema_json as FlowSchema, hidden) }
+          : loaded;
+        if (def !== loaded) {
+          setHiddenCount(flattenAnswerable(loaded.schema_json as FlowSchema).length
+            - flattenAnswerable(def.schema_json as FlowSchema).length);
+        }
         setDefinition(def);
         if (isMother) setMother(subject as Mother);
         else setChild(subject as Child);
@@ -621,6 +639,9 @@ const AssessmentRunnerPage: React.FC = () => {
                 {subjectName}
                 {subjectUid ? ` · ${subjectUid}` : ''}
               </div>
+              {hiddenCount > 0 && (
+                <div className="text-xs text-ink-muted">{t('runner.pointsHidden', { count: hiddenCount })}</div>
+              )}
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <span className="text-xs font-semibold tabular-nums text-ink-muted">

@@ -14,7 +14,7 @@ const VisitRow: React.FC<{ g: TaskGroup }> = ({ g }) => {
   const late = g.late_days > 0;
   return (
     <Link
-      to={visitUrl(g.mother_id, g.child_id, g.forms.map(f => f.key))}
+      to={visitUrl(g.mother_id, g.child_id, g.forms.map(f => f.key), g.ask_delivery)}
       className={cn(
         'flex min-h-16 items-center gap-3 border-l-[3px] px-3.5 py-3 transition-colors hover:bg-surface-sunken active:bg-surface-sunken',
         late ? 'border-l-error-500' : 'border-l-amber-500',
@@ -25,7 +25,9 @@ const VisitRow: React.FC<{ g: TaskGroup }> = ({ g }) => {
           <span className="truncate font-display text-base font-semibold text-ink">{who.name}</span>
           <span className="text-xs text-ink-muted">{who.sub}</span>
         </span>
-        <span className="block text-sm text-ink">{formNames(g.forms.map(f => f.key), t)}</span>
+        <span className="block text-sm text-ink">
+          {g.ask_delivery ? `${t('field.delivery.short')} · ` : ''}{formNames(g.forms.map(f => f.key), t)}
+        </span>
         <span className={cn('text-xs font-semibold', late ? 'text-error-600 dark:text-error-400' : 'text-amber-700 dark:text-amber-400')}>
           {late ? (g.late_days <= 30 ? t('field.lateBy', { count: g.late_days }) : t('field.late')) : t('field.dueToday')}
         </span>

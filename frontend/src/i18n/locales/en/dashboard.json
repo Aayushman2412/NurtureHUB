@@ -306,7 +306,8 @@
       "due_today": "A visit is due today",
       "finish_registration": "Registration not finished",
       "edd_passed": "Due date has passed: record the birth",
-      "low": "Growth is low"
+      "low": "Growth is low",
+      "dropped_out": "Dropped out"
     },
     "visits": {
       "title": "Visits for today",
@@ -424,6 +425,58 @@
       "left": "Still to fill: {{forms}}",
       "continue": "Continue",
       "draft": "Draft — {{form}}, saved {{date}}"
+    },
+    "delivery": {
+      "title": "Has the delivery happened?",
+      "short": "Ask: delivery?",
+      "body": "Ask this first. From 35 weeks every pregnancy visit starts with this question.",
+      "yes": "Yes, the baby is born",
+      "yesHint": "Register the baby, then the growth check, breastfeeding and the mother's protein form.",
+      "no": "No, not yet",
+      "noHint": "Fill the pregnancy check and the protein form as usual. Ask again at the next visit."
+    },
+    "protocol": {
+      "dayN": "Day {{day}}",
+      "cfN": "CF-{{n}}",
+      "plan": "Visits after this",
+      "noVisit": "No visit planned.",
+      "hidden_one": "{{count}} breastfeeding point is done well and is not asked again.",
+      "hidden_other": "{{count}} breastfeeding points are done well and are not asked again.",
+      "bf": {
+        "active": "Breastfeeding form: at every visit for now.",
+        "reopened": "Breastfeeding form needed again: the baby's weight-for-age fell.",
+        "stopped": "Breastfeeding is going well: no breastfeeding form for now.",
+        "done": "All 5 breastfeeding forms are done.",
+        "not_breastfeeding": "The mother is not breastfeeding: no breastfeeding form."
+      },
+      "pf": {
+        "stopped": "The mother eats enough protein: no more protein forms.",
+        "next": "Next protein form: {{date}}"
+      },
+      "notBreastfeeding": "The mother is not breastfeeding. There is no breastfeeding form until she restarts.",
+      "counsel": {
+        "title": "The mother is not breastfeeding",
+        "body": "Counsel her today to restart breastfeeding. Then mark it here.",
+        "done": "I counselled her today"
+      },
+      "counselled": {
+        "title": "Counselled on {{date}}",
+        "body_one": "Check breastfeeding at the next visits. {{count}} visit since the counselling.",
+        "body_other": "Check breastfeeding at the next visits. {{count}} visits since the counselling."
+      },
+      "dropOut": {
+        "title": "Breastfeeding still stopped",
+        "body": "She was still not breastfeeding at 2 visits after the counselling. If she will not restart, confirm the adoption as a drop-out.",
+        "button": "Confirm drop-out",
+        "confirmTitle": "Confirm drop-out?",
+        "confirmBody": "{{mother}} and her baby will leave your visit list. Today's date and your name are recorded.",
+        "confirm": "Yes, confirm drop-out",
+        "cancel": "Cancel"
+      },
+      "droppedOut": "Dropped out on {{date}}",
+      "droppedOutBy": "Confirmed by {{name}}. No more visits are planned.",
+      "droppedOutBody": "No more visits are planned.",
+      "failed": "Could not save. Check the connection and try again."
     }
   },
   "progressInfo": {

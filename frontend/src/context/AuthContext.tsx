@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import client from '../api/client';
 import { clearOfflineCaches } from '../pwa';
 import { detachPushSubscription, resyncPushSubscription } from '../pushClient';
+import { applyProjectSplit } from '../lib/programme';
 
 export interface User {
   id: number;
@@ -53,6 +54,9 @@ export interface User {
   is_batch_monitor?: boolean;
   /** Selected for face-to-face training: Adoptions and Growth Monitor open. */
   adoptions_open?: boolean;
+  /** Her project's visit protocol (lap_2025 | lap_2026_11) and PNC split in days. */
+  visit_protocol?: string;
+  pnc_split_days?: number;
 
   // ── Learner Registration: professional-axis FKs + extension fields ──
   department_id: number | null;
@@ -190,6 +194,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (user) void resyncPushSubscription();
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // November 2026 visit protocol: her project's PNC split labels her screens.
+  useEffect(() => {
+    if (user?.visit_protocol === 'lap_2026_11' && user.pnc_split_days) applyProjectSplit(user.pnc_split_days);
+  }, [user?.visit_protocol, user?.pnc_split_days]);
 
   const login = async (email: string, password: string) => {
     const trimmedEmail = email.trim();

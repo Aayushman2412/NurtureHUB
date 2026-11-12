@@ -11,7 +11,12 @@ import { babyVisitForms, nextInFlow, parseFlow } from '../../lib/careFlow';
 import { TONE_CLASSES } from '../../lib/babyStatus';
 import { Alert, Button, buttonClasses, Card, Modal, PageLoader } from '../../components/ui';
 import BabyCharts from '../../components/field/BabyCharts';
+import FeedingPanel from '../../components/field/FeedingPanel';
+import VisitPlanCard from '../../components/field/VisitPlanCard';
 import { formNames, shortDay, visitUrl } from '../../components/field/fieldText';
+import { getChildVisitPlan, type ChildVisitPlan } from '../../api/visits';
+import { NEW_PROTOCOL, usesNewProtocol } from '../../lib/visitProtocol';
+import { useAuth } from '../../context/AuthContext';
 import { cn } from '../../utils/cn';
 
 const daysSince = (ymd: string | null): number | null => {
@@ -127,6 +132,10 @@ const BabyPage: React.FC = () => {
   const [failed, setFailed] = useState(false);
   /** Closing the chart with the visit unfinished asks first. */
   const [askLeave, setAskLeave] = useState(false);
+  const { user } = useAuth();
+  const newProtocol = usesNewProtocol(user);
+  /** November 2026 protocol: this baby's visit plan (routers/visits.py). */
+  const [plan, setPlan] = useState<ChildVisitPlan | null>(null);
 
   const saved = params.get('saved') === 'gm';
   const done = params.get('done') === '1';
@@ -138,11 +147,15 @@ const BabyPage: React.FC = () => {
       .then(([d, s]) => { if (alive) { setDetail(d); setStandards(s); } })
       .catch(() => { if (alive) setFailed(true); });
     getToday().then(v => { if (alive) setToday(v); }).catch(() => { /* the next visit is optional */ });
+    if (newProtocol) {
+      getChildVisitPlan(childId).then(p => { if (alive) setPlan(p); }).catch(() => { /* falls back to Today */ });
+    }
     return () => { alive = false; };
-  }, [childId]);
+  }, [childId, newProtocol]);
 
   const ageDays = useMemo(() => daysSince(detail?.child.dob ?? null), [detail]);
   const visit = nextVisit(today, childId);
+  const protocolPlan = plan?.protocol === NEW_PROTOCOL ? plan : null;
 
   if (failed) {
     return (
@@ -157,7 +170,11 @@ const BabyPage: React.FC = () => {
   const motherId = detail.mother?.id ?? detail.who_case?.mother.id ?? 0;
   const name = detail.child.name || t('field.baby');
   const status: BabyStatus = detail.status ?? { status: 'none', reasons: ['no_growth_check'], see_within_days: null, latest: null, previous: null };
-  const forms: FormCode[] = babyVisitForms(ageDays);
+  // The forms that can be filled for this baby: on the November 2026
+  // protocol CF joins from 180 days (or from day 0 for a baby adopted older).
+  const forms: FormCode[] = protocolPlan
+    ? ['gm', 'bf', ...((protocolPlan.bucket === 'pnc_ge' || (ageDays ?? 0) >= 180) ? ['cf' as FormCode] : [])]
+    : babyVisitForms(ageDays);
   const startVisit = (list: FormCode[]) => visitUrl(motherId, childId, list);
   const closeSaved = () => {
     const next = new URLSearchParams(params);
@@ -172,7 +189,11 @@ const BabyPage: React.FC = () => {
   const visitDate = status.latest?.date ?? null;
   const filledThatDay = new Set<string>((detail.visits.find(v => v.date === visitDate)?.responses ?? [])
     .filter(r => r.status === 'submitted').map(r => r.form_key));
-  const pendingAfterCheck = forms.filter(f => f !== 'gm' && !filledThatDay.has(FORM_KEY[f]));
+  // On the November 2026 protocol the plan says what is left of today's visit
+  // — including a breastfeeding form the check just reopened.
+  const pendingAfterCheck = protocolPlan
+    ? (protocolPlan.today?.pending ?? []).filter(f => f !== 'gm')
+    : forms.filter(f => f !== 'gm' && !filledThatDay.has(FORM_KEY[f]));
   const nextUrl = flow?.rest.length ? nextInFlow(flow, motherId, childId)
     : pendingAfterCheck.length ? visitUrl(motherId, childId, pendingAfterCheck) : null;
   const nextStep = flow?.rest[0] ?? pendingAfterCheck[0];
@@ -214,7 +235,14 @@ const BabyPage: React.FC = () => {
       <StatusCard status={status} />
       <Tiles status={status} />
 
+      {protocolPlan && (
+        <FeedingPanel plan={protocolPlan} childId={childId} motherName={detail.mother?.name ?? ''} onChange={setPlan} />
+      )}
+
       {/* The next visit, or start one now */}
+      {protocolPlan ? (
+        !protocolPlan.dropout && <VisitPlanCard plan={protocolPlan} motherId={motherId} childId={childId} />
+      ) : (
       <Card className="flex flex-col gap-3 p-4">
         <h2 className="flex items-center gap-2 font-display text-base font-semibold text-ink">
           <CalendarDays className="size-5 text-primary-ink" />{t('field.baby.nextVisit')}
@@ -234,6 +262,7 @@ const BabyPage: React.FC = () => {
         </Link>
         <p className="text-center text-xs text-ink-muted">{t('field.baby.visitIs', { forms: formNames(visit?.now ? visit.group.forms.map(f => f.key) : forms, t) })}</p>
       </Card>
+      )}
 
       {detail.who_case && <BabyCharts who={detail.who_case} visits={detail.visits} standards={standards} />}
 

@@ -208,6 +208,25 @@
       "copied": "Copied",
       "linkClosedNote": "The link works once registration is open.",
       "saveFailed": "Could not save. Please try again."
+    },
+    "visit": {
+      "title": "Visit protocol",
+      "protocol": {
+        "lap_2026_11": "November 2026 protocol",
+        "lap_2025": "Earlier schedule (2025)"
+      },
+      "splitShort": "PNC split {{days}} days",
+      "change": "Change",
+      "hide": "Hide",
+      "help": "The visit days and forms the health workers of this project follow, and the baby's age at adoption that separates the two PNC groups. New projects start on the November 2026 protocol and 180 days.",
+      "protocolLabel": "Visit schedule",
+      "splitLabel": "Baby's age that splits PNC adoptions",
+      "splitOption": "{{days}} days ({{months}} months)",
+      "warning": "The change applies at once to every adoption in this project: Today, the visit forms and the next visit dates follow the new choice.",
+      "inherited": "This district follows {{state}}: change it on the state project, or let the district use its own content.",
+      "save": "Save",
+      "saveFailed": "Could not save. Try again.",
+      "newProjects": "A new project follows the November 2026 visit protocol (PNC split 180 days). You can change it on the project card."
     }
   },
   "learners": {

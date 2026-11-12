@@ -16,6 +16,8 @@ import { getChild, updateChild, type ChildPayload } from '../../api/children';
 import { createChildResilient, isQueuedResult } from '../../offline/submit';
 import { formRunUrl } from '../../api/today';
 import { babyVisitForms, flowString, parseFlow } from '../../lib/careFlow';
+import { firstBabyForms, usesNewProtocol } from '../../lib/visitProtocol';
+import { useAuth } from '../../context/AuthContext';
 import { getMother } from '../../api/mothers';
 import { apiErrorMessage } from '../../components/assessments/flowRunner';
 import { MAX_ADOPTION_AGE_DAYS, isoDaysAgo, todayIso } from '../../lib/motherFields';
@@ -58,6 +60,7 @@ const ChildFormPage: React.FC = () => {
   // by age (launch review of 19 Oct 2026).
   const [searchParams] = useSearchParams();
   const flow = parseFlow(searchParams.get('flow'));
+  const { user } = useAuth();
   const { t } = useTranslation('mother');
   const { showToast, updateToast } = useToast();
   const steps = STEP_KEYS.map(k => t(`child.steps.${k}`));
@@ -211,7 +214,12 @@ const ChildFormPage: React.FC = () => {
           'success',
         );
         if (flow && !isQueuedResult(saved)) {
-          const [first, ...rest] = babyVisitForms(childAge(dob)?.days ?? null);
+          // November 2026 protocol: day 0 is CG → BF (→ CF-1 for a baby at
+          // the split or older), then the mother's protein form.
+          const ageDays = childAge(dob)?.days ?? null;
+          const [first, ...rest] = usesNewProtocol(user)
+            ? firstBabyForms(ageDays, user?.pnc_split_days ?? 180)
+            : babyVisitForms(ageDays);
           navigate(formRunUrl(first, motherId, saved.id, flowString(flow.kind, [...rest, ...flow.rest])), { replace: true });
           return;
         }

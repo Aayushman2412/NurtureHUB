@@ -21,6 +21,10 @@ export interface ProjectPayload {
   inherits_content?: boolean;
   code?: string | null;
   state_prefix?: string | null;
+  /** lap_2025 | lap_2026_11 — omitted: a new project runs lap_2026_11. */
+  visit_protocol?: string;
+  /** Age (days) at adoption splitting PNC adoptions; omitted: 180. */
+  pnc_split_days?: number;
 }
 
 export const createProject = (payload: ProjectPayload): Promise<AdminProject> =>
