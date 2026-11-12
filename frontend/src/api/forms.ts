@@ -242,6 +242,8 @@ export interface ResponsePayload {
   assessment_date: string; // ISO date
   status: 'draft' | 'submitted';
   answers: AnswerIn[];
+  /** Growth check: measurement-check flags the learner confirmed as right. */
+  confirmed_checks?: string[];
 }
 
 export const createResponse = (

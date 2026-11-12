@@ -46,6 +46,8 @@ export interface UrgentBaby {
   see_within_days: number;
   forms: FormCode[];
   last_check: string | null;
+  /** Visit protocol of Nov 2026 (app/growth_priority.py): the list is ordered by it. */
+  priority?: { tier: 1 | 2 | 3 | null; score: number } | null;
 }
 
 export interface CaseRow {

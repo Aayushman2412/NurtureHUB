@@ -294,6 +294,49 @@
       "open": "Open",
       "start": "Start visit"
     },
+    "tier": {
+      "1": "Refer today",
+      "2": "Act this week",
+      "3": "Counsel at next visit"
+    },
+    "growth": {
+      "title": "My babies' growth",
+      "subtitle": "From each baby's latest growth check. Tap a group to see its babies.",
+      "group": {
+        "underweight": "Underweight",
+        "faltering": "Faltering",
+        "stunted": "Stunted",
+        "wasted": "Wasted"
+      },
+      "ofMeasured": "{{n}} of {{of}}",
+      "growingWell_one": "{{count}} growing well",
+      "growingWell_other": "{{count}} growing well",
+      "notMeasured_one": "{{count}} not yet measured",
+      "notMeasured_other": "{{count}} not yet measured",
+      "reason": {
+        "underweight": {
+          "moderate": "Underweight: weight is low for age",
+          "severe": "Severely underweight: weight is very low for age"
+        },
+        "stunted": {
+          "moderate": "Stunted: length is low for age",
+          "severe": "Severely stunted: length is very low for age"
+        },
+        "wasted": {
+          "moderate": "Wasted: weight is low for length",
+          "severe": "Severely wasted: weight is very low for length"
+        },
+        "faltering": {
+          "waz": "Falling on the weight chart since the check on {{date}}",
+          "newborn_loss": "Weight more than a tenth below the birth weight",
+          "birth_weight_not_regained": "Not back to the birth weight after 3 weeks"
+        }
+      },
+      "also": "Also: {{groups}}",
+      "lastCheck": "Last check {{date}}",
+      "empty": "No baby in this group.",
+      "loadFailed": "Could not load your babies' growth. Open this page again when you are online."
+    },
     "reason": {
       "weight_fell": "Weight reduced since the last visit",
       "not_gaining": "Not gaining enough weight",

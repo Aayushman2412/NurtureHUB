@@ -124,6 +124,22 @@
     "needsAttentionEmpty": "Everything in this assessment was as per LAP — nothing to work on.",
     "savedTitle": "Saved"
   },
+  "checks": {
+    "titleWeight": "Check this weight",
+    "titleLength": "Check this length",
+    "impossible_wfa": "This weight is not possible for the baby's age. Check the scale and weigh the baby again.",
+    "impossible_lfa": "This length is not possible for the baby's age. Measure the length again.",
+    "impossible_wfl": "This weight and length do not fit together. Measure both again.",
+    "typing_error": "This weight is very different from the last one ({{previous}} kg on {{date}}). It may be a typing mistake: check the number, or weigh the baby again.",
+    "weight_loss_refer": "The baby has lost {{pct}}% of the weight since the last check ({{previous}} kg). Weigh again. If the weight is right, look for danger signs and refer the baby today.",
+    "weight_loss_revisit": "The baby has lost {{pct}}% of the weight since the last check ({{previous}} kg). Ask about diarrhoea, fever and feeding, and visit again within {{days}} days.",
+    "newborn_loss": "The baby is {{pct}}% below the birth weight ({{birth}} kg). Weigh again. If the weight is right, look for danger signs and refer the baby today.",
+    "length_shorter": "This length is {{cm}} cm shorter than last time ({{previous}} cm). Measure again, with two people holding the baby.",
+    "remeasure": "Measure again",
+    "confirm": "The value is right",
+    "confirmed": "You confirmed this value.",
+    "mustConfirm": "Check the flagged measurement: measure again, or confirm that it is right."
+  },
   "growth": {
     "optional": "(optional)",
     "selectPlaceholder": "Select an option",

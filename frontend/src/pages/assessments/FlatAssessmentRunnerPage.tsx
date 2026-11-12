@@ -47,6 +47,19 @@ import { toFieldErrors } from '../../lib/validation';
 import { apiErrorMessage, todayIso } from '../../components/assessments/flowRunner';
 import ChildChip from '../../components/assessments/ChildChip';
 import FlatFieldInput from '../../components/assessments/FlatFieldInput';
+import MeasurementCheckNotice from '../../components/assessments/MeasurementCheckNotice';
+import { useMeasurementCheck } from '../../hooks/useMeasurementCheck';
+
+/** The growth check's weight and length fields, found as the server finds them
+ *  (routers/growth._extract_metrics): a number field named for weight, or for
+ *  length / height. The form is admin-editable, so not by a fixed id. */
+const measureFieldIds = (fields: FlatField[]) => {
+  const find = (re: RegExp, not?: RegExp) => fields.find(f => {
+    const key = `${f.id} ${f.label ?? ''}`.toLowerCase();
+    return f.type === 'number' && re.test(key) && !(not && not.test(key));
+  })?.id ?? null;
+  return { weight: find(/weight/), length: find(/length|height/, /weight/) };
+};
 
 /** Whole days between an ISO date of birth and an ISO reference date. */
 const ageDaysAt = (dob: string | null | undefined, atIso: string): number | null => {
@@ -354,6 +367,26 @@ const FlatAssessmentRunnerPage: React.FC = () => {
   const touch = (id: string) => setTouched(prev => (prev[id] ? prev : { ...prev, [id]: true }));
   const shownError = (id: string): string | undefined => errors[id] || (touched[id] ? liveErrors[id] : undefined) || undefined;
 
+  // ── Measurement checks (visit protocol, Nov 2026): asked right after the
+  // weight or length is entered — measure again, or confirm it is right. The
+  // save is never blocked for a confirmed value. ─────────────────────────────
+  const isGrowth = formKey === 'growth_monitoring' && !motherLevel;
+  const measureIds = useMemo(() => measureFieldIds(fields), [fields]);
+  const shownValue = (id: string | null) =>
+    id && visible.some(f => f.id === id) && typeof values[id] === 'string' ? (values[id] as string) : '';
+  const check = useMeasurementCheck({
+    childId: isGrowth ? childId : null,
+    responseId: typeof responseId === 'number' ? responseId : null,
+    assessmentDate,
+    weight: shownValue(measureIds.weight),
+    length: shownValue(measureIds.length),
+    live: isGrowth && [measureIds.weight, measureIds.length].some(id => !!id && touched[id]),
+  });
+  const remeasure = (id: string) => {
+    setValue(id, '');
+    document.getElementById(id)?.focus();
+  };
+
   const setValue = (id: string, v: string | string[]) => {
     setValues(prev => ({ ...prev, [id]: v }));
     setErrors(prev => (prev[id] ? { ...prev, [id]: '' } : prev));
@@ -371,7 +404,12 @@ const FlatAssessmentRunnerPage: React.FC = () => {
 
   const persist = async (status: 'draft' | 'submitted') => {
     const answers = buildFlatAnswersPayload(fields, storedValues, ageDays);
-    const payload = { assessment_date: assessmentDate, status, answers };
+    const payload = {
+      assessment_date: assessmentDate, status, answers,
+      // Which measurement-check flags the learner confirmed as right; the
+      // server recomputes the flags and records both with the response.
+      ...(isGrowth && check.confirmed.length ? { confirmed_checks: check.confirmed } : {}),
+    };
     const saved = await persistResponseResilient({
       formKey,
       responseId,
@@ -421,6 +459,18 @@ const FlatAssessmentRunnerPage: React.FC = () => {
     }
     setErrors({});
     setSubmitting(true);
+    if (isGrowth) {
+      // A flagged weight or length is asked about once more before the save:
+      // measure again or confirm. Offline the check is skipped.
+      const open = await check.flush();
+      if (open.length > 0) {
+        setSubmitting(false);
+        showToast(t('checks.mustConfirm'), 'error');
+        const id = open[0].field === 'weight' ? measureIds.weight : measureIds.length;
+        if (id) document.getElementById(id)?.scrollIntoView({ block: 'center' });
+        return;
+      }
+    }
     try {
       const saved = await persist('submitted');
       const queued = isQueuedResult(saved);
@@ -558,6 +608,18 @@ const FlatAssessmentRunnerPage: React.FC = () => {
                 dobIso={child?.dob ?? null}
                 todayIso={today}
               />
+              {isGrowth && (f.id === measureIds.weight || f.id === measureIds.length) && (() => {
+                const which = f.id === measureIds.weight ? 'weight' : 'length';
+                return (
+                  <MeasurementCheckNotice
+                    field={which}
+                    flags={check.flags.filter(x => x.field === which)}
+                    confirmed={check.confirmed}
+                    onRemeasure={() => remeasure(f.id)}
+                    onConfirm={() => check.confirm(which)}
+                  />
+                );
+              })()}
             </React.Fragment>
           ),
         )}
