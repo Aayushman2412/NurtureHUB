@@ -33,6 +33,7 @@ FORM_CODES = {
     "antenatal": VP.AF, "mother_protein_intake": VP.PF,
 }
 BREASTFED_FIELD = "breastfed_24h"
+POSTNATAL_TYPES = ("pnc_lt5", "pnc_ge5")
 _DEFAULT_POSITIVE = {"green"}
 
 
@@ -158,7 +159,10 @@ def cases_for(db: Session, mothers: Sequence[models.Mother], children: Dict[int,
                        pnc_split_days=split_days)
         kids = sorted(children.get(m.id, []), key=lambda c: (c.dob or date.max, c.id))
         if not kids:
-            out[m.id] = [(None, base)]
+            # Registered as postnatal but the baby is not registered yet: no
+            # visits to plan until it is (Today's "finish" row asks for it) —
+            # she is not a pregnancy.
+            out[m.id] = [] if m.declared_adoption_type in POSTNATAL_TYPES else [(None, base)]
             continue
         out[m.id] = [(k, VP.Case(
             adopted=base.adopted, lmp=base.lmp, edd=base.edd, dob=k.dob, child_adopted=k.adoption_date,

@@ -162,7 +162,9 @@ const AssessmentRunnerPage: React.FC = () => {
     ])
       .then(async ([loaded, subject, resp, plan]) => {
         if (cancelled) return;
-        const hidden = plan?.bf?.hidden_questions ?? [];
+        // Only a new form or a draft: re-opening a submitted one must keep
+        // every answer it holds.
+        const hidden = resp?.status === 'submitted' ? [] : plan?.bf?.hidden_questions ?? [];
         const def = hidden.length && loaded.builder_type === 'flow'
           ? { ...loaded, schema_json: withoutQuestions(loaded.schema_json as FlowSchema, hidden) }
           : loaded;

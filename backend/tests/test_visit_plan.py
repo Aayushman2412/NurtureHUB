@@ -265,6 +265,19 @@ def test_counselling_then_drop_out_leaves_today(world):
     assert (row["reason"], row["next"]) == ("dropped_out", None)
 
 
+def test_a_postnatal_mother_without_her_baby_is_not_planned_as_a_pregnancy(world):
+    from app import fieldplan
+
+    db, worker = world["db"], world["worker"]
+    m = models.Mother(mother_uid="T-M3", registered_by_user_id=worker.id, mother_name="Kavita",
+                      adoption_date=TODAY, declared_adoption_type="pnc_lt5")
+    db.add(m)
+    db.commit()
+    view = fieldplan.today_view(db, worker)
+    assert all(g["mother_id"] != m.id for g in view["today"])
+    assert {"mother_id": m.id, "mother_name": "Kavita", "missing": "baby", "then": ["protein"]} in view["finish"]
+
+
 def test_another_learners_baby_is_refused_with_404(world):
     from fastapi import HTTPException
     from app.routers.visits import child_visit_plan

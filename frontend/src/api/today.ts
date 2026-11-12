@@ -95,7 +95,7 @@ export interface TodayView {
   drafts: DraftForm[];
   today: TaskGroup[];
   /** Registration not finished; `then` is what follows the missing step. */
-  finish: { mother_id: number; mother_name: string; missing: 'protein' | 'baby'; then: 'baby'[] }[];
+  finish: { mother_id: number; mother_name: string; missing: 'protein' | 'baby'; then: ('baby' | 'protein')[] }[];
   targets: { type: 'anc' | 'pnc_lt5' | 'pnc_ge5'; target: number; adopted: number; more: number }[];
   week: { date: string; items: TaskGroup[] }[];
   cases: CaseRow[];
