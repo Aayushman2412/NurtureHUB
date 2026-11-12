@@ -581,6 +581,10 @@ class UserOut(BaseModel):
     # Adoptions and the Growth Monitor open only once she is selected for
     # face-to-face training (review of 19 Oct 2026).
     adoptions_open: bool = False
+    # Her project's visit protocol and PNC split (November 2026): the app
+    # orders the registration and visit forms by them (app/projects.py).
+    visit_protocol: str = "lap_2025"
+    pnc_split_days: int = 150
 
     # ── Learner Registration: professional-axis FKs + extension fields ──
     department_id: Optional[int] = None

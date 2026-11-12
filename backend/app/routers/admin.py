@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func
-from pydantic import BaseModel, EmailStr, ValidationError
+from pydantic import BaseModel, EmailStr, Field, ValidationError
 from typing import Optional, List, Dict, Any
 from datetime import date, datetime
 import json
@@ -56,6 +56,9 @@ router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(ge
 #                              database, then must be unset
 #
 # See app/config.py:Settings.validate_production.
+# The PNC split a project may be set to (days of age at adoption).
+MIN_SPLIT_DAYS, MAX_SPLIT_DAYS = 90, 365
+
 DEV_ADMIN_EMAIL = "admin@eduposhan.org"
 
 
@@ -168,6 +171,10 @@ class ProjectCreate(BaseModel):
     inherits_content: bool = False           # child districts: serve state content
     code: Optional[str] = None               # analytics project code (UJ/JL/ML…)
     state_prefix: Optional[str] = None       # raw-file prefix (MP/MH/ML)
+    # Visit protocol (November 2026). Omitted: a new project runs the new
+    # protocol (lap_2026_11, 180 days); a district inside a state takes the state's.
+    visit_protocol: Optional[str] = None
+    pnc_split_days: Optional[int] = Field(default=None, ge=MIN_SPLIT_DAYS, le=MAX_SPLIT_DAYS)
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
@@ -175,6 +182,26 @@ class ProjectUpdate(BaseModel):
     inherits_content: Optional[bool] = None
     code: Optional[str] = None
     state_prefix: Optional[str] = None
+    visit_protocol: Optional[str] = None
+    pnc_split_days: Optional[int] = Field(default=None, ge=MIN_SPLIT_DAYS, le=MAX_SPLIT_DAYS)
+
+
+def _check_protocol(value: Optional[str]) -> Optional[str]:
+    from app.visit_protocol import PROTOCOLS
+    if value is not None and value not in PROTOCOLS:
+        raise HTTPException(status_code=400, detail=f"visit_protocol must be one of {', '.join(PROTOCOLS)}")
+    return value
+
+
+def _new_project_visit_settings(parent: Optional[ProgramDistrict], protocol: Optional[str],
+                                split: Optional[int]) -> Dict[str, Any]:
+    """A new project runs the new protocol unless told otherwise; one inside a
+    state starts from the state's settings."""
+    from app.visit_protocol import LAP_2026_11, NEW_SPLIT_DAYS
+    return {
+        "visit_protocol": _check_protocol(protocol) or (parent.visit_protocol if parent else LAP_2026_11),
+        "pnc_split_days": split or (parent.pnc_split_days if parent else NEW_SPLIT_DAYS),
+    }
 
 class UserDistrictAssign(BaseModel):
     program_district_id: Optional[int] = None
@@ -451,6 +478,7 @@ def create_project(data: ProjectCreate, db: Session = Depends(get_db), admin_ema
         # A district inside a state inherits the state's file-name prefix.
         state_prefix=((data.state_prefix or "").strip().upper() or
                       (parent.state_prefix if parent else None)),
+        **_new_project_visit_settings(parent, data.visit_protocol, data.pnc_split_days),
     )
     db.add(project)
     db.commit()
@@ -498,6 +526,18 @@ def update_project(project_id: int, data: ProjectUpdate, db: Session = Depends(g
         project.code = code
     if data.state_prefix is not None:
         project.state_prefix = data.state_prefix.strip().upper() or None
+    if data.visit_protocol is not None or data.pnc_split_days is not None:
+        before = {"protocol": project.visit_protocol, "pnc_split_days": project.pnc_split_days}
+        if data.visit_protocol is not None:
+            project.visit_protocol = _check_protocol(data.visit_protocol)
+        if data.pnc_split_days is not None:
+            project.pnc_split_days = data.pnc_split_days
+        audit.record_sync(
+            audit.Action.ADMIN_CONFIG_CHANGE, db=db, resource_type="project_visit_protocol",
+            resource_id=project.slug, is_phi=False,
+            detail={"project": project.slug, "before": before, "by": admin_email,
+                    "after": {"protocol": project.visit_protocol, "pnc_split_days": project.pnc_split_days}},
+        )
 
     db.commit()
     db.refresh(project)
@@ -733,6 +773,7 @@ def setup_project(project_id: int, data: Dict[str, Any], db: Session = Depends(g
                 parent_id=project.id,
                 inherits_content=inherit,
                 state_prefix=project.state_prefix,
+                **_new_project_visit_settings(project, None, None),
             )
             db.add(child)
             db.flush()
@@ -795,7 +836,8 @@ def create_district(data: ProgramDistrictCreate, db: Session = Depends(get_db), 
     if existing:
         raise HTTPException(status_code=400, detail="A district with this name already exists")
 
-    district = ProgramDistrict(name=data.name, slug=slug, is_active=True)
+    district = ProgramDistrict(name=data.name, slug=slug, is_active=True,
+                               **_new_project_visit_settings(None, None, None))
     db.add(district)
     db.commit()
     db.refresh(district)

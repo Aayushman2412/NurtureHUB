@@ -11,6 +11,12 @@ Form codes: **MF** mother form · **AF** antenatal (pregnancy check) ·
 Day numbers count from the adoption visit (day 0) unless a rule says
 otherwise. A visit done within **±2 days** of its due day counts for that day.
 
+**Which projects follow it.** The protocol is a per-project setting. Projects
+created from now on use it, and so does **Chandrapur** (decided 12 Nov 2026).
+The projects already running (Jalna, Ujjain, Meghalaya) stay on the earlier
+schedule and the 5-month split unless someone switches them on the admin
+Projects page.
+
 ## Adoption types (buckets)
 
 | Bucket | Who | Split |

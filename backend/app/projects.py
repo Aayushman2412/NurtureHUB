@@ -14,7 +14,7 @@ that is the one rule this module exists to enforce.
 """
 from __future__ import annotations
 
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
@@ -103,6 +103,36 @@ def member_project_ids(db: Session, project: Optional[ProgramDistrict]) -> List[
     return ids
 
 
+# ── Visit protocol (November 2026) ───────────────────────────────────────────
+
+def visit_settings(project: Optional[ProgramDistrict]) -> Tuple[str, int]:
+    """(visit protocol, PNC split in days) a project's workers plan visits by.
+
+    A district that follows its state's content follows the state's protocol
+    too. A learner outside any project keeps the older protocol and the
+    programme-wide split (settings.PNC_SPLIT_DAYS), exactly as before."""
+    from app.config import settings
+    from app.visit_protocol import LAP_2025
+
+    if project is None:
+        return LAP_2025, settings.PNC_SPLIT_DAYS
+    source = project.visit_settings_from
+    return (source.visit_protocol or LAP_2025), int(source.pnc_split_days or settings.PNC_SPLIT_DAYS)
+
+
+def visit_settings_payload(project: ProgramDistrict) -> dict:
+    protocol, split = visit_settings(project)
+    return {
+        "protocol": protocol,
+        "pnc_split_days": split,
+        # Set when the values shown are the state's (the district follows it).
+        "inherited_from": (project.parent.name if project.visit_settings_from is not project and project.parent
+                           else None),
+        "own_protocol": project.visit_protocol,
+        "own_pnc_split_days": project.pnc_split_days,
+    }
+
+
 def analysis_level(project: Optional[ProgramDistrict]) -> str:
     """'state' (crosstab by district) or 'district' (crosstab by block)."""
     if project is not None and project.is_state:
@@ -155,6 +185,7 @@ def serialize(db: Session, project: ProgramDistrict, *, user_count: Optional[int
             "district_id": project.reg_district_id,
             "link_path": f"/join/{project.slug}",
         },
+        "visit": visit_settings_payload(project),
     }
     if user_count is not None:
         data["user_count"] = user_count

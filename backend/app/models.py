@@ -70,6 +70,15 @@ class ProgramDistrict(Base):
     # and test is "waiting for the result"; after it, one not on the selection
     # list is told she was not selected this time. Null = not announced.
     selection_announced_at = Column(DateTime(timezone=True), nullable=True)
+    # The visit protocol the worker app plans visits by (November 2026,
+    # docs/visit-protocol-2026-11.md): "lap_2025" — the older LAP tables in
+    # app/masd/rules.py — or "lap_2026_11" (app/visit_protocol.py), and the
+    # baby's age at adoption splitting PNC adoptions (150 days before, 180 in
+    # the new protocol). Existing projects were given lap_2025 / 150; new ones
+    # are created with lap_2026_11 / 180 (routers/admin.py). A district that
+    # follows its state's content follows its state's protocol too.
+    visit_protocol = Column(String(16), nullable=False, default="lap_2025", server_default=text("'lap_2025'"))
+    pnc_split_days = Column(Integer, nullable=False, default=150, server_default=text("150"))
 
     # Relationships
     users = relationship("User", back_populates="program_district")
@@ -91,6 +100,14 @@ class ProgramDistrict(Base):
         if self.parent_id and self.inherits_content:
             return self.parent_id
         return self.id
+
+    @property
+    def visit_settings_from(self) -> "ProgramDistrict":
+        """The project whose visit protocol this one follows: its state's when
+        it follows the state's content, else its own."""
+        if self.parent_id and self.inherits_content and self.parent is not None:
+            return self.parent
+        return self
 
 
 class User(Base):
@@ -227,6 +244,17 @@ class User(Base):
         if session is None or self.id is None:
             return False
         return session.query(FaceToFaceSelection.id).filter(FaceToFaceSelection.user_id == self.id).first() is not None
+
+    @property
+    def visit_protocol(self) -> str:
+        """The visit protocol of her project (app/projects.py:visit_settings)."""
+        from app.projects import visit_settings
+        return visit_settings(self.program_district)[0]
+
+    @property
+    def pnc_split_days(self) -> int:
+        from app.projects import visit_settings
+        return visit_settings(self.program_district)[1]
 
     def sync_lookups(self) -> None:
         """Recompute the blind index from the current phone — after any write
@@ -926,7 +954,19 @@ class Mother(Base):
     willingness_hcw = Column(String, nullable=True)       # Likert
     information_seeking = Column(String, nullable=True)   # Likert
 
-    registered_by = relationship("User")
+    # Drop-out (visit protocol of November 2026): the mother stopped
+    # breastfeeding and was still not breastfeeding at two visits after the
+    # learner counselled her, and the learner confirmed the adoption as a
+    # drop-out. A dropped-out adoption leaves the worker's Today list.
+    dropped_out_on = Column(Date, nullable=True)
+    dropped_out_by_user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL", name="mothers_dropped_out_by_user_id_fkey"),
+        nullable=True,
+    )
+    dropout_reason = Column(String(32), nullable=True)    # "not_breastfeeding"
+
+    registered_by = relationship("User", foreign_keys=[registered_by_user_id])
+    dropped_out_by = relationship("User", foreign_keys=[dropped_out_by_user_id])
     state = relationship("State")
     district = relationship("District")
     taluk = relationship("Block")
@@ -1021,6 +1061,11 @@ class Child(Base):
 
     # Pre-existing / birth conditions (multi-select → child table); free text for "Others"
     pre_existing_other = Column(String, nullable=True)
+
+    # The day the learner counselled the mother to restart breastfeeding
+    # (visit protocol of November 2026). Two visits after it with
+    # breastfeeding still stopped, the adoption may be confirmed a drop-out.
+    bf_counselled_on = Column(Date, nullable=True)
 
     mother = relationship("Mother", back_populates="children")
     birth_conditions = relationship(
