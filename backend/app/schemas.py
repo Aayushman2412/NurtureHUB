@@ -247,13 +247,13 @@ class MotherBase(BaseModel):
             # A PNC adoption's LMP is a past pregnancy: only its order is checked.
             if self.adoption_date and self.lmp > self.adoption_date:
                 raise ValueError("LMP cannot be after the date of adoption.")
-            if self.adoption_date and self.declared_adoption_type in (None, "anc"):
+            # Eligibility upper and lower bounds on gestation at adoption (12w to 180d)
+            # apply at registration time only (MotherCreate). Reads (MotherOut) and edits
+            # (MotherUpdate) set _enforce_freshness=False so aged/scenario records can be read.
+            if self._enforce_freshness and self.adoption_date and self.declared_adoption_type in (None, "anc"):
                 gestation_days = (self.adoption_date - self.lmp).days
                 if gestation_days > MAX_GESTATION_DAYS:
                     raise ValueError("LMP cannot be more than 180 days before the date of adoption.")
-                # Under 12 weeks pregnant on the adoption date → not eligible.
-                # Unlike the freshness bound this is a property of the record,
-                # not of the clock, so it is enforced on updates too.
                 if gestation_days < MIN_GESTATION_DAYS:
                     raise ValueError("Gestational age at adoption must be at least 12 weeks.")
         if self.mobile and self.alternate_mobile and _digits(self.mobile) == _digits(self.alternate_mobile):
