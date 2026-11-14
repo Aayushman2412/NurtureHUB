@@ -89,7 +89,7 @@ def baby_status(case: Dict[str, Any]) -> Dict[str, Any]:
                       key=lambda v: v["date"])
     if not measured:
         return {"status": NONE, "reasons": ["no_growth_check"], "see_within_days": None,
-                "latest": None, "previous": None}
+                "danger": None, "latest": None, "previous": None}
     last = measured[-1]
     prev = measured[-2] if len(measured) > 1 else None
     z = {m: _visit_z(m, sex, last) for m in ("wfa", "lfa", "wfl")}
@@ -118,6 +118,7 @@ def baby_status(case: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "status": status,
         "reasons": reasons,
+        "danger": _danger(z, last, prev),
         "see_within_days": SEE_WITHIN_DAYS if (weight_fell or fell_on_chart or weight_red) else None,
         "latest": {
             "date": last["date"], "age_days": last["age_days"], "weight": last["weight"], "length": last.get("length"),
@@ -127,6 +128,30 @@ def baby_status(case: Dict[str, Any]) -> Dict[str, Any]:
         },
         "previous": {"date": prev["date"], "weight": prev["weight"], "wfa_pct": percentile(prev_wfa)} if prev else None,
     }
+
+
+SEVERE_Z = -3.0
+BIG_LOSS = 0.10
+
+
+def _danger(z: Dict[str, Optional[float]], last: Dict[str, Any], prev: Optional[Dict[str, Any]]
+            ) -> Optional[Dict[str, Any]]:
+    """A baby to act on today (Learner Redesign review, 30 Oct 2026: an
+    8-month-old saved at 3 kg got only "see again within 2 days"): severely
+    low weight for age, severely thin for length, or 10 % of the weight lost
+    since the last check. The baby page then says: weigh again on the same
+    scale; if it is right, take the baby to the PHC / NRC today; tell the
+    supervisor."""
+    loss = None
+    if prev is not None and prev.get("weight") and last.get("weight") is not None:
+        loss = (prev["weight"] - last["weight"]) / prev["weight"]
+    kind = ("very_low_weight" if z.get("wfa") is not None and z["wfa"] < SEVERE_Z
+            else "very_thin" if z.get("wfl") is not None and z["wfl"] < SEVERE_Z
+            else "big_loss" if loss is not None and loss >= BIG_LOSS else None)
+    if kind is None:
+        return None
+    return {"kind": kind, "weight": last.get("weight"), "age_days": last.get("age_days"),
+            "loss_pct": round(loss * 100) if loss is not None and loss > 0 else None}
 
 
 def _priority(case: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -155,6 +180,20 @@ def _age_days(dob: Optional[date], on: date) -> Optional[int]:
     return (on - dob).days if dob else None
 
 
+PREGNANCY_DAYS = 280
+
+
+def _pregnancy_weeks(m: models.Mother, on: date) -> Optional[int]:
+    """Completed weeks of pregnancy on `on`, from the LMP (or the EDD)."""
+    if m.lmp:
+        days = (on - m.lmp).days
+    elif m.edd_records or m.edd_lmp:
+        days = (on - ((m.edd_records or m.edd_lmp) - timedelta(days=PREGNANCY_DAYS))).days
+    else:
+        return None
+    return days // 7 if 0 <= days <= 45 * 7 else None
+
+
 def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> Dict[str, Any]:
     from app.masd import data as D, engine as E
     from app.routers.dashboard import _masd_project
@@ -177,7 +216,7 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
     # The November 2026 protocol, when her project runs it (app/visit_plan.py):
     # the visits, their forms and dates come from app/visit_protocol.py; the
     # targets and warnings still come from the MASD view.
-    protocol = visit_plan.settings_for(user)[0]
+    protocol = visit_plan.settings_for(user, db)[0]
     new_protocol = protocol == visit_plan.VP.LAP_2026_11
     child_plans: Dict[int, Dict[str, Any]] = {}
     if project is not None:
@@ -185,8 +224,11 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
         view = E.learner_view(data, as_of, user.id, due_days=WEEK_DAYS)
         if not new_protocol:
             plan = E.field_plan(data, as_of, user.id, WEEK_DAYS)
+    protocol_progress = None
     if new_protocol:
-        plan, child_plans = visit_plan.field_plan(db, user, mothers, children, as_of, WEEK_DAYS)
+        built_cases = visit_plan.learner_cases(db, user, as_of, mothers, children)
+        plan, child_plans = visit_plan.field_plan(db, user, mothers, children, as_of, WEEK_DAYS, cases=built_cases)
+        protocol_progress = visit_plan.learner_progress(db, user, as_of, cases=built_cases)
     plan = plan or {}
     types = {c["mother_id"]: c["type"] for c in (view or {}).get("cases", [])}
     warnings = {c["mother_id"]: c["warnings"] for c in (view or {}).get("cases", [])}
@@ -277,11 +319,17 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
                                    "done": [f for f in FORM_ORDER if f in had], "pending": pending})
             elif st.get("see_within_days") and not had:
                 # Seen today already: not "see soon" again until tomorrow.
+                last_check = (st.get("latest") or {}).get("date")
+                by = (date.fromisoformat(last_check[:10]) + timedelta(days=st["see_within_days"])
+                      if last_check else as_of)
                 urgent.append({"mother_id": m.id, "mother_name": m.mother_name, "child_id": k.id,
                                "child_name": k.child_name, "status": st["status"], "reasons": st["reasons"],
                                "see_within_days": st["see_within_days"],
                                "forms": pending,
-                               "last_check": (st.get("latest") or {}).get("date"),
+                               "last_check": last_check,
+                               # "Weight went down · visit by Sun" (Learner Redesign review).
+                               "visit_by": max(by, as_of).isoformat(),
+                               "danger": st.get("danger"),
                                "priority": ranked.get(k.id)})
 
         # Registration not finished: no protein form, or a birth with no baby yet.
@@ -324,6 +372,9 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
             g = groups.setdefault(gkey, {
                 "mother_id": m.id, "mother_name": m.mother_name,
                 "child_id": kid.id if kid else None, "child_name": kid.child_name if kid else None,
+                # "Baby of Komal · 5 mo", "Sunita · Pregnant 36 weeks" (Learner Redesign review).
+                "age_days": _age_days(kid.dob, as_of) if kid else None,
+                "weeks": None if kid else _pregnancy_weeks(m, as_of),
                 "forms": [], "late_days": 0, "due_on": item["due_on"]})
             if "ask_delivery" in item:
                 g["ask_delivery"] = bool(g.get("ask_delivery") or item["ask_delivery"])
@@ -378,6 +429,7 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
         models.FormResponse.status == "submitted",
         models.FormResponse.assessment_date >= since,
         models.FormResponse.assessment_date <= as_of).count()
+    progress = _progress(view, protocol_progress, today, week, as_of, done_week)
 
     return {
         "available": True,
@@ -394,4 +446,54 @@ def today_view(db: Session, user: models.User, as_of: Optional[date] = None) -> 
         "cases": cases,
         "done_this_week": done_week,
         "nil_days": (view or {}).get("nil_days"),
+        "progress": progress,
+    }
+
+
+# "My progress" (Learner Redesign review, 30 Oct 2026): the forms of a visit
+# shown as bars, with the pregnancy check and protein form as one bar.
+PROGRESS_BARS = (("gm", ("gm",)), ("bf", ("bf",)), ("cf", ("cf",)), ("anc_pf", ("anc", "protein")))
+BEHIND_NAMES = 3
+
+
+def _progress(view: Optional[Dict[str, Any]], protocol_progress: Optional[Dict[str, Any]],
+              today: List[Dict[str, Any]], week: Dict[str, List[Dict[str, Any]]],
+              as_of: date, done_week: int) -> Dict[str, Any]:
+    """Where the worker stands: visits made against visits due (and on time),
+    each form's done against expected by today and what falls due in the next
+    7 days, and this week's forms. On the November 2026 protocol from its
+    planner (app/visit_protocol.progress); on the older one from the MASD
+    expected-forms table, the same numbers the supervisors see."""
+    if protocol_progress is not None:
+        expected, done = protocol_progress["expected"], protocol_progress["done"]
+        visits = protocol_progress["visits"]
+    else:
+        own = (view or {}).get("own") or {}
+        expected, done = own.get("expected") or {}, own.get("actual") or {}
+        visits = None
+    soon: Counter = Counter()
+    for items in week.values():
+        for g in items:
+            soon.update(f["key"] for f in g["forms"])
+    bars = []
+    for key, codes in PROGRESS_BARS:
+        e = sum(int(expected.get(c) or 0) for c in codes)
+        d = sum(int(done.get(c) or 0) for c in codes)
+        s = sum(soon[c] for c in codes)
+        if e or d or s:
+            bars.append({"key": key, "done": d, "expected": e, "soon": s})
+    sunday = as_of + timedelta(days=6 - as_of.weekday())
+    left = sum(len(g["forms"]) for g in today)
+    left += sum(len(g["forms"]) for day, items in week.items() if date.fromisoformat(day) <= sunday for g in items)
+    behind = sorted(today, key=lambda g: -g["late_days"])
+    names: List[str] = []
+    for g in behind:
+        name = g.get("child_name") or g.get("mother_name")
+        if name and name not in names:
+            names.append(name)
+    return {
+        "visits": visits,
+        "forms": bars,
+        "week": {"done": done_week, "due": done_week + left, "finish": names[:BEHIND_NAMES],
+                 "more": max(0, len(names) - BEHIND_NAMES)},
     }

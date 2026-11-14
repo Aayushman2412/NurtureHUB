@@ -468,6 +468,11 @@ export interface FlatFieldOption {
   value: string;
   /** "None of the above" on a `checkbox` field — see isExclusiveOption. */
   exclusive?: boolean | null;
+  /** Offered only while these hold (e.g. "Postnatal ward" for a newborn) —
+   *  like a field's showIf. An option already chosen stays shown. */
+  showIf?: FlatFieldCondition[] | null;
+  /** A danger sign: listed apart, and ticking it tells the learner to refer today. */
+  danger?: boolean | null;
 }
 
 export type FlatFieldType =

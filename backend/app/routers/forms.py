@@ -796,6 +796,10 @@ def _notify_high_protein(
         )
 
 
+def _points(n: int) -> str:
+    return "point" if n == 1 else "points"
+
+
 def _notify_on_submit(
     db: Session,
     user: models.User,
@@ -826,16 +830,24 @@ def _notify_on_submit(
             override = (q.get("display") or {}).get("actions")
             actions_visible[q["id"]] = default_actions if override is None else bool(override)
 
-    create_notification(
-        db,
-        user.id,
-        f"{definition.title} — {subject_name}",
-        (
-            f"{summary['green']} step(s) as per LAP, {summary['red']} need attention. "
-            "Open the assessment plan to see the recommended actions."
-        ),
-        link=link,
-    )
+    # Plain words, and nothing at all for a form with nothing scored
+    # (Learner Redesign review, 30 Oct 2026: "0 step(s) as per LAP, 0 need
+    # attention" is meaningless to her, and "LAP" is unexplained jargon).
+    green, red = int(summary.get("green") or 0), int(summary.get("red") or 0)
+    if green or red:
+        create_notification(
+            db,
+            user.id,
+            f"{definition.title} — {subject_name}",
+            (
+                f"{red} {_points(red)} to practise again with the mother, {green} done well. "
+                "Open the plan to see what to teach."
+                if red else
+                f"All {green} {_points(green)} done well. Open the plan to see what to tell the mother."
+            ),
+            link=link,
+            category="info",
+        )
     _notify_high_protein(db, user, subject_name, summary, link=link)
 
     visible = [a for a in actions if actions_visible.get(a.get("nodeId"), default_actions)]
@@ -1002,6 +1014,15 @@ def _care_prompt(db: Session, child_id: int, user: models.User) -> None:
     on_feeding_check(db, child_id, user)   # November 2026 protocol only
 
 
+def _anc_prompt(db: Session, response: models.FormResponse, definition: models.FormDefinition,
+                user: models.User) -> None:
+    """A pregnancy check with a danger sign ticked: "refer her today"
+    (Learner Redesign review, 30 Oct 2026). Never fails the submission."""
+    from app.care_alerts import on_anc_danger
+
+    on_anc_danger(db, response, definition.schema_json or {}, user)
+
+
 @router.put("/responses/{response_id}")
 def update_response(
     response_id: int,
@@ -1054,6 +1075,8 @@ def update_response(
     db.refresh(response)
     if new_status == "submitted" and not was_submitted and response.form_key == GROWTH_FORM_KEY and response.child_id:
         _care_prompt(db, response.child_id, current_user)
+    if new_status == "submitted" and not was_submitted and response.form_key == "antenatal" and response.mother_id:
+        _anc_prompt(db, response, definition, current_user)
     subject_type, subject_id = _subject_of(response)
     phi.log_update(
         resource_type="form_response",
@@ -1227,6 +1250,8 @@ def create_response(
     db.refresh(response)
     if data.status == "submitted" and form_key == GROWTH_FORM_KEY and response.child_id:
         _care_prompt(db, response.child_id, current_user)
+    if data.status == "submitted" and form_key == "antenatal" and response.mother_id:
+        _anc_prompt(db, response, definition, current_user)
     subject_type, subject_id = _subject_of(response)
     phi.log_create(
         resource_type="form_response",

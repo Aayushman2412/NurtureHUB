@@ -173,7 +173,11 @@
     },
     "otherOption": "Other",
     "otherSpecify": "{{label}} — other, please specify",
-    "otherPlaceholder": "Type your answer"
+    "otherPlaceholder": "Type your answer",
+    "today": "Today",
+    "lastVisit": "Last visit ({{date}}): {{value}}",
+    "samePlace": "Same place as the last visit. Change it if this one was different.",
+    "photoAdded": "Photo added"
   },
   "flow": {
     "next": {
@@ -184,7 +188,8 @@
       "protein": "Next: Protein form",
       "baby": "Next: Register the baby",
       "done": "Finish"
-    }
+    },
+    "then": "then {{forms}}"
   },
   "anc": {
     "autoTitle": "Identified from the registration",
@@ -195,6 +200,15 @@
       "height": "Height not recorded",
       "age": "Age not recorded"
     },
-    "otherRisks": "Does the mother have any of these other high-risk conditions?"
+    "otherRisks": "Does the mother have any of these other high-risk conditions?",
+    "noLmp": "No LMP on record: the weeks of pregnancy cannot be worked out.",
+    "danger": {
+      "groupTitle": "Danger signs — refer today if any",
+      "alertTitle": "Refer her today",
+      "alert": "A danger sign is ticked. Take her to the PHC / FRU today and tell your supervisor."
+    }
+  },
+  "cfGate": {
+    "title": "Complementary feeding is not due yet"
   }
 }

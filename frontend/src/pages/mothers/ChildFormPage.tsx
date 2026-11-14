@@ -18,7 +18,8 @@ import { formRunUrl } from '../../api/today';
 import { babyVisitForms, flowString, parseFlow } from '../../lib/careFlow';
 import { firstBabyForms, usesNewProtocol } from '../../lib/visitProtocol';
 import { useAuth } from '../../context/AuthContext';
-import { getMother } from '../../api/mothers';
+import { getMother, updateMother, type Mother } from '../../api/mothers';
+import { programme } from '../../lib/programme';
 import { apiErrorMessage } from '../../components/assessments/flowRunner';
 import { MAX_ADOPTION_AGE_DAYS, isoDaysAgo, todayIso } from '../../lib/motherFields';
 
@@ -69,6 +70,9 @@ const ChildFormPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [hydrating, setHydrating] = useState(isEdit);
   const [motherName, setMotherName] = useState('');
+  /** The mother's record: her declared adoption type is checked against the baby's age. */
+  const [mother, setMother] = useState<Mother | null>(null);
+  const [fixingType, setFixingType] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
 
   // Step 1 — birth
@@ -97,7 +101,7 @@ const ChildFormPage: React.FC = () => {
 
   // Load the mother (for the header) and, in edit mode, the child to prefill.
   useEffect(() => {
-    getMother(motherId).then(m => setMotherName(m.mother_name)).catch(() => {});
+    getMother(motherId).then(m => { setMotherName(m.mother_name); setMother(m); }).catch(() => {});
     if (!isEdit) return;
     getChild(motherId, childId)
       .then(c => {
@@ -134,6 +138,37 @@ const ChildFormPage: React.FC = () => {
   const showEbfReason = ebfDuringStay === 'No';
   const showConditionOther = birthConditions.includes('Others');
   const age = childAge(dob);
+
+  // The adoption type follows from the baby's date of birth (Learner Redesign
+  // review, 30 Oct 2026: "the type is chosen by hand. It should follow from
+  // the baby's date of birth, so it can't be wrong"). The learner chose it at
+  // registration; here, once the date of birth is in, a mismatch is shown
+  // with a one-tap fix — never changed behind her back, so the supervisors'
+  // "type mismatch" check (review of 6 Oct 2026) still sees what she chose.
+  const typeCheck = useMemo(() => {
+    const declared = mother?.declared_adoption_type;
+    if (isEdit || !mother || !dob || !declared) return null;
+    // A mother adopted in pregnancy: was the baby born after her adoption day?
+    const on = declared === 'anc' ? mother.adoption_date : (adoptionDate || mother.adoption_date);
+    if (!on) return null;
+    const days = Math.round((new Date(`${on}T00:00:00`).getTime() - new Date(`${dob}T00:00:00`).getTime()) / 86_400_000);
+    const split = user?.pnc_split_days ?? programme.pncSplitDays;
+    const expected = days < 0 ? 'anc' : days < split ? 'pnc_lt5' : 'pnc_ge5';
+    return expected === declared ? null : { expected, declared, days } as const;
+  }, [isEdit, mother, dob, adoptionDate, user?.pnc_split_days]);
+  const fixType = async () => {
+    if (!mother || !typeCheck) return;
+    setFixingType(true);
+    try {
+      const updated = await updateMother(mother.id, { ...mother, declared_adoption_type: typeCheck.expected });
+      setMother(updated);
+      showToast(t('child.typeCheck.fixed', { type: t(`form.adoptionTypes.${typeCheck.expected}`) }), 'success');
+    } catch (err) {
+      showToast(apiErrorMessage(err) ?? t('child.typeCheck.failed'), 'error');
+    } finally {
+      setFixingType(false);
+    }
+  };
 
   const clearError = (key: string) =>
     setErrors(e => (e[key] ? Object.fromEntries(Object.entries(e).filter(([k]) => k !== key)) : e));
@@ -286,6 +321,18 @@ const ChildFormPage: React.FC = () => {
                   </Field>
                   <ReadOnly label={t('child.age')} value={age ? t('child.ageValue', { days: age.days, months: age.months }) : ''} hint={t('child.ageHint')} />
                 </div>
+                {typeCheck && (
+                  <Alert variant="warning" title={t(typeCheck.days < 0 ? 'child.typeCheck.titleBorn' : 'child.typeCheck.title', {
+                    days: typeCheck.days, months: Math.floor(Math.max(0, typeCheck.days) / 30.4375),
+                  })}>
+                    <p>{t('child.typeCheck.body', {
+                      type: t(`form.adoptionTypes.${typeCheck.expected}`), declared: t(`form.adoptionTypes.${typeCheck.declared}`),
+                    })}</p>
+                    <Button size="sm" className="mt-2" loading={fixingType} onClick={() => { void fixType(); }}>
+                      {t('child.typeCheck.fix', { type: t(`form.adoptionTypes.${typeCheck.expected}`) })}
+                    </Button>
+                  </Alert>
+                )}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <Field label={t('child.birthWeight')} error={errors.birth_weight}>
                     <Input type="number" step={0.001} min={1} max={5} placeholder={t('child.birthWeightPlaceholder')} value={birthWeight}

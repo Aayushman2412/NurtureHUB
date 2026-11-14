@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
-from sqlalchemy import func, case
+from sqlalchemy import func, case, or_
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
@@ -38,8 +38,11 @@ def get_notifications(
         return Response(status_code=status.HTTP_304_NOT_MODIFIED,
                         headers={"ETag": etag, "Cache-Control": "private, no-cache"})
 
+    # "hidden" rows are kept but never listed (the empty "0 step(s) as per
+    # LAP" summaries — Learner Redesign review, 30 Oct 2026).
     notifications = db.query(Notification).filter(
-        Notification.user_id == current_user.id
+        Notification.user_id == current_user.id,
+        or_(Notification.category.is_(None), Notification.category != "hidden"),
     ).order_by(Notification.created_at.desc()).all()
     response.headers["ETag"] = etag
     response.headers["Cache-Control"] = "private, no-cache"

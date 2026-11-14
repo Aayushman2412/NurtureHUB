@@ -89,7 +89,9 @@ the mother is not breastfeeding at all.
 3. Otherwise BF repeats (a baby below the 30th percentile keeps getting BF even
    when gaining; a falling z-score keeps BF even when all answers are green).
 4. **BF reopens** after stopping if weight-for-age falls below the 30th
-   percentile or the z-score change turns negative.
+   percentile or the z-score change turns negative. **Every point comes back**
+   when it reopens: only BF forms filled since the reopening count towards
+   dropping a point out again (decided 14 Nov 2026).
 5. **At 180 days** the rule ends: BF stops if 5 BF forms are done, otherwise
    it continues until 5 are done.
 6. **Mother not breastfeeding:** the learner counsels her to restart. If
@@ -133,6 +135,9 @@ check, WHO velocity tables scaled to the interval):
 - weight loss ≥ 10 % → re-weigh, check danger signs, refer today; 5–10 % → ask
   about diarrhoea, fever and feeding, revisit within 7 days;
 - length more than 1 cm shorter than before → re-measure with two people.
+
+**Complementary feeding is never filled before its day.** Opened early, the
+app says when the last CF was (and its day) and when the next one is.
 
 ## Still to come from Nandish / Dr. Rupal
 

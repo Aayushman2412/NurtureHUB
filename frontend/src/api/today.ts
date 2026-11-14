@@ -7,10 +7,20 @@ export type FormCode = 'gm' | 'bf' | 'cf' | 'anc' | 'protein';
 export type Tone = 'green' | 'yellow' | 'red';
 export type Status = Tone | 'none';
 
+/** A baby to act on today (app/fieldplan._danger): severely low weight for
+ *  age, severely thin for length, or 10 % of the weight lost since the last check. */
+export interface BabyDanger {
+  kind: 'very_low_weight' | 'very_thin' | 'big_loss';
+  weight: number | null;
+  age_days: number | null;
+  loss_pct: number | null;
+}
+
 export interface BabyStatus {
   status: Status;
   /** weight_fell | not_gaining | low_wfa | low_lfa | low_wfl | no_growth_check */
   reasons: string[];
+  danger?: BabyDanger | null;
   see_within_days: number | null;
   latest: {
     date: string;
@@ -37,6 +47,10 @@ export interface TaskGroup {
   /** November 2026 protocol: a pregnancy visit from 35 weeks first asks
    *  "Has the delivery happened?". */
   ask_delivery?: boolean;
+  /** The baby's age today ("Baby of Komal · 5 mo"). */
+  age_days?: number | null;
+  /** Completed weeks of pregnancy today, for a visit to the mother. */
+  weeks?: number | null;
 }
 
 export interface UrgentBaby {
@@ -49,8 +63,23 @@ export interface UrgentBaby {
   see_within_days: number;
   forms: FormCode[];
   last_check: string | null;
+  /** The day to see the baby by ("visit by Sun"). */
+  visit_by?: string;
+  danger?: BabyDanger | null;
   /** Visit protocol of Nov 2026 (app/growth_priority.py): the list is ordered by it. */
   priority?: { tier: 1 | 2 | 3 | null; score: number } | null;
+}
+
+/** One bar of "My progress": a form's done against expected by today, and
+ *  how many fall due in the next 7 days. `anc_pf` = pregnancy check + protein. */
+export interface ProgressBar { key: 'gm' | 'bf' | 'cf' | 'anc_pf'; done: number; expected: number; soon: number }
+
+export interface ProgressView {
+  /** November 2026 protocol only: visit days due by today, made, made within ±2 days. */
+  visits: { due: number; made: number; on_time: number } | null;
+  forms: ProgressBar[];
+  /** This week's forms: done, due in all; whom to finish to be back on track. */
+  week: { done: number; due: number; finish: string[]; more: number };
 }
 
 export interface CaseRow {
@@ -103,7 +132,18 @@ export interface TodayView {
   cases: CaseRow[];
   done_this_week: number;
   nil_days: number | null;
+  progress?: ProgressView;
 }
+
+/** Videos to watch again, picked from her cases (app/refresh_videos.py). */
+export interface RefreshTopic {
+  topic: 'sam' | 'weight' | 'breastfeeding' | 'complementary' | 'pregnancy';
+  count: number;
+  videos: { id: number; title: string; minutes: number | null; watched: boolean }[];
+}
+
+export const getRefreshVideos = (): Promise<{ topics: RefreshTopic[] }> =>
+  client.get('/api/dashboard/refresh-videos').then(r => r.data);
 
 export const getToday = (): Promise<TodayView> => client.get('/api/dashboard/today').then(r => r.data);
 

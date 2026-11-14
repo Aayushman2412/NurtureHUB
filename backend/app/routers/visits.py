@@ -65,6 +65,48 @@ def record_counselling(child_id: int, current_user: models.User = Depends(get_ve
     return visit_plan.child_plan(db, current_user, child, date.today())
 
 
+_DANGER_WORDS = {"very_low_weight": "very low weight for age", "very_thin": "very thin for length",
+                 "big_loss": "a big weight loss"}
+
+
+@router.post("/children/{child_id}/tell-supervisor")
+def tell_supervisor(child_id: int, current_user: models.User = Depends(get_verified_user),
+                    db: Session = Depends(get_db)):
+    """A baby in danger (very low weight, very thin, a 10 % loss): tell the
+    learner's batch monitor today (Learner Redesign review, 30 Oct 2026, fix
+    2: "very low weight shows referral steps and alerts the supervisor").
+    Works on either protocol. Like the faltering prompt, the monitor's
+    message names the baby by its record ID only (app/care_alerts.py). Once
+    a day per baby."""
+    from app.care_alerts import _first, _send
+    from app.fieldplan import baby_status
+    from app.routers.growth import _build_cases
+
+    child = _get_owned_child(db, child_id, current_user)
+    monitor = current_user.batch_monitor_id
+    if not monitor or monitor == current_user.id:
+        raise HTTPException(status_code=409, detail="No supervisor is linked to your account yet.")
+    cases = _build_cases(db, child_id=child.id)
+    st = baby_status(cases[0]) if cases else {}
+    danger = st.get("danger") or {}
+    latest = st.get("latest") or {}
+    what = _DANGER_WORDS.get(danger.get("kind"), "a growth problem")
+    on = latest.get("date") or date.today().isoformat()
+    sent = _send(
+        db, kind="refer", key=f"refer:{child.id}:{date.today().isoformat()}:{monitor}",
+        learner_id=current_user.id, recipient_id=monitor, child_id=child.id,
+        title=f"{_first(current_user.full_name)} needs help with a baby",
+        message=(f"Baby {child.child_uid} of {current_user.full_name or 'your learner'} has {what} "
+                 f"at the check on {on}. Referral to the PHC / NRC advised today — please call "
+                 f"{_first(current_user.full_name)}."),
+        link="/dashboard")
+    db.commit()
+    phi.log_create(resource_type="supervisor_alert", resource_id=child.id, subject_type=phi.CHILD,
+                   subject_id=child.id, detail={"recipient_user_id": monitor, "fields": ["child_uid"],
+                                                "danger": danger.get("kind"), "sent": bool(sent)})
+    return {"sent": bool(sent), "already_today": not sent}
+
+
 @router.post("/children/{child_id}/drop-out")
 def confirm_drop_out(child_id: int, current_user: models.User = Depends(get_verified_user),
                      db: Session = Depends(get_db)):

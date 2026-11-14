@@ -1,30 +1,40 @@
 /**
- * Learner runner for `flat` forms (Check Growth).
+ * Learner runner for `flat` forms (Check Growth, the pregnancy check).
  *
- * Unlike the flow runner (one branching question per step), a flat form is a
- * single scrolling page: most of its fields are conditional, so a stepper would
- * mostly show skipped steps. Visibility, validation and the submission payload
- * come from `lib/flatForm.ts`; the server re-validates all of it.
+ * One question per screen (Learner Redesign review, 30 Oct 2026: "the Growth
+ * check and Pregnancy check are long single pages … one guided flow per
+ * visit, one question per screen"), the way the flow runner already works:
+ * Back on top, Next fixed at the bottom, and before submitting every answer
+ * listed with a pen to change it. The screens are the fields visible now —
+ * a field's conditions are re-read on every answer, so a "No" that hides
+ * three questions simply shortens the path. Read-only computed fields
+ * (gestational age, weight gain) ride on the screen before them.
+ * Visibility, validation and the submission payload come from
+ * `lib/flatForm.ts`; the server re-validates all of it.
  *
  * Convention: the first `date` field in the definition is the response's
  * `assessment_date` (Check Growth → `measurement_date`). It starts EMPTY so the
- * learner must actively pick it (required, so submission blocks until then);
- * until picked, today stands in for age/visibility computations and drafts.
- * Child age for `ageLtDays` / `ageGteDays` conditions is computed against that
- * date, not against today.
+ * learner must actively pick it (supervisor review, July 2026) — a "Today"
+ * button makes that one tap; until picked, today stands in for
+ * age/visibility computations and drafts. Child age for `ageLtDays` /
+ * `ageGteDays` conditions (fields and options) is computed against that date.
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ClipboardList, Save, Send, ShieldCheck } from 'lucide-react';
-import { Alert, Button, Card, EmptyState, PageHeader, PageLoader } from '../../components/ui';
+import {
+  AlertTriangle, ArrowLeft, ArrowRight, CalendarCheck, CheckCircle2, ClipboardList, History, ListChecks, Pencil,
+  ShieldCheck, X,
+} from 'lucide-react';
+import { Alert, Button, Card, EmptyState, PageLoader, ProgressBar } from '../../components/ui';
 import { useToast } from '../../context/ToastContext';
 import { getChild, type Child } from '../../api/children';
 import { getMother, type Mother } from '../../api/mothers';
 import {
-  getFormDefinition, getResponse, listMotherResponses,
+  getFormDefinition, getResponse, listChildResponses, listMotherResponses,
 } from '../../api/forms';
+import { getMyGrowthCaseDetail } from '../../api/growth';
 import {
   findQueuedResponseCreate, findQueuedResponseUpdate, isQueuedResult, persistResponseResilient,
 } from '../../offline/submit';
@@ -41,10 +51,13 @@ import {
   isChoiceField,
   otherTextKey,
   visibleFlatFields,
+  visibleOptions,
   type FlatFormValues,
 } from '../../lib/flatForm';
 import { toFieldErrors } from '../../lib/validation';
-import { apiErrorMessage, todayIso } from '../../components/assessments/flowRunner';
+import { optionLabel, useFormText } from '../../lib/formText';
+import { formFlowChain } from '../../lib/formNames';
+import { apiErrorMessage, formatDisplayDate, todayIso } from '../../components/assessments/flowRunner';
 import ChildChip from '../../components/assessments/ChildChip';
 import FlatFieldInput from '../../components/assessments/FlatFieldInput';
 import MeasurementCheckNotice from '../../components/assessments/MeasurementCheckNotice';
@@ -79,6 +92,11 @@ const gestationalAgeText = (lmp: string | null | undefined, atIso: string): stri
 
 /** The antenatal question whose height/age answers come from the registration. */
 const RISK_FIELD = 'high_risk_conditions';
+/** The growth check's "where was it measured" — remembered from the last check. */
+const LOCATION_FIELD = 'measurement_location';
+
+/** One screen: a field, and the read-only computed fields that follow it. */
+interface Step { field: FlatField; extras: FlatField[] }
 
 const FlatAssessmentRunnerPage: React.FC = () => {
   const { motherId: motherParam, childId: childParam, formKey: keyParam } = useParams();
@@ -89,8 +107,9 @@ const FlatAssessmentRunnerPage: React.FC = () => {
   const motherLevel = isMotherFormKey(formKey);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { t } = useTranslation('assessments');
+  const { t, i18n } = useTranslation('assessments');
   const { showToast } = useToast();
+  const words = useFormText(formKey);
 
   const resumeIdParam = searchParams.get('responseId');
   const resumeId = resumeIdParam ? Number(resumeIdParam) : null;
@@ -107,6 +126,8 @@ const FlatAssessmentRunnerPage: React.FC = () => {
   const [mother, setMother] = useState<Mother | null>(null);
   /** Latest previously SUBMITTED weight (kg) — the weight-gain baseline. */
   const [previousWeight, setPreviousWeight] = useState<number | null>(null);
+  /** The baby's last growth check, shown as a hint beside the weight and length. */
+  const [lastCheck, setLastCheck] = useState<{ date: string; weight: number | null; length: number | null } | null>(null);
   const [values, setValues] = useState<FlatFormValues>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   /** Server row id, or a queued offline creation's `tmp-` id (coalesced on save). */
@@ -118,6 +139,11 @@ const FlatAssessmentRunnerPage: React.FC = () => {
   const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [stepIndex, setStepIndex] = useState(0);
+  /** Every answer listed before submitting, each with a pen. */
+  const [reviewing, setReviewing] = useState(false);
+  /** Came from the review list to change one answer: Next goes back to it. */
+  const [returnToReview, setReturnToReview] = useState(false);
 
   const fields: FlatField[] = useMemo(
     () => ((definition?.schema_json as FlatSchema | undefined)?.fields ?? []),
@@ -143,6 +169,16 @@ const FlatAssessmentRunnerPage: React.FC = () => {
     () => visibleFlatFields(fields, values, ageDays),
     [fields, values, ageDays],
   );
+
+  /** The screens: each answerable field, with the computed fields after it. */
+  const steps: Step[] = useMemo(() => {
+    const out: Step[] = [];
+    for (const f of visible) {
+      if (f.computed && out.length > 0) out[out.length - 1].extras.push(f);
+      else out.push({ field: f, extras: [] });
+    }
+    return out;
+  }, [visible]);
 
   // ── Load definition + child (+ draft when resuming) ─────────────────────────
   useEffect(() => {
@@ -219,9 +255,12 @@ const FlatAssessmentRunnerPage: React.FC = () => {
         // The vault/coalescing identity of this visit: server row, queued
         // offline creation's temp id, or null for a brand-new visit.
         let effectiveId: number | string | null = null;
+        let fresh = false;
 
         if (resp) {
           setEditingSubmitted(resp.status === 'submitted');
+          // A submitted form opens on its answers, each with a pen.
+          if (resp.status === 'submitted') setReviewing(true);
           effectiveId = resp.id;
           // A queued offline EDIT of this row is newer than the (possibly
           // stale-cached) server copy — its answers win; saving again
@@ -244,6 +283,8 @@ const FlatAssessmentRunnerPage: React.FC = () => {
             setResponseId(queuedCreate.tempId);
             effectiveId = queuedCreate.tempId;
             applyAnswers((queuedCreate.payload.answers as SavedAnswer[] | undefined) ?? []);
+          } else {
+            fresh = true;
           }
         }
         if (cancelled) return;
@@ -255,9 +296,35 @@ const FlatAssessmentRunnerPage: React.FC = () => {
         );
         if (wip && Object.keys(wip).length > 0) {
           Object.assign(next, wip);
+          fresh = false;
           showToast(t('restoredAnswers', { ns: 'offline' }), 'info');
         }
         setValues(next);
+
+        // A new growth check: the last one's numbers as hints, and where it
+        // was measured, remembered (Learner Redesign review: "location
+        // remembered from last time, previous values shown as hints").
+        if (!motherLevel && formKey === 'growth_monitoring' && resumeId == null) {
+          getMyGrowthCaseDetail(childId)
+            .then(d => {
+              const l = d.status?.latest;
+              if (!cancelled && l) setLastCheck({ date: l.date, weight: l.weight, length: l.length });
+            })
+            .catch(() => { /* hints are a bonus */ });
+          if (fresh && defFields.some(f => f.id === LOCATION_FIELD)) {
+            listChildResponses(formKey, childId)
+              .then(rows => rows.filter(r => r.status === 'submitted')
+                .sort((a, b) => (a.assessment_date < b.assessment_date ? 1 : -1))[0])
+              .then(lastRow => (lastRow ? getResponse(lastRow.id) : null))
+              .then(full => {
+                const ans = full?.answers_json?.find(a => a.nodeId === LOCATION_FIELD);
+                const picked = ans?.selected?.[0]?.optionId;
+                if (cancelled || !picked || picked === OTHER_OPTION_VALUE) return;
+                setValues(prev => (prev[LOCATION_FIELD] ? prev : { ...prev, [LOCATION_FIELD]: picked }));
+              })
+              .catch(() => { /* remembered location is a bonus */ });
+          }
+        }
       })
       .catch(() => {
         if (!cancelled) setLoadError(true);
@@ -382,10 +449,6 @@ const FlatAssessmentRunnerPage: React.FC = () => {
     length: shownValue(measureIds.length),
     live: isGrowth && [measureIds.weight, measureIds.length].some(id => !!id && touched[id]),
   });
-  const remeasure = (id: string) => {
-    setValue(id, '');
-    document.getElementById(id)?.focus();
-  };
 
   const setValue = (id: string, v: string | string[]) => {
     setValues(prev => ({ ...prev, [id]: v }));
@@ -394,6 +457,10 @@ const FlatAssessmentRunnerPage: React.FC = () => {
     // when the field is left (onBlur), so typing "5" on the way to "58" is fine.
     const field = fields.find(f => f.id === id);
     if (field && ['radio', 'checkbox', 'dropdown', 'date', 'image'].includes(field.type)) touch(id);
+  };
+  const remeasure = (id: string) => {
+    setValue(id, '');
+    window.setTimeout(() => document.getElementById(id)?.focus(), 0);
   };
 
   // Offline-resilient: with no network the submission lands in the local sync
@@ -446,6 +513,16 @@ const FlatAssessmentRunnerPage: React.FC = () => {
     }
   };
 
+  /** The screen a field (or its "Other" text) is on. */
+  const stepOf = (key: string): number => steps.findIndex(s => s.field.id === key.replace(/__other$/, ''));
+  /** Open one screen to fix it; Next goes back to the answers. */
+  const showStep = (at: number) => {
+    if (at < 0) return;
+    setReviewing(false);
+    setReturnToReview(true);
+    setStepIndex(at);
+  };
+
   const handleSubmit = async () => {
     const schema = buildFlatZodSchema(fields, tickedValues, { t, ageDays, dobIso: child?.dob ?? null });
     const result = schema.safeParse(validationSubset());
@@ -454,7 +531,7 @@ const FlatAssessmentRunnerPage: React.FC = () => {
       setErrors(fieldErrors);
       showToast(t('growth.fixErrors'), 'error');
       const firstId = Object.keys(fieldErrors)[0];
-      if (firstId) document.getElementById(firstId)?.scrollIntoView({ block: 'center' });
+      if (firstId) showStep(stepOf(firstId));
       return;
     }
     setErrors({});
@@ -467,7 +544,7 @@ const FlatAssessmentRunnerPage: React.FC = () => {
         setSubmitting(false);
         showToast(t('checks.mustConfirm'), 'error');
         const id = open[0].field === 'weight' ? measureIds.weight : measureIds.length;
-        if (id) document.getElementById(id)?.scrollIntoView({ block: 'center' });
+        if (id) showStep(stepOf(id));
         return;
       }
     }
@@ -492,6 +569,35 @@ const FlatAssessmentRunnerPage: React.FC = () => {
     }
   };
 
+  // ── Moving between screens ─────────────────────────────────────────────────
+  const last = Math.max(0, steps.length - 1);
+  const index = Math.min(stepIndex, last);
+  const current: Step | undefined = steps[index];
+
+  const goNext = async () => {
+    if (!current) return;
+    const f = current.field;
+    const keys = [f.id, otherTextKey(f.id)];
+    keys.forEach(touch);
+    if (keys.some(k => liveErrors[k])) return;
+    // The weight and length screens ask the measurement check before moving
+    // on: "weigh again", or "weight is correct" (Learner Redesign mockup).
+    if (isGrowth && (f.id === measureIds.weight || f.id === measureIds.length)) {
+      const which = f.id === measureIds.weight ? 'weight' : 'length';
+      const open = (await check.flush()).filter(x => x.field === which);
+      if (open.length > 0) return;
+    }
+    if (returnToReview) { setReturnToReview(false); setReviewing(true); return; }
+    if (index >= last) { setReviewing(true); return; }
+    setStepIndex(index + 1);
+    window.scrollTo({ top: 0 });
+  };
+  const goBack = () => {
+    if (reviewing) { setReviewing(false); setStepIndex(last); return; }
+    if (index > 0) { setStepIndex(index - 1); return; }
+    navigate(historyUrl);
+  };
+
   if (loading) return <PageLoader label={t('runner.loading')} className="min-h-60" />;
 
   if (loadError || !definition || (motherLevel ? !mother : !child)) {
@@ -509,7 +615,7 @@ const FlatAssessmentRunnerPage: React.FC = () => {
     );
   }
 
-  if (fields.length === 0) {
+  if (fields.length === 0 || !current) {
     return (
       <div className="mx-auto max-w-3xl">
         <EmptyState
@@ -522,130 +628,291 @@ const FlatAssessmentRunnerPage: React.FC = () => {
   }
 
   const busy = saving || submitting;
+  const lang = i18n.language;
+  /** A field as the learner reads it: her language first, options filtered by age. */
+  const shownField = (field: FlatField): FlatField => {
+    const options = visibleOptions(field, values, ageDays)?.map(o => ({
+      ...o, label: optionLabel(words.option(field.id, o.value, o.label)),
+    })) ?? null;
+    return {
+      ...field,
+      label: words.title(field.id, field.label).main,
+      helpText: field.helpText ? words.help(field.id, field.helpText).main : field.helpText,
+      options,
+    };
+  };
+  /** One line per answer for the review list. */
+  const answerText = (field: FlatField): string => {
+    const v = storedValues[field.id];
+    if (isChoiceField(field)) {
+      const picked = Array.isArray(v) ? v : v ? [v] : [];
+      return picked.map(p => (p === OTHER_OPTION_VALUE
+        ? String(values[otherTextKey(field.id)] ?? '') || t('growth.otherOption')
+        : words.option(field.id, p, field.options?.find(o => o.value === p)?.label ?? p).main)).join(', ');
+    }
+    if (field.type === 'date') return typeof v === 'string' && v ? formatDisplayDate(v, lang) : '';
+    if (field.type === 'image') return typeof v === 'string' && v ? t('growth.photoAdded') : '';
+    return typeof v === 'string' ? v : '';
+  };
+  const answered = (field: FlatField) => answerText(field).trim().length > 0;
+  const chain = formFlowChain(formKey, flow?.rest ?? [], t);
+  const progressPct = steps.length ? (reviewing ? 100 : (index / steps.length) * 100) : 0;
+
+  const f = current.field;
+  const fieldShown = shownField(f);
+  const fWords = words.title(f.id, f.label);
+  const helpWords = f.helpText ? words.help(f.id, f.helpText) : null;
+  const measure: 'weight' | 'length' | null = isGrowth && f.id === measureIds.weight ? 'weight'
+    : isGrowth && f.id === measureIds.length ? 'length' : null;
+  const isRiskStep = f.id === RISK_FIELD && autos.length > 0;
+  const inputField: FlatField = isRiskStep
+    ? { ...fieldShown, options: (fieldShown.options ?? []).filter(o => !autoValues.has(o.value)) }
+    : fieldShown;
+  // Danger signs are listed apart (Learner Redesign review: "they should be
+  // asked separately and should trigger a referral message") but stay one answer.
+  const dangerOpts = f.type === 'checkbox' ? (inputField.options ?? []).filter(o => o.danger) : [];
+  const plainOpts = dangerOpts.length ? (inputField.options ?? []).filter(o => !o.danger) : null;
+  const pickedNow = Array.isArray(tickedValues[f.id]) ? (tickedValues[f.id] as string[]) : [];
+  const isDanger = (v: string) => dangerOpts.some(o => o.value === v);
+  const dangerPicked = pickedNow.some(isDanger);
+  const exclusiveValues = new Set((inputField.options ?? []).filter(isExclusiveOption).map(o => o.value));
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <PageHeader
-        title={definition.title}
-        backTo={historyUrl}
-        description={
-          motherLevel && mother ? (
-            <span className="mt-1 inline-flex items-center gap-2 text-sm text-ink-muted">
-              <span className="font-semibold text-ink">{mother.mother_name}</span>
-              <span className="font-mono text-xs">{mother.mother_uid}</span>
-              {mother.lmp == null && (
-                <span className="font-semibold text-amber-700 dark:text-amber-500">
-                  No LMP on record — gestational age cannot be computed
-                </span>
-              )}
-            </span>
-          ) : child ? (
-            <ChildChip
-              name={child.child_name}
-              uid={child.child_uid}
-              ageDays={child.age_days}
-              ageMonths={child.age_months}
-              className="mt-1"
-            />
-          ) : undefined
-        }
-      />
+    <div className="flex flex-col">
+      {/* Sticky top: Back, the form and whom it is for, the counter, Exit */}
+      <div className="sticky top-0 z-10 -mx-5 -mt-5 mb-6 border-b border-border bg-background px-5 pb-3 pt-4 sm:-mx-6 sm:-mt-6 sm:px-6">
+        <div className="mx-auto flex max-w-2xl flex-col gap-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={goBack}
+              disabled={busy}
+              aria-label={t('runner.back')}
+              className="-ml-1.5 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-surface-sunken hover:text-ink disabled:opacity-40"
+            >
+              <ArrowLeft className="size-5" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-display text-sm font-semibold text-ink">{chain.current ?? definition.title}</div>
+              <div className="truncate text-xs text-ink-muted">
+                {motherLevel ? mother?.mother_name : child?.child_name}
+                {chain.next.length > 0 && <span> · {t('flow.then', { forms: chain.next.join(' → ') })}</span>}
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="text-xs font-semibold tabular-nums text-ink-muted">
+                {reviewing ? t('runner.reviewCounter') : t('runner.stepCounter', { current: index + 1, total: steps.length })}
+              </span>
+              <button
+                type="button"
+                onClick={() => navigate(historyUrl)}
+                aria-label={t('runner.exit')}
+                className="cursor-pointer rounded-full p-1.5 text-ink-faint transition-colors hover:bg-surface-sunken hover:text-ink"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+          </div>
+          <ProgressBar value={progressPct} size="sm" />
+        </div>
+      </div>
 
-      {!motherLevel && child && child.dob == null && (
-        <Alert variant="warning" title={t('growth.noDobTitle')}>
-          {t('growth.noDobBody')}
-        </Alert>
-      )}
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 pb-6">
+        {motherLevel && mother?.lmp == null && (
+          <Alert variant="warning" title={t('anc.noLmp')} />
+        )}
+        {!motherLevel && child && child.dob == null && (
+          <Alert variant="warning" title={t('growth.noDobTitle')}>
+            {t('growth.noDobBody')}
+          </Alert>
+        )}
+        {!motherLevel && child && index === 0 && !reviewing && (
+          <ChildChip name={child.child_name} uid={child.child_uid} ageDays={child.age_days} ageMonths={child.age_months} />
+        )}
 
-      <Card className="flex flex-col gap-5 p-5 sm:p-6">
-        {visible.map(f =>
-          f.computed ? (
-            <div key={f.id} id={f.id}>
-              <span className="mb-1.5 block text-sm font-semibold text-ink">{f.label}</span>
-              <div className="rounded-lg border border-dashed border-border-strong/70 bg-surface-sunken/50 px-3.5 py-2.5 text-sm font-semibold text-ink">
+        {reviewing ? (
+          <Card className="p-5 sm:p-6">
+            <h2 className="flex items-center gap-2 font-display text-xl font-semibold text-ink">
+              <ListChecks className="size-5 text-primary-ink" />{t('runner.reviewTitle')}
+            </h2>
+            <p className="mt-1 text-sm text-ink-muted">{t('runner.reviewHint')}</p>
+            <ol className="mt-4 flex flex-col divide-y divide-border">
+              {steps.map((s, i) => {
+                const err = errors[s.field.id] || liveErrors[s.field.id];
+                const missing = s.field.required && !answered(s.field) && !s.field.computed;
+                return (
+                  <li key={s.field.id}>
+                    <button type="button" onClick={() => showStep(i)}
+                      className="flex w-full cursor-pointer items-start gap-3 py-3 text-left hover:bg-surface-sunken/60">
+                      <span className="mt-0.5 w-7 shrink-0 text-right text-sm font-semibold tabular-nums text-ink-muted">{i + 1}.</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-ink">{words.title(s.field.id, s.field.label).main}</span>
+                        <span className={missing || err ? 'block text-sm font-semibold text-error-600 dark:text-error-400' : 'block text-sm text-ink-muted'}>
+                          {s.field.computed ? (computedValues[s.field.id] || '—')
+                            : err && !answered(s.field) ? (s.field.required ? t('runner.notAnswered') : t('runner.skipped'))
+                              : err || (answered(s.field) ? answerText(s.field) : s.field.required ? t('runner.notAnswered') : t('runner.skipped'))}
+                        </span>
+                      </span>
+                      <span className="flex size-10 shrink-0 items-center justify-center rounded-full text-primary-ink" aria-label={t('runner.change')}>
+                        <Pencil className="size-4" />
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </Card>
+        ) : (
+          <Card key={f.id} className="flex flex-col gap-4 p-6 sm:p-8">
+            <div className="text-center">
+              <h2 className="text-balance font-display text-xl font-semibold text-ink sm:text-2xl">{fWords.main}</h2>
+              {fWords.english && <p className="mt-1 text-sm text-ink-muted" lang="en">{fWords.english}</p>}
+              {helpWords?.main && <p className="mt-2 text-sm text-ink-muted">{helpWords.main}</p>}
+              {!f.required && !f.computed && <p className="mt-2 text-xs text-ink-faint">{t('runner.optionalHint')}</p>}
+            </div>
+
+            {isRiskStep && mother && (
+              <div className="rounded-lg border border-border bg-surface-sunken/60 p-4">
+                <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+                  <ShieldCheck className="size-4 text-primary-ink" />{t('anc.autoTitle')}
+                </p>
+                <p className="mb-2 mt-0.5 text-xs text-ink-muted">
+                  {t('anc.autoFrom', {
+                    height: mother.height != null ? `${mother.height} cm` : '—',
+                    age: motherAgeOn(mother.mother_dob, mother.mother_age, assessmentDate) ?? '—',
+                  })}
+                </p>
+                <ul className="flex flex-col gap-1.5">
+                  {autos.map(a => (
+                    <li key={a.value} className="flex items-center justify-between gap-3 text-sm">
+                      <span className="text-ink">{words.option(RISK_FIELD, a.value, a.label).main}</span>
+                      <span className={a.applies ? 'font-semibold text-error-600 dark:text-error-400'
+                        : a.applies === false ? 'font-semibold text-success-600 dark:text-success-500' : 'text-ink-muted'}>
+                        {a.applies ? t('anc.yes') : a.applies === false ? t('anc.no') : t(`anc.unknown.${a.basis}`)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-sm font-semibold text-ink">{t('anc.otherRisks')}</p>
+              </div>
+            )}
+
+            {f.computed ? (
+              <div className="rounded-lg border border-dashed border-border-strong/70 bg-surface-sunken/50 px-3.5 py-2.5 text-center text-sm font-semibold text-ink">
                 {computedValues[f.id] || '—'}
               </div>
-              {f.helpText && <p className="mt-1 text-xs text-ink-muted">{f.helpText}</p>}
-            </div>
-          ) : (
-            <React.Fragment key={f.id}>
-              {f.id === RISK_FIELD && autos.length > 0 && mother && (
-                <div className="rounded-lg border border-border bg-surface-sunken/60 p-4">
-                  <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-                    <ShieldCheck className="size-4 text-primary-ink" />{t('anc.autoTitle')}
-                  </p>
-                  <p className="mb-2 mt-0.5 text-xs text-ink-muted">
-                    {t('anc.autoFrom', {
-                      height: mother.height != null ? `${mother.height} cm` : '—',
-                      age: motherAgeOn(mother.mother_dob, mother.mother_age, assessmentDate) ?? '—',
-                    })}
-                  </p>
-                  <ul className="flex flex-col gap-1.5">
-                    {autos.map(a => (
-                      <li key={a.value} className="flex items-center justify-between gap-3 text-sm">
-                        <span className="text-ink">{a.label}</span>
-                        <span className={a.applies ? 'font-semibold text-error-600 dark:text-error-400'
-                          : a.applies === false ? 'font-semibold text-success-600 dark:text-success-500' : 'text-ink-muted'}>
-                          {a.applies ? t('anc.yes') : a.applies === false ? t('anc.no') : t(`anc.unknown.${a.basis}`)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              <FlatFieldInput
-                field={f.id === RISK_FIELD && autos.length > 0
-                  ? { ...f, label: t('anc.otherRisks'), options: (f.options ?? []).filter(o => !autoValues.has(o.value)) }
-                  : f}
-                value={tickedValues[f.id] ?? (f.type === 'checkbox' ? [] : '')}
-                onChange={v => setValue(f.id, v)}
-                onBlur={() => { touch(f.id); touch(otherTextKey(f.id)); }}
-                error={shownError(f.id)}
-                otherText={String(values[otherTextKey(f.id)] ?? '')}
-                onOtherTextChange={v => setValue(otherTextKey(f.id), v)}
-                otherError={shownError(otherTextKey(f.id))}
-                disabled={busy}
-                dobIso={child?.dob ?? null}
-                todayIso={today}
-              />
-              {isGrowth && (f.id === measureIds.weight || f.id === measureIds.length) && (() => {
-                const which = f.id === measureIds.weight ? 'weight' : 'length';
-                return (
-                  <MeasurementCheckNotice
-                    field={which}
-                    flags={check.flags.filter(x => x.field === which)}
-                    confirmed={check.confirmed}
-                    onRemeasure={() => remeasure(f.id)}
-                    onConfirm={() => check.confirm(which)}
-                  />
-                );
-              })()}
-            </React.Fragment>
-          ),
-        )}
-      </Card>
+            ) : (
+              <div className={f.type === 'number' || f.type === 'date' || f.type === 'text' ? 'mx-auto w-full max-w-xs' : undefined}>
+                <FlatFieldInput
+                  field={plainOpts ? { ...inputField, options: plainOpts } : inputField}
+                  value={plainOpts ? pickedNow.filter(v => !isDanger(v)) : (tickedValues[f.id] ?? (f.type === 'checkbox' ? [] : ''))}
+                  onChange={v => {
+                    if (plainOpts && Array.isArray(v)) {
+                      // "None" clears the danger signs too; anything else keeps them.
+                      const keepDanger = !v.some(x => exclusiveValues.has(x));
+                      setValue(f.id, [...v, ...(keepDanger ? pickedNow.filter(isDanger) : [])]);
+                    } else setValue(f.id, v);
+                  }}
+                  onBlur={() => { touch(f.id); touch(otherTextKey(f.id)); }}
+                  error={shownError(f.id)}
+                  otherText={String(values[otherTextKey(f.id)] ?? '')}
+                  onOtherTextChange={v => setValue(otherTextKey(f.id), v)}
+                  otherError={shownError(otherTextKey(f.id))}
+                  disabled={busy}
+                  dobIso={child?.dob ?? null}
+                  todayIso={today}
+                  hideLabel
+                />
+              </div>
+            )}
 
-      {/* Mobile: primary action full-width on its own row so it is unmissable */}
-      <div className="flex flex-col-reverse gap-2 pb-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-        {!editingSubmitted && (
-          <Button
-            variant="outline"
-            onClick={handleSaveDraft}
-            loading={saving}
-            disabled={submitting}
-            iconLeft={<Save className="size-4" />}
-          >
-            {t('growth.saveDraft')}
-          </Button>
+            {f.id === dateFieldId && !values[f.id] && (
+              <div className="flex justify-center">
+                <Button variant="outline" size="sm" iconLeft={<CalendarCheck className="size-4" />} onClick={() => setValue(f.id, today)}>
+                  {t('growth.today')}
+                </Button>
+              </div>
+            )}
+
+            {plainOpts && (
+              <div className="rounded-lg border-2 border-error-300 bg-error-50/60 p-3.5 dark:border-error-500/40 dark:bg-error-500/10">
+                <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-error-700 dark:text-error-300">
+                  <AlertTriangle className="size-4" />{t('anc.danger.groupTitle')}
+                </p>
+                <FlatFieldInput
+                  field={{ ...inputField, id: `${f.id}__danger`, options: dangerOpts, allowOther: false }}
+                  value={pickedNow.filter(isDanger)}
+                  onChange={v => {
+                    const chosen = Array.isArray(v) ? v : [];
+                    // A danger sign ticked: "None" no longer holds.
+                    const plain = pickedNow.filter(x => !isDanger(x) && !(chosen.length > 0 && exclusiveValues.has(x)));
+                    setValue(f.id, [...plain, ...chosen]);
+                  }}
+                  disabled={busy}
+                  todayIso={today}
+                  hideLabel
+                />
+              </div>
+            )}
+            {dangerPicked && (
+              <Alert variant="error" title={t('anc.danger.alertTitle')}>{t('anc.danger.alert')}</Alert>
+            )}
+
+            {measure && lastCheck && lastCheck[measure] != null && (
+              <p className="flex items-center justify-center gap-1.5 text-sm text-ink-muted">
+                <History className="size-4" />
+                {t('growth.lastVisit', {
+                  date: formatDisplayDate(lastCheck.date, lang),
+                  value: measure === 'weight' ? `${lastCheck.weight} kg` : `${lastCheck.length} cm`,
+                })}
+              </p>
+            )}
+            {f.id === LOCATION_FIELD && values[f.id] && !touched[f.id] && resumeId == null && (
+              <p className="text-center text-xs text-ink-muted">{t('growth.samePlace')}</p>
+            )}
+            {measure && (
+              <MeasurementCheckNotice
+                field={measure}
+                flags={check.flags.filter(x => x.field === measure)}
+                confirmed={check.confirmed}
+                onRemeasure={() => remeasure(f.id)}
+                onConfirm={() => check.confirm(measure)}
+              />
+            )}
+
+            {current.extras.map(x => (
+              <div key={x.id} id={x.id}>
+                <span className="mb-1.5 block text-sm font-semibold text-ink">{words.title(x.id, x.label).main}</span>
+                <div className="rounded-lg border border-dashed border-border-strong/70 bg-surface-sunken/50 px-3.5 py-2.5 text-sm font-semibold text-ink">
+                  {computedValues[x.id] || '—'}
+                </div>
+                {x.helpText && <p className="mt-1 text-xs text-ink-muted">{words.help(x.id, x.helpText).main}</p>}
+              </div>
+            ))}
+          </Card>
         )}
-        <Button
-          onClick={handleSubmit}
-          loading={submitting}
-          disabled={saving}
-          iconLeft={<Send className="size-4" />}
-        >
-          {editingSubmitted ? t('runner.saveChanges') : t('growth.submit')}
-        </Button>
+      </div>
+
+      {/* Footer: fixed at the bottom so Next never moves (review of 30 Oct 2026). */}
+      <div className="sticky bottom-0 z-10 -mx-5 border-t border-border bg-background px-5 py-3 sm:-mx-6 sm:px-6">
+        <div className="mx-auto flex w-full max-w-2xl items-center gap-2 sm:gap-3">
+          {!editingSubmitted && (
+            <Button variant="ghost" onClick={handleSaveDraft} loading={saving} disabled={submitting} className="ml-auto">
+              {t('growth.saveDraft')}
+            </Button>
+          )}
+          {reviewing ? (
+            <Button size="lg" onClick={handleSubmit} loading={submitting} disabled={saving}
+              iconLeft={<CheckCircle2 className="size-4" />} className={editingSubmitted ? 'ml-auto' : undefined}>
+              {editingSubmitted ? t('runner.saveChanges') : t('runner.confirmSubmit')}
+            </Button>
+          ) : (
+            <Button size="lg" onClick={() => { void goNext(); }} disabled={busy}
+              iconRight={<ArrowRight className="size-4" />} className={editingSubmitted ? 'ml-auto' : undefined}>
+              {returnToReview ? t('runner.backToReview') : index >= last ? t('runner.review') : t('runner.next')}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -172,7 +172,15 @@
     "editTitle": "Change the mother's details",
     "saveChanges": "Save changes",
     "toastSaving": "Saving…",
-    "toastSaved": "Saved."
+    "toastSaved": "Saved.",
+    "quota": {
+      "title": "Who are you registering?",
+      "done": "{{adopted}} of {{target}} done. Not needed.",
+      "need_one": "You need {{count}} more",
+      "need_other": "You need {{count}} more",
+      "full": "You already have all the mothers of this type. Register her only if your supervisor asked you to.",
+      "dobNote": "Next, we will ask the baby's date of birth and check the age group for you."
+    }
   },
   "child": {
     "titleNew": "Register a Child",
@@ -228,7 +236,15 @@
     "toastFailRegister": "Failed to register. Please try again.",
     "twinsNoticeTitle": "Register the other twin too",
     "twinsNoticeBody": "This form records one baby. If the other twin is alive and meets the adoption criteria, add them as a separate child under the same mother once you have saved this one.",
-    "twinsNoticeAck": "Got it"
+    "twinsNoticeAck": "Got it",
+    "typeCheck": {
+      "title": "This baby was {{months}} months ({{days}} days) old on the adoption day",
+      "titleBorn": "This baby was born after the mother was adopted",
+      "body": "So this adoption is \"{{type}}\", not \"{{declared}}\". Change it so her visits follow the right schedule.",
+      "fix": "Change to \"{{type}}\"",
+      "fixed": "Adoption type changed to \"{{type}}\".",
+      "failed": "Could not change the adoption type. Try again."
+    }
   },
   "options": {
     "yes": "Yes",

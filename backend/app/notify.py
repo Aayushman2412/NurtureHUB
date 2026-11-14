@@ -39,16 +39,45 @@ _PENDING_KEY = "pending_push_notifications"
 _SEND_SLOTS = threading.BoundedSemaphore(4)
 
 
+ACT_TODAY, TOMORROW, INFO, TRAINING, HIDDEN = "act_today", "tomorrow", "info", "training", "hidden"
+CATEGORIES = (ACT_TODAY, TOMORROW, INFO, TRAINING, HIDDEN)
+_TRAINING_LINKS = ("/tutorials", "/results", "/tests")
+
+
+def _category_for(link: Optional[str]) -> str:
+    """The panel group of a notification whose sender did not name one:
+    training and test messages by their link, everything else information."""
+    if link and link.startswith(_TRAINING_LINKS):
+        return TRAINING
+    return INFO
+
+
 def create_notification(
     db: Session,
     user_id: int,
     title: str,
     message: str,
     link: Optional[str] = None,
+    category: Optional[str] = None,
+    dedupe_key: Optional[str] = None,
 ) -> models.Notification:
-    """Insert a notification row and schedule its push for after commit."""
+    """Insert a notification row and schedule its push for after commit.
+
+    `category` groups it in the panel ("act_today", "tomorrow", "info",
+    "training"); left out, it follows from the link. `dedupe_key` names the
+    problem it is about (e.g. "falter:42" for baby 42): a new notification
+    with the same key replaces that user's older ones — one alert per child
+    per problem (Learner Redesign review, 30 Oct 2026)."""
+    if category not in CATEGORIES:
+        category = _category_for(link)
+    if dedupe_key:
+        dedupe_key = dedupe_key[:160]
+        (db.query(models.Notification)
+         .filter(models.Notification.user_id == user_id, models.Notification.dedupe_key == dedupe_key)
+         .delete(synchronize_session=False))
     notification = models.Notification(
-        user_id=user_id, title=title, message=message, link=link
+        user_id=user_id, title=title, message=message, link=link,
+        category=category, dedupe_key=dedupe_key,
     )
     db.add(notification)
     db.info.setdefault(_PENDING_KEY, []).append(

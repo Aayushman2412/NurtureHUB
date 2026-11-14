@@ -127,8 +127,12 @@ BACKEND_STRINGS: List[Tuple[str, str, str, str]] = [
     ("server:notification.protein.admin", "Notification to admins on an unusual protein total (app/routers/forms.py)",
      "{learner_name} recorded a 24-hour protein total of {grams}g for {subject_name}, "
      "above the {limit}g review threshold. Worth confirming the portion sizes.", ""),
-    ("server:notification.formSummary.body", "Notification after an assessment form (app/routers/forms.py)",
-     "{green} step(s) as per LAP, {red} need attention. Open the assessment plan to see the recommended actions.", ""),
+    ("server:notification.formSummary.toPractise", "Notification after an assessment form (app/routers/forms.py)",
+     "{red} {points} to practise again with the mother, {green} done well. Open the plan to see what to teach.",
+     "{points} is 'point' or 'points'."),
+    ("server:notification.formSummary.allGood", "Notification after an assessment form (app/routers/forms.py)",
+     "All {green} {points} done well. Open the plan to see what to tell the mother.",
+     "{points} is 'point' or 'points'."),
 ]
 
 # ── Columns ─────────────────────────────────────────────────────────────────

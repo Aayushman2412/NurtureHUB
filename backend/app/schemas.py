@@ -265,6 +265,19 @@ class MotherCreate(MotherBase):
     # Client idempotency key for offline-queue replays (see routers/mothers.py).
     client_ref: Optional[str] = Field(default=None, max_length=64)
 
+    @field_validator("mother_name")
+    @classmethod
+    def _real_name(cls, v: str) -> str:
+        """Only at registration (Learner Redesign review, 30 Oct 2026: "mother
+        name", "Tttttt" saved as real mothers); reads and edits never re-check,
+        so an old record still loads and can be corrected."""
+        from app.name_checks import MESSAGES, placeholder_reason
+
+        reason = placeholder_reason(v)
+        if reason:
+            raise ValueError(MESSAGES[reason])
+        return v
+
 
 class MotherUpdate(MotherBase):
     # Editing an existing mother: don't re-apply the registration-time freshness bound.
@@ -894,6 +907,8 @@ class NotificationOut(BaseModel):
     link: Optional[str] = None
     is_read: bool
     created_at: datetime
+    # act_today | tomorrow | info | training (app/notify.py); "hidden" rows are never listed.
+    category: Optional[str] = None
 
     class Config:
         from_attributes = True

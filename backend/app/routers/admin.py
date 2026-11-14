@@ -4310,7 +4310,7 @@ def upload_face_to_face_selection(
                             "Congratulations! You have been selected for the face-to-face "
                             "training. Please await further instructions."
                         ),
-                        link="/dashboard",
+                        link="/dashboard", category="training",
                     )
                     matched.append(email)
                     continue
@@ -4331,7 +4331,7 @@ def upload_face_to_face_selection(
                     "Congratulations! You have been selected for the face-to-face "
                     "training. Please await further instructions."
                 ),
-                link="/dashboard",
+                link="/dashboard", category="training",
             )
         matched.append(email)
     db.commit()
@@ -4389,7 +4389,7 @@ def set_selection_announcement(
                     db, user.id, NOT_SELECTED_NOTIFICATION_TITLE,
                     ("Thank you for completing the training and the tests. You were not selected for the "
                      "face-to-face training this time. The videos stay open for you to revise."),
-                    link="/dashboard",
+                    link="/dashboard", category="training",
                 )
                 told += 1
     else:

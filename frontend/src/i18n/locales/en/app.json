@@ -34,7 +34,13 @@
     "readAll": "Read All",
     "close": "Close",
     "emptyTitle": "No notifications yet",
-    "emptyBody": "Updates about your training and tests will appear here."
+    "emptyBody": "Updates about your training and tests will appear here.",
+    "groups": {
+      "act_today": "Act today",
+      "tomorrow": "Tomorrow",
+      "info": "For your information",
+      "training": "Training"
+    }
   },
   "install": {
     "button": "Download the app",

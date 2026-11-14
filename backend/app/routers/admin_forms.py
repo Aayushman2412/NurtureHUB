@@ -272,18 +272,25 @@ class FlowSchemaModel(BaseModel):
         return self
 
 
-class FlatFieldOptionModel(BaseModel):
-    label: str
-    value: str
-    # "None of the above" on a checkbox field — see FlowOptionModel.exclusive.
-    exclusive: Optional[bool] = None
-
-
 class FlatFieldConditionModel(BaseModel):
     kind: Literal["field", "ageLtDays", "ageGteDays"] = "field"
     fieldId: Optional[str] = None
     anyOf: Optional[List[str]] = None
     days: Optional[float] = None
+
+
+class FlatFieldOptionModel(BaseModel):
+    label: str
+    value: str
+    # "None of the above" on a checkbox field — see FlowOptionModel.exclusive.
+    exclusive: Optional[bool] = None
+    # Offered only when these hold, like a field's showIf — e.g. "Postnatal
+    # ward" only for a newborn (Learner Redesign review, 30 Oct 2026: "hide
+    # options that can't apply at that age"). An answer saved before still loads.
+    showIf: Optional[List[FlatFieldConditionModel]] = None
+    # A danger sign: shown apart from the other options, and ticking it tells
+    # the learner to refer the mother today (same review, the pregnancy check).
+    danger: Optional[bool] = None
 
 
 class FlatFieldModel(BaseModel):

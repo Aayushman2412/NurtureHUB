@@ -1233,7 +1233,6 @@
   "server:notification.protein.title": "नेहमीपेक्षा खूप जास्त प्रथिने - {subject_name}",
   "server:notification.protein.learner": "नोंदवलेली 24 तासांची एकूण प्रथिने {grams}g आहेत, जी {limit}g च्या तपासणी मर्यादेपेक्षा जास्त आहेत. कृपया मातेसोबत आहाराचे प्रमाण पुन्हा तपासा.",
   "server:notification.protein.admin": "{learner_name} यांनी {subject_name} साठी 24 तासांची एकूण प्रथिने {grams}g नोंदवली आहेत, जी {limit}g च्या तपासणी मर्यादेपेक्षा जास्त आहेत. आहाराचे प्रमाण एकदा खात्री करून घ्यावे.",
-  "server:notification.formSummary.body": "{green} पायऱ्या LAP नुसार, {red} कडे लक्ष देणे आवश्यक. सुचवलेल्या कृती पाहण्यासाठी मूल्यांकन योजना उघडा.",
   "admin:layout.panel": "प्रशासक पॅनेल",
   "admin:layout.openMenu": "मेनू उघडा",
   "admin:layout.toggleTheme": "थीम बदला",
@@ -3209,5 +3208,7 @@
   "form:antenatal:medications.opt.none.label": "काहीही नाही",
   "form:antenatal:medications_other.title": "कृपया इतर औषध नमूद करा.",
   "resultsInsights:cmp.sentence_one": "{{total}} प्रशिक्षणार्थींपैकी फक्त {{count}} जणांनी {{a}} आणि {{b}} दोन्ही दिल्या. त्यांचे गुण {{a}} मध्ये {{avgA}}% आणि {{b}} मध्ये {{avgB}}% होते ({{change}} गुण).",
-  "resultsInsights:cmp.sentence_other": "{{total}} प्रशिक्षणार्थींपैकी {{count}} जणांनी {{a}} आणि {{b}} दोन्ही दिल्या. फक्त या {{count}} जणांची तुलना: त्यांचे सरासरी गुण {{a}} मध्ये {{avgA}}% आणि {{b}} मध्ये {{avgB}}% होते ({{change}} गुण)."
+  "resultsInsights:cmp.sentence_other": "{{total}} प्रशिक्षणार्थींपैकी {{count}} जणांनी {{a}} आणि {{b}} दोन्ही दिल्या. फक्त या {{count}} जणांची तुलना: त्यांचे सरासरी गुण {{a}} मध्ये {{avgA}}% आणि {{b}} मध्ये {{avgB}}% होते ({{change}} गुण).",
+  "server:notification.formSummary.toPractise": "आईसोबत {red} {points} पुन्हा सराव करायचे आहेत, {green} चांगले होत आहेत. काय शिकवायचे ते पाहण्यासाठी योजना उघडा.",
+  "server:notification.formSummary.allGood": "सर्व {green} {points} चांगले होत आहेत. आईला काय सांगायचे ते पाहण्यासाठी योजना उघडा."
 }

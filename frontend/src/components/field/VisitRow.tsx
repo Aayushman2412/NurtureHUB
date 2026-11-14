@@ -5,13 +5,17 @@ import { ChevronRight } from 'lucide-react';
 import type { TaskGroup } from '../../api/today';
 import { buttonClasses } from '../ui';
 import { cn } from '../../utils/cn';
-import { formNames, visitUrl, whoLine } from './fieldText';
+import { ageShort, formNames, visitUrl, whoLine } from './fieldText';
 
-/** One visit to make: who, which forms, late or today — the whole row starts it. */
+/** One visit to make: who, which forms, late or today — the whole row starts it.
+ *  "Baby of Komal · 5 mo", "Sunita · Pregnant 36 weeks"; late is always
+ *  "Late by N days" (Learner Redesign review, 30 Oct 2026). */
 const VisitRow: React.FC<{ g: TaskGroup }> = ({ g }) => {
   const { t } = useTranslation('dashboard');
   const who = whoLine(g, t);
   const late = g.late_days > 0;
+  const about = g.child_id != null ? ageShort(g.age_days, t)
+    : g.weeks != null ? t('field.pregnantWeeks', { weeks: g.weeks }) : null;
   return (
     <Link
       to={visitUrl(g.mother_id, g.child_id, g.forms.map(f => f.key), g.ask_delivery)}
@@ -23,13 +27,16 @@ const VisitRow: React.FC<{ g: TaskGroup }> = ({ g }) => {
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-baseline gap-x-2">
           <span className="truncate font-display text-base font-semibold text-ink">{who.name}</span>
+          {about && <span className="text-xs font-semibold text-ink-muted">· {about}</span>}
           <span className="text-xs text-ink-muted">{who.sub}</span>
         </span>
         <span className="block text-sm text-ink">
-          {g.ask_delivery ? `${t('field.delivery.short')} · ` : ''}{formNames(g.forms.map(f => f.key), t)}
+          {g.ask_delivery
+            ? <><b className="font-semibold">{t('field.askBorn')}</b> {t('field.thenAsPerAnswer')}</>
+            : formNames(g.forms.map(f => f.key), t)}
         </span>
         <span className={cn('text-xs font-semibold', late ? 'text-error-600 dark:text-error-400' : 'text-amber-700 dark:text-amber-400')}>
-          {late ? (g.late_days <= 30 ? t('field.lateBy', { count: g.late_days }) : t('field.late')) : t('field.dueToday')}
+          {late ? t('field.lateBy', { count: g.late_days }) : t('field.dueToday')}
         </span>
       </span>
       <span className={buttonClasses('primary', 'sm', 'shrink-0 pointer-events-none')}>

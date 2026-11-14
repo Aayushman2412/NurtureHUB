@@ -192,5 +192,5 @@ def ensure_awaiting_results_notification(db: Session, user: User) -> None:
             "Congratulations! You have completed all tutorials and tests. "
             "Please wait for your results — you will be notified once they are announced."
         ),
-        link="/dashboard",
+        link="/dashboard", category="training",
     )

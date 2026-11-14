@@ -7,7 +7,7 @@
  * protocol keeps lib/careFlow.ts exactly as it was.
  */
 import type { FormCode } from '../api/today';
-import type { ChildVisitPlan } from '../api/visits';
+import type { CfGate, ChildVisitPlan } from '../api/visits';
 import type { FlowNode, FlowSchema } from './flowTypes';
 
 export const NEW_PROTOCOL = 'lap_2026_11';
@@ -26,6 +26,32 @@ export const formsForNow = (plan: ChildVisitPlan): FormCode[] => {
   if (!today) return ['gm'];
   if (today.pending.length) return today.pending;
   return today.forms.length ? today.forms : ['gm'];
+};
+
+/**
+ * Why a complementary feeding form cannot be filled today, in words — or
+ * null when it can (the app does not allow a CF before its scheduled day;
+ * Learner Redesign review, 30 Oct 2026: "Not due yet. Last check was on
+ * 2 Nov (day 10). The next one is on 7 Nov (day 15).").
+ */
+export const cfGateMessage = (
+  gate: CfGate | undefined,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  day: (iso: string) => string,
+): string | null => {
+  if (!gate || gate.allowed || gate.reason == null || gate.reason === 'not_applicable') return null;
+  const next = gate.next_on ? day(gate.next_on) : null;
+  if (gate.reason === 'done_today') {
+    return next ? t('field.cfGate.done_today', { next, ns: 'dashboard' }) : t('field.cfGate.done_today_noDate', { ns: 'dashboard' });
+  }
+  if (gate.reason === 'not_started') {
+    return next ? t('field.cfGate.not_started', { next, ns: 'dashboard' }) : t('field.cfGate.not_started_noDate', { ns: 'dashboard' });
+  }
+  const last = gate.last_on ? day(gate.last_on) : '—';
+  if (gate.last_day != null && gate.next_day != null && next) {
+    return t('field.cfGate.too_early', { last, lastDay: gate.last_day, next, nextDay: gate.next_day, ns: 'dashboard' });
+  }
+  return t('field.cfGate.too_early_short', { last, next: next ?? '—', ns: 'dashboard' });
 };
 
 /** A visibility rule nothing can satisfy: the runner walks past the node. */

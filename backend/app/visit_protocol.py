@@ -11,6 +11,10 @@ dates and the forms already submitted (`Case`) and answers
   * the mother's protein form                         pf_status()
   * the not-breastfeeding counselling and drop-out    feeding_state()
   * the delivery question from 35 weeks               ask_delivery()
+  * why each form is on a visit                       form_reasons()
+  * whether a CF form may be filled today             cf_gate()
+  * the visits as a line of done / missed / due       timeline()
+  * visits and forms expected by today, and done      progress()
 
 app/visit_plan.py turns database rows into a `Case`; the worker app (Today,
 the baby page, the visit flow) and the care alerts read the answers from there
@@ -347,14 +351,16 @@ def _falling(last: Optional[float], prev: Optional[float]) -> bool:
     return last is not None and (last < WFA_P30_Z or (change is not None and change < 0))
 
 
-def _bf_rule(case: Case, on: date) -> Tuple[bool, bool]:
-    """(BF due by the bucket-2 rule at a visit on `on`, it was stopped before).
+def _bf_rule_state(case: Case, on: date) -> Tuple[bool, bool, Optional[date]]:
+    """(BF due by the bucket-2 rule at a visit on `on`, it was stopped before,
+    the day it last reopened).
 
     A stop is decided at the end of a visit and holds from the next one; a
     growth check that falls below the 30th percentile or turns negative
     reopens BF at once — the check is filled first, so at the same visit."""
     events = sorted({f.on for f in _of(case, CG, BF, before=on)})
     active, stopped_once = True, False
+    reopened_on: Optional[date] = None
     bfs: List[Form] = []
     last = prev = None
     for day in events:
@@ -362,7 +368,7 @@ def _bf_rule(case: Case, on: date) -> Tuple[bool, bool]:
             if f.on == day and f.code == CG and f.waz is not None:
                 prev, last = last, f.waz
                 if not active and _falling(last, prev):
-                    active = True
+                    active, reopened_on = True, day
         bfs.extend(f for f in _of(case, BF) if f.on == day)
         if active and _may_stop(bfs, last, prev):
             active, stopped_once = False, True
@@ -370,7 +376,13 @@ def _bf_rule(case: Case, on: date) -> Tuple[bool, bool]:
         if f.on == on and f.code == CG and f.waz is not None:
             prev, last = last, f.waz
             if not active and _falling(last, prev):
-                active = True
+                active, reopened_on = True, on
+    return active, stopped_once, reopened_on
+
+
+def _bf_rule(case: Case, on: date) -> Tuple[bool, bool]:
+    """(BF due by the bucket-2 rule at a visit on `on`, it was stopped before)."""
+    active, stopped_once, _reopened = _bf_rule_state(case, on)
     return active, stopped_once
 
 
@@ -390,12 +402,21 @@ def bf_status(case: Case, on: date) -> Dict[str, Any]:
     return {"due": active, "status": status, "count": count}
 
 
-def hidden_bf_questions(case: Case) -> List[str]:
+def hidden_bf_questions(case: Case, on: Optional[date] = None) -> List[str]:
     """Points drop out (bucket 2): a question answered green in two back-to-back
-    BF forms is not shown in later BF forms."""
+    BF forms is not shown in later BF forms.
+
+    When BF reopens (the baby fell below the 30th percentile, or the z-score
+    turned negative, after BF had stopped) every point comes back: only the
+    BF forms filled since the reopening count towards dropping one out again
+    (decided with the team, 14 Nov 2026)."""
     if _pnc_rules(case) == PNC_GE or case.dob is None:
         return []
-    bfs = _of(case, BF)
+    bfs = _of(case, BF, upto=on)
+    if on is not None:
+        reopened_on = _bf_rule_state(case, on + timedelta(days=1))[2]
+        if reopened_on is not None:
+            bfs = [f for f in bfs if f.on >= reopened_on]
     hidden: set = set()
     for a, b in zip(bfs, bfs[1:]):
         hidden |= set(a.green) & set(b.green)
@@ -591,5 +612,225 @@ def plan(case: Case, as_of: date, horizon_days: int = 7) -> Dict[str, Any]:
     bf_now = bf_status(case, bf_on)
     return {**out, "today": today, "next": nxt, "later": later,
             "bf": {"status": bf_now["status"], "count": len(_of(case, BF, upto=as_of)),
-                   "hidden_questions": hidden_bf_questions(case)},
+                   "hidden_questions": hidden_bf_questions(case, as_of)},
             "pf": pf_status(case, as_of + timedelta(days=1))}
+
+
+# ── Why each form is on a visit ────────────────────────────────────────────
+
+B3_BF_DAYS = (0, 1, 2, 3, 5)   # bucket 3: BF-1 … BF-5 on these visit days
+
+
+def form_reasons(case: Case, on: date, forms: Sequence[str]) -> Dict[str, Dict[str, Any]]:
+    """For each form of a visit on `on`, why it is there — the tag the visit
+    card shows beside it ("Every visit", "Catch-up 4 of 5", "CF-1"):
+
+      gm       {"kind": "every_visit"}
+      bf       {"kind": "count" | "catch_up", "n", "of"}   bucket 3, or bucket 2 from 180 days
+               {"kind": "until_good" | "reopened", "n"}    bucket 2 under 180 days
+      cf       {"kind": "cf", "n"}
+      protein  {"kind": "first" | "every_15"}
+      anc      {"kind": "every_15"}
+    """
+    slot = visit_slot(case, on)
+    out: Dict[str, Dict[str, Any]] = {}
+    for code in forms:
+        if code == CG:
+            out[code] = {"kind": "every_visit"}
+        elif code == BF:
+            n = len(_of(case, BF, before=on)) + 1
+            age = _age(case, on)
+            if _pnc_rules(case) == PNC_GE:
+                planned = B3_BF_DAYS[min(n, len(B3_BF_DAYS)) - 1]
+                late = slot is None or slot.day > planned
+                out[code] = {"kind": "catch_up" if late else "count", "n": n, "of": BF_FORMS_TARGET}
+            elif age is not None and age >= CF_SWITCH_AGE_DAYS:
+                # Bucket 2 from 180 days: only the forms still short of five.
+                out[code] = {"kind": "catch_up", "n": n, "of": BF_FORMS_TARGET}
+            else:
+                status = bf_status(case, on)["status"]
+                out[code] = {"kind": "reopened" if status == "reopened" else "until_good", "n": n}
+        elif code == CF:
+            n = slot.cf_no if slot is not None and slot.cf_no is not None else len(_of(case, CF, before=on)) + 1
+            out[code] = {"kind": "cf", "n": n}
+        elif code == PF:
+            done = _pnc_pfs(case, on) if _phase_at(case, on) == "pnc" else _of(case, PF, before=on)
+            out[code] = {"kind": "every_15" if done else "first"}
+        elif code == AF:
+            out[code] = {"kind": "every_15"}
+    return out
+
+
+# ── Complementary feeding: not before its day ─────────────────────────────
+
+def _slot_of_visits(slots: Sequence[Slot], visits: Sequence[date], idx: Sequence[Optional[int]]) -> Dict[date, Slot]:
+    return {v: slots[j] for v, j in zip(visits, idx) if j is not None}
+
+
+def cf_gate(case: Case, as_of: date) -> Dict[str, Any]:
+    """Whether a complementary feeding form may be filled today. The app does
+    not allow a CF before its scheduled day (docs/visit-protocol-2026-11.md):
+    opened too early, the learner is told when the last one was and when the
+    next one is.
+
+      allowed   a CF is due at a visit today
+      reason    None | "done_today" | "too_early" | "not_started" | "not_applicable"
+      last_on / last_day / last_no     the latest CF form
+      next_on / next_day / next_no     the next CF visit day
+    """
+    out: Dict[str, Any] = {"allowed": False, "reason": "not_applicable", "count": 0,
+                           "last_on": None, "last_day": None, "last_no": None,
+                           "next_on": None, "next_day": None, "next_no": None}
+    if case.dob is None or _phase_at(case, as_of) != "pnc":
+        return out
+    if case.dropped_out_on is not None and as_of >= case.dropped_out_on:
+        return out
+    cfs = _of(case, CF, upto=as_of)
+    slots, visits, idx, _boundary = _matched(case, as_of)
+    by_visit = _slot_of_visits(slots, visits, idx)
+    out["count"] = len(cfs)
+    if cfs:
+        last = cfs[-1]
+        s = by_visit.get(last.on)
+        out.update(last_on=last.on.isoformat(), last_day=s.day if s else None,
+                   last_no=s.cf_no if s and s.cf_no else len(cfs))
+    if any(f.on == as_of for f in cfs):
+        return {**out, "reason": "done_today"}
+    if CF in forms_at(case, as_of):
+        return {**out, "allowed": True, "reason": None}
+    k = max((j for j in idx if j is not None), default=-1)
+    nxt = next((s for s in slots[k + 1:] if s.cf_no is not None and s.due_on > as_of), None)
+    if nxt is not None:
+        out.update(next_on=nxt.due_on.isoformat(), next_day=nxt.day, next_no=nxt.cf_no)
+    return {**out, "reason": "too_early" if cfs else "not_started"}
+
+
+# ── The visit line: done, missed, due ─────────────────────────────────────
+
+_LINE_OF_SEGMENT = {"anc": "anc", "b2": "pnc", "cf": "cf", "b3": "b3"}
+
+
+def _line_end(case: Case, as_of: date) -> date:
+    """How far the visit line is drawn: to the expected delivery while
+    pregnant; to the first birthday after it (one quarterly visit on, past it)."""
+    if _phase_at(case, as_of) == "anc":
+        edd = case.edd or (case.lmp + timedelta(days=PREGNANCY_DAYS) if case.lmp else None)
+        return edd if edd and edd > as_of else as_of + timedelta(days=ANC_EVERY_DAYS)
+    birthday = case.dob + timedelta(days=ONE_YEAR_DAYS)
+    return birthday if birthday > as_of else as_of + timedelta(days=QUARTERLY_DAYS)
+
+
+def timeline(case: Case, as_of: date) -> Dict[str, Any]:
+    """The adoption's visits as a line of dots (the baby page): green done,
+    red missed, outlined due now or next, grey later — and "Visit 8 of 17".
+
+      {"lines": [{"key": "anc" | "pnc" | "cf" | "b3", "visits": [
+                   {"n", "due_on", "day", "cf_no", "state", "done_on"}]}],
+       "current": {"n", "total", "done", "missed", "state"} | None}
+    """
+    if case.dropped_out_on is not None and case.dropped_out_on <= as_of:
+        return {"lines": [], "current": None}
+    slots, visits, idx, boundary = _matched(case, as_of)
+    end = _line_end(case, as_of)
+    done = {j: visits[i] for i, j in enumerate(idx) if j is not None}
+    k = max(done, default=-1)
+    cap = boundary if boundary is not None and boundary not in visits else None
+    overdue = [j for j in range(k + 1, len(slots))
+               if slots[j].due_on <= as_of and (cap is None or slots[j].due_on <= cap)]
+    if overdue:
+        current = overdue[-1]
+    else:
+        current = next((j for j in range(k + 1, len(slots)) if slots[j].due_on > as_of), None)
+    shown = [j for j, s in enumerate(slots) if s.due_on <= end or j in done or j == current]
+    lines: List[Dict[str, Any]] = []
+    counts = {"done": 0, "missed": 0}
+    position = None
+    for n, j in enumerate(shown, start=1):
+        s = slots[j]
+        if j in done:
+            state = "done"
+        elif j == current:
+            state = "due" if s.due_on <= as_of else "next"
+        elif j < (current if current is not None else len(slots)) and s.due_on <= as_of:
+            state = "missed"
+        else:
+            state = "later"
+        if state in counts:
+            counts[state] += 1
+        if j == current:
+            position = n
+        key = _LINE_OF_SEGMENT.get(s.segment, s.segment)
+        if not lines or lines[-1]["key"] != key:
+            lines.append({"key": key, "visits": []})
+        lines[-1]["visits"].append({"n": n, "due_on": s.due_on.isoformat(), "day": s.day, "cf_no": s.cf_no,
+                                    "state": state, "done_on": _iso(done.get(j))})
+    current_out = None
+    if position is not None:
+        current_out = {"n": position, "total": len(shown), "done": counts["done"], "missed": counts["missed"],
+                       "state": "due" if slots[current].due_on <= as_of else "next"}
+    return {"lines": lines, "current": current_out}
+
+
+# ── Progress: visits and forms expected by today ───────────────────────────
+
+def _phase_counts(case: Case, as_of: date, codes: Sequence[str]) -> Dict[str, Any]:
+    slots, visits, idx, _boundary = _matched(case, as_of)
+    visit_of = {j: visits[i] for i, j in enumerate(idx) if j is not None}
+    expected: Dict[str, int] = {c: 0 for c in codes}
+    due_slots = made = on_time = 0
+    last_pf: Optional[date] = None
+    for j, s in enumerate(slots):
+        if s.due_on > as_of:
+            break
+        if case.dropped_out_on is not None and s.due_on >= case.dropped_out_on:
+            break
+        due_slots += 1
+        v = visit_of.get(j)
+        if v is not None:
+            made += 1
+            on_time += abs((v - s.due_on).days) <= TOLERANCE_DAYS
+        on = v if v is not None else s.due_on
+        for code in forms_at(case, on):
+            if code == PF:
+                # Missed visits in a row would each still "owe" the protein
+                # form; it is expected once per 15 days, never closer than 10.
+                if last_pf is not None and (on - last_pf).days < PF_MIN_GAP_DAYS:
+                    continue
+                last_pf = on
+            if code in expected:
+                expected[code] += 1
+    return {"due": due_slots, "made": made, "on_time": on_time, "expected": expected}
+
+
+def progress(case: Case, as_of: date) -> Dict[str, Any]:
+    """One adoption's work so far: visit days due by today, made, made on time
+    (within ±2 days), and the forms those visits were to carry against the
+    forms filled. A mother adopted in pregnancy counts her pregnancy visits
+    and, after the birth, the baby's."""
+    codes = (CG, BF, CF, AF, PF)
+    done: Dict[str, int] = {c: 0 for c in codes}
+    totals = {"due": 0, "made": 0, "on_time": 0}
+    expected: Dict[str, int] = {c: 0 for c in codes}
+    phases: List[Tuple[Case, date, date]] = []
+    anchor = pnc_anchor(case) if case.dob is not None else None
+    if bucket(case) == ANC:
+        pregnancy = replace(case, dob=None, child_adopted=None)
+        until = min(as_of, anchor - timedelta(days=1)) if anchor is not None and anchor <= as_of else as_of
+        phases.append((pregnancy, case.adopted, until))
+    if anchor is not None and anchor <= as_of:
+        phases.append((case, anchor, as_of))
+    for phase_case, start, until in phases:
+        if until < start:
+            continue
+        counts = _phase_counts(phase_case, until, codes)
+        for key in totals:
+            totals[key] += counts[key]
+        for code in codes:
+            expected[code] += counts["expected"][code]
+        mine = MOTHER_FORMS if phase_case.dob is None else CHILD_FORMS + ((PF,) if case.mother_forms_here else ())
+        for f in case.forms:
+            if f.code in mine and start <= f.on <= until:
+                done[f.code] += 1
+    if not case.mother_forms_here:
+        expected[PF] = done[PF] = 0
+    return {"visits": totals, "expected": expected, "done": done}

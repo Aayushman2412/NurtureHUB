@@ -346,5 +346,20 @@ def test_a_legacy_project_keeps_its_today(world):
     view = fieldplan.today_view(db, world["worker"])
     assert view["protocol"] == VP.LAP_2025
     assert all("ask_delivery" not in g for g in view["today"])
+    # Only the protocol, the split and whether a supervisor can be told
+    # (the baby page's danger box works on either protocol).
     assert child_visit_plan(world["child"].id, current_user=world["worker"], db=db) == {
-        "protocol": VP.LAP_2025, "pnc_split_days": 150}
+        "protocol": VP.LAP_2025, "pnc_split_days": 150,
+        "has_supervisor": bool(world["worker"].batch_monitor_id)}
+
+
+def test_the_cached_request_user_still_reads_its_project_protocol(world):
+    """get_verified_user hands most requests a detached copy rebuilt from
+    column values, with no `program_district` loaded: the protocol must still
+    be the project's, not the older default (bug found 14 Nov 2026)."""
+    from app.dependencies import _detached_from_snapshot, _snapshot
+    from app import visit_plan
+
+    cached = _detached_from_snapshot(_snapshot(world["worker"]))
+    assert cached.program_district is None and cached.program_district_id == world["pd"].id
+    assert visit_plan.settings_for(cached, world["db"]) == visit_plan.settings_for(world["worker"])

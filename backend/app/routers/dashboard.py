@@ -280,6 +280,16 @@ def today(current_user: User = Depends(get_verified_user), db: Session = Depends
     return view
 
 
+@router.get("/refresh-videos", dependencies=[Depends(require_phi_access)])
+def refresh_videos(current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
+    """Videos to watch again, picked from the learner's own cases (Learner
+    Redesign review, 30 Oct 2026) — app/refresh_videos.py. Topics, counts
+    and videos only; no names leave."""
+    from app.refresh_videos import refresh_videos as pick
+
+    return {"topics": pick(db, current_user)}
+
+
 @router.get("/my-team")
 def my_team(current_user: User = Depends(get_verified_user), db: Session = Depends(get_db)):
     """A batch monitor's learners and how each is doing (review of 6 Oct and
@@ -316,7 +326,7 @@ def my_team(current_user: User = Depends(get_verified_user), db: Session = Depen
     for r in rows:
         r["phone"] = phones.get(r["id"])
         learner = learners.get(r["id"])
-        if learner is not None and visit_plan.uses_new_protocol(learner):
+        if learner is not None and visit_plan.uses_new_protocol(learner, db):
             # Her project plans visits by the November 2026 protocol.
             r["late_visits"], r["due_today"] = visit_plan.visits_late_and_due(db, learner, today_d)
         else:

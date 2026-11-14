@@ -22,8 +22,11 @@ import {
 } from '../../offline/submit';
 import { vaultClear, vaultKey, vaultLoad, vaultSave } from '../../offline/answerVault';
 import { flowString, nextInFlow, parseFlow } from '../../lib/careFlow';
-import { usesNewProtocol, withoutQuestions } from '../../lib/visitProtocol';
-import { getChildVisitPlan } from '../../api/visits';
+import { cfGateMessage, usesNewProtocol, withoutQuestions } from '../../lib/visitProtocol';
+import { getChildVisitPlan, type CfGate } from '../../api/visits';
+import { optionLabel, useFormText } from '../../lib/formText';
+import { formFlowChain } from '../../lib/formNames';
+import { shortDay } from '../../components/field/fieldText';
 import { useAuth } from '../../context/AuthContext';
 import { proteinStatusOption } from '../../lib/autoAnswers';
 import type { FlowOption, FlowSchema, FormDefinition, FormKey, MatrixAnswer } from '../../lib/flowTypes';
@@ -95,9 +98,13 @@ const AssessmentRunnerPage: React.FC = () => {
   const { user } = useAuth();
   /** Breastfeeding points that dropped out and are not asked (November 2026 protocol). */
   const [hiddenCount, setHiddenCount] = useState(0);
+  /** November 2026 protocol: a CF form is not filled before its day. */
+  const [cfGate, setCfGate] = useState<CfGate | null>(null);
 
   const validKey = isFlowFormKey(keyParam ?? '');
   const formKey = (keyParam ?? 'breastfeeding') as FormKey;
+  /** The form's questions in the learner's language, English underneath. */
+  const words = useFormText(formKey);
   const isMother = isMotherFormKey(formKey);
   const resumeIdParam = searchParams.get('responseId');
   const resumeId = resumeIdParam ? Number(resumeIdParam) : null;
@@ -153,7 +160,8 @@ const AssessmentRunnerPage: React.FC = () => {
     setLoadError(false);
     // November 2026 protocol: a breastfeeding question answered green in two
     // back-to-back forms is not shown again (docs/visit-protocol-2026-11.md).
-    const wantsPlan = formKey === 'breastfeeding' && !isMother && usesNewProtocol(user);
+    // … and a complementary feeding form is not filled before its day.
+    const wantsPlan = (formKey === 'breastfeeding' || formKey === 'complementary_feeding') && !isMother && usesNewProtocol(user);
     Promise.all([
       getFormDefinition(formKey),
       isMother ? getMother(motherId) : getChild(motherId, childId),
@@ -164,7 +172,8 @@ const AssessmentRunnerPage: React.FC = () => {
         if (cancelled) return;
         // Only a new form or a draft: re-opening a submitted one must keep
         // every answer it holds.
-        const hidden = resp?.status === 'submitted' ? [] : plan?.bf?.hidden_questions ?? [];
+        const hidden = resp?.status === 'submitted' || formKey !== 'breastfeeding' ? [] : plan?.bf?.hidden_questions ?? [];
+        if (formKey === 'complementary_feeding' && !resp) setCfGate(plan?.cf ?? null);
         const def = hidden.length && loaded.builder_type === 'flow'
           ? { ...loaded, schema_json: withoutQuestions(loaded.schema_json as FlowSchema, hidden) }
           : loaded;
@@ -560,6 +569,31 @@ const AssessmentRunnerPage: React.FC = () => {
     );
   }
 
+  // November 2026 protocol: "the app does not allow a CF before its
+  // scheduled day" — opened too early, it says when the next one is
+  // (Learner Redesign review, 30 Oct 2026). A form already begun opens.
+  const cfBlocked = !isMother && resumeId == null ? cfGateMessage(cfGate ?? undefined, t, shortDay) : null;
+  if (cfBlocked) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <Card className="p-8 text-center">
+          <div className="inline-flex shrink-0 text-amber-600 dark:text-amber-500">
+            <Lock className="size-6" aria-hidden />
+          </div>
+          <h3 className="mt-4 font-display text-lg font-semibold text-ink">{t('cfGate.title')}</h3>
+          <p className="mx-auto mt-2 max-w-md text-sm text-ink-muted">{cfBlocked}</p>
+          <Button
+            variant="outline"
+            className="mt-5"
+            onClick={() => navigate(flow ? nextInFlow(flow, motherId, childId) : `/babies/${childId}`)}
+          >
+            {flow?.rest.length ? t(`flow.next.${flow.rest[0]}`) : t('field.cfGate.back', { ns: 'dashboard' })}
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
   if (derived.steps.length === 0 || !current) {
     return (
       <div className="mx-auto max-w-2xl">
@@ -605,7 +639,7 @@ const AssessmentRunnerPage: React.FC = () => {
     if (step.kind !== 'question') return '';
     const q = step.question;
     if (q.questionType === 'single' || q.questionType === 'multi') {
-      return q.options.filter(o => a?.optionIds.includes(o.id)).map(o => o.label).join(', ');
+      return q.options.filter(o => a?.optionIds.includes(o.id)).map(o => words.option(q.id, o.id, o.label).main).join(', ');
     }
     if (q.questionType === 'date') return a?.value ? formatDisplayDate(a.value, i18n.language) : '';
     return a?.value ?? '';
@@ -635,11 +669,12 @@ const AssessmentRunnerPage: React.FC = () => {
             </button>
             <div className="min-w-0 flex-1">
               <div className="truncate font-display text-sm font-semibold text-ink">
-                {definition.title}
+                {formFlowChain(formKey, [], t).current ?? definition.title}
               </div>
               <div className="truncate text-xs text-ink-muted">
                 {subjectName}
                 {subjectUid ? ` · ${subjectUid}` : ''}
+                {flow && flow.rest.length > 0 && ` · ${t('flow.then', { forms: formFlowChain(formKey, flow.rest, t).next.join(' → ') })}`}
               </div>
               {hiddenCount > 0 && (
                 <div className="text-xs text-ink-muted">{t('runner.pointsHidden', { count: hiddenCount })}</div>
@@ -677,7 +712,7 @@ const AssessmentRunnerPage: React.FC = () => {
             <ol className="mt-4 flex flex-col divide-y divide-border">
               {derived.steps.map((step, i) => {
                 if (step.kind === 'info') return null;
-                const title = step.kind === 'question' ? step.question.title : step.matrix.title;
+                const title = step.kind === 'question' ? words.title(step.id, step.question.title).main : step.matrix.title;
                 const required = step.kind === 'question' ? step.question.required : step.matrix.required;
                 const done = isStepAnswered(step, answers);
                 const text = answerText(step);
@@ -752,10 +787,13 @@ const AssessmentRunnerPage: React.FC = () => {
                 return (
                   <>
                     <h2 className="text-balance text-center font-display text-xl font-semibold text-ink sm:text-2xl">
-                      {q.title}
+                      {words.title(q.id, q.title).main}
                     </h2>
+                    {words.title(q.id, q.title).english && (
+                      <p className="mt-1 text-center text-sm text-ink-muted" lang="en">{words.title(q.id, q.title).english}</p>
+                    )}
                     {qDisplay.helpText && q.helpText && (
-                      <p className="mt-2 text-center text-sm text-ink-muted">{q.helpText}</p>
+                      <p className="mt-2 text-center text-sm text-ink-muted">{words.help(q.id, q.helpText).main}</p>
                     )}
                     {!q.required && (
                       <p className="mt-2 text-center text-xs text-ink-faint">{t('runner.optionalHint')}</p>
@@ -827,7 +865,7 @@ const AssessmentRunnerPage: React.FC = () => {
                             {[...q.options.filter(isExclusiveOption), ...q.options.filter(o => !isExclusiveOption(o))].map(o => (
                               <OptionCard
                                 key={o.id}
-                                option={o}
+                                option={{ ...o, label: optionLabel(words.option(q.id, o.id, o.label)) }}
                                 selected={selectedIds.includes(o.id)}
                                 onToggle={() => toggleOption(current, o.id)}
                                 showMedia={qDisplay.optionMedia}

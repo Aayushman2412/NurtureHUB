@@ -37,14 +37,28 @@ POSTNATAL_TYPES = ("pnc_lt5", "pnc_ge5")
 _DEFAULT_POSITIVE = {"green"}
 
 
-def settings_for(user: models.User) -> Tuple[str, int]:
-    """(protocol, PNC split days) of the learner's project."""
+def settings_for(user: models.User, db: Optional[Session] = None) -> Tuple[str, int]:
+    """(protocol, PNC split days) of the learner's project.
+
+    The request's user is often the cached, detached copy that
+    dependencies.get_verified_user rebuilds from column values: its
+    `program_district` relationship is None even when program_district_id is
+    set, which silently read as "no project" — the older protocol — on every
+    cached request (found 14 Nov 2026). The project is then read by id."""
     from app.projects import visit_settings
-    return visit_settings(user.program_district)
+
+    project = user.program_district
+    if project is None and user.program_district_id:
+        if db is not None:
+            return visit_settings(db.get(models.ProgramDistrict, user.program_district_id))
+        from app.database import SessionLocal
+        with SessionLocal() as session:
+            return visit_settings(session.get(models.ProgramDistrict, user.program_district_id))
+    return visit_settings(project)
 
 
-def uses_new_protocol(user: models.User) -> bool:
-    return settings_for(user)[0] == VP.LAP_2026_11
+def uses_new_protocol(user: models.User, db: Optional[Session] = None) -> bool:
+    return settings_for(user, db)[0] == VP.LAP_2026_11
 
 
 # ── Reading the forms ──────────────────────────────────────────────────────
@@ -184,7 +198,7 @@ def learner_cases(db: Session, user: models.User, as_of: date,
         if mothers:
             for c in db.query(models.Child).filter(models.Child.mother_id.in_([m.id for m in mothers])):
                 children[c.mother_id].append(c)
-    return cases_for(db, mothers, children, settings_for(user)[1], as_of)
+    return cases_for(db, mothers, children, settings_for(user, db)[1], as_of)
 
 
 # ── What Today reads ───────────────────────────────────────────────────────
@@ -208,12 +222,16 @@ def _items(plan: Dict[str, Any], child: Optional[models.Child], as_of: date) -> 
 
 
 def field_plan(db: Session, user: models.User, mothers: Sequence[models.Mother],
-               children: Dict[int, List[models.Child]], as_of: date, horizon_days: int
+               children: Dict[int, List[models.Child]], as_of: date, horizon_days: int,
+               cases: Optional[Dict[int, List[Tuple[Optional[models.Child], VP.Case]]]] = None,
                ) -> Tuple[Dict[int, List[Dict[str, Any]]], Dict[int, Dict[str, Any]]]:
-    """(mother id → Today items, child id → that baby's plan)."""
+    """(mother id → Today items, child id → that baby's plan). `cases`, when
+    the caller already built them (learner_cases), saves reading the forms twice."""
     items: Dict[int, List[Dict[str, Any]]] = {}
     by_child: Dict[int, Dict[str, Any]] = {}
-    for mother_id, pairs in learner_cases(db, user, as_of, mothers, children).items():
+    if cases is None:
+        cases = learner_cases(db, user, as_of, mothers, children)
+    for mother_id, pairs in cases.items():
         rows: List[Dict[str, Any]] = []
         for child, case in pairs:
             plan = VP.plan(case, as_of, horizon_days)
@@ -236,22 +254,56 @@ def today_forms(plan: Optional[Dict[str, Any]]) -> Tuple[List[str], List[str]]:
 
 def child_plan(db: Session, user: models.User, child: models.Child, as_of: date,
                horizon_days: int = 30) -> Dict[str, Any]:
-    protocol, split = settings_for(user)
+    protocol, split = settings_for(user, db)
+    has_supervisor = bool(user.batch_monitor_id and user.batch_monitor_id != user.id)
     if protocol != VP.LAP_2026_11:
-        return {"protocol": protocol, "pnc_split_days": split}
+        return {"protocol": protocol, "pnc_split_days": split, "has_supervisor": has_supervisor}
     mother = child.mother
     siblings = db.query(models.Child).filter(models.Child.mother_id == mother.id).all()
     pairs = cases_for(db, [mother], {mother.id: siblings}, split, as_of)[mother.id]
     case = next(c for k, c in pairs if k is not None and k.id == child.id)
     plan = VP.plan(case, as_of, horizon_days)
     dropped_by = db.get(models.User, mother.dropped_out_by_user_id) if mother.dropped_out_by_user_id else None
+    # Why each form is on a visit (the tags of the visit card), only here: the
+    # baby page asks for one baby, Today for all of them.
+    if plan.get("next"):
+        nxt = plan["next"]
+        plan["next"] = {**nxt, "tags": VP.form_reasons(case, max(as_of, date.fromisoformat(nxt["due_on"])), nxt["forms"])}
+    if plan.get("today", {}).get("forms"):
+        plan["today"] = {**plan["today"], "tags": VP.form_reasons(case, as_of, plan["today"]["forms"])}
     return {
         "protocol": protocol, "pnc_split_days": split, "child_id": child.id, "mother_id": mother.id,
         **plan,
+        "cf": VP.cf_gate(case, as_of),
+        "timeline": VP.timeline(case, as_of),
+        "has_supervisor": has_supervisor,
         "dropout": ({"on": mother.dropped_out_on.isoformat(), "reason": mother.dropout_reason,
                      "by": (dropped_by.full_name or None) if dropped_by else None}
                     if mother.dropped_out_on else None),
     }
+
+
+def learner_progress(db: Session, user: models.User, as_of: date,
+                     cases: Optional[Dict[int, List[Tuple[Optional[models.Child], VP.Case]]]] = None,
+                     ) -> Dict[str, Any]:
+    """"My progress" on the November 2026 protocol: every adoption's visit
+    days due by today, made, made on time, and the forms they were to carry
+    against the forms filled (app/visit_protocol.progress)."""
+    visits = {"due": 0, "made": 0, "on_time": 0}
+    expected: Dict[str, int] = defaultdict(int)
+    done: Dict[str, int] = defaultdict(int)
+    if cases is None:
+        cases = learner_cases(db, user, as_of)
+    for pairs in cases.values():
+        for _child, case in pairs:
+            p = VP.progress(case, as_of)
+            for key in visits:
+                visits[key] += p["visits"][key]
+            for code, n in p["expected"].items():
+                expected[code] += n
+            for code, n in p["done"].items():
+                done[code] += n
+    return {"visits": visits, "expected": dict(expected), "done": dict(done)}
 
 
 def plan_for_alerts(db: Session, user: models.User, child: models.Child, as_of: date) -> Optional[Dict[str, Any]]:

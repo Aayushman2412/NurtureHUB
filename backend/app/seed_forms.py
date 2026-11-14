@@ -1349,6 +1349,25 @@ def _if_age_gte(days: int) -> dict:
     return {"kind": "ageGteDays", "days": days}
 
 
+# Learner Redesign review (30 Oct 2026): "for an 8-month baby the form still
+# offers 'Postnatal ward', 'At discharge' and 'Not applicable' for solid
+# foods — hide options that can't apply at that age"; danger signs "should be
+# asked separately and should trigger a referral message".
+NEWBORN_DAYS = 28
+NEWBORN_ONLY_LOCATIONS = ("postnatal_ward_normal_delivery", "postnatal_ward_caesarean_section", "at_discharge")
+ANC_DANGER_SIGNS = {"high_risk_conditions": ("vaginal_bleeding",),
+                    "pregnancy_symptoms": ("headache", "blurred_vision")}
+
+
+def _only_when(options: list[dict], values: tuple, *conditions: dict) -> list[dict]:
+    """These options are offered only while the conditions hold."""
+    return [o | {"showIf": list(conditions)} if o["value"] in values else o for o in options]
+
+
+def _danger(options: list[dict], values: tuple) -> list[dict]:
+    return [o | {"danger": True} if o["value"] in values else o for o in options]
+
+
 def build_growth_monitoring_fields() -> dict:
     """The Check Growth (CG) form — 24 questions transcribed from the
     'EP HST tools' instrument: measurement + 24h feeding recall + illness
@@ -1380,13 +1399,14 @@ def build_growth_monitoring_fields() -> dict:
         },
         _field("measurement_location", "Where was the measurement taken?", "dropdown",
                "Select location",
-               options=_cg_opts(
+               options=_only_when(_cg_opts(
                    "Postnatal ward (Normal delivery)", "Postnatal ward (Caesarean section)",
                    "At discharge", "Mother's home", "Anganwadi Centre",
                    "Health & Wellness Centre", "Primary Health Centre (PHC)",
                    "Community Health Centre (CHC)/Taluk Hospital", "District Hospital",
                    "Health camp", "Other (Specify)",
-               )) | {"showIf": [_if_field("measurement_completed", "yes")]},
+               ), NEWBORN_ONLY_LOCATIONS, _if_age_lt(NEWBORN_DAYS))) | {
+            "showIf": [_if_field("measurement_completed", "yes")]},
         _field("measurement_location_other", "Specify other location", "text") | {
             "showIf": [_if_field("measurement_location", "other_specify")],
         },
@@ -1395,10 +1415,11 @@ def build_growth_monitoring_fields() -> dict:
             "min": 30.0, "max": 120.0, "decimals": 1,
             "helpText": "30.0–120.0 cm, one decimal place.",
         },
-        _field("baby_weight", "Baby's weight (kg)", "number", "e.g. 7.250") | {
+        _field("baby_weight", "Baby's weight (kg)", "number", "e.g. 7.25") | {
             "showIf": [_if_field("measurement_completed", "yes")],
-            "min": 1.0, "max": 30.0, "decimals": 3,
-            "helpText": "1.000–30.000 kg, up to three decimal places.",
+            # Two decimals: scales show 0.05 kg steps at most (review of 30 Oct 2026).
+            "min": 1.0, "max": 30.0, "decimals": 2,
+            "helpText": "1.00–30.00 kg, up to two decimal places.",
         },
         _field("growth_photo",
                "Upload photograph of the length measurement", "image", required=False) | {
@@ -1437,7 +1458,7 @@ def build_growth_monitoring_fields() -> dict:
         _field("complementary_feeding_started",
                "Has your child started receiving any semi-solid or solid foods in addition "
                "to breastmilk?",
-               "radio", options=yes_no_na) | {
+               "radio", options=_only_when(yes_no_na, ("not_applicable",), _if_age_lt(183))) | {
             "showIf": [_if_age_gte(122)],
             "helpText": "Asked for children of 4 completed months and older.",
         },
@@ -1519,25 +1540,27 @@ def build_antenatal_fields() -> dict:
         _field("high_risk_conditions",
                "Does the mother currently have any of the following high-risk conditions?",
                "checkbox",
-               options=_cg_opts(
+               options=_danger(_cg_opts(
                    "Multiple pregnancy (Twins/Triplets)", "Short stature (<145 cm)",
                    "Age less than 18 years", "Age more than 35 years",
                    "Previous caesarean section", "Previous stillbirth or newborn loss",
                    "Hypertension / Pre-eclampsia", "Gestational or pre-existing diabetes",
                    "Severe anaemia", "Vaginal bleeding", "Other (Specify)", "None",
-               )) | {"helpText": "Select all that apply. If None applies, select only that."},
+               ), ANC_DANGER_SIGNS["high_risk_conditions"])) | {
+            "helpText": "Select all that apply. If None applies, select only that."},
         _field("high_risk_other", "Please specify the other high-risk condition.", "text") | {
             "showIf": [_if_field("high_risk_conditions", "other_specify")],
         },
         _field("pregnancy_symptoms",
                "Is the mother currently experiencing any of the following pregnancy-related symptoms?",
                "checkbox",
-               options=_cg_opts(
+               options=_danger(_cg_opts(
                    "Nausea", "Vomiting", "Loss of appetite", "Food aversions",
                    "Heartburn / Acidity", "Constipation", "Swelling of feet",
                    "Excessive tiredness", "Headache", "Blurred vision",
                    "Other (Specify)", "None",
-               )) | {"helpText": "Select all that apply. If None applies, select only that."},
+               ), ANC_DANGER_SIGNS["pregnancy_symptoms"])) | {
+            "helpText": "Select all that apply. If None applies, select only that."},
         _field("pregnancy_symptoms_other", "Please specify the other symptom.", "text") | {
             "showIf": [_if_field("pregnancy_symptoms", "other_specify")],
         },

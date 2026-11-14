@@ -36,6 +36,8 @@ export interface FlatFieldInputProps {
   otherError?: string;
   /** The learner left the field — the runner checks the answer then. */
   onBlur?: () => void;
+  /** The runner shows the question itself (one question per screen). */
+  hideLabel?: boolean;
 }
 
 const asString = (v: string | string[]): string => (Array.isArray(v) ? '' : v);
@@ -53,6 +55,7 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
   onOtherTextChange,
   otherError,
   onBlur,
+  hideLabel = false,
 }) => {
   const { t } = useTranslation('assessments');
   const { showToast } = useToast();
@@ -362,6 +365,14 @@ const FlatFieldInput: React.FC<FlatFieldInputProps> = ({
     }
   };
 
+  if (hideLabel) {
+    return (
+      <div>
+        {control()}
+        {error && <p className="mt-1.5 text-xs text-error-600 dark:text-error-300">{error}</p>}
+      </div>
+    );
+  }
   return (
     <Field label={label} htmlFor={field.id} error={error}>
       {control()}

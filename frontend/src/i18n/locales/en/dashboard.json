@@ -285,7 +285,8 @@
       "bf": "Breastfeeding",
       "cf": "Complementary feeding",
       "anc": "Pregnancy check",
-      "protein": "Protein form (mother)"
+      "protein": "Protein form (mother)",
+      "baby": "Register the baby"
     },
     "urgent": {
       "title": "See these babies soon",
@@ -520,6 +521,170 @@
       "droppedOutBy": "Confirmed by {{name}}. No more visits are planned.",
       "droppedOutBody": "No more visits are planned.",
       "failed": "Could not save. Check the connection and try again."
+    },
+    "tabs": {
+      "todo": "To do",
+      "progress": "My progress",
+      "label": "Home"
+    },
+    "lateVisits": {
+      "title": "Late visits"
+    },
+    "dueTodayTitle": "Due today",
+    "next7": {
+      "title": "Next 7 days",
+      "count_one": "{{count}} visit",
+      "count_other": "{{count}} visits",
+      "tomorrow": "Tomorrow"
+    },
+    "visitBy": "visit by {{day}}",
+    "visitToday": "visit today",
+    "pregnantWeeks": "Pregnant {{weeks}} weeks",
+    "ageMonths": "{{count}} mo",
+    "askBorn": "Ask: baby born?",
+    "thenAsPerAnswer": "Then forms as per the answer",
+    "danger": {
+      "short": {
+        "very_low_weight": "Very low weight · refer today",
+        "very_thin": "Very thin · refer today",
+        "big_loss": "Big weight loss · refer today"
+      },
+      "title": {
+        "very_low_weight": "Weight {{weight}} kg is very low for {{age}}",
+        "very_thin": "{{name}} is very thin for the length",
+        "big_loss": "The weight fell by {{pct}}% since the last check"
+      },
+      "step1": "Weigh again now on the same scale.",
+      "step2": "If it is still low, take the baby to the PHC / NRC today.",
+      "step3": "Tell your supervisor (button below).",
+      "step3NoSupervisor": "Tell your supervisor.",
+      "tell": "Tell my supervisor",
+      "told": "Your supervisor has been told.",
+      "toldAlready": "Your supervisor was already told today.",
+      "noSupervisor": "No supervisor is linked to you yet. Please call your supervisor.",
+      "failed": "Could not send. Check the connection and try again."
+    },
+    "adoptPrompt": {
+      "lead_one": "Adopt {{count}} more mother.",
+      "lead_other": "Adopt {{count}} more mothers.",
+      "need": "You need {{list}}.",
+      "and": " and ",
+      "anc_one": "{{count}} pregnant mother",
+      "anc_other": "{{count}} pregnant mothers",
+      "pnc_lt5_one": "{{count}} with a baby under {{pncM}} months",
+      "pnc_lt5_other": "{{count}} with a baby under {{pncM}} months",
+      "pnc_ge5_one": "{{count}} with a baby {{pncM}} months or older",
+      "pnc_ge5_other": "{{count}} with a baby {{pncM}} months or older",
+      "tip": "Ask your AWW for new deliveries this week."
+    },
+    "progress": {
+      "visitsDone": "visits done",
+      "visitsExpected": "visits expected",
+      "onTime": "on time",
+      "visitsHint": "Visits counted from each adoption day. A visit within 2 days of its day is on time.",
+      "adoptions": "Adoptions {{adopted}} of {{target}}",
+      "formsTitle": "Forms done vs expected",
+      "formsLegend": "line = expected by today",
+      "soon_one": "+{{count}} due in the next 7 days",
+      "soon_other": "+{{count}} due in the next 7 days",
+      "bar": {
+        "gm": "Growth check",
+        "bf": "Breastfeeding",
+        "cf": "Complementary feeding",
+        "anc_pf": "Pregnancy check + Protein"
+      },
+      "week": "This week: {{done}} forms done of {{due}} due.",
+      "finish": "Finish {{names}} to be back on track.",
+      "finishMore": "Finish {{names}} and {{count}} more to be back on track.",
+      "onTrack": "You are on track this week. Well done!",
+      "nothing": "Your numbers appear here once you adopt mothers.",
+      "visitsTitle": "Visits"
+    },
+    "tag": {
+      "every_visit": "Every visit",
+      "count": "{{n}} of {{of}}",
+      "catch_up": "Catch-up {{n}} of {{of}}",
+      "until_good": "Until feeding and growth are good",
+      "reopened": "Needed again",
+      "cf": "CF-{{n}}",
+      "first": "First protein form",
+      "every_15": "Every 15 days"
+    },
+    "visitCard": {
+      "todaysForms": "Today's forms",
+      "forms_one": "{{count}} form · about {{min}} min",
+      "forms_other": "{{count}} forms · about {{min}} min",
+      "nextVisits": "Next visits: {{list}}"
+    },
+    "timeline": {
+      "title": "Visit plan",
+      "counter": "Visit {{n}} of {{total}}",
+      "dueToday": "due today",
+      "nextOn": "next on {{date}}",
+      "summary_done_one": "{{count}} done",
+      "summary_done_other": "{{count}} done",
+      "summary_missed_one": "{{count}} missed",
+      "summary_missed_other": "{{count}} missed",
+      "legend": "Green done · red missed · outlined due",
+      "start": "Start visit {{n}}",
+      "line": {
+        "anc": "Pregnancy visits",
+        "pnc": "Growth & breastfeeding",
+        "cf": "Complementary feeding (from 180 days)",
+        "b3": "Visits"
+      },
+      "dot": {
+        "done": "Done on {{date}}",
+        "missed": "Missed ({{date}})",
+        "due": "Due {{date}}",
+        "next": "Next: {{date}}",
+        "later": "{{date}}"
+      }
+    },
+    "cfGate": {
+      "label": "Not due yet",
+      "too_early": "Not due yet. The last check was on {{last}} (day {{lastDay}}). The next one is on {{next}} (day {{nextDay}}).",
+      "too_early_short": "Not due yet. The last check was on {{last}}. The next one is on {{next}}.",
+      "not_started": "Complementary feeding starts when the baby is 6 months old. The first check is on {{next}}.",
+      "not_started_noDate": "Complementary feeding starts when the baby is 6 months old.",
+      "done_today": "Already filled today. The next one is on {{next}}.",
+      "done_today_noDate": "Already filled today.",
+      "title": "Complementary feeding",
+      "back": "Back to the baby"
+    },
+    "talk": {
+      "title": "Talk to the mother about",
+      "very_low_weight": "Feeding often: breastfeed on demand; from 6 months 3–4 meals a day plus snacks — thick dal, egg, mashed fruit.",
+      "very_thin": "Feeding often: breastfeed on demand; from 6 months 3–4 meals a day plus snacks — thick dal, egg, mashed fruit.",
+      "big_loss": "Ask about diarrhoea, fever and feeding since the last visit. Check for danger signs.",
+      "video": "Video: {{title}}"
+    },
+    "tile": {
+      "wfa": "Weight",
+      "lfa": "Height",
+      "wfl": "Body",
+      "pct": "P{{pct}}"
+    },
+    "refresh": {
+      "title": "Refresh videos",
+      "subtitle": "Picked for the babies and mothers you see now.",
+      "minutes": "{{n}} min",
+      "watched": "Watched",
+      "topic": {
+        "sam_one": "{{count}} baby is very thin or very low weight",
+        "sam_other": "{{count}} babies are very thin or very low weight",
+        "weight_one": "{{count}} baby's weight fell or stopped rising",
+        "weight_other": "{{count}} babies' weight fell or stopped rising",
+        "breastfeeding_one": "{{count}} baby under 6 months: breastfeeding",
+        "breastfeeding_other": "{{count}} babies under 6 months: breastfeeding",
+        "complementary_one": "{{count}} baby on complementary feeding",
+        "complementary_other": "{{count}} babies on complementary feeding",
+        "pregnancy_one": "{{count}} pregnant mother",
+        "pregnancy_other": "{{count}} pregnant mothers"
+      }
+    },
+    "trainingMessages": {
+      "title": "Training messages"
     }
   },
   "progressInfo": {

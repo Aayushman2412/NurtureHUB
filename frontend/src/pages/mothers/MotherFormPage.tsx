@@ -7,7 +7,8 @@ import {
   Button, Card, ComboBox, DateInput, Field, Input, Radio, RatingGrid, SearchableSelect, SelectField,
 } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
-import { formRunUrl } from '../../api/today';
+import { formRunUrl, getToday, type TodayView } from '../../api/today';
+import { placeholderReason } from '../../lib/nameChecks';
 import { flowString } from '../../lib/careFlow';
 import { usesNewProtocol } from '../../lib/visitProtocol';
 import { cn } from '../../utils/cn';
@@ -67,6 +68,10 @@ const MotherFormPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  /** Her adoption targets, to say which types she still needs (Learner
+   *  Redesign review, 30 Oct 2026: "she can pick 'Pregnant' even though that
+   *  quota is full, and nothing says which types are still needed"). */
+  const [targets, setTargets] = useState<TodayView['targets']>([]);
 
   // Step 1 — identity & clinical
   const [declaredType, setDeclaredType] = useState('');
@@ -189,16 +194,26 @@ const MotherFormPage: React.FC = () => {
     educationDegreeId, occupation, occupationOther, rationCard, rationCardOther, socialCategory, nutritionCourse,
     nutritionCourseName, videoFrequency, ratings, likert, showEducationField, showOccupationOther, showNutritionCourseName]);
 
+  // A new mother's name must be a real one (Learner Redesign review, 30 Oct
+  // 2026: "mother name", "Tttttt" were saved as real mothers). Editing an old
+  // record is never blocked by it — the server checks new ones too.
+  const nameIssue = editId == null ? placeholderReason(motherName) : null;
+  const validate = (v: MotherFormValues): FieldErrors => {
+    const errs = validateMother(v);
+    return nameIssue && !errs.mother_name ? { ...errs, mother_name: t(`mother.notReal.${nameIssue}`, { ns: 'validation' }) } : errs;
+  };
+
   // Live validation: recompute on every change; a field's error is shown once it has
   // been touched, or once a Continue/submit attempt flagged it.
-  const liveErrors = useMemo(() => validateMother(values), [values]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const liveErrors = useMemo(() => validate(values), [values, nameIssue]);
   const shown = (k: string): string | undefined => (touched[k] || errors[k] ? liveErrors[k] : undefined);
 
   // Each page opens at the top of the screen.
   useEffect(() => { window.scrollTo({ top: 0 }); }, [step]);
 
   const next = () => {
-    const stepErrs = pickErrors(validateMother(values), PAGES[step]);
+    const stepErrs = pickErrors(validate(values), PAGES[step]);
     setErrors(stepErrs);
     if (!Object.keys(stepErrs).length) setStep(s => Math.min(s + 1, PAGES.length - 1));
   };
@@ -231,6 +246,14 @@ const MotherFormPage: React.FC = () => {
     })),
   });
 
+  // Registering: how many of each type she still needs.
+  useEffect(() => {
+    if (editId != null) return;
+    let alive = true;
+    getToday().then(v => { if (alive) setTargets(v.targets); }).catch(() => { /* the quota is a hint */ });
+    return () => { alive = false; };
+  }, [editId]);
+
   // Editing: load her details into every page.
   useEffect(() => {
     if (editId == null) return;
@@ -260,7 +283,7 @@ const MotherFormPage: React.FC = () => {
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    const allErrs = validateMother(values);
+    const allErrs = validate(values);
     if (Object.keys(allErrs).length) {
       setErrors(allErrs);
       const firstStep = PAGES.findIndex(keys => keys.some(k => allErrs[k]));
@@ -350,14 +373,18 @@ const MotherFormPage: React.FC = () => {
       <Card className="p-5 sm:p-7">
         <form onSubmit={e => { if (isLast) void handleSubmit(e); else { e.preventDefault(); next(); } }} className="flex flex-col gap-6" noValidate>
           {step === 0 && (
-            <Field label={t('form.adoptionType')} error={shown('declared_adoption_type')}>
+            <Field label={editId == null ? t('form.quota.title') : t('form.adoptionType')} error={shown('declared_adoption_type')}>
               <div role="radiogroup" className="mt-1 flex flex-col gap-2.5">
-                {ADOPTION_TYPES.map(k => (
+                {ADOPTION_TYPES.map(k => {
+                  const quota = targets.find(x => x.type === k);
+                  const full = !!quota && quota.target > 0 && quota.more === 0;
+                  return (
                   <label
                     key={k}
                     className={cn(
                       'flex min-h-14 cursor-pointer items-center gap-3 rounded-lg border-2 px-4 py-3 text-base font-semibold transition-colors',
                       declaredType === k ? 'border-primary bg-brand-50 text-ink dark:bg-brand-500/10' : 'border-border text-ink hover:border-border-strong',
+                      full && declaredType !== k && 'opacity-70',
                     )}
                   >
                     <input type="radio" name="declared_adoption_type" value={k} checked={declaredType === k} className="sr-only"
@@ -366,10 +393,32 @@ const MotherFormPage: React.FC = () => {
                       declaredType === k ? 'border-primary bg-primary text-white' : 'border-ink-faint')}>
                       {declaredType === k && <Check className="size-4" />}
                     </span>
-                    {t(`form.adoptionTypes.${k}`)}
+                    <span className="min-w-0 flex-1">
+                      <span className="block">{t(`form.adoptionTypes.${k}`)}</span>
+                      {quota && quota.target > 0 && (
+                        <span className={cn('block text-sm font-semibold', full ? 'text-success-600 dark:text-success-500' : 'text-primary-ink')}>
+                          {full ? t('form.quota.done', { adopted: quota.adopted, target: quota.target })
+                            : t('form.quota.need', { count: quota.more })}
+                        </span>
+                      )}
+                    </span>
+                    {full && <Check className="size-5 shrink-0 text-success-600 dark:text-success-500" aria-hidden />}
                   </label>
-                ))}
+                  );
+                })}
               </div>
+              {(() => {
+                const chosen = targets.find(x => x.type === declaredType);
+                const fullChosen = editId == null && !!chosen && chosen.target > 0 && chosen.more === 0;
+                return (
+                  <>
+                    {fullChosen && <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">{t('form.quota.full')}</p>}
+                    {editId == null && (declaredType === 'pnc_lt5' || declaredType === 'pnc_ge5') && (
+                      <p className="mt-3 text-sm text-ink-muted">{t('form.quota.dobNote')}</p>
+                    )}
+                  </>
+                );
+              })()}
             </Field>
           )}
 

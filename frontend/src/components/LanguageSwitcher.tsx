@@ -25,6 +25,9 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ variant = 'pill' })
 
   return (
     <Dropdown
+      // In the header the button sits at the right edge: open the menu leftwards
+      // so it is never cut off (Learner Redesign review, 30 Oct 2026).
+      align={variant === 'compact' ? 'right' : 'left'}
       trigger={open => (
         <button type="button" className={triggerClass} aria-label={t('language.select')}>
           <Globe className="size-4 shrink-0" />

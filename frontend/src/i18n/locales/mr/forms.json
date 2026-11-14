@@ -1,0 +1,4316 @@
+{
+  "growth_monitoring": {
+    "measurement_date": {
+      "title": {
+        "en": "Measurement date",
+        "tr": "मोजमापाची तारीख"
+      },
+      "help": {
+        "en": "Cannot be a future date.",
+        "tr": "भविष्यातील तारीख असू शकत नाही."
+      }
+    },
+    "measurement_completed": {
+      "title": {
+        "en": "Were you able to measure the child's weight and length?",
+        "tr": "तुम्ही बाळाचे वजन आणि लांबी मोजू शकलात का?"
+      },
+      "opt": {
+        "yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "measurement_not_done_reason": {
+      "title": {
+        "en": "What were the reasons for not recording the measurements?",
+        "tr": "मोजमाप नोंदवता न येण्याची कारणे कोणती होती?"
+      },
+      "help": {
+        "en": "Select all that apply.",
+        "tr": "लागू असलेले सर्व निवडा."
+      },
+      "opt": {
+        "house_was_locked": {
+          "label": {
+            "en": "House was locked",
+            "tr": "घराला कुलूप होते"
+          }
+        },
+        "mother_and_child_not_present": {
+          "label": {
+            "en": "Mother and child not present",
+            "tr": "माता आणि बाळ उपस्थित नव्हते"
+          }
+        },
+        "mother_not_present": {
+          "label": {
+            "en": "Mother not present",
+            "tr": "माता उपस्थित नव्हती"
+          }
+        },
+        "family_has_moved_migrated": {
+          "label": {
+            "en": "Family has moved/migrated",
+            "tr": "कुटुंब दुसरीकडे गेले आहे/स्थलांतरित झाले आहे"
+          }
+        },
+        "bad_weather": {
+          "label": {
+            "en": "Bad weather",
+            "tr": "खराब हवामान"
+          }
+        },
+        "damaged_measuring_instrument": {
+          "label": {
+            "en": "Damaged measuring instrument",
+            "tr": "मोजमापाचे साधन खराब होते"
+          }
+        },
+        "measuring_instrument_unavailable": {
+          "label": {
+            "en": "Measuring instrument unavailable",
+            "tr": "मोजमापाचे साधन उपलब्ध नव्हते"
+          }
+        },
+        "other_restriction_on_visit": {
+          "label": {
+            "en": "Other restriction on visit",
+            "tr": "भेटीवर इतर कोणतेही बंधन"
+          }
+        },
+        "i_was_sick_and_could_not_visit": {
+          "label": {
+            "en": "I was sick and could not visit",
+            "tr": "स्वतः आजारी असल्यामुळे भेट देता आली नाही"
+          }
+        },
+        "other_specify": {
+          "label": {
+            "en": "Other (Specify)",
+            "tr": "इतर (नमूद करा)"
+          }
+        }
+      }
+    },
+    "measurement_reason_other": {
+      "title": {
+        "en": "Please specify the other reason.",
+        "tr": "कृपया इतर कारण नमूद करा."
+      }
+    },
+    "measurement_location": {
+      "title": {
+        "en": "Where was the measurement taken?",
+        "tr": "मोजमाप कुठे घेतले?"
+      },
+      "placeholder": {
+        "en": "Select location",
+        "tr": "ठिकाण निवडा"
+      },
+      "opt": {
+        "postnatal_ward_normal_delivery": {
+          "label": {
+            "en": "Postnatal ward (Normal delivery)",
+            "tr": "प्रसूतीनंतरचा वॉर्ड (नैसर्गिक प्रसूती)"
+          }
+        },
+        "postnatal_ward_caesarean_section": {
+          "label": {
+            "en": "Postnatal ward (Caesarean section)",
+            "tr": "प्रसूतीनंतरचा वॉर्ड (सिझेरियन)"
+          }
+        },
+        "at_discharge": {
+          "label": {
+            "en": "At discharge",
+            "tr": "रुग्णालयातून डिस्चार्जच्या वेळी"
+          }
+        },
+        "mother_s_home": {
+          "label": {
+            "en": "Mother's home",
+            "tr": "मातेचे घर"
+          }
+        },
+        "anganwadi_centre": {
+          "label": {
+            "en": "Anganwadi Centre",
+            "tr": "अंगणवाडी केंद्र"
+          }
+        },
+        "health_wellness_centre": {
+          "label": {
+            "en": "Health & Wellness Centre",
+            "tr": "आरोग्यवर्धिनी केंद्र"
+          }
+        },
+        "primary_health_centre_phc": {
+          "label": {
+            "en": "Primary Health Centre (PHC)",
+            "tr": "प्राथमिक आरोग्य केंद्र (PHC)"
+          }
+        },
+        "community_health_centre_chc_taluk_hospital": {
+          "label": {
+            "en": "Community Health Centre (CHC)/Taluk Hospital",
+            "tr": "ग्रामीण रुग्णालय (CHC)/तालुका रुग्णालय"
+          }
+        },
+        "district_hospital": {
+          "label": {
+            "en": "District Hospital",
+            "tr": "जिल्हा रुग्णालय"
+          }
+        },
+        "health_camp": {
+          "label": {
+            "en": "Health camp",
+            "tr": "आरोग्य शिबिर"
+          }
+        },
+        "other_specify": {
+          "label": {
+            "en": "Other (Specify)",
+            "tr": "इतर (नमूद करा)"
+          }
+        }
+      }
+    },
+    "measurement_location_other": {
+      "title": {
+        "en": "Specify other location",
+        "tr": "इतर ठिकाण नमूद करा"
+      }
+    },
+    "baby_length": {
+      "title": {
+        "en": "Baby's length (cm)",
+        "tr": "बाळाची लांबी (सें.मी.)"
+      },
+      "help": {
+        "en": "30.0–120.0 cm, one decimal place.",
+        "tr": "30.0–120.0 सें.मी., दशांश चिन्हानंतर एक अंक."
+      },
+      "placeholder": {
+        "en": "e.g. 68.5",
+        "tr": "उदा. 68.5"
+      }
+    },
+    "baby_weight": {
+      "title": {
+        "en": "Baby's weight (kg)",
+        "tr": "बाळाचे वजन (कि.ग्रॅ.)"
+      },
+      "help": {
+        "en": "1.00–30.00 kg, up to two decimal places.",
+        "tr": "1.000–30.000 कि.ग्रॅ., दशांश चिन्हानंतर तीन अंकांपर्यंत."
+      },
+      "placeholder": {
+        "en": "e.g. 7.25",
+        "tr": "उदा. 7.250"
+      }
+    },
+    "growth_photo": {
+      "title": {
+        "en": "Upload photograph of the length measurement",
+        "tr": "लांबी मोजतानाचा फोटो अपलोड करा"
+      },
+      "help": {
+        "en": "Whole body visible with correct positioning (optional, quality assurance).",
+        "tr": "संपूर्ण शरीर योग्य स्थितीत दिसावे (ऐच्छिक, गुणवत्ता तपासणीसाठी)."
+      }
+    },
+    "weight_photo": {
+      "title": {
+        "en": "Upload photograph of the weighing scale display showing the child's weight",
+        "tr": "बाळाचे वजन दाखवणाऱ्या वजनकाट्याच्या डिस्प्लेचा फोटो अपलोड करा"
+      },
+      "help": {
+        "en": "Optional, quality assurance.",
+        "tr": "ऐच्छिक, गुणवत्ता तपासणीसाठी."
+      }
+    },
+    "breastfed_24h": {
+      "title": {
+        "en": "Was the child breastfed during the past 24 hours?",
+        "tr": "गेल्या 24 तासांत बाळाला स्तनपान दिले का?"
+      },
+      "opt": {
+        "yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "exclusive_breastfeeding": {
+      "title": {
+        "en": "Is the child currently receiving only breastmilk (excluding prescribed medicines, vitamin/mineral supplements and ORS)?",
+        "tr": "बाळाला सध्या फक्त आईचे दूधच मिळत आहे का (डॉक्टरांनी दिलेली औषधे, जीवनसत्त्व/खनिज पूरक आणि ORS सोडून)?"
+      },
+      "help": {
+        "en": "WHO definition of exclusive breastfeeding. Asked for children under 6 months.",
+        "tr": "केवळ स्तनपानाची WHO व्याख्या. 6 महिन्यांपेक्षा कमी वयाच्या बाळांसाठी विचारले जाते."
+      },
+      "opt": {
+        "yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        },
+        "not_applicable": {
+          "label": {
+            "en": "Not applicable",
+            "tr": "लागू नाही"
+          }
+        }
+      }
+    },
+    "received_other_foods": {
+      "title": {
+        "en": "During the past 24 hours, was the child given anything other than breastmilk?",
+        "tr": "गेल्या 24 तासांत बाळाला आईच्या दुधाशिवाय दुसरे काही दिले का?"
+      },
+      "opt": {
+        "yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "foods_given": {
+      "title": {
+        "en": "What was the child given during the past 24 hours? (Select all that apply)",
+        "tr": "गेल्या 24 तासांत बाळाला काय दिले? (लागू असलेले सर्व निवडा)"
+      },
+      "opt": {
+        "infant_formula": {
+          "label": {
+            "en": "Infant formula",
+            "tr": "बाळाचे फॉर्म्युला दूध"
+          }
+        },
+        "cow_s_milk": {
+          "label": {
+            "en": "Cow's milk",
+            "tr": "गाईचे दूध"
+          }
+        },
+        "buffalo_milk": {
+          "label": {
+            "en": "Buffalo milk",
+            "tr": "म्हशीचे दूध"
+          }
+        },
+        "goat_s_milk": {
+          "label": {
+            "en": "Goat's milk",
+            "tr": "शेळीचे दूध"
+          }
+        },
+        "plain_water": {
+          "label": {
+            "en": "Plain water",
+            "tr": "साधे पाणी"
+          }
+        },
+        "oral_rehydration_solution_ors": {
+          "label": {
+            "en": "Oral Rehydration Solution (ORS)",
+            "tr": "जलसंजीवनी (ORS)"
+          }
+        },
+        "fruit_juice": {
+          "label": {
+            "en": "Fruit juice",
+            "tr": "फळांचा रस"
+          }
+        },
+        "semi_solid_foods": {
+          "label": {
+            "en": "Semi-solid foods",
+            "tr": "अर्धघन आहार"
+          }
+        },
+        "solid_foods": {
+          "label": {
+            "en": "Solid foods",
+            "tr": "घन आहार"
+          }
+        },
+        "other_liquids": {
+          "label": {
+            "en": "Other liquids",
+            "tr": "इतर द्रव पदार्थ"
+          }
+        },
+        "other_foods_specify": {
+          "label": {
+            "en": "Other foods (Specify)",
+            "tr": "इतर अन्नपदार्थ (नमूद करा)"
+          }
+        }
+      }
+    },
+    "other_food": {
+      "title": {
+        "en": "Please specify the other food or liquid given.",
+        "tr": "कृपया दिलेले इतर अन्न किंवा द्रव पदार्थ नमूद करा."
+      }
+    },
+    "complementary_feeding_started": {
+      "title": {
+        "en": "Has your child started receiving any semi-solid or solid foods in addition to breastmilk?",
+        "tr": "तुमच्या बाळाला आईच्या दुधाबरोबर अर्धघन किंवा घन आहार मिळू लागला आहे का?"
+      },
+      "help": {
+        "en": "Asked for children of 4 completed months and older.",
+        "tr": "4 महिने पूर्ण झालेल्या आणि त्याहून मोठ्या बाळांसाठी विचारले जाते."
+      },
+      "opt": {
+        "yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        },
+        "not_applicable": {
+          "label": {
+            "en": "Not applicable",
+            "tr": "लागू नाही"
+          }
+        }
+      }
+    },
+    "complementary_feeding_start_date": {
+      "title": {
+        "en": "Approximately on what date was complementary feeding first started?",
+        "tr": "पूरक आहार साधारण कोणत्या तारखेला पहिल्यांदा सुरू केला?"
+      },
+      "help": {
+        "en": "An approximate date is fine if the exact date is unknown.",
+        "tr": "नेमकी तारीख माहीत नसल्यास अंदाजे तारीखही चालेल."
+      }
+    },
+    "illness_since_last_visit": {
+      "title": {
+        "en": "Since the last follow-up visit, has the child had any illness?",
+        "tr": "मागील पाठपुरावा भेटीपासून बाळ आजारी पडले आहे का?"
+      },
+      "opt": {
+        "yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "illness_type": {
+      "title": {
+        "en": "Which of the following illnesses did the child have? (Select all that apply)",
+        "tr": "बाळाला यापैकी कोणते आजार झाले? (लागू असलेले सर्व निवडा)"
+      },
+      "opt": {
+        "fever": {
+          "label": {
+            "en": "Fever",
+            "tr": "ताप"
+          }
+        },
+        "cold_upper_respiratory_infection_uri": {
+          "label": {
+            "en": "Cold/Upper Respiratory Infection (URI)",
+            "tr": "सर्दी/श्वसनमार्गाच्या वरच्या भागाचा संसर्ग (URI)"
+          }
+        },
+        "cough": {
+          "label": {
+            "en": "Cough",
+            "tr": "खोकला"
+          }
+        },
+        "fast_breathing_difficulty_breathing": {
+          "label": {
+            "en": "Fast breathing/Difficulty breathing",
+            "tr": "जलद श्वास/श्वास घेण्यास त्रास"
+          }
+        },
+        "diarrhoea": {
+          "label": {
+            "en": "Diarrhoea",
+            "tr": "जुलाब (अतिसार)"
+          }
+        },
+        "vomiting": {
+          "label": {
+            "en": "Vomiting",
+            "tr": "उलटी"
+          }
+        },
+        "ear_infection_ear_discharge": {
+          "label": {
+            "en": "Ear infection/Ear discharge",
+            "tr": "कानाचा संसर्ग/कान वाहणे"
+          }
+        },
+        "skin_infection": {
+          "label": {
+            "en": "Skin infection",
+            "tr": "त्वचेचा संसर्ग"
+          }
+        },
+        "hospitalization_due_to_illness": {
+          "label": {
+            "en": "Hospitalization due to illness",
+            "tr": "आजारामुळे रुग्णालयात दाखल"
+          }
+        },
+        "other_specify": {
+          "label": {
+            "en": "Other (Specify)",
+            "tr": "इतर (नमूद करा)"
+          }
+        }
+      }
+    },
+    "illness_other": {
+      "title": {
+        "en": "Please specify the other illness.",
+        "tr": "कृपया इतर आजार नमूद करा."
+      }
+    },
+    "illness_duration": {
+      "title": {
+        "en": "Approximately how many days was the child ill since the last follow-up visit?",
+        "tr": "मागील पाठपुरावा भेटीपासून बाळ साधारण किती दिवस आजारी होते?"
+      },
+      "placeholder": {
+        "en": "Select duration",
+        "tr": "कालावधी निवडा"
+      },
+      "opt": {
+        "1_2_days": {
+          "label": {
+            "en": "1-2 days",
+            "tr": "1-2 दिवस"
+          }
+        },
+        "3_5_days": {
+          "label": {
+            "en": "3-5 days",
+            "tr": "3-5 दिवस"
+          }
+        },
+        "6_10_days": {
+          "label": {
+            "en": "6-10 days",
+            "tr": "6-10 दिवस"
+          }
+        },
+        "more_than_10_days": {
+          "label": {
+            "en": "More than 10 days",
+            "tr": "10 दिवसांपेक्षा जास्त"
+          }
+        }
+      }
+    },
+    "feeding_during_illness": {
+      "title": {
+        "en": "During the illness, compared with usual, how was the child fed?",
+        "tr": "आजारपणात, नेहमीच्या तुलनेत बाळाला कसे खाऊ घातले?"
+      },
+      "placeholder": {
+        "en": "Select one",
+        "tr": "एक निवडा"
+      },
+      "opt": {
+        "more_than_usual": {
+          "label": {
+            "en": "More than usual",
+            "tr": "नेहमीपेक्षा जास्त"
+          }
+        },
+        "same_as_usual": {
+          "label": {
+            "en": "Same as usual",
+            "tr": "नेहमीइतकेच"
+          }
+        },
+        "less_than_usual": {
+          "label": {
+            "en": "Less than usual",
+            "tr": "नेहमीपेक्षा कमी"
+          }
+        },
+        "unable_to_feed": {
+          "label": {
+            "en": "Unable to feed",
+            "tr": "खाऊ घालता आले नाही"
+          }
+        }
+      }
+    },
+    "health_services": {
+      "title": {
+        "en": "For this illness, which of the following health services were sought? (Select all that apply)",
+        "tr": "या आजारासाठी यापैकी कोणत्या आरोग्य सेवा घेतल्या? (लागू असलेले सर्व निवडा)"
+      },
+      "opt": {
+        "no_treatment_sought": {
+          "label": {
+            "en": "No treatment sought",
+            "tr": "कोणताही उपचार घेतला नाही"
+          }
+        },
+        "asha_advice": {
+          "label": {
+            "en": "ASHA advice",
+            "tr": "आशाचा सल्ला"
+          }
+        },
+        "anganwadi_worker_aww_advice": {
+          "label": {
+            "en": "Anganwadi Worker (AWW) advice",
+            "tr": "अंगणवाडी सेविकेचा (AWW) सल्ला"
+          }
+        },
+        "anm_advice": {
+          "label": {
+            "en": "ANM advice",
+            "tr": "एएनएमचा सल्ला"
+          }
+        },
+        "health_wellness_centre_hwc_visit": {
+          "label": {
+            "en": "Health & Wellness Centre (HWC) visit",
+            "tr": "आरोग्यवर्धिनी केंद्राला (HWC) भेट"
+          }
+        },
+        "primary_health_centre_phc_visit": {
+          "label": {
+            "en": "Primary Health Centre (PHC) visit",
+            "tr": "प्राथमिक आरोग्य केंद्राला (PHC) भेट"
+          }
+        },
+        "community_health_centre_chc_visit": {
+          "label": {
+            "en": "Community Health Centre (CHC) visit",
+            "tr": "ग्रामीण रुग्णालयाला (CHC) भेट"
+          }
+        },
+        "taluk_hospital_visit": {
+          "label": {
+            "en": "Taluk Hospital visit",
+            "tr": "तालुका रुग्णालयाला भेट"
+          }
+        },
+        "district_hospital_visit": {
+          "label": {
+            "en": "District Hospital visit",
+            "tr": "जिल्हा रुग्णालयाला भेट"
+          }
+        },
+        "private_clinic_hospital_visit": {
+          "label": {
+            "en": "Private Clinic/Hospital visit",
+            "tr": "खाजगी दवाखाना/रुग्णालयाला भेट"
+          }
+        },
+        "pharmacy_medical_shop_advised_treatment": {
+          "label": {
+            "en": "Pharmacy/Medical Shop advised treatment",
+            "tr": "फार्मसी/मेडिकल दुकानातून उपचाराचा सल्ला"
+          }
+        },
+        "traditional_healer_advice": {
+          "label": {
+            "en": "Traditional healer advice",
+            "tr": "पारंपरिक उपचारकाचा (वैदू) सल्ला"
+          }
+        },
+        "hospital_admission": {
+          "label": {
+            "en": "Hospital admission",
+            "tr": "रुग्णालयात दाखल"
+          }
+        },
+        "other_specify": {
+          "label": {
+            "en": "Other (Specify)",
+            "tr": "इतर (नमूद करा)"
+          }
+        }
+      }
+    },
+    "health_services_other": {
+      "title": {
+        "en": "Please specify the other health service sought.",
+        "tr": "कृपया घेतलेली इतर आरोग्य सेवा नमूद करा."
+      }
+    }
+  },
+  "antenatal": {
+    "assessment_date": {
+      "title": {
+        "en": "Assessment Date",
+        "tr": "मूल्यांकनाची तारीख"
+      },
+      "help": {
+        "en": "Cannot be a future date.",
+        "tr": "भविष्यातील तारीख असू शकत नाही."
+      }
+    },
+    "gestational_age": {
+      "title": {
+        "en": "Gestational Age",
+        "tr": "गर्भावस्थेचा कालावधी"
+      },
+      "help": {
+        "en": "Auto-calculated from the mother's LMP as XX completed weeks + XX completed days.",
+        "tr": "मातेच्या LMP वरून आपोआप मोजले जाते: XX पूर्ण आठवडे + XX पूर्ण दिवस."
+      }
+    },
+    "current_weight": {
+      "title": {
+        "en": "Current Weight (kg)",
+        "tr": "सध्याचे वजन (कि.ग्रॅ.)"
+      },
+      "placeholder": {
+        "en": "e.g. 58.5",
+        "tr": "उदा. 58.5"
+      }
+    },
+    "weight_gain": {
+      "title": {
+        "en": "Weight Gain Since Previous Visit (kg)",
+        "tr": "मागील भेटीपासून वाढलेले वजन (कि.ग्रॅ.)"
+      },
+      "help": {
+        "en": "Auto-calculated against the previous submitted antenatal visit.",
+        "tr": "मागील सादर केलेल्या प्रसूतिपूर्व भेटीच्या तुलनेत आपोआप मोजले जाते."
+      }
+    },
+    "high_risk_conditions": {
+      "title": {
+        "en": "Does the mother currently have any of the following high-risk conditions?",
+        "tr": "मातेला सध्या यापैकी कोणती उच्च जोखमीची स्थिती आहे का?"
+      },
+      "help": {
+        "en": "Select all that apply. If None applies, select only that.",
+        "tr": "लागू असलेले सर्व निवडा. काहीही लागू नसल्यास फक्त 'काहीही नाही' निवडा."
+      },
+      "opt": {
+        "multiple_pregnancy_twins_triplets": {
+          "label": {
+            "en": "Multiple pregnancy (Twins/Triplets)",
+            "tr": "एकापेक्षा जास्त गर्भ (जुळी/तिळी)"
+          }
+        },
+        "short_stature_145_cm": {
+          "label": {
+            "en": "Short stature (<145 cm)",
+            "tr": "कमी उंची (<145 सें.मी.)"
+          }
+        },
+        "age_less_than_18_years": {
+          "label": {
+            "en": "Age less than 18 years",
+            "tr": "वय 18 वर्षांपेक्षा कमी"
+          }
+        },
+        "age_more_than_35_years": {
+          "label": {
+            "en": "Age more than 35 years",
+            "tr": "वय 35 वर्षांपेक्षा जास्त"
+          }
+        },
+        "previous_caesarean_section": {
+          "label": {
+            "en": "Previous caesarean section",
+            "tr": "यापूर्वी सिझेरियन झाले आहे"
+          }
+        },
+        "previous_stillbirth_or_newborn_loss": {
+          "label": {
+            "en": "Previous stillbirth or newborn loss",
+            "tr": "यापूर्वी मृत बाळाचा जन्म किंवा नवजात बाळाचा मृत्यू"
+          }
+        },
+        "hypertension_pre_eclampsia": {
+          "label": {
+            "en": "Hypertension / Pre-eclampsia",
+            "tr": "उच्च रक्तदाब / प्री-एक्लॅम्पसिया"
+          }
+        },
+        "gestational_or_pre_existing_diabetes": {
+          "label": {
+            "en": "Gestational or pre-existing diabetes",
+            "tr": "गर्भावस्थेतील किंवा आधीपासूनचा मधुमेह"
+          }
+        },
+        "severe_anaemia": {
+          "label": {
+            "en": "Severe anaemia",
+            "tr": "तीव्र रक्तक्षय (ॲनिमिया)"
+          }
+        },
+        "vaginal_bleeding": {
+          "label": {
+            "en": "Vaginal bleeding",
+            "tr": "योनीमार्गातून रक्तस्राव"
+          }
+        },
+        "other_specify": {
+          "label": {
+            "en": "Other (Specify)",
+            "tr": "इतर (नमूद करा)"
+          }
+        },
+        "none": {
+          "label": {
+            "en": "None",
+            "tr": "काहीही नाही"
+          }
+        }
+      }
+    },
+    "high_risk_other": {
+      "title": {
+        "en": "Please specify the other high-risk condition.",
+        "tr": "कृपया इतर उच्च जोखमीची स्थिती नमूद करा."
+      }
+    },
+    "pregnancy_symptoms": {
+      "title": {
+        "en": "Is the mother currently experiencing any of the following pregnancy-related symptoms?",
+        "tr": "मातेला सध्या गर्भावस्थेशी संबंधित यापैकी कोणते लक्षण जाणवत आहे का?"
+      },
+      "help": {
+        "en": "Select all that apply. If None applies, select only that.",
+        "tr": "लागू असलेले सर्व निवडा. काहीही लागू नसल्यास फक्त 'काहीही नाही' निवडा."
+      },
+      "opt": {
+        "nausea": {
+          "label": {
+            "en": "Nausea",
+            "tr": "मळमळ"
+          }
+        },
+        "vomiting": {
+          "label": {
+            "en": "Vomiting",
+            "tr": "उलटी"
+          }
+        },
+        "loss_of_appetite": {
+          "label": {
+            "en": "Loss of appetite",
+            "tr": "भूक न लागणे"
+          }
+        },
+        "food_aversions": {
+          "label": {
+            "en": "Food aversions",
+            "tr": "काही पदार्थांची नावड"
+          }
+        },
+        "heartburn_acidity": {
+          "label": {
+            "en": "Heartburn / Acidity",
+            "tr": "छातीत जळजळ / ॲसिडिटी"
+          }
+        },
+        "constipation": {
+          "label": {
+            "en": "Constipation",
+            "tr": "बद्धकोष्ठता"
+          }
+        },
+        "swelling_of_feet": {
+          "label": {
+            "en": "Swelling of feet",
+            "tr": "पायांवर सूज"
+          }
+        },
+        "excessive_tiredness": {
+          "label": {
+            "en": "Excessive tiredness",
+            "tr": "खूप थकवा"
+          }
+        },
+        "headache": {
+          "label": {
+            "en": "Headache",
+            "tr": "डोकेदुखी"
+          }
+        },
+        "blurred_vision": {
+          "label": {
+            "en": "Blurred vision",
+            "tr": "अंधुक दिसणे"
+          }
+        },
+        "other_specify": {
+          "label": {
+            "en": "Other (Specify)",
+            "tr": "इतर (नमूद करा)"
+          }
+        },
+        "none": {
+          "label": {
+            "en": "None",
+            "tr": "काहीही नाही"
+          }
+        }
+      }
+    },
+    "pregnancy_symptoms_other": {
+      "title": {
+        "en": "Please specify the other symptom.",
+        "tr": "कृपया इतर लक्षण नमूद करा."
+      }
+    },
+    "ifa_purpose": {
+      "title": {
+        "en": "What is the current purpose of taking Iron and Folic Acid (IFA) tablets?",
+        "tr": "लोह व फॉलिक ॲसिडच्या (IFA) गोळ्या सध्या कोणत्या उद्देशाने घेतल्या जात आहेत?"
+      },
+      "placeholder": {
+        "en": "Select purpose",
+        "tr": "उद्देश निवडा"
+      },
+      "opt": {
+        "routine_prophylactic_supplementation_during_pregnancy": {
+          "label": {
+            "en": "Routine prophylactic supplementation during pregnancy",
+            "tr": "गर्भावस्थेत नियमित प्रतिबंधात्मक पूरक"
+          }
+        },
+        "treatment_of_diagnosed_anaemia": {
+          "label": {
+            "en": "Treatment of diagnosed anaemia",
+            "tr": "निदान झालेल्या रक्तक्षयावर (ॲनिमिया) उपचार"
+          }
+        },
+        "not_taking_ifa_currently": {
+          "label": {
+            "en": "Not taking IFA currently",
+            "tr": "सध्या IFA घेत नाही"
+          }
+        }
+      }
+    },
+    "ifa_compliance": {
+      "title": {
+        "en": "Approximately how many Iron and Folic Acid (IFA) tablets did the mother take in the last 7 days?",
+        "tr": "गेल्या 7 दिवसांत मातेने साधारण किती लोह व फॉलिक ॲसिडच्या (IFA) गोळ्या घेतल्या?"
+      },
+      "help": {
+        "en": "Captures both once-daily and twice-daily regimens.",
+        "tr": "दिवसातून एकदा आणि दोनदा - दोन्ही प्रकारच्या मात्रा नोंदवता येतात."
+      },
+      "placeholder": {
+        "en": "Select count",
+        "tr": "संख्या निवडा"
+      },
+      "opt": {
+        "ifa_tablets_unavailable": {
+          "label": {
+            "en": "IFA tablets unavailable",
+            "tr": "IFA गोळ्या उपलब्ध नाहीत"
+          }
+        },
+        "none_0_tablets": {
+          "label": {
+            "en": "None (0 tablets)",
+            "tr": "काहीही नाही (0 गोळ्या)"
+          }
+        },
+        "1_3_tablets": {
+          "label": {
+            "en": "1–3 tablets",
+            "tr": "1–3 गोळ्या"
+          }
+        },
+        "4_6_tablets": {
+          "label": {
+            "en": "4–6 tablets",
+            "tr": "4–6 गोळ्या"
+          }
+        },
+        "7_tablets_once_daily": {
+          "label": {
+            "en": "7 tablets (once daily)",
+            "tr": "7 गोळ्या (दिवसातून एकदा)"
+          }
+        },
+        "8_13_tablets": {
+          "label": {
+            "en": "8–13 tablets",
+            "tr": "8–13 गोळ्या"
+          }
+        },
+        "14_tablets_twice_daily": {
+          "label": {
+            "en": "14 tablets (twice daily)",
+            "tr": "14 गोळ्या (दिवसातून दोनदा)"
+          }
+        }
+      }
+    },
+    "calcium_compliance": {
+      "title": {
+        "en": "Approximately how many Calcium tablets did the mother take in the last 7 days?",
+        "tr": "गेल्या 7 दिवसांत मातेने साधारण किती कॅल्शियमच्या गोळ्या घेतल्या?"
+      },
+      "help": {
+        "en": "Suitable for one or two tablets/day regimens.",
+        "tr": "दिवसाला एक किंवा दोन गोळ्यांच्या मात्रेसाठी योग्य."
+      },
+      "placeholder": {
+        "en": "Select count",
+        "tr": "संख्या निवडा"
+      },
+      "opt": {
+        "calcium_tablets_unavailable": {
+          "label": {
+            "en": "Calcium tablets unavailable",
+            "tr": "कॅल्शियमच्या गोळ्या उपलब्ध नाहीत"
+          }
+        },
+        "none_0_tablets": {
+          "label": {
+            "en": "None (0 tablets)",
+            "tr": "काहीही नाही (0 गोळ्या)"
+          }
+        },
+        "1_3_tablets": {
+          "label": {
+            "en": "1–3 tablets",
+            "tr": "1–3 गोळ्या"
+          }
+        },
+        "4_6_tablets": {
+          "label": {
+            "en": "4–6 tablets",
+            "tr": "4–6 गोळ्या"
+          }
+        },
+        "7_tablets_once_daily": {
+          "label": {
+            "en": "7 tablets (once daily)",
+            "tr": "7 गोळ्या (दिवसातून एकदा)"
+          }
+        },
+        "8_13_tablets": {
+          "label": {
+            "en": "8–13 tablets",
+            "tr": "8–13 गोळ्या"
+          }
+        },
+        "14_tablets_twice_daily": {
+          "label": {
+            "en": "14 tablets (twice daily)",
+            "tr": "14 गोळ्या (दिवसातून दोनदा)"
+          }
+        }
+      }
+    },
+    "hb_value": {
+      "title": {
+        "en": "Latest Haemoglobin Value (g/dL)",
+        "tr": "नवीनतम हिमोग्लोबिन मूल्य (g/dL)"
+      },
+      "placeholder": {
+        "en": "e.g. 11.2",
+        "tr": "उदा. 11.2"
+      }
+    },
+    "hb_date": {
+      "title": {
+        "en": "Date of Latest Haemoglobin Test",
+        "tr": "नवीनतम हिमोग्लोबिन तपासणीची तारीख"
+      }
+    },
+    "medications": {
+      "title": {
+        "en": "Apart from Iron, Folic Acid and Calcium, is the mother currently taking any of the following medications?",
+        "tr": "लोह, फॉलिक ॲसिड आणि कॅल्शियम सोडून, माता सध्या यापैकी कोणते औषध घेत आहे का?"
+      },
+      "help": {
+        "en": "Select all that apply. If None applies, select only that.",
+        "tr": "लागू असलेले सर्व निवडा. काहीही लागू नसल्यास फक्त 'काहीही नाही' निवडा."
+      },
+      "opt": {
+        "blood_pressure_medicines": {
+          "label": {
+            "en": "Blood pressure medicines",
+            "tr": "रक्तदाबाची औषधे"
+          }
+        },
+        "diabetes_medicines": {
+          "label": {
+            "en": "Diabetes medicines",
+            "tr": "मधुमेहाची औषधे"
+          }
+        },
+        "thyroid_medicines": {
+          "label": {
+            "en": "Thyroid medicines",
+            "tr": "थायरॉइडची औषधे"
+          }
+        },
+        "antibiotics": {
+          "label": {
+            "en": "Antibiotics",
+            "tr": "प्रतिजैविके (अँटिबायोटिक)"
+          }
+        },
+        "ayurvedic_herbal_preparations": {
+          "label": {
+            "en": "Ayurvedic / Herbal preparations",
+            "tr": "आयुर्वेदिक / वनौषधी तयारी"
+          }
+        },
+        "other_specify": {
+          "label": {
+            "en": "Other (Specify)",
+            "tr": "इतर (नमूद करा)"
+          }
+        },
+        "none": {
+          "label": {
+            "en": "None",
+            "tr": "काहीही नाही"
+          }
+        }
+      }
+    },
+    "medications_other": {
+      "title": {
+        "en": "Please specify the other medication.",
+        "tr": "कृपया इतर औषध नमूद करा."
+      }
+    }
+  },
+  "breastfeeding": {
+    "bf_date": {
+      "title": {
+        "en": "Assessment date",
+        "tr": "मूल्यांकनाची तारीख"
+      },
+      "help": {
+        "en": "Date on which this breastfeeding observation was done.",
+        "tr": "ज्या दिवशी स्तनपानाचे हे निरीक्षण केले ती तारीख."
+      }
+    },
+    "bf_sec_prep": {
+      "title": {
+        "en": "Mother's preparation",
+        "tr": "मातेची तयारी"
+      }
+    },
+    "bf_hunger": {
+      "title": {
+        "en": "Feeding the baby when the baby is hungry",
+        "tr": "बाळाला भूक लागल्यावर दूध पाजणे"
+      },
+      "opt": {
+        "bf_hunger_g": {
+          "label": {
+            "en": "The mother knows the baby’s early hunger cues like squirming, opening of the mouth, putting ﬁnger in the mouth.",
+            "tr": "मातेला बाळाच्या भुकेची सुरुवातीची लक्षणे माहीत आहेत, जसे की चुळबुळ करणे, तोंड उघडणे, तोंडात बोट घालणे."
+          }
+        },
+        "bf_hunger_r": {
+          "label": {
+            "en": "The mother feeds the baby when the baby cries.",
+            "tr": "बाळ रडल्यावरच माता दूध पाजते."
+          },
+          "message": {
+            "en": "Revise early hunger cues: rooting, bringing hands to the mouth and soft sounds. Feed before the baby starts crying.",
+            "tr": "भुकेची सुरुवातीची लक्षणे पुन्हा समजावून सांगा: तोंडाने स्तन शोधणे, हात तोंडाकडे नेणे आणि हलके आवाज करणे. बाळ रडू लागण्यापूर्वीच दूध पाजा."
+          }
+        }
+      }
+    },
+    "bf_prep_wash": {
+      "title": {
+        "en": "Washing hands before breastfeeding",
+        "tr": "स्तनपानापूर्वी हात धुणे"
+      },
+      "opt": {
+        "bf_prep_wash_g": {
+          "label": {
+            "en": "The mother washes her hands with soap and water.",
+            "tr": "माता साबण आणि पाण्याने हात धुते."
+          }
+        },
+        "bf_prep_wash_r": {
+          "label": {
+            "en": "The mother does not wash her hands with soap and water.",
+            "tr": "माता साबण आणि पाण्याने हात धुत नाही."
+          },
+          "message": {
+            "en": "Hands must be washed with soap and water before every feed.",
+            "tr": "प्रत्येक वेळी दूध पाजण्यापूर्वी साबण आणि पाण्याने हात धुतले पाहिजेत."
+          }
+        }
+      }
+    },
+    "bf_prep_water": {
+      "title": {
+        "en": "Drinking water before breastfeeding",
+        "tr": "स्तनपानापूर्वी पाणी पिणे"
+      },
+      "opt": {
+        "bf_prep_water_g": {
+          "label": {
+            "en": "The mother drinks one glass of water before breastfeeding.",
+            "tr": "माता स्तनपानापूर्वी एक ग्लास पाणी पिते."
+          }
+        },
+        "bf_prep_water_r": {
+          "label": {
+            "en": "The mother does not drink water before breastfeeding.",
+            "tr": "माता स्तनपानापूर्वी पाणी पीत नाही."
+          },
+          "message": {
+            "en": "Remind the mother to drink a glass of water before sitting down to feed.",
+            "tr": "दूध पाजायला बसण्यापूर्वी एक ग्लास पाणी पिण्याची मातेला आठवण करून द्या."
+          }
+        }
+      }
+    },
+    "bf_prep_posture": {
+      "title": {
+        "en": "Mother's sitting position during breastfeeding",
+        "tr": "स्तनपान करताना मातेची बसण्याची पद्धत"
+      },
+      "opt": {
+        "bf_prep_posture_g": {
+          "label": {
+            "en": "The mother is relaxed and sitting straight with back support on the bed or on the ﬂoor.",
+            "tr": "माता आरामात, पाठीला आधार देऊन, पलंगावर किंवा जमिनीवर ताठ बसली आहे."
+          }
+        },
+        "bf_prep_posture_r": {
+          "label": {
+            "en": "The mother's shoulders are hunched. She is leaning over the baby with no back support.",
+            "tr": "मातेचे खांदे वाकलेले आहेत. पाठीला आधार न घेता ती बाळावर झुकलेली आहे."
+          },
+          "message": {
+            "en": "The mother should sit comfortably with her back supported and feet resting flat.",
+            "tr": "मातेने पाठीला आधार देऊन आणि पाय जमिनीवर सपाट टेकवून आरामात बसावे."
+          }
+        }
+      }
+    },
+    "bf_clothes": {
+      "title": {
+        "en": "Mother's clothing during breastfeeding",
+        "tr": "स्तनपान करताना मातेचे कपडे"
+      },
+      "opt": {
+        "bf_clothes_g": {
+          "label": {
+            "en": "The mother is wearing loose clothes.",
+            "tr": "मातेने सैल कपडे घातले आहेत."
+          }
+        },
+        "bf_clothes_r": {
+          "label": {
+            "en": "The mother is wearing tight clothes.",
+            "tr": "मातेने घट्ट कपडे घातले आहेत."
+          },
+          "message": {
+            "en": "Loose or front-open clothing makes positioning and skin-to-skin contact easier during feeds.",
+            "tr": "सैल किंवा पुढून उघडणाऱ्या कपड्यांमुळे दूध पाजताना बाळाला योग्य स्थितीत ठेवणे आणि त्वचेचा त्वचेशी संपर्क सोपा होतो."
+          }
+        }
+      }
+    },
+    "bf_waking": {
+      "title": {
+        "en": "Waking the baby before breastfeeding",
+        "tr": "स्तनपानापूर्वी बाळाला जागे करणे"
+      },
+      "opt": {
+        "bf_waking_g": {
+          "label": {
+            "en": "The mother wakes up the baby by removing the blanket, cap, mittens, and socks. Then, she makes the baby sit for a few minutes before bringing the baby close to breastfeed.",
+            "tr": "माता पांघरूण, टोपी, हातमोजे आणि पायमोजे काढून बाळाला जागे करते. मग स्तनपानासाठी जवळ घेण्यापूर्वी बाळाला काही मिनिटे बसवते."
+          }
+        },
+        "bf_waking_r": {
+          "label": {
+            "en": "The mother does not remove the blanket, cap, mittens, or socks. She does not make the baby sit to wake her up. The baby is sleepy when brought close to breastfeed.",
+            "tr": "माता पांघरूण, टोपी, हातमोजे किंवा पायमोजे काढत नाही. बाळाला जागे करण्यासाठी ती त्याला बसवत नाही. स्तनपानासाठी जवळ घेतल्यावर बाळ झोपेत असते."
+          },
+          "message": {
+            "en": "Show the mother gentle ways to wake the baby: stroke the soles, undress a layer, or express a few drops on the lips.",
+            "tr": "बाळाला हळुवारपणे जागे करण्याच्या पद्धती मातेला दाखवा: तळपाय कुरवाळा, कपड्यांचा एक थर काढा किंवा ओठांवर दुधाचे काही थेंब काढा."
+          }
+        }
+      }
+    },
+    "bf_sec_position": {
+      "title": {
+        "en": "Baby position",
+        "tr": "बाळाची स्थिती"
+      }
+    },
+    "bf_body_support": {
+      "title": {
+        "en": "Supporting the baby's whole body",
+        "tr": "बाळाच्या संपूर्ण शरीराला आधार देणे"
+      },
+      "opt": {
+        "bf_body_support_g": {
+          "label": {
+            "en": "Baby's head, back, hips & legs are fully supported by the mother's left hand.",
+            "tr": "बाळाचे डोके, पाठ, नितंब आणि पाय यांना मातेच्या डाव्या हाताचा पूर्ण आधार आहे."
+          }
+        },
+        "bf_body_support_r": {
+          "label": {
+            "en": "Baby’s full body is not supported by the mother. Only the shoulders or the head of the baby are supported.",
+            "tr": "माता बाळाच्या संपूर्ण शरीराला आधार देत नाही. फक्त बाळाच्या खांद्यांना किंवा डोक्याला आधार आहे."
+          },
+          "message": {
+            "en": "The baby's whole body should be supported and turned towards the mother, not just the head and shoulders.",
+            "tr": "बाळाच्या संपूर्ण शरीराला आधार देऊन ते मातेकडे वळवले पाहिजे, फक्त डोके आणि खांदे नव्हे."
+          }
+        }
+      }
+    },
+    "bf_alignment": {
+      "title": {
+        "en": "Keeping the baby's body in a straight line",
+        "tr": "बाळाचे शरीर एका सरळ रेषेत ठेवणे"
+      },
+      "opt": {
+        "bf_alignment_g": {
+          "label": {
+            "en": "Baby's ears, shoulder joint and hip joint are in the same line.",
+            "tr": "बाळाचे कान, खांद्याचा सांधा आणि नितंबाचा सांधा एकाच रेषेत आहेत."
+          }
+        },
+        "bf_alignment_r": {
+          "label": {
+            "en": "Baby's ears, shoulder joint and hip joint are not in the same line. Baby’s body or neck is twisted.",
+            "tr": "बाळाचे कान, खांद्याचा सांधा आणि नितंबाचा सांधा एका रेषेत नाहीत. बाळाचे शरीर किंवा मान वळलेली आहे."
+          },
+          "message": {
+            "en": "Ear, shoulder and hip should stay in one straight line so the baby does not twist its neck to feed.",
+            "tr": "कान, खांदा आणि नितंब एका सरळ रेषेत असावेत, म्हणजे दूध पिण्यासाठी बाळाला मान वळवावी लागणार नाही."
+          }
+        }
+      }
+    },
+    "bf_head_support": {
+      "title": {
+        "en": "Supporting the baby's head correctly",
+        "tr": "बाळाच्या डोक्याला योग्य आधार देणे"
+      },
+      "opt": {
+        "bf_head_support_g": {
+          "label": {
+            "en": "The lower part of the baby's head is held with the mother's left thumb and other ﬁngers. Mother’s thumb is behind one ear of the baby. Her ﬁngers are behind the other ear of the baby.",
+            "tr": "बाळाच्या डोक्याचा खालचा भाग मातेच्या डाव्या अंगठ्याने आणि इतर बोटांनी धरलेला आहे. मातेचा अंगठा बाळाच्या एका कानामागे आहे. तिची बोटे बाळाच्या दुसऱ्या कानामागे आहेत."
+          }
+        },
+        "bf_head_support_r": {
+          "label": {
+            "en": "The mother is not supporting the baby’s head properly. She is restricting the movement of the baby’s head while breastfeeding the baby by putting pressure on the back of the baby’s head.",
+            "tr": "माता बाळाच्या डोक्याला नीट आधार देत नाही. बाळाच्या डोक्याच्या मागे दाब देऊन ती स्तनपान करताना डोक्याची हालचाल रोखत आहे."
+          },
+          "message": {
+            "en": "Support the head with the forearm or palm so the neck is slightly extended, never pushed into the breast.",
+            "tr": "डोक्याला हाताने किंवा तळहाताने असा आधार द्या की मान थोडी मागे राहील; डोके कधीही स्तनाकडे ढकलू नका."
+          }
+        }
+      }
+    },
+    "bf_face_direction": {
+      "title": {
+        "en": "Keeping the baby close to the mother's body",
+        "tr": "बाळाला मातेच्या शरीराजवळ ठेवणे"
+      },
+      "opt": {
+        "bf_face_direction_g": {
+          "label": {
+            "en": "The baby is facing the mother's breast. The baby's chest and the mother's chest are touching each other. The baby is in a horizontal position.",
+            "tr": "बाळाचे तोंड मातेच्या स्तनाकडे आहे. बाळाची छाती आणि मातेची छाती एकमेकांना स्पर्श करत आहेत. बाळ आडव्या स्थितीत आहे."
+          }
+        },
+        "bf_face_direction_r": {
+          "label": {
+            "en": "The baby is facing the mother's face. The baby's chest is not touching the mother's chest. The baby’s chest is held far away, or it is turned upward. The baby is in a diagonal position.",
+            "tr": "बाळाचे तोंड मातेच्या चेहऱ्याकडे आहे. बाळाची छाती मातेच्या छातीला स्पर्श करत नाही. बाळाची छाती दूर धरलेली आहे किंवा वरच्या बाजूला वळलेली आहे. बाळ तिरक्या स्थितीत आहे."
+          },
+          "message": {
+            "en": "The baby's face should directly face the breast with the nose opposite the nipple before latching.",
+            "tr": "स्तनाला लागण्यापूर्वी बाळाचा चेहरा थेट स्तनाकडे आणि नाक स्तनाग्रासमोर असले पाहिजे."
+          }
+        }
+      }
+    },
+    "bf_lip_position": {
+      "title": {
+        "en": "Keeping the baby in the correct feeding position",
+        "tr": "बाळाला दूध पाजण्याच्या योग्य स्थितीत ठेवणे"
+      },
+      "opt": {
+        "bf_lip_position_g": {
+          "label": {
+            "en": "When the baby is absolutely horizontal while feeding on the right breast, the baby's upper lip is at 9 o'clock position and the lower lip is at 3 o'clock position. Thus the baby's lips are absolutely vertical.",
+            "tr": "उजव्या स्तनावर दूध पिताना बाळ पूर्णपणे आडव्या स्थितीत असते, तेव्हा बाळाचा वरचा ओठ 9 वाजण्याच्या स्थितीत आणि खालचा ओठ 3 वाजण्याच्या स्थितीत असतो. अशा प्रकारे बाळाचे ओठ पूर्णपणे उभ्या स्थितीत असतात."
+          }
+        },
+        "bf_lip_position_r": {
+          "label": {
+            "en": "When the baby is in a diagonal position while feeding on the right breast, the baby's lips are not in a vertical position on the areola.",
+            "tr": "उजव्या स्तनावर दूध पिताना बाळ तिरक्या स्थितीत असते, तेव्हा बाळाचे ओठ एरिओलावर (स्तनाग्राभोवतीचा काळा भाग) उभ्या स्थितीत नसतात."
+          },
+          "message": {
+            "en": "Check the lip line: the baby's lips should meet the breast so more areola shows above the top lip than below.",
+            "tr": "ओठांची रेषा तपासा: बाळाचे ओठ स्तनाला असे लागावेत की वरच्या ओठाच्या वर एरिओला खालच्यापेक्षा जास्त दिसेल."
+          }
+        }
+      }
+    },
+    "bf_nose_chin": {
+      "title": {
+        "en": "Bringing the baby to the breast correctly",
+        "tr": "बाळाला योग्य प्रकारे स्तनाजवळ आणणे"
+      },
+      "opt": {
+        "bf_nose_chin_g": {
+          "label": {
+            "en": "The mother brings the baby to the breast keeping the baby’s chin forward such that the Nare of the nose is in line with the nipple. Doing so, will ensure that the baby’s neck is extended in the same way that an adult’s neck is extended while drinking water.",
+            "tr": "माता बाळाची हनुवटी पुढे ठेवून त्याला स्तनाजवळ आणते, म्हणजे नाकपुड्या स्तनाग्राच्या सरळ रेषेत येतात. असे केल्याने पाणी पिताना प्रौढ व्यक्तीची मान जशी मागे ताणली जाते, तशीच बाळाची मान ताणलेली राहते."
+          }
+        },
+        "bf_nose_chin_r": {
+          "label": {
+            "en": "The baby is brought straight on to the nipple without extension of the neck. Here, either the baby's nose is higher than the mother's nipple or the tip of the nose is in line with the nipple. Also, the baby’s neck is bent forward.",
+            "tr": "मान मागे न ताणता बाळाला थेट स्तनाग्रावर आणले जाते. यात बाळाचे नाक मातेच्या स्तनाग्रापेक्षा वर असते किंवा नाकाचे टोक स्तनाग्राच्या सरळ रेषेत असते. तसेच बाळाची मान पुढे वाकलेली असते."
+          },
+          "message": {
+            "en": "The chin should touch the breast and the nose stay free — revise the tilted-head position from the tutorial.",
+            "tr": "हनुवटी स्तनाला टेकली पाहिजे आणि नाक मोकळे राहिले पाहिजे — व्हिडिओमधील डोके मागे झुकवण्याची स्थिती पुन्हा पाहा."
+          }
+        }
+      }
+    },
+    "bf_sec_hold": {
+      "title": {
+        "en": "Holding the breast for a deep latch",
+        "tr": "खोल पकडीसाठी स्तन धरणे"
+      }
+    },
+    "bf_finger_direction": {
+      "title": {
+        "en": "Holding the breast correctly",
+        "tr": "स्तन योग्य प्रकारे धरणे"
+      },
+      "opt": {
+        "bf_finger_direction_g": {
+          "label": {
+            "en": "The mother holds the breast in such a way that her ﬁngers are parallel to the baby's lips.",
+            "tr": "माता स्तन असे धरते की तिची बोटे बाळाच्या ओठांना समांतर असतात."
+          }
+        },
+        "bf_finger_direction_r": {
+          "label": {
+            "en": "The mother holds the breast in such a way that her ﬁngers are not parallel to the baby's lips.",
+            "tr": "माता स्तन असे धरते की तिची बोटे बाळाच्या ओठांना समांतर नसतात."
+          },
+          "message": {
+            "en": "The fingers should run parallel to the baby's lips so the breast 'sandwich' matches the mouth opening.",
+            "tr": "बोटे बाळाच्या ओठांना समांतर असावीत, म्हणजे स्तनाचा 'सँडविच' आकार तोंडाच्या उघडण्याशी जुळेल."
+          }
+        }
+      }
+    },
+    "bf_compressing": {
+      "title": {
+        "en": "Pressing the breast correctly",
+        "tr": "स्तन योग्य प्रकारे दाबणे"
+      },
+      "opt": {
+        "bf_compressing_g": {
+          "label": {
+            "en": "The mother is compressing the breast adequately. So it is easy for the baby to attach deeply to the lower areola.",
+            "tr": "माता स्तन पुरेसा दाबत आहे. त्यामुळे बाळाला एरिओलाचा खालचा भाग खोलवर पकडणे सोपे जाते."
+          }
+        },
+        "bf_compressing_r": {
+          "label": {
+            "en": "The mother is not compressing the breast adequately. So the baby is unable to attach deeply.",
+            "tr": "माता स्तन पुरेसा दाबत नाही. त्यामुळे बाळ खोलवर पकडू शकत नाही."
+          },
+          "message": {
+            "en": "Gently compress the breast to shape it to the baby's mouth; deep pressing can block milk ducts.",
+            "tr": "स्तनाला बाळाच्या तोंडाचा आकार देण्यासाठी हळुवारपणे दाबा; जास्त जोराने दाबल्यास दुधाच्या नलिका बंद होऊ शकतात."
+          }
+        }
+      }
+    },
+    "bf_latching": {
+      "title": {
+        "en": "Bringing the baby to the breast (not the breast to the baby)",
+        "tr": "बाळाला स्तनाजवळ आणणे (स्तन बाळाकडे नव्हे)"
+      },
+      "opt": {
+        "bf_latching_g": {
+          "label": {
+            "en": "The mother is bringing the baby to the breast. She is not pushing the breast towards the baby.",
+            "tr": "माता बाळाला स्तनाजवळ आणत आहे. ती स्तन बाळाकडे ढकलत नाही."
+          }
+        },
+        "bf_latching_r": {
+          "label": {
+            "en": "The mother is pushing the breast towards the baby. She is not bringing the baby to the breast.",
+            "tr": "माता स्तन बाळाकडे ढकलत आहे. ती बाळाला स्तनाजवळ आणत नाही."
+          },
+          "message": {
+            "en": "Bring the baby quickly to the breast (not the breast to the baby), aiming the lower lip below the nipple.",
+            "tr": "बाळाला पटकन स्तनाजवळ आणा (स्तन बाळाकडे नव्हे), खालचा ओठ स्तनाग्राच्या खाली येईल याकडे लक्ष द्या."
+          }
+        }
+      }
+    },
+    "bf_sec_latch": {
+      "title": {
+        "en": "Latching",
+        "tr": "स्तनाला लागणे (पकड)"
+      }
+    },
+    "bf_stimulate_mouth": {
+      "title": {
+        "en": "Helping the baby open the mouth wide",
+        "tr": "बाळाला तोंड मोठे उघडण्यास मदत करणे"
+      },
+      "opt": {
+        "bf_stimulate_mouth_g": {
+          "label": {
+            "en": "The mother brushes her nipple on the upper lip of the baby to stimulate opening of the baby’s mouth between 120 -160 degrees wide.",
+            "tr": "बाळाचे तोंड 120-160 अंश रुंद उघडावे म्हणून माता आपले स्तनाग्र बाळाच्या वरच्या ओठावर फिरवते."
+          }
+        },
+        "bf_stimulate_mouth_r": {
+          "label": {
+            "en": "The mother doesn't attempt to stimulate a wide opening of the baby’s mouth. She hurriedly pushes her nipple into the baby's mouth when the mouth opening is smaller than 120 degrees wide.",
+            "tr": "माता बाळाचे तोंड मोठे उघडण्याचा प्रयत्न करत नाही. तोंड 120 अंशांपेक्षा कमी उघडलेले असतानाच ती घाईघाईने स्तनाग्र बाळाच्या तोंडात घालते."
+          },
+          "message": {
+            "en": "Brush the nipple from nose to lips and wait for a wide open mouth before bringing the baby to the breast.",
+            "tr": "स्तनाग्र नाकापासून ओठांपर्यंत फिरवा आणि बाळाला स्तनाजवळ आणण्यापूर्वी तोंड मोठे उघडेपर्यंत थांबा."
+          }
+        }
+      }
+    },
+    "bf_upper_lower_lips": {
+      "title": {
+        "en": "Baby taking the breast deeply into the mouth",
+        "tr": "बाळाने स्तन तोंडात खोलवर घेणे"
+      },
+      "opt": {
+        "bf_upper_lower_lips_g": {
+          "label": {
+            "en": "The baby’s lower lip is at the border of the areola in case of a big areola. Lower lip is on the breast if the mother’s areola is small. Upper lip is at the border of the nipple.",
+            "tr": "एरिओला मोठा असल्यास बाळाचा खालचा ओठ एरिओलाच्या कडेवर असतो. मातेचा एरिओला लहान असल्यास खालचा ओठ स्तनावर असतो. वरचा ओठ स्तनाग्राच्या कडेवर असतो."
+          }
+        },
+        "bf_upper_lower_lips_r": {
+          "label": {
+            "en": "The baby’s lower lip is just below the nipple. The upper lip is either at the border of the nipple or at the border of the areola.",
+            "tr": "बाळाचा खालचा ओठ स्तनाग्राच्या अगदी खाली आहे. वरचा ओठ स्तनाग्राच्या कडेवर किंवा एरिओलाच्या कडेवर आहे."
+          },
+          "message": {
+            "en": "Both lips should be turned outward (flanged) like a fish — tucked-in lips cause a shallow, painful latch.",
+            "tr": "दोन्ही ओठ माशासारखे बाहेरच्या बाजूला वळलेले असावेत — आत वळलेल्या ओठांमुळे पकड उथळ आणि वेदनादायक होते."
+          }
+        }
+      }
+    },
+    "bf_deep_attachment": {
+      "title": {
+        "en": "Checking whether the baby is attached properly",
+        "tr": "बाळ योग्य प्रकारे लागले आहे का ते तपासणे"
+      },
+      "opt": {
+        "bf_deep_attachment_g": {
+          "label": {
+            "en": "The mother checks the latch by pressing on the breast near the baby's lower lip with her right index finger.",
+            "tr": "माता उजव्या हाताच्या तर्जनीने बाळाच्या खालच्या ओठाजवळ स्तन दाबून पकड तपासते."
+          }
+        },
+        "bf_deep_attachment_r": {
+          "label": {
+            "en": "The mother does not check the latch by pressing on the breast with her finger.",
+            "tr": "माता बोटाने स्तन दाबून पकड तपासत नाही."
+          },
+          "message": {
+            "en": "In a deep latch most of the areola is inside the mouth and sucks are slow and deep with visible swallowing.",
+            "tr": "खोल पकडीत एरिओलाचा बहुतांश भाग तोंडात असतो आणि चोखणे हळू व खोल असते, गिळणे दिसून येते."
+          }
+        }
+      }
+    },
+    "bf_lips_chin_visibility": {
+      "title": {
+        "en": "Baby's lips and chin touching the breast correctly",
+        "tr": "बाळाचे ओठ आणि हनुवटी स्तनाला योग्य प्रकारे टेकणे"
+      },
+      "opt": {
+        "bf_lips_chin_visibility_g": {
+          "label": {
+            "en": "The baby's lips and chin are embedded in the breast. They are not visible when the baby breastfeeds.",
+            "tr": "बाळाचे ओठ आणि हनुवटी स्तनात रुतलेले आहेत. बाळ दूध पिताना ते दिसत नाहीत."
+          }
+        },
+        "bf_lips_chin_visibility_r": {
+          "label": {
+            "en": "The baby’s lips and chin are not embedded in the breast. They are visible when the baby breastfeeds.",
+            "tr": "बाळाचे ओठ आणि हनुवटी स्तनात रुतलेले नाहीत. बाळ दूध पिताना ते दिसतात."
+          },
+          "message": {
+            "en": "The chin should press into the breast and the lower lip stay hidden — revise attachment checkpoints.",
+            "tr": "हनुवटी स्तनात दाबलेली असावी आणि खालचा ओठ लपलेला असावा — स्तनाला लागण्याचे तपासणी मुद्दे पुन्हा पाहा."
+          }
+        }
+      }
+    },
+    "bf_cheeks": {
+      "title": {
+        "en": "Baby's cheeks while sucking",
+        "tr": "चोखताना बाळाचे गाल"
+      },
+      "opt": {
+        "bf_cheeks_g": {
+          "label": {
+            "en": "The baby’s cheeks look full and rounded. There are no dimples in the cheeks.",
+            "tr": "बाळाचे गाल भरलेले आणि गोल दिसतात. गालांवर खळ्या नाहीत."
+          }
+        },
+        "bf_cheeks_r": {
+          "label": {
+            "en": "The baby’s cheeks look hollow. There are dimples in the cheeks.",
+            "tr": "बाळाचे गाल आत ओढलेले दिसतात. गालांवर खळ्या पडतात."
+          },
+          "message": {
+            "en": "Cheeks should look full and rounded while feeding; dimpling means the latch is shallow — relatch the baby.",
+            "tr": "दूध पिताना गाल भरलेले आणि गोल दिसले पाहिजेत; खळ्या पडणे म्हणजे पकड उथळ आहे — बाळाला पुन्हा स्तनाला लावा."
+          }
+        }
+      }
+    },
+    "bf_breast_in_mouth": {
+      "title": {
+        "en": "Amount of breast inside the baby's mouth",
+        "tr": "बाळाच्या तोंडात असलेला स्तनाचा भाग"
+      },
+      "opt": {
+        "bf_breast_in_mouth_g": {
+          "label": {
+            "en": "While checking the latch, only the upper areola is visible. The lower areola is not visible. If the mother has a small areola, both the upper & the lower parts of the areola are in the baby's mouth.",
+            "tr": "पकड तपासताना फक्त वरचा एरिओला दिसतो. खालचा एरिओला दिसत नाही. मातेचा एरिओला लहान असल्यास एरिओलाचे वरचे आणि खालचे दोन्ही भाग बाळाच्या तोंडात असतात."
+          }
+        },
+        "bf_breast_in_mouth_r": {
+          "label": {
+            "en": "While checking the latch, even for the mothers having a big areola, the upper areola is not visible as it is in the baby's mouth.",
+            "tr": "पकड तपासताना, मोठा एरिओला असलेल्या मातांमध्येही वरचा एरिओला दिसत नाही, कारण तो बाळाच्या तोंडात असतो."
+          },
+          "message": {
+            "en": "In a deep latch the lower areola is inside the baby's mouth and only the upper areola stays visible — relatch the baby if the whole areola disappears into the mouth.",
+            "tr": "खोल पकडीत खालचा एरिओला बाळाच्या तोंडात असतो आणि फक्त वरचा एरिओला दिसतो — संपूर्ण एरिओला तोंडात गेल्यास बाळाला पुन्हा स्तनाला लावा."
+          }
+        }
+      }
+    },
+    "bf_release_latch": {
+      "title": {
+        "en": "Removing the baby from the breast safely",
+        "tr": "बाळाला स्तनापासून सुरक्षितपणे दूर करणे"
+      },
+      "opt": {
+        "bf_release_latch_g": {
+          "label": {
+            "en": "While delatching the baby, the mother inserts her little ﬁnger in the corner of the baby’s mouth to delatch.",
+            "tr": "बाळाला स्तनापासून सोडवताना माता आपली करंगळी बाळाच्या तोंडाच्या कोपऱ्यात घालून सोडवते."
+          }
+        },
+        "bf_release_latch_r": {
+          "label": {
+            "en": "While delatching the baby, mother just pulls the baby oﬀ her breast without putting her ﬁnger in the baby’s mouth.",
+            "tr": "बाळाला स्तनापासून सोडवताना माता बाळाच्या तोंडात बोट न घालता त्याला स्तनापासून ओढून घेते."
+          },
+          "message": {
+            "en": "Never pull the baby off — slide a clean little finger into the corner of the mouth to break the suction first.",
+            "tr": "बाळाला कधीही ओढून दूर करू नका — आधी स्वच्छ करंगळी तोंडाच्या कोपऱ्यात घालून चोखण्याचा दाब सोडवा."
+          }
+        }
+      }
+    },
+    "bf_sec_counsel": {
+      "title": {
+        "en": "Important counselling points",
+        "tr": "समुपदेशनाचे महत्त्वाचे मुद्दे"
+      }
+    },
+    "bf_support_after_latch": {
+      "title": {
+        "en": "Supporting the baby after the baby starts feeding",
+        "tr": "बाळ दूध पिऊ लागल्यानंतर त्याला आधार देणे"
+      },
+      "opt": {
+        "bf_support_after_latch_g": {
+          "label": {
+            "en": "After checking the latch, the mother releases her breast from her hand. She supports the baby's body with that hand. She ensures that the baby's head is still well supported with her other hand.",
+            "tr": "पकड तपासल्यानंतर माता स्तन हातातून सोडते. त्याच हाताने ती बाळाच्या शरीराला आधार देते. दुसऱ्या हाताने बाळाच्या डोक्याला अजूनही चांगला आधार आहे याची ती काळजी घेते."
+          }
+        },
+        "bf_support_after_latch_r": {
+          "label": {
+            "en": "After checking the latch, the mother keeps holding the breast with her hand. She does not support the baby’s body with that hand. She does not support the baby's head with her other hand.",
+            "tr": "पकड तपासल्यानंतरही माता स्तन हाताने धरून ठेवते. त्या हाताने ती बाळाच्या शरीराला आधार देत नाही. दुसऱ्या हाताने ती बाळाच्या डोक्याला आधार देत नाही."
+          },
+          "message": {
+            "en": "Once deeply latched, the breast can be released slowly; keep supporting it only if it is large or heavy.",
+            "tr": "खोल पकड बसल्यावर स्तन हळूच सोडता येतो; स्तन मोठा किंवा जड असेल तरच आधार देत राहा."
+          }
+        }
+      }
+    },
+    "bf_check_emptied": {
+      "title": {
+        "en": "Checking whether one breast is emptied",
+        "tr": "एक स्तन रिकामा झाला आहे का ते तपासणे"
+      },
+      "opt": {
+        "bf_check_emptied_g": {
+          "label": {
+            "en": "The mother expresses breast milk with her hand to check if thin milk or thick milk comes out. She oﬀers the other breast when only a few drops of thick milk can be expressed.",
+            "tr": "पातळ दूध येते की दाट दूध, हे पाहण्यासाठी माता हाताने दूध काढून पाहते. दाट दुधाचे फक्त काही थेंबच निघतात तेव्हा ती दुसरा स्तन देते."
+          }
+        },
+        "bf_check_emptied_r": {
+          "label": {
+            "en": "The mother attempts to feed from the other breast without checking if her breast is empty or not by expressing breast milk with her hand.",
+            "tr": "स्तन रिकामा झाला की नाही हे हाताने दूध काढून न तपासता माता दुसऱ्या स्तनाने दूध पाजू लागते."
+          },
+          "message": {
+            "en": "After the feed, express a few drops to confirm the breast is soft and emptied — fullness invites engorgement.",
+            "tr": "दूध पाजल्यानंतर काही थेंब काढून स्तन मऊ आणि रिकामा झाल्याची खात्री करा — स्तन भरलेला राहिल्यास तो भरून येऊन सुजू शकतो."
+          }
+        }
+      }
+    },
+    "bf_manual_expression": {
+      "title": {
+        "en": "Expressing breast milk by hand",
+        "tr": "हाताने स्तनातील दूध काढणे"
+      },
+      "opt": {
+        "bf_manual_expression_g": {
+          "label": {
+            "en": "The mother knows the technique of manual expression of breast milk - press back, compress & release.",
+            "tr": "मातेला हाताने स्तनातील दूध काढण्याची पद्धत माहीत आहे - मागे दाबणे, दाबणे आणि सोडणे."
+          }
+        },
+        "bf_manual_expression_r": {
+          "label": {
+            "en": "The mother does not know press back, compress and release technique of hand expression of milk.",
+            "tr": "मातेला हाताने दूध काढण्याची 'मागे दाबणे, दाबणे आणि सोडणे' ही पद्धत माहीत नाही."
+          },
+          "message": {
+            "en": "Revise manual expression: press back towards the chest, then compress rhythmically behind the areola.",
+            "tr": "हाताने दूध काढणे पुन्हा समजावून सांगा: छातीकडे मागे दाबा, मग एरिओलाच्या मागे लयीत दाबा."
+          }
+        }
+      }
+    },
+    "bf_emptying": {
+      "title": {
+        "en": "Feeding completely from one breast before changing sides",
+        "tr": "बाजू बदलण्यापूर्वी एका स्तनाने पूर्ण दूध पाजणे"
+      },
+      "opt": {
+        "bf_emptying_g": {
+          "label": {
+            "en": "The mother feeds the baby completely from one breast before feeding from the other breast.",
+            "tr": "दुसऱ्या स्तनाने दूध पाजण्यापूर्वी माता बाळाला एका स्तनाने पूर्ण दूध पाजते."
+          }
+        },
+        "bf_emptying_r": {
+          "label": {
+            "en": "The mother feeds from both breasts for less than 5 minutes, without emptying the breasts completely.",
+            "tr": "माता स्तन पूर्ण रिकामे न करता दोन्ही स्तनांनी 5 मिनिटांपेक्षा कमी वेळ दूध पाजते."
+          },
+          "message": {
+            "en": "Let the baby finish the first breast completely (to reach fatty hind milk) before offering the second.",
+            "tr": "दुसरा स्तन देण्यापूर्वी बाळाला पहिला स्तन पूर्ण रिकामा करू द्या (म्हणजे त्याला स्निग्धतायुक्त नंतरचे दूध मिळेल)."
+          }
+        }
+      }
+    },
+    "bf_burping": {
+      "title": {
+        "en": "Burping the baby after feeding",
+        "tr": "दूध पाजल्यानंतर बाळाला ढेकर काढणे"
+      },
+      "opt": {
+        "bf_burping_g": {
+          "label": {
+            "en": "The mother holds the baby in a sitting position for burping.",
+            "tr": "ढेकर काढण्यासाठी माता बाळाला बसलेल्या स्थितीत धरते."
+          }
+        },
+        "bf_burping_r": {
+          "label": {
+            "en": "The mother holds the baby on her shoulder for burping.",
+            "tr": "ढेकर काढण्यासाठी माता बाळाला आपल्या खांद्यावर घेते."
+          },
+          "message": {
+            "en": "Burp the baby in a SITTING position: support the chin, keep the back straight and rub or pat the back gently until the baby burps.",
+            "tr": "बाळाला बसलेल्या स्थितीत ढेकर काढा: हनुवटीला आधार द्या, पाठ सरळ ठेवा आणि ढेकर येईपर्यंत पाठ हळुवार चोळा किंवा थोपटा."
+          }
+        }
+      }
+    },
+    "bf_both_sides": {
+      "title": {
+        "en": "Feeding from both breasts",
+        "tr": "दोन्ही स्तनांनी दूध पाजणे"
+      },
+      "opt": {
+        "bf_both_sides_g": {
+          "label": {
+            "en": "The mother oﬀers both the breasts to the baby to feed from.",
+            "tr": "माता बाळाला दोन्ही स्तनांनी दूध पाजते."
+          }
+        },
+        "bf_both_sides_r": {
+          "label": {
+            "en": "The mother feeds the baby only from one breast.",
+            "tr": "माता बाळाला फक्त एकाच स्तनाने दूध पाजते."
+          },
+          "message": {
+            "en": "Offer both breasts at each feed, starting from the side used last so both are drained regularly.",
+            "tr": "प्रत्येक वेळी दोन्ही स्तन द्या, मागच्या वेळी शेवटी ज्या स्तनाने पाजले त्यापासून सुरुवात करा, म्हणजे दोन्ही नियमितपणे रिकामे होतील."
+          }
+        }
+      }
+    },
+    "bf_frequency": {
+      "title": {
+        "en": "Number of breastfeeds during the day",
+        "tr": "दिवसभरात स्तनपानाची संख्या"
+      },
+      "opt": {
+        "bf_frequency_g": {
+          "label": {
+            "en": "The mother feeds the baby 10-12 times in 24 hours.",
+            "tr": "माता 24 तासांत बाळाला 10-12 वेळा दूध पाजते."
+          }
+        },
+        "bf_frequency_r": {
+          "label": {
+            "en": "The frequency of breastfeeding is less than 10 times in 24 hours.",
+            "tr": "24 तासांत स्तनपान 10 वेळांपेक्षा कमी होते."
+          },
+          "message": {
+            "en": "Feed on demand, 10–12 times in 24 hours in the early months.",
+            "tr": "सुरुवातीच्या महिन्यांत बाळ मागेल तेव्हा दूध पाजा, 24 तासांत 10–12 वेळा."
+          }
+        }
+      }
+    },
+    "bf_night_feeding": {
+      "title": {
+        "en": "Number of breastfeeds during the night",
+        "tr": "रात्री स्तनपानाची संख्या"
+      },
+      "opt": {
+        "bf_night_feeding_g": {
+          "label": {
+            "en": "The mother breastfeeds the baby 3-4 times at night.",
+            "tr": "माता रात्री बाळाला 3-4 वेळा स्तनपान देते."
+          }
+        },
+        "bf_night_feeding_r": {
+          "label": {
+            "en": "Breastfeeding during the night is less than 3 times.",
+            "tr": "रात्री स्तनपान 3 वेळांपेक्षा कमी होते."
+          },
+          "message": {
+            "en": "Night feeds matter — they maintain milk supply and the baby gets hind milk. Encourage 3–4 night feeds.",
+            "tr": "रात्रीचे स्तनपान महत्त्वाचे आहे — त्यामुळे दूध तयार होत राहते आणि बाळाला नंतरचे दूध मिळते. रात्री 3–4 वेळा दूध पाजण्यास प्रोत्साहन द्या."
+          }
+        }
+      }
+    }
+  },
+  "complementary_feeding": {
+    "cfa_date": {
+      "title": {
+        "en": "Complementary Feeding Assessment Date",
+        "tr": "पूरक आहार मूल्यांकनाची तारीख"
+      },
+      "help": {
+        "en": "Date of this complementary feeding assessment (DD-MM-YYYY).",
+        "tr": "या पूरक आहार मूल्यांकनाची तारीख (DD-MM-YYYY)."
+      }
+    },
+    "cfa_diet": {
+      "title": {
+        "en": "Baby's diet type",
+        "tr": "बाळाच्या आहाराचा प्रकार"
+      },
+      "opt": {
+        "cfa_diet_veg": {
+          "label": {
+            "en": "Vegetarian",
+            "tr": "शाकाहारी"
+          }
+        },
+        "cfa_diet_egg": {
+          "label": {
+            "en": "Eggetarian (Vegetarian who eats eggs)",
+            "tr": "अंडाहारी (अंडी खाणारे शाकाहारी)"
+          }
+        },
+        "cfa_diet_nonveg": {
+          "label": {
+            "en": "Non-Vegetarian",
+            "tr": "मांसाहारी"
+          }
+        }
+      }
+    },
+    "cfa_pulses_freq": {
+      "title": {
+        "en": "Number of days per week whole beans or pulses were given to the baby",
+        "tr": "आठवड्यातून किती दिवस बाळाला अख्खी कडधान्ये किंवा डाळी दिल्या"
+      },
+      "opt": {
+        "cfa_pulses_freq_0": {
+          "label": {
+            "en": "0 days",
+            "tr": "0 दिवस"
+          }
+        },
+        "cfa_pulses_freq_1": {
+          "label": {
+            "en": "1 day",
+            "tr": "1 दिवस"
+          }
+        },
+        "cfa_pulses_freq_2": {
+          "label": {
+            "en": "2 days",
+            "tr": "2 दिवस"
+          }
+        },
+        "cfa_pulses_freq_3": {
+          "label": {
+            "en": "3 days",
+            "tr": "3 दिवस"
+          }
+        },
+        "cfa_pulses_freq_4": {
+          "label": {
+            "en": "4 days",
+            "tr": "4 दिवस"
+          }
+        },
+        "cfa_pulses_freq_5": {
+          "label": {
+            "en": "5 days",
+            "tr": "5 दिवस"
+          }
+        },
+        "cfa_pulses_freq_6": {
+          "label": {
+            "en": "6 days",
+            "tr": "6 दिवस"
+          }
+        },
+        "cfa_pulses_freq_7": {
+          "label": {
+            "en": "7 days",
+            "tr": "7 दिवस"
+          }
+        }
+      }
+    },
+    "cfa_pulses_types": {
+      "title": {
+        "en": "Select types of whole beans or pulses given to the baby",
+        "tr": "बाळाला दिलेल्या अख्ख्या कडधान्यांचे किंवा डाळींचे प्रकार निवडा"
+      },
+      "opt": {
+        "cfa_pulses_types_beans": {
+          "label": {
+            "en": "Beans",
+            "tr": "कडधान्ये (अख्खी)"
+          }
+        },
+        "cfa_pulses_types_pulses": {
+          "label": {
+            "en": "Pulses",
+            "tr": "डाळी"
+          }
+        }
+      }
+    },
+    "cfa_pulses_24h": {
+      "title": {
+        "en": "Did you give the baby any whole beans or pulses in the last 24 hours?",
+        "tr": "गेल्या 24 तासांत तुम्ही बाळाला अख्खी कडधान्ये किंवा डाळी दिल्या का?"
+      },
+      "opt": {
+        "cfa_pulses_24h_yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "cfa_pulses_24h_no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "cfa_milk_freq": {
+      "title": {
+        "en": "Number of days per week milk products were given to the baby",
+        "tr": "आठवड्यातून किती दिवस बाळाला दुधाचे पदार्थ दिले"
+      },
+      "opt": {
+        "cfa_milk_freq_0": {
+          "label": {
+            "en": "0 days",
+            "tr": "0 दिवस"
+          }
+        },
+        "cfa_milk_freq_1": {
+          "label": {
+            "en": "1 day",
+            "tr": "1 दिवस"
+          }
+        },
+        "cfa_milk_freq_2": {
+          "label": {
+            "en": "2 days",
+            "tr": "2 दिवस"
+          }
+        },
+        "cfa_milk_freq_3": {
+          "label": {
+            "en": "3 days",
+            "tr": "3 दिवस"
+          }
+        },
+        "cfa_milk_freq_4": {
+          "label": {
+            "en": "4 days",
+            "tr": "4 दिवस"
+          }
+        },
+        "cfa_milk_freq_5": {
+          "label": {
+            "en": "5 days",
+            "tr": "5 दिवस"
+          }
+        },
+        "cfa_milk_freq_6": {
+          "label": {
+            "en": "6 days",
+            "tr": "6 दिवस"
+          }
+        },
+        "cfa_milk_freq_7": {
+          "label": {
+            "en": "7 days",
+            "tr": "7 दिवस"
+          }
+        }
+      }
+    },
+    "cfa_milk_types": {
+      "title": {
+        "en": "Select types of milk products given to the baby",
+        "tr": "बाळाला दिलेल्या दुधाच्या पदार्थांचे प्रकार निवडा"
+      },
+      "opt": {
+        "cfa_milk_types_curd": {
+          "label": {
+            "en": "Curd",
+            "tr": "दही"
+          }
+        },
+        "cfa_milk_types_paneer": {
+          "label": {
+            "en": "Paneer",
+            "tr": "पनीर"
+          }
+        },
+        "cfa_milk_types_cheese": {
+          "label": {
+            "en": "Cheese",
+            "tr": "चीज"
+          }
+        },
+        "cfa_milk_types_khoa": {
+          "label": {
+            "en": "Khoa",
+            "tr": "खवा"
+          }
+        },
+        "cfa_milk_types_buttermilk": {
+          "label": {
+            "en": "Buttermilk",
+            "tr": "ताक"
+          }
+        },
+        "cfa_milk_types_cow_milk": {
+          "label": {
+            "en": "Cow or animal milk",
+            "tr": "गाईचे किंवा जनावराचे दूध"
+          }
+        },
+        "cfa_milk_types_formula": {
+          "label": {
+            "en": "Formula milk",
+            "tr": "फॉर्म्युला दूध"
+          }
+        }
+      }
+    },
+    "cfa_milk_24h": {
+      "title": {
+        "en": "Did you give the baby any milk products in the last 24 hours?",
+        "tr": "गेल्या 24 तासांत तुम्ही बाळाला दुधाचे कोणतेही पदार्थ दिले का?"
+      },
+      "opt": {
+        "cfa_milk_24h_yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "cfa_milk_24h_no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "cfa_grains_freq": {
+      "title": {
+        "en": "Number of days per week grains were given to the baby",
+        "tr": "आठवड्यातून किती दिवस बाळाला धान्य दिले"
+      },
+      "opt": {
+        "cfa_grains_freq_0": {
+          "label": {
+            "en": "0 days",
+            "tr": "0 दिवस"
+          }
+        },
+        "cfa_grains_freq_1": {
+          "label": {
+            "en": "1 day",
+            "tr": "1 दिवस"
+          }
+        },
+        "cfa_grains_freq_2": {
+          "label": {
+            "en": "2 days",
+            "tr": "2 दिवस"
+          }
+        },
+        "cfa_grains_freq_3": {
+          "label": {
+            "en": "3 days",
+            "tr": "3 दिवस"
+          }
+        },
+        "cfa_grains_freq_4": {
+          "label": {
+            "en": "4 days",
+            "tr": "4 दिवस"
+          }
+        },
+        "cfa_grains_freq_5": {
+          "label": {
+            "en": "5 days",
+            "tr": "5 दिवस"
+          }
+        },
+        "cfa_grains_freq_6": {
+          "label": {
+            "en": "6 days",
+            "tr": "6 दिवस"
+          }
+        },
+        "cfa_grains_freq_7": {
+          "label": {
+            "en": "7 days",
+            "tr": "7 दिवस"
+          }
+        }
+      }
+    },
+    "cfa_grains_types": {
+      "title": {
+        "en": "Select types of grains given to the baby",
+        "tr": "बाळाला दिलेल्या धान्याचे प्रकार निवडा"
+      },
+      "opt": {
+        "cfa_grains_types_rice": {
+          "label": {
+            "en": "Rice",
+            "tr": "तांदूळ"
+          }
+        },
+        "cfa_grains_types_wheat": {
+          "label": {
+            "en": "Wheat",
+            "tr": "गहू"
+          }
+        }
+      }
+    },
+    "cfa_millets_freq": {
+      "title": {
+        "en": "Number of days per week millets were given to the baby",
+        "tr": "आठवड्यातून किती दिवस बाळाला भरडधान्ये (मिलेट) दिली"
+      },
+      "opt": {
+        "cfa_millets_freq_0": {
+          "label": {
+            "en": "0 days",
+            "tr": "0 दिवस"
+          }
+        },
+        "cfa_millets_freq_1": {
+          "label": {
+            "en": "1 day",
+            "tr": "1 दिवस"
+          }
+        },
+        "cfa_millets_freq_2": {
+          "label": {
+            "en": "2 days",
+            "tr": "2 दिवस"
+          }
+        },
+        "cfa_millets_freq_3": {
+          "label": {
+            "en": "3 days",
+            "tr": "3 दिवस"
+          }
+        },
+        "cfa_millets_freq_4": {
+          "label": {
+            "en": "4 days",
+            "tr": "4 दिवस"
+          }
+        },
+        "cfa_millets_freq_5": {
+          "label": {
+            "en": "5 days",
+            "tr": "5 दिवस"
+          }
+        },
+        "cfa_millets_freq_6": {
+          "label": {
+            "en": "6 days",
+            "tr": "6 दिवस"
+          }
+        },
+        "cfa_millets_freq_7": {
+          "label": {
+            "en": "7 days",
+            "tr": "7 दिवस"
+          }
+        }
+      }
+    },
+    "cfa_millets_types": {
+      "title": {
+        "en": "Select types of millets given to the baby",
+        "tr": "बाळाला दिलेल्या भरडधान्यांचे (मिलेट) प्रकार निवडा"
+      },
+      "opt": {
+        "cfa_millets_types_bajra": {
+          "label": {
+            "en": "Bajra",
+            "tr": "बाजरी"
+          }
+        },
+        "cfa_millets_types_jowar": {
+          "label": {
+            "en": "Jowar",
+            "tr": "ज्वारी"
+          }
+        },
+        "cfa_millets_types_ragi": {
+          "label": {
+            "en": "Ragi",
+            "tr": "नाचणी (रागी)"
+          }
+        },
+        "cfa_millets_types_kodo": {
+          "label": {
+            "en": "Kodo Millet",
+            "tr": "कोदो (हरिक)"
+          }
+        },
+        "cfa_millets_types_little": {
+          "label": {
+            "en": "Little Millet",
+            "tr": "सावा (कुटकी)"
+          }
+        },
+        "cfa_millets_types_barnyard": {
+          "label": {
+            "en": "Barnyard Millet",
+            "tr": "भगर (वरई)"
+          }
+        },
+        "cfa_millets_types_foxtail": {
+          "label": {
+            "en": "Foxtail Millet",
+            "tr": "राळा"
+          }
+        }
+      }
+    },
+    "cfa_millets_24h": {
+      "title": {
+        "en": "Did you give the baby any millets in the last 24 hours?",
+        "tr": "गेल्या 24 तासांत तुम्ही बाळाला कोणतेही भरडधान्य (मिलेट) दिले का?"
+      },
+      "opt": {
+        "cfa_millets_24h_yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "cfa_millets_24h_no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "cfa_leafy_veg_freq": {
+      "title": {
+        "en": "Number of days per week green leafy vegetables were given to the baby",
+        "tr": "आठवड्यातून किती दिवस बाळाला हिरव्या पालेभाज्या दिल्या"
+      },
+      "opt": {
+        "cfa_leafy_veg_freq_0": {
+          "label": {
+            "en": "0 days",
+            "tr": "0 दिवस"
+          }
+        },
+        "cfa_leafy_veg_freq_1": {
+          "label": {
+            "en": "1 day",
+            "tr": "1 दिवस"
+          }
+        },
+        "cfa_leafy_veg_freq_2": {
+          "label": {
+            "en": "2 days",
+            "tr": "2 दिवस"
+          }
+        },
+        "cfa_leafy_veg_freq_3": {
+          "label": {
+            "en": "3 days",
+            "tr": "3 दिवस"
+          }
+        },
+        "cfa_leafy_veg_freq_4": {
+          "label": {
+            "en": "4 days",
+            "tr": "4 दिवस"
+          }
+        },
+        "cfa_leafy_veg_freq_5": {
+          "label": {
+            "en": "5 days",
+            "tr": "5 दिवस"
+          }
+        },
+        "cfa_leafy_veg_freq_6": {
+          "label": {
+            "en": "6 days",
+            "tr": "6 दिवस"
+          }
+        },
+        "cfa_leafy_veg_freq_7": {
+          "label": {
+            "en": "7 days",
+            "tr": "7 दिवस"
+          }
+        }
+      }
+    },
+    "cfa_leafy_veg_24h": {
+      "title": {
+        "en": "Did you give the baby any green leafy vegetables in the last 24 hours?",
+        "tr": "गेल्या 24 तासांत तुम्ही बाळाला कोणतीही हिरवी पालेभाजी दिली का?"
+      },
+      "opt": {
+        "cfa_leafy_veg_24h_yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "cfa_leafy_veg_24h_no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "cfa_orange_veg_freq": {
+      "title": {
+        "en": "Number of days per week red and orange vegetables were given to the baby",
+        "tr": "आठवड्यातून किती दिवस बाळाला लाल आणि केशरी भाज्या दिल्या"
+      },
+      "opt": {
+        "cfa_orange_veg_freq_0": {
+          "label": {
+            "en": "0 days",
+            "tr": "0 दिवस"
+          }
+        },
+        "cfa_orange_veg_freq_1": {
+          "label": {
+            "en": "1 day",
+            "tr": "1 दिवस"
+          }
+        },
+        "cfa_orange_veg_freq_2": {
+          "label": {
+            "en": "2 days",
+            "tr": "2 दिवस"
+          }
+        },
+        "cfa_orange_veg_freq_3": {
+          "label": {
+            "en": "3 days",
+            "tr": "3 दिवस"
+          }
+        },
+        "cfa_orange_veg_freq_4": {
+          "label": {
+            "en": "4 days",
+            "tr": "4 दिवस"
+          }
+        },
+        "cfa_orange_veg_freq_5": {
+          "label": {
+            "en": "5 days",
+            "tr": "5 दिवस"
+          }
+        },
+        "cfa_orange_veg_freq_6": {
+          "label": {
+            "en": "6 days",
+            "tr": "6 दिवस"
+          }
+        },
+        "cfa_orange_veg_freq_7": {
+          "label": {
+            "en": "7 days",
+            "tr": "7 दिवस"
+          }
+        }
+      }
+    },
+    "cfa_orange_veg_24h": {
+      "title": {
+        "en": "Did you give the baby any red and orange vegetables in the last 24 hours?",
+        "tr": "गेल्या 24 तासांत तुम्ही बाळाला कोणतीही लाल किंवा केशरी भाजी दिली का?"
+      },
+      "opt": {
+        "cfa_orange_veg_24h_yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "cfa_orange_veg_24h_no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "cfa_other_veg_freq": {
+      "title": {
+        "en": "Number of days per week other vegetables were given to the baby",
+        "tr": "आठवड्यातून किती दिवस बाळाला इतर भाज्या दिल्या"
+      },
+      "opt": {
+        "cfa_other_veg_freq_0": {
+          "label": {
+            "en": "0 days",
+            "tr": "0 दिवस"
+          }
+        },
+        "cfa_other_veg_freq_1": {
+          "label": {
+            "en": "1 day",
+            "tr": "1 दिवस"
+          }
+        },
+        "cfa_other_veg_freq_2": {
+          "label": {
+            "en": "2 days",
+            "tr": "2 दिवस"
+          }
+        },
+        "cfa_other_veg_freq_3": {
+          "label": {
+            "en": "3 days",
+            "tr": "3 दिवस"
+          }
+        },
+        "cfa_other_veg_freq_4": {
+          "label": {
+            "en": "4 days",
+            "tr": "4 दिवस"
+          }
+        },
+        "cfa_other_veg_freq_5": {
+          "label": {
+            "en": "5 days",
+            "tr": "5 दिवस"
+          }
+        },
+        "cfa_other_veg_freq_6": {
+          "label": {
+            "en": "6 days",
+            "tr": "6 दिवस"
+          }
+        },
+        "cfa_other_veg_freq_7": {
+          "label": {
+            "en": "7 days",
+            "tr": "7 दिवस"
+          }
+        }
+      }
+    },
+    "cfa_other_veg_24h": {
+      "title": {
+        "en": "Did you give the baby any other vegetables in the last 24 hours?",
+        "tr": "गेल्या 24 तासांत तुम्ही बाळाला कोणतीही इतर भाजी दिली का?"
+      },
+      "opt": {
+        "cfa_other_veg_24h_yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "cfa_other_veg_24h_no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "cfa_fruits_freq": {
+      "title": {
+        "en": "Number of days per week fruits were given to the baby",
+        "tr": "आठवड्यातून किती दिवस बाळाला फळे दिली"
+      },
+      "opt": {
+        "cfa_fruits_freq_0": {
+          "label": {
+            "en": "0 days",
+            "tr": "0 दिवस"
+          }
+        },
+        "cfa_fruits_freq_1": {
+          "label": {
+            "en": "1 day",
+            "tr": "1 दिवस"
+          }
+        },
+        "cfa_fruits_freq_2": {
+          "label": {
+            "en": "2 days",
+            "tr": "2 दिवस"
+          }
+        },
+        "cfa_fruits_freq_3": {
+          "label": {
+            "en": "3 days",
+            "tr": "3 दिवस"
+          }
+        },
+        "cfa_fruits_freq_4": {
+          "label": {
+            "en": "4 days",
+            "tr": "4 दिवस"
+          }
+        },
+        "cfa_fruits_freq_5": {
+          "label": {
+            "en": "5 days",
+            "tr": "5 दिवस"
+          }
+        },
+        "cfa_fruits_freq_6": {
+          "label": {
+            "en": "6 days",
+            "tr": "6 दिवस"
+          }
+        },
+        "cfa_fruits_freq_7": {
+          "label": {
+            "en": "7 days",
+            "tr": "7 दिवस"
+          }
+        }
+      }
+    },
+    "cfa_fruits_24h": {
+      "title": {
+        "en": "Did you give the baby any fruits in the last 24 hours?",
+        "tr": "गेल्या 24 तासांत तुम्ही बाळाला कोणतेही फळ दिले का?"
+      },
+      "opt": {
+        "cfa_fruits_24h_yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "cfa_fruits_24h_no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "cfa_roots_freq": {
+      "title": {
+        "en": "Number of days per week roots and tubers were given to the baby",
+        "tr": "आठवड्यातून किती दिवस बाळाला कंदमुळे दिली"
+      },
+      "opt": {
+        "cfa_roots_freq_0": {
+          "label": {
+            "en": "0 days",
+            "tr": "0 दिवस"
+          }
+        },
+        "cfa_roots_freq_1": {
+          "label": {
+            "en": "1 day",
+            "tr": "1 दिवस"
+          }
+        },
+        "cfa_roots_freq_2": {
+          "label": {
+            "en": "2 days",
+            "tr": "2 दिवस"
+          }
+        },
+        "cfa_roots_freq_3": {
+          "label": {
+            "en": "3 days",
+            "tr": "3 दिवस"
+          }
+        },
+        "cfa_roots_freq_4": {
+          "label": {
+            "en": "4 days",
+            "tr": "4 दिवस"
+          }
+        },
+        "cfa_roots_freq_5": {
+          "label": {
+            "en": "5 days",
+            "tr": "5 दिवस"
+          }
+        },
+        "cfa_roots_freq_6": {
+          "label": {
+            "en": "6 days",
+            "tr": "6 दिवस"
+          }
+        },
+        "cfa_roots_freq_7": {
+          "label": {
+            "en": "7 days",
+            "tr": "7 दिवस"
+          }
+        }
+      }
+    },
+    "cfa_roots_24h": {
+      "title": {
+        "en": "Did you give the baby any roots and tubers in the last 24 hours?",
+        "tr": "गेल्या 24 तासांत तुम्ही बाळाला कोणतेही कंदमूळ दिले का?"
+      },
+      "opt": {
+        "cfa_roots_24h_yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "cfa_roots_24h_no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "cfa_nuts_freq": {
+      "title": {
+        "en": "Number of days per week nuts and seeds were given to the baby",
+        "tr": "आठवड्यातून किती दिवस बाळाला सुकामेवा आणि बिया दिल्या"
+      },
+      "opt": {
+        "cfa_nuts_freq_0": {
+          "label": {
+            "en": "0 days",
+            "tr": "0 दिवस"
+          }
+        },
+        "cfa_nuts_freq_1": {
+          "label": {
+            "en": "1 day",
+            "tr": "1 दिवस"
+          }
+        },
+        "cfa_nuts_freq_2": {
+          "label": {
+            "en": "2 days",
+            "tr": "2 दिवस"
+          }
+        },
+        "cfa_nuts_freq_3": {
+          "label": {
+            "en": "3 days",
+            "tr": "3 दिवस"
+          }
+        },
+        "cfa_nuts_freq_4": {
+          "label": {
+            "en": "4 days",
+            "tr": "4 दिवस"
+          }
+        },
+        "cfa_nuts_freq_5": {
+          "label": {
+            "en": "5 days",
+            "tr": "5 दिवस"
+          }
+        },
+        "cfa_nuts_freq_6": {
+          "label": {
+            "en": "6 days",
+            "tr": "6 दिवस"
+          }
+        },
+        "cfa_nuts_freq_7": {
+          "label": {
+            "en": "7 days",
+            "tr": "7 दिवस"
+          }
+        }
+      }
+    },
+    "cfa_nuts_24h": {
+      "title": {
+        "en": "Did you give the baby any nuts and seeds in the last 24 hours?",
+        "tr": "गेल्या 24 तासांत तुम्ही बाळाला सुकामेवा किंवा बिया दिल्या का?"
+      },
+      "opt": {
+        "cfa_nuts_24h_yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "cfa_nuts_24h_no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "cfa_eggs_freq": {
+      "title": {
+        "en": "Number of days per week eggs were given to the baby",
+        "tr": "आठवड्यातून किती दिवस बाळाला अंडी दिली"
+      },
+      "opt": {
+        "cfa_eggs_freq_0": {
+          "label": {
+            "en": "0 days",
+            "tr": "0 दिवस"
+          }
+        },
+        "cfa_eggs_freq_1": {
+          "label": {
+            "en": "1 day",
+            "tr": "1 दिवस"
+          }
+        },
+        "cfa_eggs_freq_2": {
+          "label": {
+            "en": "2 days",
+            "tr": "2 दिवस"
+          }
+        },
+        "cfa_eggs_freq_3": {
+          "label": {
+            "en": "3 days",
+            "tr": "3 दिवस"
+          }
+        },
+        "cfa_eggs_freq_4": {
+          "label": {
+            "en": "4 days",
+            "tr": "4 दिवस"
+          }
+        },
+        "cfa_eggs_freq_5": {
+          "label": {
+            "en": "5 days",
+            "tr": "5 दिवस"
+          }
+        },
+        "cfa_eggs_freq_6": {
+          "label": {
+            "en": "6 days",
+            "tr": "6 दिवस"
+          }
+        },
+        "cfa_eggs_freq_7": {
+          "label": {
+            "en": "7 days",
+            "tr": "7 दिवस"
+          }
+        }
+      }
+    },
+    "cfa_eggs_24h": {
+      "title": {
+        "en": "Did you give the baby any eggs in the last 24 hours?",
+        "tr": "गेल्या 24 तासांत तुम्ही बाळाला अंडे दिले का?"
+      },
+      "opt": {
+        "cfa_eggs_24h_yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "cfa_eggs_24h_no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "cfa_chicken_freq": {
+      "title": {
+        "en": "Number of days per week chicken or poultry was given to the baby",
+        "tr": "आठवड्यातून किती दिवस बाळाला चिकन किंवा कोंबडीचे मांस दिले"
+      },
+      "opt": {
+        "cfa_chicken_freq_0": {
+          "label": {
+            "en": "0 days",
+            "tr": "0 दिवस"
+          }
+        },
+        "cfa_chicken_freq_1": {
+          "label": {
+            "en": "1 day",
+            "tr": "1 दिवस"
+          }
+        },
+        "cfa_chicken_freq_2": {
+          "label": {
+            "en": "2 days",
+            "tr": "2 दिवस"
+          }
+        },
+        "cfa_chicken_freq_3": {
+          "label": {
+            "en": "3 days",
+            "tr": "3 दिवस"
+          }
+        },
+        "cfa_chicken_freq_4": {
+          "label": {
+            "en": "4 days",
+            "tr": "4 दिवस"
+          }
+        },
+        "cfa_chicken_freq_5": {
+          "label": {
+            "en": "5 days",
+            "tr": "5 दिवस"
+          }
+        },
+        "cfa_chicken_freq_6": {
+          "label": {
+            "en": "6 days",
+            "tr": "6 दिवस"
+          }
+        },
+        "cfa_chicken_freq_7": {
+          "label": {
+            "en": "7 days",
+            "tr": "7 दिवस"
+          }
+        }
+      }
+    },
+    "cfa_chicken_24h": {
+      "title": {
+        "en": "Did you give the baby any chicken or poultry in the last 24 hours?",
+        "tr": "गेल्या 24 तासांत तुम्ही बाळाला चिकन किंवा कोंबडीचे मांस दिले का?"
+      },
+      "opt": {
+        "cfa_chicken_24h_yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "cfa_chicken_24h_no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "cfa_seafood_freq": {
+      "title": {
+        "en": "Number of days per week seafood was given to the baby",
+        "tr": "आठवड्यातून किती दिवस बाळाला मासे किंवा समुद्री अन्न दिले"
+      },
+      "opt": {
+        "cfa_seafood_freq_0": {
+          "label": {
+            "en": "0 days",
+            "tr": "0 दिवस"
+          }
+        },
+        "cfa_seafood_freq_1": {
+          "label": {
+            "en": "1 day",
+            "tr": "1 दिवस"
+          }
+        },
+        "cfa_seafood_freq_2": {
+          "label": {
+            "en": "2 days",
+            "tr": "2 दिवस"
+          }
+        },
+        "cfa_seafood_freq_3": {
+          "label": {
+            "en": "3 days",
+            "tr": "3 दिवस"
+          }
+        },
+        "cfa_seafood_freq_4": {
+          "label": {
+            "en": "4 days",
+            "tr": "4 दिवस"
+          }
+        },
+        "cfa_seafood_freq_5": {
+          "label": {
+            "en": "5 days",
+            "tr": "5 दिवस"
+          }
+        },
+        "cfa_seafood_freq_6": {
+          "label": {
+            "en": "6 days",
+            "tr": "6 दिवस"
+          }
+        },
+        "cfa_seafood_freq_7": {
+          "label": {
+            "en": "7 days",
+            "tr": "7 दिवस"
+          }
+        }
+      }
+    },
+    "cfa_seafood_24h": {
+      "title": {
+        "en": "Did you give the baby any seafood in the last 24 hours?",
+        "tr": "गेल्या 24 तासांत तुम्ही बाळाला मासे किंवा समुद्री अन्न दिले का?"
+      },
+      "opt": {
+        "cfa_seafood_24h_yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "cfa_seafood_24h_no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "cfa_meat_freq": {
+      "title": {
+        "en": "Number of days per week meat or organ meat was given to the baby",
+        "tr": "आठवड्यातून किती दिवस बाळाला मटण किंवा कलेजीसारखे अवयव दिले"
+      },
+      "opt": {
+        "cfa_meat_freq_0": {
+          "label": {
+            "en": "0 days",
+            "tr": "0 दिवस"
+          }
+        },
+        "cfa_meat_freq_1": {
+          "label": {
+            "en": "1 day",
+            "tr": "1 दिवस"
+          }
+        },
+        "cfa_meat_freq_2": {
+          "label": {
+            "en": "2 days",
+            "tr": "2 दिवस"
+          }
+        },
+        "cfa_meat_freq_3": {
+          "label": {
+            "en": "3 days",
+            "tr": "3 दिवस"
+          }
+        },
+        "cfa_meat_freq_4": {
+          "label": {
+            "en": "4 days",
+            "tr": "4 दिवस"
+          }
+        },
+        "cfa_meat_freq_5": {
+          "label": {
+            "en": "5 days",
+            "tr": "5 दिवस"
+          }
+        },
+        "cfa_meat_freq_6": {
+          "label": {
+            "en": "6 days",
+            "tr": "6 दिवस"
+          }
+        },
+        "cfa_meat_freq_7": {
+          "label": {
+            "en": "7 days",
+            "tr": "7 दिवस"
+          }
+        }
+      }
+    },
+    "cfa_meat_24h": {
+      "title": {
+        "en": "Did you give the baby any meat or organ meat in the last 24 hours?",
+        "tr": "गेल्या 24 तासांत तुम्ही बाळाला मटण किंवा कलेजीसारखे अवयव दिले का?"
+      },
+      "opt": {
+        "cfa_meat_24h_yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "cfa_meat_24h_no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "cfa_practice_consistency": {
+      "title": {
+        "en": "Consistency of food given to the baby",
+        "tr": "बाळाला दिलेल्या अन्नाचा घट्टपणा"
+      },
+      "opt": {
+        "cfa_practice_consistency_thin_puree": {
+          "label": {
+            "en": "Thin puree",
+            "tr": "पातळ प्युरी"
+          }
+        },
+        "cfa_practice_consistency_thick_puree": {
+          "label": {
+            "en": "Thick puree",
+            "tr": "दाट प्युरी"
+          }
+        },
+        "cfa_practice_consistency_thick_paste": {
+          "label": {
+            "en": "Thick paste",
+            "tr": "दाट लगदा"
+          }
+        },
+        "cfa_practice_consistency_mashed": {
+          "label": {
+            "en": "Hand mashed or lumpy food",
+            "tr": "हाताने कुस्करलेले किंवा भरड अन्न"
+          }
+        },
+        "cfa_practice_consistency_chunky": {
+          "label": {
+            "en": "Soft chunky food",
+            "tr": "मऊ, तुकड्यांचे अन्न"
+          }
+        },
+        "cfa_practice_consistency_finger": {
+          "label": {
+            "en": "Soft finger food",
+            "tr": "मऊ फिंगर फूड (हातात धरून खाण्याचे)"
+          }
+        },
+        "cfa_practice_consistency_table": {
+          "label": {
+            "en": "Table food",
+            "tr": "घरचे नेहमीचे जेवण (कुटुंब खाते ते)"
+          }
+        }
+      }
+    },
+    "cfa_practice_meals": {
+      "title": {
+        "en": "Number of meals given to the baby per day",
+        "tr": "बाळाला दररोज दिलेल्या जेवणांची संख्या"
+      },
+      "opt": {
+        "cfa_practice_meals_1": {
+          "label": {
+            "en": "1 meal",
+            "tr": "1 वेळा जेवण"
+          }
+        },
+        "cfa_practice_meals_2": {
+          "label": {
+            "en": "2 meals",
+            "tr": "2 वेळा जेवण"
+          }
+        },
+        "cfa_practice_meals_3": {
+          "label": {
+            "en": "3 meals",
+            "tr": "3 वेळा जेवण"
+          }
+        },
+        "cfa_practice_meals_4": {
+          "label": {
+            "en": "4 meals",
+            "tr": "4 वेळा जेवण"
+          }
+        },
+        "cfa_practice_meals_5": {
+          "label": {
+            "en": "5 meals",
+            "tr": "5 वेळा जेवण"
+          }
+        },
+        "cfa_practice_meals_gt5": {
+          "label": {
+            "en": "More than 5 meals",
+            "tr": "5 पेक्षा जास्त वेळा जेवण"
+          }
+        }
+      }
+    },
+    "cfa_practice_quantity": {
+      "title": {
+        "en": "Quantity of food given to the baby per meal",
+        "tr": "प्रत्येक जेवणात बाळाला दिलेल्या अन्नाचे प्रमाण"
+      },
+      "opt": {
+        "cfa_practice_quantity_tbsp1": {
+          "label": {
+            "en": "1 tablespoon (15 g)",
+            "tr": "1 मोठा चमचा (15 ग्रॅम)"
+          }
+        },
+        "cfa_practice_quantity_tbsp2": {
+          "label": {
+            "en": "2 tablespoons (30 g)",
+            "tr": "2 मोठे चमचे (30 ग्रॅम)"
+          }
+        },
+        "cfa_practice_quantity_tbsp3": {
+          "label": {
+            "en": "3 tablespoons (45 g)",
+            "tr": "3 मोठे चमचे (45 ग्रॅम)"
+          }
+        },
+        "cfa_practice_quantity_tbsp4": {
+          "label": {
+            "en": "4 tablespoons (60 g)",
+            "tr": "4 मोठे चमचे (60 ग्रॅम)"
+          }
+        },
+        "cfa_practice_quantity_half_cup": {
+          "label": {
+            "en": "Half cup (125 mL)",
+            "tr": "अर्धा कप (125 मि.ली.)"
+          }
+        },
+        "cfa_practice_quantity_threefourth_cup": {
+          "label": {
+            "en": "Three-fourths cup (190 mL)",
+            "tr": "पाऊण कप (190 मि.ली.)"
+          }
+        },
+        "cfa_practice_quantity_cup1": {
+          "label": {
+            "en": "1 cup (250 mL)",
+            "tr": "1 कप (250 मि.ली.)"
+          }
+        },
+        "cfa_practice_quantity_gt_cup": {
+          "label": {
+            "en": "More than 1 cup",
+            "tr": "1 कपपेक्षा जास्त"
+          }
+        }
+      }
+    },
+    "cfa_ingredients": {
+      "title": {
+        "en": "Were any of the following ingredients added to the baby's food?",
+        "tr": "बाळाच्या अन्नात यापैकी कोणता पदार्थ घातला होता का?"
+      },
+      "help": {
+        "en": "(If 'None added' applies, select only that.)",
+        "tr": "('काहीही घातले नाही' लागू असल्यास फक्त तेच निवडा.)"
+      },
+      "opt": {
+        "cfa_ingredients_sugar": {
+          "label": {
+            "en": "Sugar",
+            "tr": "साखर"
+          }
+        },
+        "cfa_ingredients_jaggery": {
+          "label": {
+            "en": "Jaggery",
+            "tr": "गूळ"
+          }
+        },
+        "cfa_ingredients_honey": {
+          "label": {
+            "en": "Honey",
+            "tr": "मध"
+          }
+        },
+        "cfa_ingredients_salt": {
+          "label": {
+            "en": "Salt",
+            "tr": "मीठ"
+          }
+        },
+        "cfa_ingredients_spices": {
+          "label": {
+            "en": "Spices",
+            "tr": "मसाले"
+          }
+        },
+        "cfa_ingredients_none": {
+          "label": {
+            "en": "None added",
+            "tr": "काहीही घातले नाही"
+          }
+        }
+      }
+    },
+    "cfa_bf_timing": {
+      "title": {
+        "en": "When is the baby breastfed or given expressed breast milk in relation to complementary feeding?",
+        "tr": "पूरक आहाराच्या संदर्भात बाळाला स्तनपान किंवा काढलेले आईचे दूध केव्हा दिले जाते?"
+      },
+      "opt": {
+        "cfa_bf_timing_just_before": {
+          "label": {
+            "en": "Just before giving complementary feeding",
+            "tr": "पूरक आहार देण्याच्या अगदी आधी"
+          }
+        },
+        "cfa_bf_timing_just_after": {
+          "label": {
+            "en": "Just after giving complementary feeding",
+            "tr": "पूरक आहार दिल्यानंतर लगेच"
+          }
+        },
+        "cfa_bf_timing_gap_20_30": {
+          "label": {
+            "en": "20–30 minutes before or after complementary feeding",
+            "tr": "पूरक आहाराच्या 20–30 मिनिटे आधी किंवा नंतर"
+          }
+        },
+        "cfa_bf_timing_not_given": {
+          "label": {
+            "en": "Breastmilk is not given during complementary feeding stage",
+            "tr": "पूरक आहाराच्या टप्प्यात आईचे दूध दिले जात नाही"
+          }
+        },
+        "cfa_bf_timing_stopped": {
+          "label": {
+            "en": "Breastfeeding has been stopped",
+            "tr": "स्तनपान बंद केले आहे"
+          }
+        }
+      }
+    },
+    "cfa_water": {
+      "title": {
+        "en": "Type of water given to the baby",
+        "tr": "बाळाला दिलेल्या पाण्याचा प्रकार"
+      },
+      "opt": {
+        "cfa_water_boiled": {
+          "label": {
+            "en": "Boiled and cooled water",
+            "tr": "उकळून थंड केलेले पाणी"
+          }
+        },
+        "cfa_water_tap": {
+          "label": {
+            "en": "Tap water",
+            "tr": "नळाचे पाणी"
+          }
+        },
+        "cfa_water_bottled": {
+          "label": {
+            "en": "Bottled water",
+            "tr": "बाटलीबंद पाणी"
+          }
+        },
+        "cfa_water_filtered": {
+          "label": {
+            "en": "Filtered water",
+            "tr": "गाळलेले (फिल्टर केलेले) पाणी"
+          }
+        },
+        "cfa_water_purified": {
+          "label": {
+            "en": "Purified water",
+            "tr": "शुद्ध केलेले पाणी"
+          }
+        },
+        "cfa_water_none": {
+          "label": {
+            "en": "No water was given",
+            "tr": "पाणी दिले नाही"
+          }
+        }
+      }
+    },
+    "cfa_diversity": {
+      "title": {
+        "en": "Was a combination of cereals and pulses given to the baby?",
+        "tr": "बाळाला धान्य आणि डाळी एकत्र करून दिल्या का?"
+      },
+      "opt": {
+        "cfa_diversity_yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "cfa_diversity_no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "cfa_limit": {
+      "title": {
+        "en": "Which of the following was given to the baby?",
+        "tr": "यापैकी बाळाला काय दिले?"
+      },
+      "help": {
+        "en": "(If 'None' applies, select only that.)",
+        "tr": "('काहीही नाही' लागू असल्यास फक्त तेच निवडा.)"
+      },
+      "opt": {
+        "cfa_limit_tea_coffee": {
+          "label": {
+            "en": "Tea/Coffee",
+            "tr": "चहा/कॉफी"
+          }
+        },
+        "cfa_limit_packaged": {
+          "label": {
+            "en": "Packaged food/drink",
+            "tr": "पाकिटबंद अन्न/पेय"
+          }
+        },
+        "cfa_limit_outside": {
+          "label": {
+            "en": "Outside food",
+            "tr": "बाहेरचे अन्न"
+          }
+        },
+        "cfa_limit_biscuits": {
+          "label": {
+            "en": "Biscuits",
+            "tr": "बिस्किटे"
+          }
+        },
+        "cfa_limit_chocolate": {
+          "label": {
+            "en": "Chocolate",
+            "tr": "चॉकलेट"
+          }
+        },
+        "cfa_limit_fried": {
+          "label": {
+            "en": "Fried food",
+            "tr": "तळलेले अन्न"
+          }
+        },
+        "cfa_limit_baby_food": {
+          "label": {
+            "en": "Baby food products",
+            "tr": "बाजारातील बाळांचे तयार अन्नपदार्थ"
+          }
+        },
+        "cfa_limit_bakery": {
+          "label": {
+            "en": "Bakery products",
+            "tr": "बेकरी पदार्थ"
+          }
+        },
+        "cfa_limit_ice_cream": {
+          "label": {
+            "en": "Ice cream",
+            "tr": "आईस्क्रीम"
+          }
+        },
+        "cfa_limit_none": {
+          "label": {
+            "en": "None",
+            "tr": "काहीही नाही"
+          }
+        }
+      }
+    },
+    "cfa_fruit_puree": {
+      "title": {
+        "en": "Is fruit puree added to the baby's regular meals?",
+        "tr": "बाळाच्या रोजच्या जेवणात फळांची प्युरी घातली जाते का?"
+      },
+      "opt": {
+        "cfa_fruit_puree_yes": {
+          "label": {
+            "en": "Yes",
+            "tr": "हो"
+          }
+        },
+        "cfa_fruit_puree_no": {
+          "label": {
+            "en": "No",
+            "tr": "नाही"
+          }
+        }
+      }
+    },
+    "cfa_cooking": {
+      "title": {
+        "en": "What cooking techniques were used to increase nutrient absorption for the food given to the baby?",
+        "tr": "बाळाला दिलेल्या अन्नातील पोषक घटकांचे शोषण वाढवण्यासाठी स्वयंपाकाच्या कोणत्या पद्धती वापरल्या?"
+      },
+      "help": {
+        "en": "(If 'No technique used' applies, select only that.)",
+        "tr": "('कोणतीही पद्धत वापरली नाही' लागू असल्यास फक्त तेच निवडा.)"
+      },
+      "opt": {
+        "cfa_cooking_soaking": {
+          "label": {
+            "en": "Soaking",
+            "tr": "भिजवणे"
+          }
+        },
+        "cfa_cooking_sprouting": {
+          "label": {
+            "en": "Sprouting",
+            "tr": "मोड आणणे"
+          }
+        },
+        "cfa_cooking_fermenting": {
+          "label": {
+            "en": "Fermenting",
+            "tr": "आंबवणे"
+          }
+        },
+        "cfa_cooking_roasting": {
+          "label": {
+            "en": "Roasting",
+            "tr": "भाजणे"
+          }
+        },
+        "cfa_cooking_steaming": {
+          "label": {
+            "en": "Steaming",
+            "tr": "वाफवणे"
+          }
+        },
+        "cfa_cooking_boiling": {
+          "label": {
+            "en": "Boiling",
+            "tr": "उकळणे"
+          }
+        },
+        "cfa_cooking_none": {
+          "label": {
+            "en": "No technique used",
+            "tr": "कोणतीही पद्धत वापरली नाही"
+          }
+        }
+      }
+    },
+    "cfa_powders": {
+      "title": {
+        "en": "Which home-made nutritious powders were added to the food given to the baby?",
+        "tr": "बाळाच्या अन्नात घरी तयार केलेली कोणती पौष्टिक पावडर घातली?"
+      },
+      "help": {
+        "en": "(If 'No home-made nutritious powder added' applies, select only that.)",
+        "tr": "('घरी तयार केलेली कोणतीही पौष्टिक पावडर घातली नाही' लागू असल्यास फक्त तेच निवडा.)"
+      },
+      "opt": {
+        "cfa_powders_peanut": {
+          "label": {
+            "en": "Peanut powder",
+            "tr": "शेंगदाणा पावडर"
+          }
+        },
+        "cfa_powders_coconut": {
+          "label": {
+            "en": "Coconut powder",
+            "tr": "खोबरे पावडर"
+          }
+        },
+        "cfa_powders_nuts": {
+          "label": {
+            "en": "Nuts powder",
+            "tr": "सुकामेवा पावडर"
+          }
+        },
+        "cfa_powders_seeds": {
+          "label": {
+            "en": "Seeds powder",
+            "tr": "बियांची पावडर"
+          }
+        },
+        "cfa_powders_sprouts": {
+          "label": {
+            "en": "Sprouts powder",
+            "tr": "मोड आलेल्या धान्याची पावडर"
+          }
+        },
+        "cfa_powders_leaf": {
+          "label": {
+            "en": "Leaf powder",
+            "tr": "पानांची पावडर"
+          }
+        },
+        "cfa_powders_amylase": {
+          "label": {
+            "en": "Amylase powder",
+            "tr": "अमायलेज पावडर (मोड आलेल्या धान्याचे माल्ट)"
+          }
+        },
+        "cfa_powders_none": {
+          "label": {
+            "en": "No home-made nutritious powder added",
+            "tr": "घरी तयार केलेली कोणतीही पौष्टिक पावडर घातली नाही"
+          }
+        }
+      }
+    }
+  },
+  "mother_protein_intake": {
+    "pca_date": {
+      "title": {
+        "en": "Assessment Date",
+        "tr": "मूल्यांकनाची तारीख"
+      }
+    },
+    "pca_status": {
+      "title": {
+        "en": "Mother's Status",
+        "tr": "मातेची स्थिती"
+      },
+      "opt": {
+        "pca_status_pregnant": {
+          "label": {
+            "en": "Pregnant Woman (ANC stage)",
+            "tr": "गर्भवती महिला (ANC टप्पा)"
+          }
+        },
+        "pca_status_lactating": {
+          "label": {
+            "en": "Lactating Mother (PNC stage)",
+            "tr": "स्तनदा माता (PNC टप्पा)"
+          }
+        }
+      }
+    },
+    "pca_diet": {
+      "title": {
+        "en": "Diet Type",
+        "tr": "आहाराचा प्रकार"
+      },
+      "opt": {
+        "pca_diet_veg": {
+          "label": {
+            "en": "Vegetarian",
+            "tr": "शाकाहारी"
+          }
+        },
+        "pca_diet_egg": {
+          "label": {
+            "en": "Eggetarian (Vegetarian who eats eggs)",
+            "tr": "अंडाहारी (अंडी खाणारे शाकाहारी)"
+          }
+        },
+        "pca_diet_nonveg": {
+          "label": {
+            "en": "Non-Vegetarian",
+            "tr": "मांसाहारी"
+          }
+        }
+      }
+    },
+    "pca_m_pulses": {
+      "title": {
+        "en": "Pulses",
+        "tr": "डाळी"
+      },
+      "col": {
+        "freq": {
+          "label": {
+            "en": "Frequency (days/week)",
+            "tr": "वारंवारता (दिवस/आठवडा)"
+          },
+          "opt0": {
+            "label": {
+              "en": "0 days",
+              "tr": "0 दिवस"
+            }
+          },
+          "opt1": {
+            "label": {
+              "en": "1 day",
+              "tr": "1 दिवस"
+            }
+          },
+          "opt2": {
+            "label": {
+              "en": "2 days",
+              "tr": "2 दिवस"
+            }
+          },
+          "opt3": {
+            "label": {
+              "en": "3 days",
+              "tr": "3 दिवस"
+            }
+          },
+          "opt4": {
+            "label": {
+              "en": "4 days",
+              "tr": "4 दिवस"
+            }
+          },
+          "opt5": {
+            "label": {
+              "en": "5 days",
+              "tr": "5 दिवस"
+            }
+          },
+          "opt6": {
+            "label": {
+              "en": "6 days",
+              "tr": "6 दिवस"
+            }
+          },
+          "opt7": {
+            "label": {
+              "en": "7 days",
+              "tr": "7 दिवस"
+            }
+          }
+        },
+        "usual": {
+          "label": {
+            "en": "Usual quantity on a day when consumed",
+            "tr": "ज्या दिवशी खाल्ले त्या दिवशीचे नेहमीचे प्रमाण"
+          }
+        },
+        "qty24": {
+          "label": {
+            "en": "Quantity consumed in the past 24 hours",
+            "tr": "गेल्या 24 तासांत खाल्लेले प्रमाण"
+          }
+        }
+      },
+      "row": {
+        "pca_m_pulses_r1": {
+          "label": {
+            "en": "1 cup cooked whole beans/sprouts/thick dal",
+            "tr": "1 कप शिजवलेली अख्खी कडधान्ये/मोड आलेली कडधान्ये/घट्ट डाळ"
+          }
+        },
+        "pca_m_pulses_r2": {
+          "label": {
+            "en": "1 cup cooked whole soybeans",
+            "tr": "1 कप शिजवलेले अख्खे सोयाबीन"
+          }
+        }
+      }
+    },
+    "pca_m_milk": {
+      "title": {
+        "en": "Milk Products",
+        "tr": "दुधाचे पदार्थ"
+      },
+      "col": {
+        "freq": {
+          "label": {
+            "en": "Frequency (days/week)",
+            "tr": "वारंवारता (दिवस/आठवडा)"
+          }
+        },
+        "usual": {
+          "label": {
+            "en": "Usual quantity on a day when consumed",
+            "tr": "ज्या दिवशी खाल्ले त्या दिवशीचे नेहमीचे प्रमाण"
+          }
+        },
+        "qty24": {
+          "label": {
+            "en": "Quantity consumed in the past 24 hours",
+            "tr": "गेल्या 24 तासांत खाल्लेले प्रमाण"
+          }
+        }
+      },
+      "row": {
+        "pca_m_milk_r1": {
+          "label": {
+            "en": "1 cup curd",
+            "tr": "1 कप दही"
+          }
+        },
+        "pca_m_milk_r2": {
+          "label": {
+            "en": "3–4 pieces paneer",
+            "tr": "पनीरचे 3–4 तुकडे"
+          }
+        },
+        "pca_m_milk_r3": {
+          "label": {
+            "en": "1 glass milk",
+            "tr": "1 ग्लास दूध"
+          }
+        }
+      }
+    },
+    "pca_m_grains": {
+      "title": {
+        "en": "Grains",
+        "tr": "धान्य"
+      },
+      "col": {
+        "freq": {
+          "label": {
+            "en": "Frequency (days/week)",
+            "tr": "वारंवारता (दिवस/आठवडा)"
+          }
+        },
+        "usual": {
+          "label": {
+            "en": "Usual quantity on a day when consumed",
+            "tr": "ज्या दिवशी खाल्ले त्या दिवशीचे नेहमीचे प्रमाण"
+          }
+        },
+        "qty24": {
+          "label": {
+            "en": "Quantity consumed in the past 24 hours",
+            "tr": "गेल्या 24 तासांत खाल्लेले प्रमाण"
+          }
+        }
+      },
+      "row": {
+        "pca_m_grains_r1": {
+          "label": {
+            "en": "1 chapati/roti",
+            "tr": "1 चपाती/पोळी"
+          }
+        },
+        "pca_m_grains_r2": {
+          "label": {
+            "en": "1 cup cooked rice",
+            "tr": "1 कप शिजवलेला भात"
+          }
+        }
+      }
+    },
+    "pca_m_millets": {
+      "title": {
+        "en": "Millets",
+        "tr": "भरडधान्ये (मिलेट)"
+      },
+      "col": {
+        "freq": {
+          "label": {
+            "en": "Frequency (days/week)",
+            "tr": "वारंवारता (दिवस/आठवडा)"
+          }
+        },
+        "usual": {
+          "label": {
+            "en": "Usual quantity on a day when consumed",
+            "tr": "ज्या दिवशी खाल्ले त्या दिवशीचे नेहमीचे प्रमाण"
+          }
+        },
+        "qty24": {
+          "label": {
+            "en": "Quantity consumed in the past 24 hours",
+            "tr": "गेल्या 24 तासांत खाल्लेले प्रमाण"
+          }
+        }
+      },
+      "row": {
+        "pca_m_millets_r1": {
+          "label": {
+            "en": "1 bhakri (jowar/bajra etc.)",
+            "tr": "1 भाकरी (ज्वारी/बाजरी इ.)"
+          }
+        }
+      }
+    },
+    "pca_m_leafy": {
+      "title": {
+        "en": "Green Leafy Vegetables",
+        "tr": "हिरव्या पालेभाज्या"
+      },
+      "col": {
+        "freq": {
+          "label": {
+            "en": "Frequency (days/week)",
+            "tr": "वारंवारता (दिवस/आठवडा)"
+          }
+        },
+        "usual": {
+          "label": {
+            "en": "Usual quantity on a day when consumed",
+            "tr": "ज्या दिवशी खाल्ले त्या दिवशीचे नेहमीचे प्रमाण"
+          }
+        },
+        "qty24": {
+          "label": {
+            "en": "Quantity consumed in the past 24 hours",
+            "tr": "गेल्या 24 तासांत खाल्लेले प्रमाण"
+          }
+        }
+      },
+      "row": {
+        "pca_m_leafy_r1": {
+          "label": {
+            "en": "½ cup dry cooked green leafy vegetables",
+            "tr": "½ कप सुकी शिजवलेली हिरवी पालेभाजी"
+          }
+        },
+        "pca_m_leafy_r2": {
+          "label": {
+            "en": "1 cup green leafy vegetable curry",
+            "tr": "1 कप हिरव्या पालेभाजीची पातळ भाजी (रस्सा)"
+          }
+        }
+      }
+    },
+    "pca_m_veg": {
+      "title": {
+        "en": "Other Vegetables",
+        "tr": "इतर भाज्या"
+      },
+      "col": {
+        "freq": {
+          "label": {
+            "en": "Frequency (days/week)",
+            "tr": "वारंवारता (दिवस/आठवडा)"
+          }
+        },
+        "usual": {
+          "label": {
+            "en": "Usual quantity on a day when consumed",
+            "tr": "ज्या दिवशी खाल्ले त्या दिवशीचे नेहमीचे प्रमाण"
+          }
+        },
+        "qty24": {
+          "label": {
+            "en": "Quantity consumed in the past 24 hours",
+            "tr": "गेल्या 24 तासांत खाल्लेले प्रमाण"
+          }
+        }
+      },
+      "row": {
+        "pca_m_veg_r1": {
+          "label": {
+            "en": "1 cup dry cooked vegetables",
+            "tr": "1 कप सुकी शिजवलेली भाजी"
+          }
+        },
+        "pca_m_veg_r2": {
+          "label": {
+            "en": "1 cup vegetable curry",
+            "tr": "1 कप रस्सा भाजी"
+          }
+        }
+      }
+    },
+    "pca_m_roots": {
+      "title": {
+        "en": "Roots & Tubers",
+        "tr": "कंदमुळे"
+      },
+      "col": {
+        "freq": {
+          "label": {
+            "en": "Frequency (days/week)",
+            "tr": "वारंवारता (दिवस/आठवडा)"
+          }
+        },
+        "usual": {
+          "label": {
+            "en": "Usual quantity on a day when consumed",
+            "tr": "ज्या दिवशी खाल्ले त्या दिवशीचे नेहमीचे प्रमाण"
+          }
+        },
+        "qty24": {
+          "label": {
+            "en": "Quantity consumed in the past 24 hours",
+            "tr": "गेल्या 24 तासांत खाल्लेले प्रमाण"
+          }
+        }
+      },
+      "row": {
+        "pca_m_roots_r1": {
+          "label": {
+            "en": "1 cup dry cooked roots and tubers",
+            "tr": "1 कप सुकी शिजवलेली कंदमुळे"
+          }
+        },
+        "pca_m_roots_r2": {
+          "label": {
+            "en": "1 cup roots and tubers curry",
+            "tr": "1 कप कंदमुळांची रस्सा भाजी"
+          }
+        }
+      }
+    },
+    "pca_m_nuts": {
+      "title": {
+        "en": "Nuts & Seeds",
+        "tr": "सुकामेवा आणि बिया"
+      },
+      "col": {
+        "freq": {
+          "label": {
+            "en": "Frequency (days/week)",
+            "tr": "वारंवारता (दिवस/आठवडा)"
+          }
+        },
+        "usual": {
+          "label": {
+            "en": "Usual quantity on a day when consumed",
+            "tr": "ज्या दिवशी खाल्ले त्या दिवशीचे नेहमीचे प्रमाण"
+          }
+        },
+        "qty24": {
+          "label": {
+            "en": "Quantity consumed in the past 24 hours",
+            "tr": "गेल्या 24 तासांत खाल्लेले प्रमाण"
+          }
+        }
+      },
+      "row": {
+        "pca_m_nuts_r1": {
+          "label": {
+            "en": "1 tablespoon (15 g)",
+            "tr": "1 मोठा चमचा (15 ग्रॅम)"
+          }
+        }
+      }
+    },
+    "pca_m_eggs": {
+      "title": {
+        "en": "Eggs",
+        "tr": "अंडी"
+      },
+      "col": {
+        "freq": {
+          "label": {
+            "en": "Frequency (days/week)",
+            "tr": "वारंवारता (दिवस/आठवडा)"
+          }
+        },
+        "usual": {
+          "label": {
+            "en": "Usual quantity on a day when consumed",
+            "tr": "ज्या दिवशी खाल्ले त्या दिवशीचे नेहमीचे प्रमाण"
+          }
+        },
+        "qty24": {
+          "label": {
+            "en": "Quantity consumed in the past 24 hours",
+            "tr": "गेल्या 24 तासांत खाल्लेले प्रमाण"
+          }
+        }
+      },
+      "row": {
+        "pca_m_eggs_r1": {
+          "label": {
+            "en": "1 egg",
+            "tr": "1 अंडे"
+          }
+        }
+      }
+    },
+    "pca_m_meat": {
+      "title": {
+        "en": "Meat/Chicken/Seafood",
+        "tr": "मटण/चिकन/मासे व समुद्री अन्न"
+      },
+      "col": {
+        "freq": {
+          "label": {
+            "en": "Frequency (days/week)",
+            "tr": "वारंवारता (दिवस/आठवडा)"
+          }
+        },
+        "usual": {
+          "label": {
+            "en": "Usual quantity on a day when consumed",
+            "tr": "ज्या दिवशी खाल्ले त्या दिवशीचे नेहमीचे प्रमाण"
+          }
+        },
+        "qty24": {
+          "label": {
+            "en": "Quantity consumed in the past 24 hours",
+            "tr": "गेल्या 24 तासांत खाल्लेले प्रमाण"
+          }
+        }
+      },
+      "row": {
+        "pca_m_meat_r1": {
+          "label": {
+            "en": "4 medium cooked pieces (100 g)",
+            "tr": "4 मध्यम शिजवलेले तुकडे (100 ग्रॅम)"
+          }
+        }
+      }
+    },
+    "pca_supplements": {
+      "title": {
+        "en": "Is the mother currently consuming any nutritional supplement, nutritional powder, or fortified health drink apart from her regular diet?",
+        "tr": "माता आपल्या नेहमीच्या आहाराशिवाय सध्या कोणतेही पोषण पूरक, पौष्टिक पावडर किंवा फोर्टिफाइड आरोग्य पेय घेत आहे का?"
+      },
+      "help": {
+        "en": "Select all that apply. If None, select only that.",
+        "tr": "लागू असलेले सर्व निवडा. काहीही नसल्यास फक्त तेच निवडा."
+      },
+      "opt": {
+        "pca_supp_protein": {
+          "label": {
+            "en": "Protein powder",
+            "tr": "प्रोटीन पावडर"
+          }
+        },
+        "pca_supp_medical": {
+          "label": {
+            "en": "Medical nutrition supplement",
+            "tr": "वैद्यकीय पोषण पूरक"
+          }
+        },
+        "pca_supp_malted": {
+          "label": {
+            "en": "Malted health drink (Horlicks, Boost, Bournvita, etc.)",
+            "tr": "माल्टयुक्त आरोग्य पेय (हॉर्लिक्स, बूस्ट, बोर्नव्हिटा इ.)"
+          }
+        },
+        "pca_supp_ragi": {
+          "label": {
+            "en": "Ragi malt",
+            "tr": "नाचणी सत्त्व (रागी माल्ट)"
+          }
+        },
+        "pca_supp_sprouted": {
+          "label": {
+            "en": "Sprouted cereal powder",
+            "tr": "मोड आलेल्या धान्याची पावडर"
+          }
+        },
+        "pca_supp_peanut": {
+          "label": {
+            "en": "Groundnut/Peanut powder",
+            "tr": "शेंगदाणा पावडर"
+          }
+        },
+        "pca_supp_sattu": {
+          "label": {
+            "en": "Sattu",
+            "tr": "सत्तू"
+          }
+        },
+        "pca_supp_homemade": {
+          "label": {
+            "en": "Homemade nutritional powder/mix",
+            "tr": "घरी तयार केलेली पौष्टिक पावडर/मिश्रण"
+          }
+        },
+        "pca_supp_other": {
+          "label": {
+            "en": "Other (Specify)",
+            "tr": "इतर (नमूद करा)"
+          }
+        },
+        "pca_supp_none": {
+          "label": {
+            "en": "None",
+            "tr": "काहीही नाही"
+          }
+        }
+      }
+    },
+    "pca_m_supp": {
+      "title": {
+        "en": "Nutritional Supplement Consumption",
+        "tr": "पोषण पूरकांचे सेवन"
+      },
+      "unitLabel": {
+        "en": "Standard serving unit",
+        "tr": "प्रमाणित सर्व्हिंग एकक"
+      },
+      "col": {
+        "brand": {
+          "label": {
+            "en": "Brand / product name (optional)",
+            "tr": "ब्रँड / उत्पादनाचे नाव (ऐच्छिक)"
+          }
+        },
+        "freq": {
+          "label": {
+            "en": "Frequency (days/week)",
+            "tr": "वारंवारता (दिवस/आठवडा)"
+          }
+        },
+        "usual": {
+          "label": {
+            "en": "Usual quantity on a day when consumed",
+            "tr": "ज्या दिवशी खाल्ले त्या दिवशीचे नेहमीचे प्रमाण"
+          }
+        },
+        "qty24": {
+          "label": {
+            "en": "Quantity consumed in the past 24 hours",
+            "tr": "गेल्या 24 तासांत खाल्लेले प्रमाण"
+          }
+        }
+      },
+      "row": {
+        "pca_m_supp_r1": {
+          "label": {
+            "en": "Protein powder",
+            "tr": "प्रोटीन पावडर"
+          },
+          "unit": {
+            "en": "Scoop",
+            "tr": "स्कूप"
+          }
+        },
+        "pca_m_supp_r2": {
+          "label": {
+            "en": "Medical nutrition supplement",
+            "tr": "वैद्यकीय पोषण पूरक"
+          },
+          "unit": {
+            "en": "Scoop/Sachet",
+            "tr": "स्कूप/पाऊच"
+          }
+        },
+        "pca_m_supp_r3": {
+          "label": {
+            "en": "Malted health drink",
+            "tr": "माल्टयुक्त आरोग्य पेय"
+          },
+          "unit": {
+            "en": "Tablespoon",
+            "tr": "मोठा चमचा"
+          }
+        },
+        "pca_m_supp_r4": {
+          "label": {
+            "en": "Ragi malt",
+            "tr": "नाचणी सत्त्व (रागी माल्ट)"
+          },
+          "unit": {
+            "en": "Tablespoon",
+            "tr": "मोठा चमचा"
+          }
+        },
+        "pca_m_supp_r5": {
+          "label": {
+            "en": "Sprouted cereal powder",
+            "tr": "मोड आलेल्या धान्याची पावडर"
+          },
+          "unit": {
+            "en": "Tablespoon",
+            "tr": "मोठा चमचा"
+          }
+        },
+        "pca_m_supp_r6": {
+          "label": {
+            "en": "Peanut powder",
+            "tr": "शेंगदाणा पावडर"
+          },
+          "unit": {
+            "en": "Tablespoon",
+            "tr": "मोठा चमचा"
+          }
+        },
+        "pca_m_supp_r7": {
+          "label": {
+            "en": "Sattu",
+            "tr": "सत्तू"
+          },
+          "unit": {
+            "en": "Tablespoon",
+            "tr": "मोठा चमचा"
+          }
+        },
+        "pca_m_supp_r8": {
+          "label": {
+            "en": "Homemade nutrition mix",
+            "tr": "घरी तयार केलेले पोषण मिश्रण"
+          },
+          "unit": {
+            "en": "Tablespoon",
+            "tr": "मोठा चमचा"
+          }
+        },
+        "pca_m_supp_r9": {
+          "label": {
+            "en": "Other",
+            "tr": "इतर"
+          },
+          "unit": {
+            "en": "User defined",
+            "tr": "वापरकर्त्याने ठरवलेले"
+          }
+        }
+      }
+    }
+  }
+}

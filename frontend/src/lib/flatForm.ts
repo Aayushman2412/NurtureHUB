@@ -87,6 +87,24 @@ export function visibleFlatFields(
   return fields.filter(f => isFieldVisible(f, values, ageDays));
 }
 
+/**
+ * The options a field offers now: those whose own `showIf` holds (Learner
+ * Redesign review, 30 Oct 2026: "hide options that can't apply at that
+ * age"). An option already chosen is always kept, so a saved answer still
+ * shows and can be changed.
+ */
+export function visibleOptions(
+  field: FlatField,
+  values: FlatFormValues,
+  ageDays: number | null,
+): FlatField['options'] {
+  if (!field.options) return field.options;
+  const current = values[field.id];
+  const chosen = new Set(Array.isArray(current) ? current : current ? [current] : []);
+  return field.options.filter(o =>
+    chosen.has(o.value) || !o.showIf || o.showIf.length === 0 || o.showIf.every(c => conditionHolds(c, values, ageDays)));
+}
+
 // ── Zod schema ───────────────────────────────────────────────────────────────
 
 const numberOf = (raw: string): number | null => {

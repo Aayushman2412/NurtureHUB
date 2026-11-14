@@ -49,6 +49,30 @@ import hiResultsInsights from './locales/hi/resultsInsights.json';
 import hiMasd from './locales/hi/masd.json';
 import hiGuide from './locales/hi/guide.json';
 
+import mrCommon from './locales/mr/common.json';
+import mrAuth from './locales/mr/auth.json';
+import mrApp from './locales/mr/app.json';
+import mrTutorials from './locales/mr/tutorials.json';
+import mrDashboard from './locales/mr/dashboard.json';
+import mrTests from './locales/mr/tests.json';
+import mrLearner from './locales/mr/learner.json';
+import mrMother from './locales/mr/mother.json';
+import mrAssessments from './locales/mr/assessments.json';
+import mrLanding from './locales/mr/landing.json';
+import mrAdmin from './locales/mr/admin.json';
+import mrAdminResults from './locales/mr/adminResults.json';
+import mrAdminTests from './locales/mr/adminTests.json';
+import mrAdminTutorials from './locales/mr/adminTutorials.json';
+import mrAdminFormBuilder from './locales/mr/adminFormBuilder.json';
+import mrAdminLiveMonitor from './locales/mr/adminLiveMonitor.json';
+import mrValidation from './locales/mr/validation.json';
+import mrGrowth from './locales/mr/growth.json';
+import mrPipelines from './locales/mr/pipelines.json';
+import mrOffline from './locales/mr/offline.json';
+import mrResultsInsights from './locales/mr/resultsInsights.json';
+import mrMasd from './locales/mr/masd.json';
+import mrGuide from './locales/mr/guide.json';
+
 /**
  * Languages the UI actually ships translations for. The switcher only offers
  * these — add a new entry (plus its locale JSON) to expose another language.
@@ -56,6 +80,7 @@ import hiGuide from './locales/hi/guide.json';
 export const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English', native: 'English' },
   { code: 'hi', label: 'Hindi', native: 'हिन्दी' },
+  { code: 'mr', label: 'Marathi', native: 'मराठी' },
 ] as const;
 
 export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
@@ -80,6 +105,31 @@ const resources = {
     adminTests: hiAdminTests, adminTutorials: hiAdminTutorials, adminFormBuilder: hiAdminFormBuilder,
     adminLiveMonitor: hiAdminLiveMonitor, validation: hiValidation, growth: hiGrowth, pipelines: hiPipelines,
     offline: hiOffline, resultsInsights: hiResultsInsights, masd: hiMasd, guide: hiGuide,
+  },
+  mr: {
+    common: mrCommon,
+    auth: mrAuth,
+    app: mrApp,
+    tutorials: mrTutorials,
+    dashboard: mrDashboard,
+    tests: mrTests,
+    learner: mrLearner,
+    mother: mrMother,
+    assessments: mrAssessments,
+    landing: mrLanding,
+    admin: mrAdmin,
+    adminResults: mrAdminResults,
+    adminTests: mrAdminTests,
+    adminTutorials: mrAdminTutorials,
+    adminFormBuilder: mrAdminFormBuilder,
+    adminLiveMonitor: mrAdminLiveMonitor,
+    validation: mrValidation,
+    growth: mrGrowth,
+    pipelines: mrPipelines,
+    offline: mrOffline,
+    resultsInsights: mrResultsInsights,
+    masd: mrMasd,
+    guide: mrGuide,
   },
 } as const;
 

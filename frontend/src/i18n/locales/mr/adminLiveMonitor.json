@@ -1,0 +1,197 @@
+{
+  "loading": {
+    "title": "थेट प्रक्षेपणाशी जोडत आहे…",
+    "subtitle": "चाचणीच्या देखरेखीसाठी थेट जोडणी करत आहे"
+  },
+  "connError": {
+    "title": "थेट प्रक्षेपण उपलब्ध नाही",
+    "back": "चाचणी व्यवस्थापकाकडे परत"
+  },
+  "header": {
+    "titleFallback": "चाचणी देखरेख",
+    "live": "थेट",
+    "description": "{{questions}} प्रश्न · {{minutes}} मिनिटांचा कालावधी",
+    "descriptionFallback": "चाचणीची थेट देखरेख",
+    "reportTitle": "कामगिरी आणि गैरप्रकार-प्रतिबंधाचा संपूर्ण अहवाल Excel मध्ये डाउनलोड करा",
+    "report": "अहवाल",
+    "connected": "जोडलेले",
+    "reconnecting": "पुन्हा जोडत आहे…",
+    "watching": "{{n}} पाहत आहेत"
+  },
+  "reconnectBanner": "थेट जोडणी तुटली — पुन्हा जोडण्याचा प्रयत्न करत आहे…",
+  "stats": {
+    "totalCandidates": "एकूण उमेदवार",
+    "activeNow": "आता सक्रिय",
+    "highRisk": "जास्त धोका",
+    "flagged": "चिन्हांकित",
+    "avgProgress": "सरासरी प्रगती",
+    "avgAccuracy": "सरासरी अचूकता"
+  },
+  "controls": {
+    "sort": {
+      "riskScore": "धोका गुण",
+      "timeRemaining": "उरलेला वेळ",
+      "questionsDone": "सोडवलेले प्रश्न",
+      "accuracy": "अचूकता",
+      "tabSwitches": "टॅब बदल"
+    },
+    "ascending": "चढत्या क्रमाने",
+    "descending": "उतरत्या क्रमाने",
+    "toggleSortOrder": "क्रम उलटा करा",
+    "gridView": "कार्ड दृश्य",
+    "gridViewAria": "कार्ड दृश्य",
+    "tableView": "तक्ता दृश्य",
+    "tableViewAria": "तक्ता दृश्य"
+  },
+  "filters": {
+    "all": "सर्व"
+  },
+  "status": {
+    "active": "सक्रिय",
+    "idle": "निष्क्रिय",
+    "started": "सुरू केले",
+    "not_started": "सुरू केले नाही",
+    "submitted": "सबमिट केले",
+    "auto_submitted": "आपोआप सबमिट झाले",
+    "disconnected": "जोडणी तुटली"
+  },
+  "showingCount": "{{total}} पैकी {{shown}} उमेदवार दाखवत आहे",
+  "empty": {
+    "title": "कोणताही उमेदवार सापडला नाही",
+    "waiting": "उमेदवार जोडले जाण्याची वाट पाहत आहे…",
+    "adjustFilters": "फिल्टर बदलून पहा"
+  },
+  "riskScoreTitle": "धोका गुण: {{score}}/100",
+  "qShort": "प्र{{n}}",
+  "card": {
+    "unknownUser": "अज्ञात वापरकर्ता",
+    "progress": "प्रगती",
+    "tabSwitchesTitle": "{{n}} वेळा टॅब बदलला",
+    "flaggedTitle": "चिन्हांकित",
+    "flag": "चिन्हांकित करा",
+    "unflag": "चिन्ह काढा",
+    "removeFlag": "चिन्ह काढा",
+    "sendWarning": "सूचना पाठवा",
+    "viewDetails": "तपशील पहा"
+  },
+  "table": {
+    "candidate": "उमेदवार",
+    "status": "स्थिती",
+    "progress": "प्रगती",
+    "accuracy": "अचूकता",
+    "timeLeft": "उरलेला वेळ",
+    "currentQ": "सध्याचा प्रश्न",
+    "risk": "धोका",
+    "tabSwitches": "टॅब बदल",
+    "actions": "क्रिया",
+    "unknown": "अज्ञात",
+    "flag": "चिन्हांकित करा",
+    "unflag": "चिन्ह काढा",
+    "warn": "सूचना द्या",
+    "sendWarningAria": "सूचना पाठवा"
+  },
+  "detail": {
+    "loading": "उमेदवाराचा तपशील लोड होत आहे…",
+    "flagged": "चिन्हांकित",
+    "progress": "प्रगती",
+    "behavioralIndicators": "वर्तनाचे निर्देशक",
+    "suspiciousFlags": "संशयास्पद हालचालींची चिन्हे",
+    "activityTimeline": "हालचालींची कालरेषा (अलीकडील)",
+    "adminActions": "प्रशासकाच्या कृती",
+    "stats": {
+      "questionsAttempted": "सोडवलेले प्रश्न",
+      "correctAnswers": "बरोबर उत्तरे",
+      "wrongAnswers": "चुकीची उत्तरे",
+      "accuracy": "अचूकता",
+      "timeRemaining": "उरलेला वेळ",
+      "currentQuestion": "सध्याचा प्रश्न",
+      "avgTimeQuestion": "प्रति प्रश्न सरासरी वेळ",
+      "fastestQuestion": "सर्वात जलद सोडवलेला प्रश्न"
+    },
+    "behavioral": {
+      "tabSwitches": "{{n}} वेळा टॅब बदलला",
+      "fullscreenExits": "{{n}} वेळा फुलस्क्रीनमधून बाहेर",
+      "copyPaste": "{{n}} वेळा कॉपी/पेस्ट"
+    },
+    "footer": {
+      "removeFlag": "चिन्ह काढा",
+      "flagUser": "वापरकर्त्याला चिन्हांकित करा",
+      "sendWarning": "सूचना पाठवा",
+      "addNote": "टीप जोडा",
+      "forceSubmit": "सक्तीने सबमिट करा"
+    }
+  },
+  "actionModal": {
+    "titleForceSubmit": "चाचणी सक्तीने सबमिट करा",
+    "titleSendWarning": "सूचना पाठवा",
+    "titleAddNote": "नियमभंगाची टीप जोडा",
+    "cancel": "रद्द करा",
+    "confirmForceSubmit": "सक्तीने सबमिट करा",
+    "confirmSendWarning": "सूचना पाठवा",
+    "confirmSaveNote": "टीप जतन करा",
+    "targetLabel": "कोणासाठी:",
+    "forceSubmitWarning": "यामुळे उमेदवाराची चाचणी लगेच सबमिट होईल. ही क्रिया परत करता येणार नाही.",
+    "placeholderWarning": "सूचनेचा संदेश लिहा…",
+    "placeholderNote": "नियमभंगाच्या टिपा लिहा…",
+    "placeholderForceSubmit": "सक्तीने सबमिट करण्याचे कारण…"
+  },
+  "actions": {
+    "flaggedByAdmin": "प्रशासकाने चिन्हांकित केले"
+  },
+  "eventTypes": {
+    "HEARTBEAT": "जोडणी तपासणी",
+    "QUESTION_VIEWED": "प्रश्न पाहिला",
+    "ANSWER_SELECTED": "उत्तर निवडले",
+    "ANSWER_CHANGED": "उत्तर बदलले",
+    "ANSWER_CLEARED": "उत्तर काढले",
+    "ANSWER_MARKED_REVIEW": "उत्तर पुनरावलोकनासाठी चिन्हांकित",
+    "TEST_SUBMITTED": "चाचणी सबमिट केली",
+    "TEST_AUTO_SUBMITTED": "चाचणी आपोआप सबमिट झाली",
+    "TAB_SWITCH": "टॅब बदलला",
+    "FULLSCREEN_EXIT": "फुलस्क्रीनमधून बाहेर",
+    "WINDOW_BLUR": "विंडोवरून लक्ष हटले",
+    "WINDOW_FOCUS": "विंडोवर परत आले",
+    "COPY_PASTE_DETECTED": "कॉपी-पेस्ट आढळले"
+  },
+  "actionTypes": {
+    "FLAG": "चिन्हांकित केले",
+    "UNFLAG": "चिन्ह काढले",
+    "FORCE_SUBMIT": "सक्तीने सबमिट",
+    "SEND_WARNING": "सूचना पाठवली",
+    "ADD_NOTE": "टीप जोडली"
+  },
+  "export": {
+    "sheet": "चाचणी अहवाल",
+    "yes": "होय",
+    "no": "नाही",
+    "headers": {
+      "candidateName": "उमेदवाराचे नाव",
+      "email": "ईमेल",
+      "status": "स्थिती",
+      "ipAddress": "IP पत्ता",
+      "connectedAt": "जोडल्याची वेळ",
+      "questionsAttempted": "सोडवलेले प्रश्न",
+      "totalQuestions": "एकूण प्रश्न",
+      "correct": "बरोबर",
+      "wrong": "चूक",
+      "accuracyPct": "अचूकता %",
+      "timeSpent": "लागलेला वेळ (सेकंद)",
+      "avgTimeQuestion": "प्रति प्रश्न सरासरी वेळ (ms)",
+      "fastestQ": "सर्वात जलद प्रश्न (ms)",
+      "slowestQ": "सर्वात सावकाश प्रश्न (ms)",
+      "tabSwitches": "टॅब बदल",
+      "fullscreenExits": "फुलस्क्रीनमधून बाहेर",
+      "windowBlurs": "विंडोवरून लक्ष हटले",
+      "copyPasteEvents": "कॉपी/पेस्ट घटना",
+      "questionSwitches": "प्रश्न बदल",
+      "idlePeriods": "निष्क्रिय कालावधी",
+      "riskScore": "धोका गुण",
+      "flagged": "चिन्हांकित",
+      "flagReason": "चिन्हांकित करण्याचे कारण",
+      "suspiciousFlags": "संशयास्पद चिन्हे",
+      "finalScorePct": "अंतिम गुण %",
+      "passed": "उत्तीर्ण",
+      "submittedAt": "सबमिट केल्याची वेळ"
+    }
+  }
+}

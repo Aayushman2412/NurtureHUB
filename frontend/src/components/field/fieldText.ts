@@ -22,6 +22,35 @@ export const shortDay = (ymd: string): string => {
   return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 };
 
+/** 23 Oct — for dots and tight lines. */
+export const dayMonth = (ymd: string): string => {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+};
+
+/** Sun */
+export const weekdayOf = (ymd: string): string => {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short' });
+};
+
+/** Today as YYYY-MM-DD in the phone's own time zone (not UTC). */
+export const localIso = (offsetDays = 0): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+export const isTomorrow = (ymd: string): boolean => ymd === localIso(1);
+
+/** "5 mo", "3 weeks", "12 days" — a baby's age in one short word. */
+export const ageShort = (days: number | null | undefined, t: TFunction): string | null => {
+  if (days == null || days < 0) return null;
+  if (days < 14) return t('field.age.days', { count: days });
+  if (days < 98) return t('field.age.weeks', { count: Math.round(days / 7) });
+  return t('field.ageMonths', { count: Math.floor(days / 30.4375) });
+};
+
 /** The person a visit is about: the baby by name, else the mother. */
 export const whoLine = (
   g: { mother_name: string; child_id: number | null; child_name: string | null },

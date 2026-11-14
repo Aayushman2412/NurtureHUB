@@ -1,0 +1,38 @@
+{
+  "nav": {
+    "profile": "प्रोफाइल"
+  },
+  "headerTitle": {
+    "profile": "प्रोफाइल सेटिंग्ज"
+  },
+  "header": {
+    "toggleMenu": "मेनू उघडा/बंद करा",
+    "notifications": "सूचना"
+  },
+  "user": {
+    "fallbackName": "वापरकर्ता",
+    "defaultRole": "आयसीडीएस कर्मचारी",
+    "signOut": "साइन आउट"
+  },
+  "notifications": {
+    "title": "सूचना",
+    "markAllRead": "सर्व वाचल्या म्हणून चिन्हांकित करा",
+    "readAll": "सर्व वाचल्या",
+    "close": "बंद करा",
+    "emptyTitle": "अद्याप कोणतीही सूचना नाही",
+    "groups": {
+      "act_today": "आज करा",
+      "tomorrow": "उद्या",
+      "info": "तुमच्या माहितीसाठी",
+      "training": "प्रशिक्षण"
+    }
+  },
+  "install": {
+    "button": "ॲप डाउनलोड करा",
+    "iosStep1": "Safari च्या टूलबारमधील शेअर बटणावर टॅप करा.",
+    "iosStep2": "खाली स्क्रोल करून \"Add to Home Screen\" निवडा.",
+    "otherStep1": "ब्राउझरचा मेनू उघडा (Chrome मध्ये ⋮, Edge मध्ये ···).",
+    "otherStep2": "\"Install app\" किंवा \"Add to Home screen\" निवडा.",
+    "gotIt": "समजले"
+  }
+}

@@ -534,6 +534,12 @@ class Notification(Base):
     link = Column(String, nullable=True)
     is_read = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    # Where the panel groups it (Learner Redesign review, 30 Oct 2026):
+    # "act_today" | "tomorrow" | "info" | "training" | "hidden" (never listed).
+    category = Column(String(20), nullable=True)
+    # One alert per child per problem: a new notification with the same key
+    # replaces the older ones for that user (app/notify.create_notification).
+    dedupe_key = Column(String(160), nullable=True, index=True)
 
     # Relationships
     user = relationship("User", back_populates="notifications")

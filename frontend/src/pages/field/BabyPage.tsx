@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronRight, CircleCheck, FileText, Info, Pencil } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronRight, CircleCheck, Clock, FileText, Info, Pencil } from 'lucide-react';
 import {
   getGrowthStandards, getMyGrowthCaseDetail, type GrowthStandards, type MyGrowthCaseDetail,
 } from '../../api/growth';
@@ -13,9 +13,10 @@ import { Alert, Button, buttonClasses, Card, Modal, PageLoader } from '../../com
 import BabyCharts from '../../components/field/BabyCharts';
 import FeedingPanel from '../../components/field/FeedingPanel';
 import VisitPlanCard from '../../components/field/VisitPlanCard';
-import { formNames, shortDay, visitUrl } from '../../components/field/fieldText';
+import DangerCard from '../../components/field/DangerCard';
+import { formNames, shortDay, sortForms, visitUrl } from '../../components/field/fieldText';
 import { getChildVisitPlan, type ChildVisitPlan } from '../../api/visits';
-import { NEW_PROTOCOL, usesNewProtocol } from '../../lib/visitProtocol';
+import { cfGateMessage, NEW_PROTOCOL, usesNewProtocol } from '../../lib/visitProtocol';
 import { useAuth } from '../../context/AuthContext';
 import { cn } from '../../utils/cn';
 
@@ -61,16 +62,19 @@ const StatusCard: React.FC<{ status: BabyStatus }> = ({ status }) => {
   );
 };
 
-/** One number with its colour and word: "P23 — Good". */
-const Tile: React.FC<{ label: string; value: string; tone: Tone | null; word: string; wordy?: boolean }> = ({ label, value, tone, word, wordy }) => {
+/** One measure as a colour and one plain word first — "Low / Weight" — the
+ *  percentile under it (Learner Redesign review, 30 Oct 2026: "'P1' … hard to
+ *  read for this learner. Use colour plus one plain word"; the percentile
+ *  stays, as the launch review of 19 Oct asked). */
+const Tile: React.FC<{ label: string; full: string; word: string; tone: Tone | null; sub?: string | null }> = ({ label, full, word, tone, sub }) => {
   const c = TONE_CLASSES[(tone ?? 'none') as Status];
   return (
-    <div className={cn('flex flex-col items-center gap-0.5 rounded-lg px-2 py-3 text-center', c.soft)}>
-      <span className="text-xs font-semibold leading-tight text-ink-muted">{label}</span>
-      <span className={cn('font-display font-semibold tabular-nums', wordy ? 'py-1 text-base leading-tight' : 'text-2xl', c.text)}>{value}</span>
-      <span className={cn('flex items-center gap-1 text-xs font-semibold', c.text)}>
-        <span className={cn('size-2 rounded-full', c.dot)} aria-hidden />{word}
+    <div className={cn('flex flex-col items-center gap-0.5 rounded-lg px-2 py-3 text-center', c.soft)} title={full}>
+      <span className={cn('flex items-center gap-1.5 font-display text-lg font-semibold leading-tight', c.text)}>
+        <span className={cn('size-2.5 shrink-0 rounded-full', c.dot)} aria-hidden />{word}
       </span>
+      <span className="text-sm font-semibold leading-tight text-ink">{label}</span>
+      {sub && <span className="text-xs tabular-nums text-ink-muted">{sub}</span>}
     </div>
   );
 };
@@ -83,9 +87,12 @@ const Tiles: React.FC<{ status: BabyStatus }> = ({ status }) => {
   return (
     <div className="flex flex-col gap-2">
       <div className="grid grid-cols-3 gap-2">
-        <Tile label={t('field.baby.wfa')} value={l.wfa.pct != null ? `P${l.wfa.pct}` : '—'} tone={l.wfa.tone} word={word(l.wfa.tone)} />
-        <Tile label={t('field.baby.lfa')} value={l.lfa.pct != null ? `P${l.lfa.pct}` : '—'} tone={l.lfa.tone} word={word(l.lfa.tone)} />
-        <Tile label={t('field.baby.wfl')} value={l.wfl.grade ? t(`field.wfl.${l.wfl.grade}`) : '—'} tone={l.wfl.tone} word={word(l.wfl.tone)} wordy />
+        <Tile label={t('field.tile.wfa')} full={t('field.baby.wfa')} word={word(l.wfa.tone)} tone={l.wfa.tone}
+          sub={l.wfa.pct != null ? t('field.tile.pct', { pct: l.wfa.pct }) : null} />
+        <Tile label={t('field.tile.lfa')} full={t('field.baby.lfa')} word={word(l.lfa.tone)} tone={l.lfa.tone}
+          sub={l.lfa.pct != null ? t('field.tile.pct', { pct: l.lfa.pct }) : null} />
+        <Tile label={t('field.tile.wfl')} full={t('field.baby.wfl')} tone={l.wfl.tone}
+          word={l.wfl.grade ? t(`field.wfl.${l.wfl.grade}`) : '—'} />
       </div>
       <p className="text-center text-xs text-ink-muted">
         {t('field.baby.lastCheck', {
@@ -172,9 +179,14 @@ const BabyPage: React.FC = () => {
   const status: BabyStatus = detail.status ?? { status: 'none', reasons: ['no_growth_check'], see_within_days: null, latest: null, previous: null };
   // The forms that can be filled for this baby: on the November 2026
   // protocol CF joins from 180 days (or from day 0 for a baby adopted older).
+  // Every form a visit carries has its link (Learner Redesign review, 30 Oct
+  // 2026: the visit included Breastfeeding, the page had no link to it).
   const forms: FormCode[] = protocolPlan
     ? ['gm', 'bf', ...((protocolPlan.bucket === 'pnc_ge' || (ageDays ?? 0) >= 180) ? ['cf' as FormCode] : [])]
-    : babyVisitForms(ageDays);
+    : sortForms([...babyVisitForms(ageDays), ...(visit?.group.forms.map(f => f.key) ?? [])]
+      .filter(f => f === 'gm' || f === 'bf' || f === 'cf'));
+  // The app does not allow a CF before its day: say when it is instead.
+  const cfBlocked = protocolPlan ? cfGateMessage(protocolPlan.cf, t, shortDay) : null;
   const startVisit = (list: FormCode[]) => visitUrl(motherId, childId, list);
   const closeSaved = () => {
     const next = new URLSearchParams(params);
@@ -233,6 +245,15 @@ const BabyPage: React.FC = () => {
       )}
 
       <StatusCard status={status} />
+      {status.danger && (
+        <DangerCard
+          danger={status.danger}
+          childId={childId}
+          name={name}
+          ageText={ageText(status.danger.age_days ?? ageDays, t)}
+          hasSupervisor={plan?.has_supervisor ?? true}
+        />
+      )}
       <Tiles status={status} />
 
       {protocolPlan && (
@@ -267,13 +288,23 @@ const BabyPage: React.FC = () => {
       {detail.who_case && <BabyCharts who={detail.who_case} visits={detail.visits} standards={standards} />}
 
       <div className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
-        {forms.map(f => (
+        {forms.map(f => (f === 'cf' && cfBlocked ? (
+          <div key={f} className="flex min-h-14 items-start gap-3 px-4 py-3">
+            <Clock className="mt-0.5 size-5 shrink-0 text-ink-faint" />
+            <span className="flex-1">
+              <span className="flex flex-wrap items-baseline gap-x-2 font-semibold text-ink-muted">
+                {t('field.form.cf')}<span className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">{t('field.cfGate.label')}</span>
+              </span>
+              <span className="block text-sm text-ink-muted">{cfBlocked}</span>
+            </span>
+          </div>
+        ) : (
           <Link key={f} to={formRunUrl(f, motherId, childId)} className="flex min-h-14 items-center gap-3 px-4 py-3 font-semibold text-ink hover:bg-surface-sunken">
             <FileText className="size-5 text-primary-ink" />
             <span className="flex-1">{t('field.baby.fillOnly', { form: t(`field.form.${f}`) })}</span>
             <ChevronRight className="size-5 text-ink-muted" />
           </Link>
-        ))}
+        )))}
         <Link to={`/growth/cases/${childId}?from=baby-${childId}`} className="flex min-h-14 items-center gap-3 px-4 py-3 font-semibold text-ink hover:bg-surface-sunken">
           <Info className="size-5 text-primary-ink" />
           <span className="flex-1">{t('field.baby.allDetails')}</span>

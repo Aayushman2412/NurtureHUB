@@ -26,6 +26,7 @@ import { Badge, Button, Card, Modal, PageLoader, ProgressBar, ProgressRing } fro
 import SupportTeamCard from '../components/SupportTeamCard';
 import TrainingRings from '../components/dashboard/TrainingRings';
 import FieldHome from '../components/field/FieldHome';
+import RefreshVideos from '../components/field/RefreshVideos';
 import { getTopicReport, type TestTopicReport } from '../api/results';
 import TestTopicsCard from '../components/tests/TestTopicsCard';
 import { cn } from '../utils/cn';
@@ -320,6 +321,9 @@ const DashboardPage: React.FC = () => {
           </span>
         </button>
       </header>
+
+      {/* Videos to watch again for her current cases (Learner Redesign review). */}
+      {adoptionsOpen && <RefreshVideos />}
 
       {/* An easy password is allowed, never forced — but asked about (review of 17 Oct 2026). */}
       {user?.password_weak && (

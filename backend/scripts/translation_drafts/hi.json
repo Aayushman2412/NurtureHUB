@@ -20,7 +20,6 @@
   "server:notification.protein.title": "असामान्य रूप से ज़्यादा प्रोटीन - {subject_name}",
   "server:notification.protein.learner": "दर्ज किया गया 24 घंटे का कुल प्रोटीन {grams} ग्राम है, जो {limit} ग्राम की समीक्षा सीमा से ज़्यादा है। कृपया माता के साथ खाने की मात्रा फिर से जाँचें।",
   "server:notification.protein.admin": "{learner_name} ने {subject_name} के लिए 24 घंटे का कुल प्रोटीन {grams} ग्राम दर्ज किया है, जो {limit} ग्राम की समीक्षा सीमा से ज़्यादा है। खाने की मात्रा की पुष्टि कर लेना ठीक रहेगा।",
-  "server:notification.formSummary.body": "{green} कदम LAP के अनुसार हैं, {red} पर ध्यान देने की ज़रूरत है। सुझाए गए कदम देखने के लिए मूल्यांकन योजना खोलें।",
   "form:breastfeeding:bf_date.title": "मूल्यांकन की तारीख",
   "form:breastfeeding:bf_date.help": "वह तारीख जिस दिन स्तनपान का यह अवलोकन किया गया।",
   "form:breastfeeding:bf_sec_prep.title": "माता की तैयारी",
@@ -723,5 +722,7 @@
   "form:antenatal:medications.opt.ayurvedic_herbal_preparations.label": "आयुर्वेदिक / जड़ी-बूटी से बनी दवाइयाँ",
   "form:antenatal:medications.opt.other_specify.label": "अन्य (बताएँ)",
   "form:antenatal:medications.opt.none.label": "कुछ नहीं",
-  "form:antenatal:medications_other.title": "कृपया अन्य दवा बताएँ।"
+  "form:antenatal:medications_other.title": "कृपया अन्य दवा बताएँ।",
+  "server:notification.formSummary.toPractise": "माँ के साथ {red} {points} फिर से अभ्यास करने हैं, {green} अच्छे से हो रहे हैं। क्या सिखाना है, यह देखने के लिए योजना खोलें।",
+  "server:notification.formSummary.allGood": "सभी {green} {points} अच्छे से हो रहे हैं। माँ को क्या बताना है, यह देखने के लिए योजना खोलें।"
 }

@@ -13,7 +13,16 @@ interface Notification {
   link?: string | null;
   is_read: boolean;
   created_at: string;
+  /** act_today | tomorrow | info | training (backend app/notify.py). */
+  category?: string | null;
 }
+
+/** The panel's groups, in order (Learner Redesign review, 30 Oct 2026:
+ *  "Act today / Tomorrow / For your information"; training messages last). */
+const GROUPS = ['act_today', 'tomorrow', 'info', 'training'] as const;
+type Group = (typeof GROUPS)[number];
+const groupOf = (n: Notification): Group =>
+  (GROUPS as readonly string[]).includes(n.category ?? '') ? (n.category as Group) : 'info';
 
 interface NotificationPanelProps {
   isOpen: boolean;
@@ -107,7 +116,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+        <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-5">
           <div className="flex items-center gap-2">
             <Bell className="size-5 text-primary-ink" />
             <span className="font-display font-semibold">{t('notifications.title')}</span>
@@ -127,7 +136,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
             <button
               onClick={onClose}
               aria-label={t('notifications.close')}
-              className="flex size-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer"
+              className="ml-1 flex size-11 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-sunken hover:text-ink cursor-pointer"
             >
               <X className="size-5" />
             </button>
@@ -135,7 +144,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-3">
+        <div className="flex-1 overflow-y-auto px-3 pb-3 pt-4">
           {loading && notifications.length === 0 ? (
             <div className="flex justify-center py-10">
               <Spinner />
@@ -148,8 +157,14 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
               className="mt-6"
             />
           ) : (
-            <div className="flex flex-col gap-2">
-              {notifications.map(n => (
+            <div className="flex flex-col gap-4">
+              {GROUPS.filter(g => notifications.some(n => groupOf(n) === g)).map(g => (
+              <section key={g} className="flex flex-col gap-2">
+                <h3 className={cn('px-1 text-xs font-semibold uppercase tracking-wide',
+                  g === 'act_today' ? 'text-error-600 dark:text-error-400' : 'text-ink-muted')}>
+                  {t(`notifications.groups.${g}`)}
+                </h3>
+              {notifications.filter(n => groupOf(n) === g).map(n => (
                 <button
                   key={n.id}
                   type="button"
@@ -182,6 +197,8 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, 
                     {new Date(n.created_at).toLocaleDateString('en-GB')}
                   </span>
                 </button>
+              ))}
+              </section>
               ))}
             </div>
           )}
